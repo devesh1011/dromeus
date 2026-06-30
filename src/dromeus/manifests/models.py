@@ -1,0 +1,1 @@
+"""Validated manifest models."""

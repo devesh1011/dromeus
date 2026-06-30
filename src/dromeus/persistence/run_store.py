@@ -1,0 +1,1 @@
+"""Atomic run-state storage."""

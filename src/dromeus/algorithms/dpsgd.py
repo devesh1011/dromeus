@@ -1,0 +1,1 @@
+"""Decentralized parallel SGD algorithm."""

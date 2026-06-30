@@ -1,0 +1,1 @@
+"""Membership formation protocol."""
