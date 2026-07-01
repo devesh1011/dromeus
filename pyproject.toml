@@ -16,7 +16,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "msgpack>=1.1,<2",
+    "pydantic>=2.11,<3",
+    "pyyaml>=6.0,<7",
+]
 
 [dependency-groups]
 dev = [
