@@ -1,0 +1,17 @@
+graphify-out/
+.claude
+.graphify_detect.json
+.graphifyignore
+.mcp.json
+CLAUDE.md
+linkedin-post-drafts.md
+PROPOSAL.md
+.agents/
+.codex
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.vscode
+AGENTS.md
+skills-lock.json

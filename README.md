@@ -29,3 +29,7 @@ uv run python -m dromeus.node --config /path/to/node.yaml
 
 AXL is a separately managed runtime dependency. Importing `dromeus` does not start
 AXL or perform any other runtime work.
+
+The pinned upstream AXL commit and expected Linux binary hashes live in
+[`docker/axl.env`](docker/axl.env). Use [`docker/verify-axl.sh`](docker/verify-axl.sh)
+to rebuild and verify that pinned binary during image builds.

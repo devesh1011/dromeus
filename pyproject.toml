@@ -18,8 +18,10 @@ classifiers = [
 ]
 dependencies = [
     "msgpack>=1.1,<2",
+    "numpy>=2,<3",
     "pydantic>=2.11,<3",
     "pyyaml>=6.0,<7",
+    "safetensors>=0.5,<1",
 ]
 
 [dependency-groups]
