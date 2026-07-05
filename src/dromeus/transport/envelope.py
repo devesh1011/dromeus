@@ -106,7 +106,7 @@ def decode_envelope(
     data: bytes,
     *,
     authenticated_sender: str,
-    participant_keys: frozenset[str],
+    participant_keys: frozenset[str] | None,
     max_payload_bytes: int = DEFAULT_MAX_PAYLOAD_BYTES,
 ) -> Envelope:
     """Decode only bounded messages from authenticated sealed participants."""
@@ -135,6 +135,9 @@ def decode_envelope(
         raise EnvelopeError("payload exceeds size limit")
     if envelope.sender_public_key != authenticated_sender:
         raise EnvelopeError("authenticated sender does not match envelope")
-    if envelope.sender_public_key not in participant_keys:
+    if (
+        participant_keys is not None
+        and envelope.sender_public_key not in participant_keys
+    ):
         raise EnvelopeError("sender is not a sealed participant")
     return envelope

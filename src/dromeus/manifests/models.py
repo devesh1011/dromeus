@@ -19,6 +19,7 @@ MessageId = Identifier
 TransferId = Identifier
 AlgorithmId = Identifier
 RoundId = Annotated[int, Field(ge=0)]
+NodeIndex = Annotated[int, Field(ge=0, lt=M1_PARTICIPANT_COUNT)]
 Sha256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
 PublicKey = Annotated[
     str, StringConstraints(min_length=1, max_length=512, pattern=r"^\S+$")
@@ -33,7 +34,7 @@ class DomainModel(BaseModel):
 
 class Participant(DomainModel):
     public_key: PublicKey
-    node_index: Annotated[int, Field(ge=0, lt=M1_PARTICIPANT_COUNT)]
+    node_index: NodeIndex
 
 
 class Tensor(DomainModel):
@@ -67,11 +68,14 @@ class DatasetContract(DomainModel):
         Annotated[int, Field(gt=0)],
         Annotated[int, Field(gt=0)],
     ]
+    node_index_partitions: tuple[NodeIndex, NodeIndex, NodeIndex, NodeIndex]
 
     @model_validator(mode="after")
     def partitions_cover_dataset(self) -> Self:
         if sum(self.partition_sample_counts) != self.sample_count:
             raise ValueError("partition sample counts must equal sample count")
+        if set(self.node_index_partitions) != set(range(M1_PARTICIPANT_COUNT)):
+            raise ValueError("node index partitions must be exactly 0 through 3")
         return self
 
 
@@ -114,7 +118,7 @@ class DraftRunSpec(DomainModel):
     optimizer: Literal["sgd"] = "sgd"
     learning_rate: Annotated[float, Field(gt=0)]
     peer_scheduler_seed: int
-    codec_id: Identifier
+    codec_id: Literal["safetensors-v1"]
     transport: TransportLimits
     consensus_sketch: ConsensusSketchConfig
 
@@ -136,6 +140,7 @@ class Invitation(DomainModel):
 
 
 class SealedManifest(DraftRunSpec):
+    draft_hash: Sha256
     participants: tuple[Participant, Participant, Participant, Participant]
     initial_checkpoint_hash: Sha256
     tensor_schema: TensorSchema
