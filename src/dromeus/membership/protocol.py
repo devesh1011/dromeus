@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -30,6 +29,7 @@ from dromeus.manifests.models import (
     TensorSchema,
     TransportLimits,
 )
+from dromeus.telemetry.events import emit_event
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.envelope import (
     Envelope,
@@ -37,7 +37,7 @@ from dromeus.transport.envelope import (
     create_envelope,
     encode_envelope,
 )
-from dromeus.transport.receiver import Receiver, ReceiverPolicy
+from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import ArtifactStore, TransferManager
 
@@ -159,7 +159,7 @@ class FormationResult:
     checkpoint_path: Path
 
 
-class FormationNode:
+class FormationProtocol:
     """End-to-end fixed-membership formation over receiver/sender/transfer."""
 
     def __init__(
@@ -207,6 +207,12 @@ class FormationNode:
         tensor_schema: TensorSchema,
     ) -> FormationResult:
         local_key = await self._transport.local_public_key()
+        emit_event(
+            "formation_started",
+            run_id=self._draft.run_id,
+            peer_id=local_key,
+            role="initiator",
+        )
         invitation = create_invitation(
             draft=self._draft,
             initiator_public_key=local_key,
@@ -241,8 +247,10 @@ class FormationNode:
             tensor_schema=tensor_schema,
         )
         manifest_hash = canonical_hash(manifest)
-        self._receiver.policy.participant_keys = frozenset(participant_keys)
-        self._receiver.policy.manifest_hash = manifest_hash
+        self._receiver.configure_sealed_run(
+            participant_keys=frozenset(participant_keys),
+            manifest_hash=manifest_hash,
+        )
         await self._broadcast_manifest(manifest, participant_keys - {local_key})
         transfer = await self._create_transfer_manager(
             local_key, manifest, manifest_hash
@@ -288,11 +296,18 @@ class FormationNode:
             if start.manifest_hash != manifest_hash:
                 continue
             started_keys.add(envelope.sender_public_key)
-        return FormationResult(
+        result = FormationResult(
             manifest=manifest,
             manifest_hash=manifest_hash,
             checkpoint_path=checkpoint_path,
         )
+        emit_event(
+            "formation_completed",
+            run_id=manifest.run_id,
+            peer_id=local_key,
+            manifest_hash=manifest_hash,
+        )
+        return result
 
     async def join(
         self,
@@ -305,6 +320,12 @@ class FormationNode:
         ):
             raise FormationError("invitation has expired")
         local_key = await self._transport.local_public_key()
+        emit_event(
+            "formation_started",
+            run_id=self._draft.run_id,
+            peer_id=local_key,
+            role="participant",
+        )
         await self._send_control(
             destination=invitation.initiator_public_key,
             message_type=MessageType.JOIN_REQUEST,
@@ -333,11 +354,13 @@ class FormationNode:
             participant.public_key for participant in manifest.participants
         }:
             raise FormationError("local node was not sealed into the manifest")
-        self._receiver.policy.participant_keys = frozenset(
-            participant.public_key for participant in manifest.participants
-        )
         assert manifest_hash is not None
-        self._receiver.policy.manifest_hash = manifest_hash
+        self._receiver.configure_sealed_run(
+            participant_keys=frozenset(
+                participant.public_key for participant in manifest.participants
+            ),
+            manifest_hash=manifest_hash,
+        )
         transfer = await self._create_transfer_manager(
             local_key, manifest, manifest_hash
         )
@@ -376,11 +399,18 @@ class FormationNode:
             payload=_pack(StartMessage(manifest_hash=manifest_hash)),
             manifest_hash=manifest_hash,
         )
-        return FormationResult(
+        result = FormationResult(
             manifest=manifest,
             manifest_hash=manifest_hash,
             checkpoint_path=checkpoint.path,
         )
+        emit_event(
+            "formation_completed",
+            run_id=manifest.run_id,
+            peer_id=local_key,
+            manifest_hash=manifest_hash,
+        )
+        return result
 
     async def _broadcast_manifest(
         self, manifest: SealedManifest, peers: set[PublicKey]
@@ -418,14 +448,17 @@ class FormationNode:
 
     async def _next_control(self) -> Envelope:
         try:
-            envelope = await asyncio.wait_for(
-                self._receiver.control_queue.get(),
-                timeout=self._formation_timeout_seconds,
+            return await self._receiver.receive(
+                MessageChannel.CONTROL,
+                timeout_seconds=self._formation_timeout_seconds,
             )
         except TimeoutError as error:
+            emit_event(
+                "formation_failed",
+                run_id=self._draft.run_id,
+                error="formation control deadline exceeded",
+            )
             raise FormationError("formation control deadline exceeded") from error
-        self._receiver.control_queue.task_done()
-        return envelope
 
     @property
     def _formation_timeout_seconds(self) -> float:

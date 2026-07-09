@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from dataclasses import dataclass
 from typing import cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+import msgpack  # pyright: ignore[reportMissingTypeStubs]
 
 from dromeus.manifests.models import PublicKey
 from dromeus.transport.base import ReceivedBytes, TransportError
@@ -76,26 +79,40 @@ class AXLTransport:
             raise TransportError("AXL topology response was not an object")
         return cast(dict[str, object], payload)
 
-    def _resolve_sender(self, bridge_sender: str) -> PublicKey:
-        topology = self._load_topology()
+    def _resolve_sender(
+        self, bridge_sender: str, payload: bytes | None = None
+    ) -> PublicKey:
         candidates: set[str] = set()
-        for section in ("peers", "tree"):
-            entries = topology.get(section)
-            if not isinstance(entries, list):
-                continue
-            for entry in cast(list[object], entries):
-                if isinstance(entry, dict):
-                    public_key = cast(dict[object, object], entry).get("public_key")
-                    if isinstance(public_key, str):
-                        candidates.add(public_key)
-        if bridge_sender in candidates:
-            return bridge_sender
-        matches = [
-            key for key in candidates if matches_yggdrasil_sender(key, bridge_sender)
-        ]
-        if len(matches) != 1:
-            raise TransportError("AXL sender header did not resolve uniquely")
-        return matches[0]
+        for attempt in range(20):
+            topology = self._load_topology()
+            candidates.clear()
+            for section in ("peers", "tree"):
+                entries = topology.get(section)
+                if not isinstance(entries, list):
+                    continue
+                for entry in cast(list[object], entries):
+                    if isinstance(entry, dict):
+                        public_key = cast(dict[object, object], entry).get("public_key")
+                        if isinstance(public_key, str):
+                            candidates.add(public_key)
+            if bridge_sender in candidates:
+                return bridge_sender
+            matches = [
+                key
+                for key in candidates
+                if matches_yggdrasil_sender(key, bridge_sender)
+            ]
+            if len(matches) == 1:
+                return matches[0]
+            claimed_sender = _payload_sender(payload)
+            if claimed_sender in matches:
+                return claimed_sender
+            if attempt < 19:
+                time.sleep(0.1)
+        raise TransportError(
+            "AXL sender header did not resolve uniquely "
+            f"from {len(candidates)} topology keys"
+        )
 
     async def _post_send(self, destination: PublicKey, payload: bytes) -> None:
         def send_request() -> None:
@@ -123,9 +140,10 @@ class AXLTransport:
                     bridge_sender = response.headers.get("X-From-Peer-Id")
                     if bridge_sender is None:
                         raise TransportError("AXL recv response missing sender header")
+                    body = response.read()
                     return ReceivedBytes(
-                        sender_public_key=self._resolve_sender(bridge_sender),
-                        payload=response.read(),
+                        sender_public_key=self._resolve_sender(bridge_sender, body),
+                        payload=body,
                     )
             except HTTPError as error:
                 if error.code == 204:
@@ -135,3 +153,21 @@ class AXLTransport:
                 raise TransportError("AXL recv failed") from error
 
         return await asyncio.to_thread(recv_request)
+
+
+def _payload_sender(payload: bytes | None) -> str | None:
+    if payload is None:
+        return None
+    try:
+        unpacked = cast(
+            object,
+            msgpack.unpackb(payload, raw=False),  # pyright: ignore[reportUnknownMemberType]
+        )
+    except (ValueError, msgpack.UnpackException):
+        return None
+    if not isinstance(unpacked, dict):
+        return None
+    sender = cast(dict[object, object], unpacked).get("sender_public_key")
+    if not isinstance(sender, str):
+        return None
+    return sender

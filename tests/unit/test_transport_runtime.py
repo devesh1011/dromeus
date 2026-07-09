@@ -4,17 +4,21 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from support.in_memory_transport import (
+    InMemoryFaults,
+    InMemoryNetwork,
+    InMemoryTransport,
+)
 
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.protocol import (
     FormationError,
-    FormationNode,
     FormationResult,
     create_invitation,
 )
-from dromeus.transport.base import InMemoryFaults, InMemoryNetwork, InMemoryTransport
+from dromeus.runtime import NodeRuntime, NodeState
 from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
-from dromeus.transport.receiver import Receiver, ReceiverPolicy
+from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import ArtifactStore, TransferError, TransferManager
 from sample_manifest import manifest_data, write_checkpoint
@@ -53,12 +57,17 @@ async def _test_future_round_message_is_routed_once_after_round_advances() -> No
     )
     await sender_transport.send("peer-1", encode_envelope(envelope))
     await asyncio.sleep(0.05)
-    assert receiver.pair_commit_queue.empty()
+    with pytest.raises(TimeoutError):
+        await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=0.01)
 
     current_round = 1
     await receiver.advance_round(1)
-    assert (await receiver.pair_commit_queue.get()).message_id == "future-update"
-    assert receiver.pair_commit_queue.empty()
+    received = await receiver.receive(
+        MessageChannel.PAIR_COMMIT, timeout_seconds=0.1
+    )
+    assert received.message_id == "future-update"
+    with pytest.raises(TimeoutError):
+        await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=0.01)
     await receiver.stop()
 
 
@@ -81,21 +90,19 @@ async def _test_in_memory_transport_and_formation(tmp_path: Path) -> None:
     draft = DraftRunSpec.model_validate(draft_data)
     network = InMemoryNetwork()
     transports: list[InMemoryTransport] = []
-    nodes: list[FormationNode] = []
+    nodes: list[NodeRuntime] = []
     for index in range(5):
         transport = InMemoryTransport(network=network, public_key=f"peer-{index}")
         transports.append(transport)
         store = ArtifactStore(tmp_path / f"artifacts-{index}")
-        node = FormationNode(
+        node = NodeRuntime(
             transport=transport,
             draft=draft,
             environment=manifest.environment,
             dataset=manifest.dataset,
-            transport_limits=draft.transport,
             artifact_store=store,
         )
         nodes.append(node)
-        await node.start()
     checkpoint = tmp_path / "checkpoint.safetensors"
     write_checkpoint(checkpoint)
     invitation = create_invitation(
@@ -124,12 +131,15 @@ async def _test_in_memory_transport_and_formation(tmp_path: Path) -> None:
     failures = [outcome for outcome in outcomes if isinstance(outcome, FormationError)]
     assert len(results) == 4
     assert len(failures) == 1
+    assert sum(node.state is NodeState.READY for node in nodes) == 4
+    assert sum(node.state is NodeState.FAILED for node in nodes) == 1
     hashes = {result.manifest_hash for result in results}
     assert len(hashes) == 1
     for result in results:
         assert result.checkpoint_path.read_bytes() == checkpoint.read_bytes()
     for node in nodes:
         await node.stop()
+        assert node.state is NodeState.STOPPED
 
 
 def test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> None:
@@ -196,6 +206,27 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
     )
     await sender_manager.start()
     await receiver_manager.start()
+    malformed_transfer = create_envelope(
+        message_type=MessageType.TRANSFER_BEGIN,
+        message_id="malformed-transfer",
+        run_id=manifest.run_id,
+        manifest_hash=manifest.draft_hash,
+        sender_public_key="peer-0",
+        algorithm_id=manifest.algorithm_id,
+        payload=b"not-msgpack",
+    )
+    malformed_ack = create_envelope(
+        message_type=MessageType.CHUNK_ACK,
+        message_id="malformed-ack",
+        run_id=manifest.run_id,
+        manifest_hash=manifest.draft_hash,
+        sender_public_key="peer-1",
+        algorithm_id=manifest.algorithm_id,
+        payload=b"not-msgpack",
+    )
+    await sender_transport.send("peer-1", encode_envelope(malformed_transfer))
+    await receiver_transport.send("peer-0", encode_envelope(malformed_ack))
+    await asyncio.sleep(0.05)
     artifact = tmp_path / "payload.safetensors"
     write_checkpoint(artifact)
     transfer_id = await sender_manager.send_artifact(

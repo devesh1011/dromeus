@@ -15,7 +15,8 @@ import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import pytest
 
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
-from dromeus.membership.protocol import FormationNode, create_invitation
+from dromeus.membership.protocol import create_invitation
+from dromeus.runtime import NodeRuntime, NodeState
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import AsyncTransport, ReceivedBytes
 from dromeus.transport.envelope import MessageType
@@ -26,6 +27,8 @@ pytestmark = pytest.mark.skipif(
     os.environ.get("DROMEUS_RUN_AXL_TESTS") != "1",
     reason="set DROMEUS_RUN_AXL_TESTS=1 to run real AXL integration tests",
 )
+
+LOG_ROOT = Path(__file__).resolve().parents[2] / "logs"
 
 
 class FaultInjectingTransport:
@@ -86,7 +89,7 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         binary = build_axl_binary(root)
-        processes = start_nodes(binary, root)
+        processes = start_nodes(binary, root, LOG_ROOT)
         try:
             await wait_for_topology(9302)
             await wait_for_topology(9303)
@@ -113,18 +116,15 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                 axl_transports[3],
             ]
             nodes = [
-                FormationNode(
+                NodeRuntime(
                     transport=transport,
                     draft=draft,
                     environment=manifest.environment,
                     dataset=manifest.dataset,
-                    transport_limits=draft.transport,
                     artifact_store=ArtifactStore(root / f"artifacts-{index}"),
                 )
                 for index, transport in enumerate(transports)
             ]
-            for node in nodes:
-                await node.start()
             checkpoint = root / "checkpoint.safetensors"
             element_count = (8 * 1024 * 1024 - 128) // 4
             write_checkpoint(checkpoint, shape=(element_count,))
@@ -160,6 +160,7 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
             assert duplicate_transport.faults_applied
             assert ack_loss_transport.faults_applied
             assert len({result.manifest_hash for result in results}) == 1
+            assert all(node.state is NodeState.READY for node in nodes)
             for result in results[1:]:
                 assert result.checkpoint_path.stat().st_size >= 8 * 1024 * 1024 - 256
                 assert result.checkpoint_path.stat().st_size <= 8 * 1024 * 1024
@@ -198,8 +199,11 @@ def build_axl_binary(root: Path) -> Path:
     return binary
 
 
-def start_nodes(binary: Path, root: Path) -> list[subprocess.Popen[str]]:
+def start_nodes(
+    binary: Path, root: Path, log_root: Path
+) -> list[subprocess.Popen[str]]:
     processes: list[subprocess.Popen[str]] = []
+    log_root.mkdir(exist_ok=True)
     openssl = find_openssl()
     configs: list[dict[str, object]] = [
         {
@@ -251,7 +255,7 @@ def start_nodes(binary: Path, root: Path) -> list[subprocess.Popen[str]]:
         )
         config_path = root / f"node-{index}.json"
         config_path.write_text(json.dumps(config))
-        log_path = root / f"node-{index}.log"
+        log_path = log_root / f"node-{index}.log"
         processes.append(
             subprocess.Popen(
                 [str(binary), "-config", str(config_path)],

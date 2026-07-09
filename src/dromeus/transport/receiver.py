@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from dromeus.manifests.models import (
     AlgorithmId,
@@ -14,6 +15,7 @@ from dromeus.manifests.models import (
     RunId,
     Sha256,
 )
+from dromeus.telemetry.events import emit_event
 from dromeus.transport.base import AsyncTransport, TransportError
 from dromeus.transport.envelope import (
     Envelope,
@@ -49,6 +51,14 @@ class ReceiverError(RuntimeError):
     """Inbound traffic violated routing policy."""
 
 
+class MessageChannel(StrEnum):
+    CONTROL = "control"
+    TRANSFER = "transfer"
+    ACKNOWLEDGMENT = "acknowledgment"
+    TELEMETRY = "telemetry"
+    PAIR_COMMIT = "pair_commit"
+
+
 @dataclass
 class ReceiverPolicy:
     run_id: RunId | None = None
@@ -68,25 +78,13 @@ class ReceiverStats:
 @dataclass
 class Receiver:
     transport: AsyncTransport
-    policy: ReceiverPolicy = field(default_factory=ReceiverPolicy)
-    control_queue: asyncio.Queue[Envelope] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=64)
-    )
-    transfer_queue: asyncio.Queue[Envelope] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=64)
-    )
-    acknowledgment_queue: asyncio.Queue[Envelope] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=64)
-    )
-    telemetry_queue: asyncio.Queue[Envelope] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=64)
-    )
-    pair_commit_queue: asyncio.Queue[Envelope] = field(
-        default_factory=lambda: asyncio.Queue(maxsize=64)
-    )
+    _policy: ReceiverPolicy = field(default_factory=ReceiverPolicy)
     stats: ReceiverStats = field(default_factory=ReceiverStats)
 
     def __post_init__(self) -> None:
+        self._queues = {
+            channel: asyncio.Queue[Envelope](maxsize=64) for channel in MessageChannel
+        }
         self._seen_messages: set[MessageId] = set()
         self._future_round_by_sender: dict[PublicKey, Envelope] = {}
         self._task: asyncio.Task[None] | None = None
@@ -103,35 +101,59 @@ class Receiver:
 
     async def _run(self) -> None:
         while not self._stop.is_set():
-            inbound = await self.transport.recv(timeout_seconds=0.1)
+            try:
+                inbound = await self.transport.recv(timeout_seconds=0.1)
+            except TransportError as error:
+                emit_event(
+                    "transport_receive_failed",
+                    run_id=self._policy.run_id,
+                    error=str(error),
+                )
+                continue
             if inbound is None:
                 continue
             try:
                 envelope = decode_envelope(
                     inbound.payload,
                     authenticated_sender=inbound.sender_public_key,
-                    participant_keys=self.policy.participant_keys,
-                    max_payload_bytes=self.policy.max_payload_bytes,
+                    participant_keys=self._policy.participant_keys,
+                    max_payload_bytes=self._policy.max_payload_bytes,
                 )
                 should_route = self._validate_envelope(envelope)
-            except (EnvelopeError, ReceiverError, TransportError):
+            except (EnvelopeError, ReceiverError, TransportError) as error:
                 self.stats.rejected_messages += 1
+                emit_event(
+                    "message_rejected",
+                    run_id=self._policy.run_id,
+                    peer_id=inbound.sender_public_key,
+                    error=str(error),
+                )
                 continue
             if should_route:
                 await self._route(envelope)
             self.stats.accepted_messages += 1
+            emit_event(
+                "message_received",
+                run_id=envelope.run_id,
+                message_id=envelope.message_id,
+                transfer_id=envelope.correlation_id,
+                peer_id=envelope.sender_public_key,
+                round_id=envelope.round_id,
+                message_type=envelope.message_type,
+                routed=should_route,
+            )
 
     def _validate_envelope(self, envelope: Envelope) -> bool:
-        if self.policy.run_id is not None and envelope.run_id != self.policy.run_id:
+        if self._policy.run_id is not None and envelope.run_id != self._policy.run_id:
             raise ReceiverError("unexpected run id")
         if (
-            self.policy.manifest_hash is not None
-            and envelope.manifest_hash != self.policy.manifest_hash
+            self._policy.manifest_hash is not None
+            and envelope.manifest_hash != self._policy.manifest_hash
         ):
             raise ReceiverError("unexpected manifest hash")
         if (
-            self.policy.algorithm_id is not None
-            and envelope.algorithm_id != self.policy.algorithm_id
+            self._policy.algorithm_id is not None
+            and envelope.algorithm_id != self._policy.algorithm_id
         ):
             raise ReceiverError("unexpected algorithm id")
         if envelope.message_type not in TRANSFER_TYPES | ACK_TYPES:
@@ -146,7 +168,7 @@ class Receiver:
         return True
 
     def _validate_round_window(self, envelope: Envelope) -> bool:
-        current_round = self.policy.current_round()
+        current_round = self._policy.current_round()
         assert envelope.round_id is not None
         if envelope.round_id < current_round:
             raise ReceiverError("stale message")
@@ -162,18 +184,39 @@ class Receiver:
 
     async def _route(self, envelope: Envelope) -> None:
         if envelope.message_type in CONTROL_TYPES:
-            await self.control_queue.put(envelope)
+            await self._queues[MessageChannel.CONTROL].put(envelope)
             return
         if envelope.message_type in TRANSFER_TYPES:
-            await self.transfer_queue.put(envelope)
+            await self._queues[MessageChannel.TRANSFER].put(envelope)
             return
         if envelope.message_type in ACK_TYPES:
-            await self.acknowledgment_queue.put(envelope)
+            await self._queues[MessageChannel.ACKNOWLEDGMENT].put(envelope)
             return
         if envelope.message_type in TELEMETRY_TYPES:
-            await self.telemetry_queue.put(envelope)
+            await self._queues[MessageChannel.TELEMETRY].put(envelope)
             return
-        await self.pair_commit_queue.put(envelope)
+        await self._queues[MessageChannel.PAIR_COMMIT].put(envelope)
+
+    async def receive(
+        self,
+        channel: MessageChannel,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> Envelope:
+        """Return the next validated message for a protocol channel."""
+        queue = self._queues[channel]
+        if timeout_seconds is None:
+            return await queue.get()
+        return await asyncio.wait_for(queue.get(), timeout=timeout_seconds)
+
+    def configure_sealed_run(
+        self,
+        *,
+        manifest_hash: Sha256,
+        participant_keys: frozenset[PublicKey],
+    ) -> None:
+        self._policy.manifest_hash = manifest_hash
+        self._policy.participant_keys = participant_keys
 
     async def advance_round(self, next_round: RoundId) -> None:
         ready = [

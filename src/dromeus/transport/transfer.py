@@ -28,13 +28,14 @@ from dromeus.manifests.models import (
     TransferId,
     TransportLimits,
 )
+from dromeus.telemetry.events import emit_event
 from dromeus.transport.envelope import (
     Envelope,
     MessageType,
     create_envelope,
     encode_envelope,
 )
-from dromeus.transport.receiver import Receiver
+from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.sender import OutboundScheduler, Priority
 
 
@@ -356,8 +357,8 @@ class TransferManager:
     async def _transfer_loop(self) -> None:
         while not self._stop.is_set():
             try:
-                envelope = await asyncio.wait_for(
-                    self._receiver.transfer_queue.get(), timeout=0.1
+                envelope = await self._receiver.receive(
+                    MessageChannel.TRANSFER, timeout_seconds=0.1
                 )
             except TimeoutError:
                 self._expire_incoming()
@@ -365,16 +366,23 @@ class TransferManager:
             self._expire_incoming()
             try:
                 await self._handle_transfer(envelope)
-            except TransferError:
+            except (TransferError, ValueError, msgpack.UnpackException) as error:
+                emit_event(
+                    "transfer_message_rejected",
+                    run_id=envelope.run_id,
+                    message_id=envelope.message_id,
+                    transfer_id=envelope.correlation_id,
+                    peer_id=envelope.sender_public_key,
+                    round_id=envelope.round_id,
+                    error=str(error),
+                )
                 continue
-            finally:
-                self._receiver.transfer_queue.task_done()
 
     async def _ack_loop(self) -> None:
         while not self._stop.is_set():
             try:
-                envelope = await asyncio.wait_for(
-                    self._receiver.acknowledgment_queue.get(), timeout=0.1
+                envelope = await self._receiver.receive(
+                    MessageChannel.ACKNOWLEDGMENT, timeout_seconds=0.1
                 )
             except TimeoutError:
                 continue
@@ -383,8 +391,16 @@ class TransferManager:
                 waiter = self._ack_waiters.pop((ack.transfer_id, ack.chunk_index), None)
                 if waiter is not None and not waiter.done():
                     waiter.set_result(ack)
-            finally:
-                self._receiver.acknowledgment_queue.task_done()
+            except (ValueError, msgpack.UnpackException) as error:
+                emit_event(
+                    "transfer_ack_rejected",
+                    run_id=envelope.run_id,
+                    message_id=envelope.message_id,
+                    transfer_id=envelope.correlation_id,
+                    peer_id=envelope.sender_public_key,
+                    round_id=envelope.round_id,
+                    error=str(error),
+                )
 
     async def _handle_transfer(self, envelope: Envelope) -> None:
         if envelope.message_type is MessageType.TRANSFER_BEGIN:
@@ -527,10 +543,23 @@ class TransferManager:
             correlation_id=correlation_id,
             payload=payload,
         )
-        await self._sender.send(
+        timing = await self._sender.send(
             destination,
             encode_envelope(envelope),
             priority=priority,
             retries=self._transport_limits.max_retries,
             retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+        )
+        emit_event(
+            "transfer_message_sent",
+            run_id=self._run_id,
+            message_id=message_id,
+            transfer_id=correlation_id,
+            peer_id=destination,
+            round_id=round_id,
+            message_type=message_type,
+            queue_seconds=timing.queue_seconds,
+            send_seconds=timing.send_seconds,
+            retry_count=timing.retry_count,
+            completion_seconds=timing.completion_seconds,
         )
