@@ -16,14 +16,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
 
-      - name: Sync
-        run: uv sync --frozen
+      - name: Bootstrap
+        run: ./scripts/bootstrap
 
-      - name: Lint
-        run: uv run ruff check .
-
-      - name: Type check
-        run: uv run pyright
-
-      - name: Test
-        run: uv run pytest
+      - name: Verify
+        run: ./scripts/verify

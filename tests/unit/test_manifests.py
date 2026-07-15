@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+from support.sample_manifest import manifest_data
 
 from dromeus.manifests.canonical import (
     canonical_hash,
@@ -13,7 +14,6 @@ from dromeus.manifests.canonical import (
     parse_sealed_json,
 )
 from dromeus.manifests.models import DraftRunSpec, Invitation, SealedManifest
-from sample_manifest import manifest_data
 
 GOLDEN = Path(__file__).parents[1] / "golden" / "sealed_manifest.json"
 GOLDEN_HASH = "dd9ef12063cd632283f8c5fad1570d106f2876d6575e6190d49aa2cce101583b"

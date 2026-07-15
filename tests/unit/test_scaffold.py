@@ -3,13 +3,13 @@ import json
 
 import pytest
 from support.in_memory_transport import InMemoryNetwork, InMemoryTransport
+from support.sample_manifest import manifest_data
 
 import dromeus
 from dromeus.manifests.models import SealedManifest
 from dromeus.telemetry.events import emit_event
 from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
-from sample_manifest import manifest_data
 
 
 def test_import_and_structured_event(capsys: pytest.CaptureFixture[str]) -> None:

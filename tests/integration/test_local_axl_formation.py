@@ -13,6 +13,7 @@ from urllib.request import urlopen
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import pytest
+from support.sample_manifest import manifest_data, write_checkpoint
 
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.protocol import create_invitation
@@ -21,7 +22,6 @@ from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import AsyncTransport, ReceivedBytes
 from dromeus.transport.envelope import MessageType
 from dromeus.transport.transfer import ArtifactStore
-from sample_manifest import manifest_data, write_checkpoint
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("DROMEUS_RUN_AXL_TESTS") != "1",

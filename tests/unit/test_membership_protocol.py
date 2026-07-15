@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from support.sample_manifest import manifest_data
 
 from dromeus.manifests.models import SealedManifest
 from dromeus.membership.protocol import ReadyValidationError, validate_ready
-from sample_manifest import manifest_data
 
 
 def test_validate_ready_accepts_matching_environment() -> None:

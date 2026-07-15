@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "verify: 'uv' is missing; install uv, then run ./scripts/bootstrap." >&2
+    exit 127
+fi
+if [ ! -x .venv/bin/python ]; then
+    echo "verify: environment is missing; run ./scripts/bootstrap first." >&2
+    exit 1
+fi
+
+run() {
+    label=$1
+    shift
+    echo "verify: $label"
+    if ! "$@"; then
+        echo "verify: $label failed; fix the output above and rerun ./scripts/verify." >&2
+        exit 1
+    fi
+}
+
+run "lockfile" uv lock --check
+run "architecture" uv run --frozen --no-sync python scripts/check_structure.py
+run "lint" uv run --frozen --no-sync ruff check .
+run "types" uv run --frozen --no-sync pyright
+run "tests" uv run --frozen --no-sync pytest -q
+
+echo "verify: all checks passed"

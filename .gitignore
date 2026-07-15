@@ -17,7 +17,6 @@ graphify-out/
 skills-lock.json
 
 # Local project files
-AGENTS.md
 CLAUDE.md
 HANDOFF.md
 MISSION.md
@@ -35,3 +34,7 @@ docs/
 
 # Logs
 logs/*.log
+
+
+# Misc
+.DS_Store

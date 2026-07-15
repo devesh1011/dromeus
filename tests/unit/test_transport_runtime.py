@@ -9,6 +9,7 @@ from support.in_memory_transport import (
     InMemoryNetwork,
     InMemoryTransport,
 )
+from support.sample_manifest import manifest_data, write_checkpoint
 
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.protocol import (
@@ -21,7 +22,6 @@ from dromeus.transport.envelope import MessageType, create_envelope, encode_enve
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import ArtifactStore, TransferError, TransferManager
-from sample_manifest import manifest_data, write_checkpoint
 
 
 def test_future_round_message_is_routed_once_after_round_advances() -> None:

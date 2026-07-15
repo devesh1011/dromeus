@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "bootstrap: 'uv' is required. Install it from https://docs.astral.sh/uv/getting-started/installation/ and retry." >&2
+    exit 127
+fi
+
+echo "bootstrap: syncing locked Python 3.12 environment"
+if ! uv sync --frozen; then
+    echo "bootstrap: sync failed. Check network access and Python 3.12 availability. If dependencies intentionally changed, run 'uv lock' and commit uv.lock." >&2
+    exit 1
+fi
+
+version=$(uv run --frozen --no-sync python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+if [ "$version" != "3.12" ]; then
+    echo "bootstrap: expected Python 3.12, resolved $version. Remove .venv and rerun ./scripts/bootstrap." >&2
+    exit 1
+fi
+
+echo "bootstrap: ready (Python $version)"
