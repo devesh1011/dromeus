@@ -20,6 +20,13 @@ def test_yggdrasil_sender_identity_uses_known_bits_not_string_prefix() -> None:
     assert not matches_yggdrasil_sender(different_sender, bridge_sender)
 
 
+def test_yggdrasil_sender_accepts_valid_address_with_leading_zero_key_bits() -> None:
+    actual_sender = "9c800afbc9caad915aaec9b2dd6be5bb53874a44e0993cfc325dacefed413bde"
+    bridge_sender = "9c800afbc9caad915aaec9b2dd6b" + "f" * 36
+
+    assert matches_yggdrasil_sender(actual_sender, bridge_sender)
+
+
 def test_sender_resolution_retries_ambiguous_topology() -> None:
     bridge_sender = "d5bcbd9608ae04b5a88dbafe46287" + "f" * 35
     actual_sender = "d5bcbd9608ae04b5a88dbafe4628672ed7d776c8fdef2857c3f09093d9ecbe0a"

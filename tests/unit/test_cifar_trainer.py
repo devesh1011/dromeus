@@ -1,30 +1,67 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
+import pytest
+import torch
 
 from dromeus.training.pytorch import (
     CIFAR10Data,
     CIFAR10Trainer,
+    CIFARDataError,
     create_initial_checkpoint,
 )
 
 
-def test_iid_partitions_are_reproducible_and_disjoint() -> None:
-    data = CIFAR10Data.synthetic(sample_count=40, seed=4)
+@pytest.fixture(scope="session")
+def cifar10_data() -> CIFAR10Data:
+    root = Path(
+        os.environ.get(
+            "DROMEUS_CIFAR_ROOT",
+            Path.home() / ".cache" / "dromeus" / "cifar10",
+        )
+    )
+    try:
+        return CIFAR10Data.from_torchvision(
+            root=root,
+            train=False,
+            download=os.environ.get("DROMEUS_DOWNLOAD_CIFAR") == "1",
+        )
+    except CIFARDataError:
+        pytest.skip(
+            "real CIFAR-10 data unavailable; prepare DROMEUS_CIFAR_ROOT or set "
+            "DROMEUS_DOWNLOAD_CIFAR=1"
+        )
 
-    first = data.split_iid(participant_count=4, seed=11)
-    second = data.split_iid(participant_count=4, seed=11)
 
-    assert [part.labels.tolist() for part in first] == [
-        part.labels.tolist() for part in second
+def test_torchvision_loader_returns_real_cifar10(cifar10_data: CIFAR10Data) -> None:
+    image, label = cifar10_data[0]
+
+    assert len(cifar10_data) == 10_000
+    assert image.shape == (3, 32, 32)
+    assert image.dtype == torch.float32
+    assert 0 <= label < 10
+
+
+def test_iid_partitions_are_reproducible_and_disjoint(
+    cifar10_data: CIFAR10Data,
+) -> None:
+    first = cifar10_data.split_iid(participant_count=4, seed=11)
+    second = cifar10_data.split_iid(participant_count=4, seed=11)
+
+    assert [[part[index][1] for index in range(len(part))] for part in first] == [
+        [part[index][1] for index in range(len(part))] for part in second
     ]
-    assert all(part.images.shape == (10, 3, 32, 32) for part in first)
-    assert len({int(label) for part in first for label in part.labels}) > 1
+    assert all(part[0][0].shape == (3, 32, 32) for part in first)
+    assert len({part[index][1] for part in first for index in range(len(part))}) > 1
 
 
-def test_checkpoint_is_deterministic_and_matches_trainer_schema(tmp_path: Path) -> None:
+def test_checkpoint_is_deterministic_and_matches_trainer_schema(
+    tmp_path: Path,
+    cifar10_data: CIFAR10Data,
+) -> None:
     first_path = tmp_path / "first.safetensors"
     second_path = tmp_path / "second.safetensors"
 
@@ -34,7 +71,7 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(tmp_path: Path) 
     assert first_path.read_bytes() == second_path.read_bytes()
 
     trainer = CIFAR10Trainer(
-        train_data=CIFAR10Data.synthetic(sample_count=8, seed=2),
+        train_data=cifar10_data,
         seed=17,
         batch_size=4,
     )
@@ -43,13 +80,17 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(tmp_path: Path) 
     assert trainer.checkpoint_hash(first_path) == trainer.checkpoint_hash(second_path)
 
 
-def test_trainer_runs_sgd_and_evaluates() -> None:
-    data = CIFAR10Data.synthetic(sample_count=16, seed=8)
-    trainer = CIFAR10Trainer(train_data=data, seed=3, batch_size=4, learning_rate=0.05)
+def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:
+    trainer = CIFAR10Trainer(
+        train_data=cifar10_data,
+        seed=3,
+        batch_size=4,
+        learning_rate=0.05,
+    )
     before = trainer.weights()
 
     trainer.train_local_steps(2)
-    loss, accuracy = trainer.evaluate(data)
+    loss, accuracy = trainer.evaluate(cifar10_data)
 
     assert any(
         not np.array_equal(before[name], value)
