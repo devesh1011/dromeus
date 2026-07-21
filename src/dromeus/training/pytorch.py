@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Callable
+from collections.abc import Callable, Sized
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, cast
-from urllib.request import urlopen
 
 import numpy as np
 import torch
@@ -18,7 +17,11 @@ from safetensors.torch import (
     save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
 )
 from torch import Tensor, nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import (  # pyright: ignore[reportMissingTypeStubs]
+    CIFAR10 as TorchvisionCIFAR10,  # pyright: ignore[reportMissingTypeStubs]
+)
+from torchvision.transforms import ToTensor  # pyright: ignore[reportMissingTypeStubs]
 
 from dromeus.manifests.models import Tensor as TensorSpec
 from dromeus.manifests.models import TensorSchema
@@ -41,94 +44,31 @@ class CIFARDataError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
-class CIFAR10Data:
-    """Validated channel-first CIFAR-10 arrays with uint8 or float pixels."""
+class CIFAR10Data(Dataset[tuple[Tensor, int]]):
+    """Thin view over a torchvision CIFAR-10 dataset."""
 
-    images: np.ndarray
-    labels: np.ndarray
-
-    def __post_init__(self) -> None:
-        images = np.asarray(self.images)
-        labels = np.asarray(self.labels)
-        if images.ndim != 4 or images.shape[1:] != IMAGE_SHAPE:
-            raise CIFARDataError("images must have shape (N, 3, 32, 32)")
-        if labels.ndim != 1 or labels.shape[0] != images.shape[0]:
-            raise CIFARDataError("labels must be one-dimensional and match images")
-        if images.shape[0] == 0:
-            raise CIFARDataError("dataset must contain at least one image")
-        if images.dtype not in (np.dtype(np.uint8), np.dtype(np.float32)):
-            raise CIFARDataError("images must be uint8 or float32")
-        if labels.dtype not in (np.dtype(np.int64), np.dtype(np.int32)):
-            raise CIFARDataError("labels must be int32 or int64")
-        if not np.isfinite(images).all() or not np.isfinite(labels).all():
-            raise CIFARDataError("dataset contains non-finite values")
-        if images.dtype == np.dtype(np.float32) and (
-            float(images.min()) < 0.0 or float(images.max()) > 1.0
-        ):
-            raise CIFARDataError("float images must be normalized to [0, 1]")
-        if np.any(labels < 0) or np.any(labels >= CLASS_COUNT):
-            raise CIFARDataError("labels must be in [0, 10)")
-        images = np.ascontiguousarray(images)
-        labels = np.ascontiguousarray(labels, dtype=np.int64)
-        images.setflags(write=False)
-        labels.setflags(write=False)
-        object.__setattr__(self, "images", images)
-        object.__setattr__(self, "labels", labels)
+    _dataset: Dataset[tuple[Tensor, int]]
+    _indices: tuple[int, ...] | None = None
 
     @classmethod
-    def synthetic(cls, *, sample_count: int, seed: int) -> CIFAR10Data:
-        """Create deterministic uint8 data for smoke tests and local pilots."""
-        if sample_count <= 0:
-            raise ValueError("sample_count must be positive")
-        generator = np.random.default_rng(seed)
-        images = generator.integers(
-            0,
-            256,
-            size=(sample_count, *IMAGE_SHAPE),
-            dtype=np.uint8,
-        )
-        labels = generator.integers(0, CLASS_COUNT, size=sample_count, dtype=np.int64)
-        return cls(images=images, labels=labels)
-
-    @classmethod
-    def from_npz(cls, path: Path) -> CIFAR10Data:
-        """Load validated arrays from an NPZ with ``images`` and ``labels`` keys."""
-        try:
-            with np.load(path, allow_pickle=False) as archive:
-                images = archive["images"]
-                labels = archive["labels"]
-        except (OSError, KeyError, ValueError) as error:
-            raise CIFARDataError(f"cannot load CIFAR NPZ: {path}") from error
-        return cls(images=images, labels=labels)
-
-    @classmethod
-    def download_npz(
+    def from_torchvision(
         cls,
         *,
-        url: str,
-        destination: Path,
-        sha256: str,
+        root: Path,
+        train: bool = True,
+        download: bool = False,
     ) -> CIFAR10Data:
-        """Download an immutable NPZ into place after verifying its SHA-256."""
-        if len(sha256) != 64 or any(
-            character not in "0123456789abcdef" for character in sha256
-        ):
-            raise ValueError("sha256 must be a lowercase hexadecimal digest")
-        temporary = destination.with_suffix(destination.suffix + ".part")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        digest = hashlib.sha256()
+        """Open the standard CIFAR-10 dataset with tensor conversion."""
         try:
-            with urlopen(url, timeout=30) as response, temporary.open("wb") as handle:
-                while block := response.read(1024 * 1024):
-                    handle.write(block)
-                    digest.update(block)
-            if digest.hexdigest() != sha256:
-                raise CIFARDataError("downloaded CIFAR archive checksum mismatch")
-            temporary.replace(destination)
-        except Exception:
-            temporary.unlink(missing_ok=True)
-            raise
-        return cls.from_npz(destination)
+            dataset = TorchvisionCIFAR10(
+                root=str(root),
+                train=train,
+                transform=ToTensor(),
+                download=download,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            raise CIFARDataError(f"cannot open CIFAR-10 dataset at {root}") from error
+        return cls(cast(Dataset[tuple[Tensor, int]], dataset))
 
     def split_iid(
         self,
@@ -137,30 +77,31 @@ class CIFAR10Data:
         seed: int,
     ) -> tuple[CIFAR10Data, ...]:
         """Return equal, disjoint, deterministic IID partitions."""
-        if participant_count <= 0 or self.images.shape[0] % participant_count:
+        if participant_count <= 0 or len(self) % participant_count:
             raise ValueError("sample count must divide participant count exactly")
         generator = np.random.default_rng(seed)
-        order = generator.permutation(self.images.shape[0])
+        order = generator.permutation(len(self))
         partitions: list[CIFAR10Data] = []
         for indices in np.array_split(order, participant_count):
             partitions.append(
-                CIFAR10Data(images=self.images[indices], labels=self.labels[indices])
+                CIFAR10Data(
+                    self._dataset,
+                    tuple(int(index) for index in indices),
+                )
             )
         return tuple(partitions)
 
-    def tensors(self) -> tuple[Tensor, Tensor]:
-        """Return normalized tensors suitable for a PyTorch data loader."""
-        images = self.images.astype(np.float32, copy=False)
-        if self.images.dtype == np.dtype(np.uint8):
-            images = images / 255.0
+    def __len__(self) -> int:
         return (
-            torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                cast(Any, np.ascontiguousarray(images).copy())
-            ),
-            torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                cast(Any, np.ascontiguousarray(self.labels, dtype=np.int64).copy())
-            ),
+            len(self._indices)
+            if self._indices is not None
+            else len(cast(Sized, self._dataset))
         )
+
+    def __getitem__(self, index: int) -> tuple[Tensor, int]:
+        dataset_index = self._indices[index] if self._indices is not None else index
+        image, label = self._dataset[dataset_index]
+        return image, int(label)
 
 
 class CIFARGroupNormCNN(nn.Module):
@@ -363,11 +304,9 @@ class CIFAR10Trainer:
         return checkpoint_hash(path)
 
     def _make_loader(self, data: CIFAR10Data, *, shuffle: bool) -> DataLoader[Any]:
-        images, labels = data.tensors()
-        dataset = TensorDataset(images, labels)
         generator = self._loader_generator if shuffle else None
         return DataLoader(
-            dataset,
+            data,
             batch_size=self._batch_size,
             shuffle=shuffle,
             generator=generator,

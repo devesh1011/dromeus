@@ -69,6 +69,7 @@ class NodeRuntime:
         checkpoint_path: Path,
         tensor_schema: TensorSchema,
     ) -> FormationResult:
+        """Form as initiator using a checkpoint prepared by the local trainer."""
         await self._start_formation()
         try:
             result = await self._formation.initiate(

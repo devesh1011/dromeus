@@ -27,9 +27,6 @@ def matches_yggdrasil_sender(public_key: str, bridge_sender: str) -> bool:
     while value & 1:
         trailing_ones += 1
         value >>= 1
-    known_bits = len(bridge_sender) * 4 - trailing_ones
-    if known_bits < 112:
-        return False
     unknown_mask = (1 << trailing_ones) - 1
     return key_value | unknown_mask == sender_value
 
