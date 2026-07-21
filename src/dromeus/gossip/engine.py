@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
@@ -35,6 +35,7 @@ from dromeus.manifests.models import (
     TensorSchema,
     TransportLimits,
 )
+from dromeus.telemetry.consensus import encode_sketch
 from dromeus.transport.envelope import (
     Envelope,
     MessageType,
@@ -53,6 +54,25 @@ save_file = cast(_save_safetensors, _save_file)
 
 class PairCommitError(RuntimeError):
     """A peer update or pair commit could not be completed safely."""
+
+
+@dataclass(frozen=True, slots=True)
+class RunFailure:
+    """Terminal failure evidence for persistence and control-plane reporting."""
+
+    round_id: RoundId
+    error_type: str
+    reason: str
+
+
+class FailureBroadcaster(Protocol):
+    async def broadcast_run_failed(self, failure: RunFailure) -> None: ...
+
+
+class ConsensusPublisher(Protocol):
+    def submit(
+        self, *, round_id: RoundId, weights: Mapping[str, np.ndarray]
+    ) -> bool: ...
 
 
 class GossipAlgorithm(Protocol):
@@ -102,6 +122,14 @@ class PairCommitMessage(DomainModel):
     checksum: Sha256
 
 
+class RunFailedMessage(DomainModel):
+    """Validated control payload for terminal run failure."""
+
+    round_id: RoundId
+    error_type: str
+    reason: str
+
+
 class AXLPairTransport:
     """Pair transport backed by reliable safetensors transfer and AXL envelopes."""
 
@@ -118,6 +146,7 @@ class AXLPairTransport:
         sender: OutboundScheduler,
         transfer_manager: TransferManager,
         artifact_root: Path,
+        participant_keys: frozenset[PublicKey] | None = None,
     ) -> None:
         self._local_public_key = local_public_key
         self._run_id = run_id
@@ -129,9 +158,78 @@ class AXLPairTransport:
         self._sender = sender
         self._transfer_manager = transfer_manager
         self._artifact_root = artifact_root
+        self._participant_keys = participant_keys or frozenset()
         self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._ready_cache: dict[RoundId, str] = {}
         self._committed_rounds: dict[RoundId, str] = {}
+
+    async def broadcast_run_failed(self, failure: RunFailure) -> None:
+        """Best-effort failure broadcast using manifest-bounded sender retries."""
+        peers = self._participant_keys - {self._local_public_key}
+        if not peers:
+            return
+        payload = _pack(
+            RunFailedMessage(
+                round_id=failure.round_id,
+                error_type=failure.error_type[:128],
+                reason=failure.reason[:1024],
+            )
+        )
+
+        async def send(peer: PublicKey) -> None:
+            envelope = create_envelope(
+                message_type=MessageType.RUN_FAILED,
+                message_id=f"run-failed-{failure.round_id}-{self._local_public_key[:8]}",
+                run_id=self._run_id,
+                manifest_hash=self._manifest_hash,
+                sender_public_key=self._local_public_key,
+                algorithm_id=self._algorithm_id,
+                round_id=failure.round_id,
+                correlation_id=f"run-failure-{failure.round_id}",
+                payload=payload,
+            )
+            await self._sender.send(
+                peer,
+                encode_envelope(envelope),
+                priority=Priority.CONTROL,
+                retries=self._transport_limits.max_retries,
+                retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+            )
+
+        await asyncio.gather(*(send(peer) for peer in peers), return_exceptions=True)
+
+    async def broadcast_consensus_sketch(
+        self, *, round_id: RoundId, sketch: np.ndarray
+    ) -> None:
+        """Best-effort low-priority broadcast of one FP32 consensus sketch."""
+        peers = self._participant_keys - {self._local_public_key}
+        if not peers:
+            return
+        payload = encode_sketch(sketch)
+
+        async def send(peer: PublicKey) -> None:
+            envelope = create_envelope(
+                message_type=MessageType.CONSENSUS_SKETCH,
+                message_id=(
+                    f"consensus-sketch-{round_id}-{self._local_public_key[:8]}"
+                ),
+                run_id=self._run_id,
+                manifest_hash=self._manifest_hash,
+                sender_public_key=self._local_public_key,
+                algorithm_id=self._algorithm_id,
+                round_id=round_id,
+                correlation_id=f"consensus-round-{round_id}",
+                payload=payload,
+            )
+            await self._sender.send(
+                peer,
+                encode_envelope(envelope),
+                priority=Priority.TELEMETRY,
+                retries=self._transport_limits.max_retries,
+                retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+            )
+
+        await asyncio.gather(*(send(peer) for peer in peers), return_exceptions=True)
 
     async def exchange_update(
         self,
@@ -352,17 +450,44 @@ class GossipEngine:
         algorithm: GossipAlgorithm,
         transport: PairTransport,
         commit_callback: CommitCallback,
+        timeout_seconds: float | None = None,
+        transport_limits: TransportLimits | None = None,
+        failure_callback: Callable[[RunFailure], None | Awaitable[None]] | None = None,
+        failure_broadcaster: FailureBroadcaster | None = None,
+        consensus_publisher: ConsensusPublisher | None = None,
     ) -> None:
         if round_count <= 0:
             raise ValueError("round_count must be positive")
+        if timeout_seconds is not None and timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+        if timeout_seconds is not None and transport_limits is not None:
+            raise ValueError("pass timeout_seconds or transport_limits, not both")
         self._local_public_key = local_public_key
         self._round_count = round_count
         self._scheduler = scheduler
         self._algorithm = algorithm
         self._transport = transport
         self._commit_callback = commit_callback
+        self._timeout_seconds = (
+            timeout_seconds
+            if timeout_seconds is not None
+            else (
+                transport_limits.retry_timeout_seconds
+                * (transport_limits.max_retries + 4)
+                if transport_limits is not None
+                else None
+            )
+        )
+        self._failure_callback = failure_callback
+        if failure_broadcaster is None:
+            candidate = getattr(transport, "broadcast_run_failed", None)
+            if candidate is not None:
+                failure_broadcaster = cast(FailureBroadcaster, transport)
+        self._failure_broadcaster = failure_broadcaster
+        self._consensus_publisher = consensus_publisher
         self._current_round = 0
         self._commits: list[RoundCommit] = []
+        self._failure: RunFailure | None = None
 
     @property
     def current_round(self) -> RoundId:
@@ -372,6 +497,10 @@ class GossipEngine:
     def commits(self) -> tuple[RoundCommit, ...]:
         return tuple(self._commits)
 
+    @property
+    def failure(self) -> RunFailure | None:
+        return self._failure
+
     async def run(self) -> tuple[RoundCommit, ...]:
         """Train and commit every manifest round in order."""
         while self._current_round < self._round_count:
@@ -380,10 +509,29 @@ class GossipEngine:
 
     async def run_round(self, round_id: RoundId) -> RoundCommit:
         """Complete one scheduled pair exchange and commit."""
+        if self._failure is not None:
+            raise PairCommitError("run has already failed")
         if round_id != self._current_round:
             raise PairCommitError(
                 f"round {round_id} is not current; expected {self._current_round}"
             )
+        try:
+            if self._timeout_seconds is None:
+                return await self._run_round(round_id)
+            return await asyncio.wait_for(
+                self._run_round(round_id), timeout=self._timeout_seconds
+            )
+        except asyncio.CancelledError:
+            raise
+        except TimeoutError as error:
+            failure = PairCommitError("pair round deadline exceeded")
+            await self._record_failure(round_id, failure)
+            raise failure from error
+        except Exception as error:
+            await self._record_failure(round_id, error)
+            raise
+
+    async def _run_round(self, round_id: RoundId) -> RoundCommit:
         pairing = self._scheduler.schedule(round_id)
         try:
             peer = pairing.peer_for(self._local_public_key)
@@ -445,14 +593,48 @@ class GossipEngine:
         )
         self._commits.append(commit)
         self._current_round += 1
+        if self._consensus_publisher is not None:
+            try:
+                self._consensus_publisher.submit(
+                    round_id=round_id,
+                    weights=post_mix.weights,
+                )
+            except Exception:
+                pass
         return commit
+
+    async def _record_failure(self, round_id: RoundId, error: Exception) -> None:
+        if self._failure is not None:
+            return
+        failure = RunFailure(
+            round_id=round_id,
+            error_type=type(error).__name__,
+            reason=str(error)[:1024] or "pair round failed",
+        )
+        self._failure = failure
+        if self._failure_callback is not None:
+            try:
+                result = self._failure_callback(failure)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception:
+                pass
+        if self._failure_broadcaster is not None:
+            try:
+                await self._failure_broadcaster.broadcast_run_failed(failure)
+            except Exception:
+                pass
 
 
 __all__ = [
     "AXLPairTransport",
     "GossipAlgorithm",
     "GossipEngine",
+    "FailureBroadcaster",
+    "ConsensusPublisher",
     "PairCommitError",
     "PairTransport",
+    "RunFailedMessage",
+    "RunFailure",
     "RoundCommit",
 ]
