@@ -45,6 +45,7 @@ ROUND_TRACKED_TYPES = TRANSFER_TYPES | {
     MessageType.UPDATE_READY,
     MessageType.ROUND_COMMITTED,
 }
+IDEMPOTENT_TYPES = {MessageType.UPDATE_READY, MessageType.ROUND_COMMITTED}
 
 
 class ReceiverError(RuntimeError):
@@ -156,7 +157,7 @@ class Receiver:
             and envelope.algorithm_id != self._policy.algorithm_id
         ):
             raise ReceiverError("unexpected algorithm id")
-        if envelope.message_type not in TRANSFER_TYPES | ACK_TYPES:
+        if envelope.message_type not in TRANSFER_TYPES | ACK_TYPES | IDEMPOTENT_TYPES:
             if envelope.message_id in self._seen_messages:
                 raise ReceiverError("replayed message id")
             self._seen_messages.add(envelope.message_id)
@@ -217,6 +218,10 @@ class Receiver:
     ) -> None:
         self._policy.manifest_hash = manifest_hash
         self._policy.participant_keys = participant_keys
+
+    def set_current_round(self, round_id: RoundId) -> None:
+        """Advance round validation after a pair commit is durable."""
+        self._policy.current_round = lambda: round_id
 
     async def advance_round(self, next_round: RoundId) -> None:
         ready = [

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-import hashlib
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
 
-from dromeus.algorithms.base import AlgorithmSnapshot, TrainedWeightsBundle
+from dromeus.algorithms.base import (
+    AlgorithmSnapshot,
+    TrainedWeightsBundle,
+    checksum_tensors,
+)
 from dromeus.manifests.models import RoundId, TensorSchema
 from dromeus.training.base import StochasticGradientTrainer, WeightTrainer
 
@@ -18,17 +21,6 @@ _DTYPES = {
     "float32": np.dtype(np.float32),
     "float64": np.dtype(np.float64),
 }
-
-
-def checksum_tensors(tensors: dict[str, np.ndarray]) -> str:
-    digest = hashlib.sha256()
-    for name in sorted(tensors):
-        tensor = np.ascontiguousarray(tensors[name])
-        digest.update(name.encode())
-        digest.update(str(tensor.dtype).encode())
-        digest.update(str(tensor.shape).encode())
-        digest.update(tensor.tobytes())
-    return digest.hexdigest()
 
 
 @dataclass
@@ -54,9 +46,8 @@ class DPSGDAdapter:
         return self.snapshot()
 
     def local_training(self) -> AlgorithmSnapshot:
-        if (
-            self.learning_rate is not None
-            and isinstance(self.trainer, StochasticGradientTrainer)
+        if self.learning_rate is not None and isinstance(
+            self.trainer, StochasticGradientTrainer
         ):
             for _ in range(self.local_steps):
                 self.step()
@@ -100,12 +91,16 @@ class DPSGDAdapter:
             checksum=checksum_tensors(tensors),
         )
 
-    def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot:
+    def validate_peer(self, peer_bundle: TrainedWeightsBundle) -> None:
+        """Validate a peer update without mutating local model state."""
         if peer_bundle.round_id != self._round_id:
             raise ValueError("peer bundle round does not match current round")
         self._validate_tensors(peer_bundle.tensors)
         if checksum_tensors(peer_bundle.tensors) != peer_bundle.checksum:
             raise ValueError("peer bundle checksum mismatch")
+
+    def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot:
+        self.validate_peer(peer_bundle)
         local = self.trainer.weights()
         self._validate_tensors(local)
         mixed = self._weighted_average(local, (peer_bundle,), (0.5,))
@@ -157,10 +152,7 @@ class DPSGDAdapter:
             raise ValueError("mixing weights must be non-negative")
         if not np.isclose(self_weight + sum(peer_weights), 1.0):
             raise ValueError("mixing weights must sum to one")
-        mixed = {
-            name: (local[name].astype(np.float32) * self_weight)
-            for name in local
-        }
+        mixed = {name: (local[name].astype(np.float32) * self_weight) for name in local}
         for bundle, weight in zip(peer_bundles, peer_weights, strict=True):
             if bundle.round_id != self._round_id:
                 raise ValueError("peer bundle round does not match current round")
