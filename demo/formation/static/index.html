@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="oklch(0.08 0 0)" />
+    <title>Dromeus — Real AXL Formation</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#formation-map">Skip to formation map</a>
+
+    <main class="app-shell">
+      <header class="masthead">
+        <div class="identity">
+          <svg class="mark" viewBox="0 0 44 44" aria-hidden="true">
+            <circle cx="22" cy="22" r="5"></circle>
+            <circle cx="7" cy="22" r="3"></circle>
+            <circle cx="36" cy="9" r="3"></circle>
+            <circle cx="36" cy="35" r="3"></circle>
+            <path d="M10 22h7M26 18l7-7M26 26l7 7"></path>
+          </svg>
+          <div>
+            <h1>Dromeus</h1>
+            <p>Formation trace</p>
+          </div>
+        </div>
+
+        <div class="transport-proof" aria-label="Transport configuration">
+          <span class="signal-dot" aria-hidden="true"></span>
+          <div>
+            <strong>AXL transport</strong>
+          </div>
+        </div>
+
+        <div class="run-actions">
+          <button class="primary-action" id="start-run" type="button">
+            <span class="button-ready">Begin formation</span>
+            <span class="button-busy">Formation running</span>
+          </button>
+          <div class="replay-controls" id="replay-controls" hidden>
+            <label class="replay-speed" for="replay-speed">
+              <span>Replay speed</span>
+              <select id="replay-speed">
+                <option value="1">1×</option>
+                <option value="0.5" selected>0.5×</option>
+                <option value="0.25">0.25×</option>
+              </select>
+            </label>
+            <button class="replay-action" id="replay-run" type="button">
+              Replay capture
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section class="status-ribbon" aria-live="polite">
+        <div class="status-copy">
+          <span
+            class="status-marker"
+            id="status-marker"
+            aria-hidden="true"
+          ></span>
+          <strong id="run-status">Awaiting launch</strong>
+          <span id="status-detail">Ready to launch four local AXL nodes</span>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section
+          class="formation-field"
+          id="formation-map"
+          aria-labelledby="map-title"
+        >
+          <div class="field-heading">
+            <div>
+              <h2 id="map-title">Fixed group formation</h2>
+              <p>
+                Invitation is out-of-band. Every envelope after it crosses AXL.
+              </p>
+            </div>
+            <div class="route-key" aria-label="Route legend">
+              <span
+                ><i class="route-swatch invitation-swatch"></i>Invitation</span
+              >
+              <span><i class="route-swatch axl-swatch"></i>AXL envelope</span>
+            </div>
+          </div>
+
+          <div class="topology" id="topology">
+            <svg class="routes" id="routes" aria-hidden="true"></svg>
+            <div class="axl-fabric" aria-hidden="true">
+              <div class="fabric-orbit"></div>
+              <span>AXL</span>
+              <small>encrypted mesh</small>
+            </div>
+            <div
+              class="packet-layer"
+              id="packet-layer"
+              aria-hidden="true"
+            ></div>
+
+            <article class="node initiator" id="node-0" data-state="offline">
+              <div class="node-heading">
+                <span class="node-index">N0</span>
+                <span class="node-role">Initiator</span>
+                <span class="node-state">Offline</span>
+              </div>
+              <h3>Manifest authority</h3>
+              <code class="node-key">identity pending</code>
+              <div class="node-meta">
+                <span class="node-container">dromeus-node-0</span>
+                <span>AXL bridge</span>
+                <strong>:9302</strong>
+              </div>
+              <div class="node-progress" aria-hidden="true"><i></i></div>
+            </article>
+
+            <article
+              class="node participant node-one"
+              id="node-1"
+              data-state="offline"
+            >
+              <div class="node-heading">
+                <span class="node-index">N1</span>
+                <span class="node-role">Participant</span>
+                <span class="node-state">Offline</span>
+              </div>
+              <h3>Training peer 01</h3>
+              <code class="node-key">identity pending</code>
+              <div class="node-meta">
+                <span class="node-container">dromeus-node-1</span>
+                <span>AXL bridge</span>
+                <strong>:9303</strong>
+              </div>
+              <div class="node-progress" aria-hidden="true"><i></i></div>
+            </article>
+
+            <article
+              class="node participant node-two"
+              id="node-2"
+              data-state="offline"
+            >
+              <div class="node-heading">
+                <span class="node-index">N2</span>
+                <span class="node-role">Participant</span>
+                <span class="node-state">Offline</span>
+              </div>
+              <h3>Training peer 02</h3>
+              <code class="node-key">identity pending</code>
+              <div class="node-meta">
+                <span class="node-container">dromeus-node-2</span>
+                <span>AXL bridge</span>
+                <strong>:9304</strong>
+              </div>
+              <div class="node-progress" aria-hidden="true"><i></i></div>
+            </article>
+
+            <article
+              class="node participant node-three"
+              id="node-3"
+              data-state="offline"
+            >
+              <div class="node-heading">
+                <span class="node-index">N3</span>
+                <span class="node-role">Participant</span>
+                <span class="node-state">Offline</span>
+              </div>
+              <h3>Training peer 03</h3>
+              <code class="node-key">identity pending</code>
+              <div class="node-meta">
+                <span class="node-container">dromeus-node-3</span>
+                <span>AXL bridge</span>
+                <strong>:9305</strong>
+              </div>
+              <div class="node-progress" aria-hidden="true"><i></i></div>
+            </article>
+          </div>
+
+          <footer class="field-footer">
+            <div class="manifest-evidence">
+              <span>Sealed manifest</span>
+              <code id="manifest-hash">Waiting for membership</code>
+            </div>
+            <div class="agreement" id="agreement" data-complete="false">
+              <span class="agreement-dots" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+              </span>
+              <span id="agreement-copy">0 / 4 identities agreed</span>
+            </div>
+          </footer>
+        </section>
+
+        <aside class="evidence-rail" aria-label="Formation evidence">
+          <section class="phase-section" aria-labelledby="phase-title">
+            <div class="rail-heading">
+              <h2 id="phase-title">Formation phases</h2>
+              <span id="phase-count">0 / 6</span>
+            </div>
+            <ol class="phase-list" id="phase-list">
+              <li data-phase="0">
+                <i></i><span>Invitation shared</span><b>0/1</b>
+              </li>
+              <li data-phase="1">
+                <i></i><span>Members accepted</span><b>0/3</b>
+              </li>
+              <li data-phase="2">
+                <i></i><span>Manifest agreed</span><b>0/3</b>
+              </li>
+              <li data-phase="3">
+                <i></i><span>Checkpoint verified</span><b>0/3</b>
+              </li>
+              <li data-phase="4">
+                <i></i><span>Readiness confirmed</span><b>0/3</b>
+              </li>
+              <li data-phase="5">
+                <i></i><span>Round zero started</span><b>0/3</b>
+              </li>
+            </ol>
+          </section>
+
+          <section class="ledger-section" aria-labelledby="ledger-title">
+            <div class="rail-heading">
+              <h2 id="ledger-title">Envelope ledger</h2>
+              <span id="event-count">0 events</span>
+            </div>
+            <div class="ledger-empty" id="ledger-empty">
+              <span aria-hidden="true">↗</span>
+              <p>Captured protocol envelopes will appear here.</p>
+            </div>
+            <ol class="event-ledger" id="event-ledger" aria-live="polite"></ol>
+          </section>
+
+          <footer class="evidence-footer">
+            <span><i class="proof-dot"></i>Wire source</span>
+            <strong>AXLTransport</strong>
+          </footer>
+        </aside>
+      </div>
+    </main>
+
+    <dialog id="error-dialog" aria-labelledby="error-title">
+      <form method="dialog">
+        <div>
+          <h2 id="error-title">Formation stopped</h2>
+          <p id="error-message"></p>
+        </div>
+        <button value="close">Close</button>
+      </form>
+    </dialog>
+  </body>
+</html>

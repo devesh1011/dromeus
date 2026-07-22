@@ -1,0 +1,87 @@
+name: dromeus-live-demo
+
+services:
+  dashboard:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    command:
+      - python
+      - -m
+      - demo.formation.server
+      - --docker
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --no-open
+    environment:
+      DROMEUS_WORKER_URLS: >-
+        http://node-0:9400,http://node-1:9400,http://node-2:9400,http://node-3:9400
+    ports:
+      - "8765:8765"
+    depends_on:
+      - node-0
+      - node-1
+      - node-2
+      - node-3
+    init: true
+
+  node-0:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    environment:
+      DROMEUS_NODE_INDEX: "0"
+      DROMEUS_CONTROL_DIR: /run/dromeus
+      DROMEUS_DATA_DIR: /var/lib/dromeus
+    volumes:
+      - dromeus-control:/run/dromeus
+      - dromeus-node-0:/var/lib/dromeus
+    init: true
+
+  node-1:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    environment:
+      DROMEUS_NODE_INDEX: "1"
+      DROMEUS_CONTROL_DIR: /run/dromeus
+      DROMEUS_DATA_DIR: /var/lib/dromeus
+    volumes:
+      - dromeus-control:/run/dromeus:ro
+      - dromeus-node-1:/var/lib/dromeus
+    init: true
+
+  node-2:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    environment:
+      DROMEUS_NODE_INDEX: "2"
+      DROMEUS_CONTROL_DIR: /run/dromeus
+      DROMEUS_DATA_DIR: /var/lib/dromeus
+    volumes:
+      - dromeus-control:/run/dromeus:ro
+      - dromeus-node-2:/var/lib/dromeus
+    init: true
+
+  node-3:
+    build:
+      context: ..
+      dockerfile: demo/Dockerfile
+    environment:
+      DROMEUS_NODE_INDEX: "3"
+      DROMEUS_CONTROL_DIR: /run/dromeus
+      DROMEUS_DATA_DIR: /var/lib/dromeus
+    volumes:
+      - dromeus-control:/run/dromeus:ro
+      - dromeus-node-3:/var/lib/dromeus
+    init: true
+
+volumes:
+  dromeus-control:
+  dromeus-node-0:
+  dromeus-node-1:
+  dromeus-node-2:
+  dromeus-node-3:
