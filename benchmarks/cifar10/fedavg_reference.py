@@ -1,1 +1,0 @@
-"""Centralized FedAvg benchmark reference."""
