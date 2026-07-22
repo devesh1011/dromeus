@@ -23,6 +23,7 @@ dependencies = [
     "pyyaml>=6.0,<7",
     "safetensors>=0.5,<1",
     "torch>=2.7,<3",
+    "torchvision>=0.22,<1",
 ]
 
 [dependency-groups]
