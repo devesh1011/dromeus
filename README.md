@@ -6,30 +6,45 @@ averages model weights with randomly selected peers; raw training data stays on 
 machine that owns it. Training nodes are symmetric and there is no central
 coordinator.
 
-Milestone 1 builds a four-node D-PSGD benchmark on CIFAR-10. See
-[`docs/architecture.md`](docs/architecture.md) for the design and
-[`docs/m1-plan.md`](docs/m1-plan.md) for the implementation plan.
-
 ## Development
 
 Python 3.12 and [`uv`](https://docs.astral.sh/uv/) are required.
 
 ```bash
-uv sync --frozen
-uv run ruff check .
-uv run pyright
-uv run pytest
+./scripts/bootstrap
+./scripts/verify
 ```
 
-The internal node entry point used by containers and end-to-end tests is:
-
-```bash
-uv run python -m dromeus.node --config /path/to/node.yaml
-```
+These are the canonical setup and verification commands used by CI. Verification
+runs lockfile, architecture, lint, type, and test checks.
 
 AXL is a separately managed runtime dependency. Importing `dromeus` does not start
 AXL or perform any other runtime work.
 
-The pinned upstream AXL commit and expected Linux binary hashes live in
-[`docker/axl.env`](docker/axl.env). Use [`docker/verify-axl.sh`](docker/verify-axl.sh)
-to rebuild and verify that pinned binary during image builds.
+## Run the nodes in Docker
+
+Docker Compose runs four worker containers plus the dashboard. This is the easiest
+path for another developer to reproduce the demo without installing Go locally.
+
+```bash
+docker compose -f demo/compose.yaml up --build -d
+docker compose -f demo/compose.yaml ps
+open http://127.0.0.1:8765
+```
+
+On Linux, replace `open` with `xdg-open`; or navigate to the URL manually. Start the
+formation in the browser, or run:
+
+```bash
+curl -X POST http://127.0.0.1:8765/api/start
+curl http://127.0.0.1:8765/api/state
+docker compose -f demo/compose.yaml logs -f node-0 node-1 node-2 node-3
+```
+
+Cleanly stop the demo and remove its identities/artifacts with:
+
+```bash
+docker compose -f demo/compose.yaml down -v
+```
+
+More container/log commands are in [`demo/README.md`](demo/README.md).
