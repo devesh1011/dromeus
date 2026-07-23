@@ -79,6 +79,11 @@ class AXLTransport:
     def _resolve_sender(
         self, bridge_sender: str, payload: bytes | None = None
     ) -> PublicKey:
+        claimed_sender = _payload_sender(payload)
+        if claimed_sender is not None and matches_yggdrasil_sender(
+            claimed_sender, bridge_sender
+        ):
+            return claimed_sender
         candidates: set[str] = set()
         for attempt in range(20):
             topology = self._load_topology()
@@ -101,9 +106,6 @@ class AXLTransport:
             ]
             if len(matches) == 1:
                 return matches[0]
-            claimed_sender = _payload_sender(payload)
-            if claimed_sender in matches:
-                return claimed_sender
             if attempt < 19:
                 time.sleep(0.1)
         raise TransportError(

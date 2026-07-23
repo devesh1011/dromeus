@@ -46,6 +46,7 @@ ROUND_TRACKED_TYPES = TRANSFER_TYPES | {
     MessageType.ROUND_COMMITTED,
 }
 IDEMPOTENT_TYPES = {MessageType.UPDATE_READY, MessageType.ROUND_COMMITTED}
+MAX_FUTURE_ROUND_MESSAGES = 64
 
 
 class ReceiverError(RuntimeError):
@@ -88,7 +89,8 @@ class Receiver:
             channel: asyncio.Queue[Envelope](maxsize=64) for channel in MessageChannel
         }
         self._seen_messages: set[MessageId] = set()
-        self._future_round_by_sender: dict[PublicKey, Envelope] = {}
+        self._future_round_messages: list[Envelope] = []
+        self._future_round_transfer_by_sender: dict[PublicKey, MessageId] = {}
         self._task: asyncio.Task[None] | None = None
         self._stop = asyncio.Event()
 
@@ -180,10 +182,27 @@ class Receiver:
         if envelope.round_id > current_round + 1:
             raise ReceiverError("message too far in future")
         if envelope.round_id == current_round + 1:
-            existing = self._future_round_by_sender.get(envelope.sender_public_key)
-            if existing is not None:
-                raise ReceiverError("too many future-round messages from sender")
-            self._future_round_by_sender[envelope.sender_public_key] = envelope
+            if any(
+                buffered.sender_public_key == envelope.sender_public_key
+                and buffered.message_id == envelope.message_id
+                for buffered in self._future_round_messages
+            ):
+                return False
+            if len(self._future_round_messages) >= MAX_FUTURE_ROUND_MESSAGES:
+                raise ReceiverError("future-round message buffer is full")
+            if envelope.message_type in TRANSFER_TYPES:
+                transfer_id = envelope.correlation_id
+                if transfer_id is None:
+                    raise ReceiverError("future-round transfer has no correlation id")
+                existing_transfer = self._future_round_transfer_by_sender.get(
+                    envelope.sender_public_key
+                )
+                if existing_transfer is not None and existing_transfer != transfer_id:
+                    raise ReceiverError("too many future-round updates from sender")
+                self._future_round_transfer_by_sender[envelope.sender_public_key] = (
+                    transfer_id
+                )
+            self._future_round_messages.append(envelope)
             return False
         return True
 
@@ -229,10 +248,20 @@ class Receiver:
 
     async def advance_round(self, next_round: RoundId) -> None:
         ready = [
-            sender
-            for sender, envelope in self._future_round_by_sender.items()
+            envelope
+            for envelope in self._future_round_messages
             if envelope.round_id == next_round
         ]
-        for sender in ready:
-            envelope = self._future_round_by_sender.pop(sender)
+        self._future_round_messages = [
+            envelope
+            for envelope in self._future_round_messages
+            if envelope.round_id != next_round
+        ]
+        self._future_round_transfer_by_sender = {
+            envelope.sender_public_key: envelope.correlation_id
+            for envelope in self._future_round_messages
+            if envelope.message_type in TRANSFER_TYPES
+            and envelope.correlation_id is not None
+        }
+        for envelope in ready:
             await self._route(envelope)

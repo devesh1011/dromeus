@@ -17,6 +17,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+    "datasets>=3,<5",
     "msgpack>=1.1,<2",
     "numpy>=2,<3",
     "pydantic>=2.11,<3",

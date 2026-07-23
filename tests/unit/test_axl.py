@@ -1,6 +1,7 @@
 from typing import cast
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
+import pytest
 
 from dromeus.transport.axl import (
     AXLBridgeConfig,
@@ -70,6 +71,29 @@ def test_sender_resolution_uses_claimed_sender_when_topology_stays_ambiguous() -
             {"sender_public_key": actual_sender}
         ),
     )
+
+    assert transport.resolve_sender(bridge_sender, payload) == actual_sender
+
+
+def test_sender_resolution_uses_header_matching_claim_absent_from_topology(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bridge_sender = "d5bcbd9608ae04b5a88dbafe46287" + "f" * 35
+    actual_sender = "d5bcbd9608ae04b5a88dbafe4628672ed7d776c8fdef2857c3f09093d9ecbe0a"
+    transport = SequencedTopologyTransport(
+        [{"peers": [{"public_key": "a" * 64}]}]
+    )
+    payload = cast(
+        bytes,
+        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
+            {"sender_public_key": actual_sender}
+        ),
+    )
+
+    def skip_sleep(_: float) -> None:
+        return
+
+    monkeypatch.setattr("dromeus.transport.axl.time.sleep", skip_sleep)
 
     assert transport.resolve_sender(bridge_sender, payload) == actual_sender
 

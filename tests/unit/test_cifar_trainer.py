@@ -17,26 +17,26 @@ from dromeus.training.pytorch import (
 
 @pytest.fixture(scope="session")
 def cifar10_data() -> CIFAR10Data:
-    root = Path(
+    cache_dir = Path(
         os.environ.get(
-            "DROMEUS_CIFAR_ROOT",
+            "DROMEUS_CIFAR_CACHE",
             Path.home() / ".cache" / "dromeus" / "cifar10",
         )
     )
+    if not cache_dir.exists():
+        pytest.skip("real CIFAR-10 data unavailable in DROMEUS_CIFAR_CACHE")
     try:
-        return CIFAR10Data.from_torchvision(
-            root=root,
+        return CIFAR10Data.from_huggingface(
+            cache_dir=cache_dir,
             train=False,
-            download=os.environ.get("DROMEUS_DOWNLOAD_CIFAR") == "1",
         )
     except CIFARDataError:
         pytest.skip(
-            "real CIFAR-10 data unavailable; prepare DROMEUS_CIFAR_ROOT or set "
-            "DROMEUS_DOWNLOAD_CIFAR=1"
+            "real CIFAR-10 data unavailable; set DROMEUS_CIFAR_CACHE to writable cache"
         )
 
 
-def test_torchvision_loader_returns_real_cifar10(cifar10_data: CIFAR10Data) -> None:
+def test_huggingface_loader_returns_real_cifar10(cifar10_data: CIFAR10Data) -> None:
     image, label = cifar10_data[0]
 
     assert len(cifar10_data) == 10_000

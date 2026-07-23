@@ -2,22 +2,36 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import cast
 from urllib.request import urlopen
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
+import numpy as np
 import pytest
 from support.sample_manifest import manifest_data, write_checkpoint
 
+from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
-from dromeus.membership.protocol import create_invitation
-from dromeus.runtime import NodeRuntime, NodeState
+from dromeus.membership.protocol import create_invitation, seal_manifest
+from dromeus.persistence.run_store import RunStore
+from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
+from dromeus.telemetry.events import JsonlEventSink
+from dromeus.telemetry.metrics import JsonlMetricsPublisher
+from dromeus.training.pytorch import (
+    MODEL_DEFINITION_HASH,
+    CIFAR10Data,
+    CIFAR10Trainer,
+    create_initial_checkpoint,
+)
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import AsyncTransport, ReceivedBytes
 from dromeus.transport.envelope import MessageType
@@ -28,7 +42,9 @@ pytestmark = pytest.mark.skipif(
     reason="set DROMEUS_RUN_AXL_TESTS=1 to run real AXL integration tests",
 )
 
-LOG_ROOT = Path(__file__).resolve().parents[2] / "logs"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOG_ROOT = REPO_ROOT / "logs"
+AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
 
 class FaultInjectingTransport:
@@ -176,6 +192,226 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                     process.kill()
 
 
+def test_four_local_axl_nodes_train_cifar10() -> None:
+    asyncio.run(_test_four_local_axl_nodes_train_cifar10())
+
+
+async def _test_four_local_axl_nodes_train_cifar10() -> None:
+    draft_data = manifest_data()
+    draft_data["model_definition_hash"] = MODEL_DEFINITION_HASH
+    environment = cast(dict[str, object], draft_data["environment"])
+    dromeus_version, pytorch_version, dromeus_commit = await asyncio.gather(
+        asyncio.to_thread(package_version, "dromeus"),
+        asyncio.to_thread(package_version, "torch"),
+        asyncio.to_thread(
+            subprocess.check_output,
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPO_ROOT,
+            text=True,
+        ),
+    )
+    environment.update(
+        {
+            "dromeus_version": dromeus_version,
+            "dromeus_commit": dromeus_commit.strip(),
+            "pytorch_version": pytorch_version,
+            "axl_version": AXL_COMMIT,
+            "model_definition_hash": MODEL_DEFINITION_HASH,
+            "container_image_digest": os.environ.get(
+                "DROMEUS_CONTAINER_IMAGE_DIGEST", f"sha256:{'0' * 64}"
+            ),
+        }
+    )
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    draft_data["round_count"] = 2
+    draft_data["local_steps"] = 1
+    draft_data["learning_rate"] = 0.01
+    draft = DraftRunSpec.model_validate(draft_data)
+    cache_dir = Path(
+        os.environ.get(
+            "DROMEUS_CIFAR_CACHE",
+            Path.home() / ".cache" / "dromeus" / "cifar10",
+        )
+    )
+    train_data = await asyncio.to_thread(
+        CIFAR10Data.from_huggingface, cache_dir=cache_dir, train=True
+    )
+    test_data = await asyncio.to_thread(
+        CIFAR10Data.from_huggingface, cache_dir=cache_dir, train=False
+    )
+    partitions = await asyncio.to_thread(
+        train_data.split_iid,
+        participant_count=len(draft.dataset.partition_sample_counts),
+        seed=draft.dataset.iid_partition_seed,
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        binary = await asyncio.to_thread(build_axl_binary, root)
+        processes = await asyncio.to_thread(start_nodes, binary, root, LOG_ROOT)
+        nodes: list[NodeRuntime] = []
+        try:
+            for port in (9302, 9303, 9304, 9305):
+                await wait_for_topology(port)
+            await wait_for_peer_count(9302, 3)
+            for port in (9303, 9304, 9305):
+                await wait_for_peer_count(port, 1)
+            transports: list[AsyncTransport] = [
+                AXLTransport(AXLBridgeConfig(base_url=f"http://127.0.0.1:{port}"))
+                for port in (9302, 9303, 9304, 9305)
+            ]
+            checkpoint = root / "checkpoint.safetensors"
+            prepared = await asyncio.to_thread(
+                create_initial_checkpoint, checkpoint, seed=17
+            )
+            local_keys = await asyncio.gather(
+                *(transport.local_public_key() for transport in transports)
+            )
+            expected_manifest = seal_manifest(
+                draft=draft,
+                participant_keys=set(local_keys),
+                initial_checkpoint_hash=prepared.sha256,
+                tensor_schema=prepared.tensor_schema,
+            )
+            expected_manifest_hash = canonical_hash(expected_manifest)
+            node_indices = {
+                participant.public_key: participant.node_index
+                for participant in expected_manifest.participants
+            }
+            trainers: list[CIFAR10Trainer] = []
+            for index, transport in enumerate(transports):
+                node_index = node_indices[local_keys[index]]
+                partition_index = draft.dataset.node_index_partitions[node_index]
+                trainer = await asyncio.to_thread(
+                    CIFAR10Trainer,
+                    train_data=partitions[partition_index],
+                    test_data=test_data,
+                    seed=17 + node_index,
+                    learning_rate=draft.learning_rate,
+                )
+                trainers.append(trainer)
+                event_sink = JsonlEventSink(
+                    LOG_ROOT / f"dromeus-training-node-{index}.log"
+                )
+                nodes.append(
+                    NodeRuntime(
+                        transport=transport,
+                        draft=draft,
+                        environment=draft.environment,
+                        dataset=draft.dataset,
+                        artifact_store=ArtifactStore(root / f"artifacts-{index}"),
+                        event_sink=event_sink,
+                        training=TrainingConfig(
+                            algorithm=DPSGDAdapter(
+                                trainer=trainer,
+                                tensor_schema=prepared.tensor_schema,
+                                local_steps=draft.local_steps,
+                                learning_rate=draft.learning_rate,
+                            ),
+                            load_checkpoint=trainer.load_checkpoint,
+                            run_store=RunStore(root / f"run-{index}"),
+                            artifact_root=root / f"rounds-{index}",
+                            metrics_publisher=JsonlMetricsPublisher(
+                                sink=event_sink,
+                                run_id=draft.run_id,
+                                manifest_hash=expected_manifest_hash,
+                                node_id=local_keys[index],
+                            ),
+                        ),
+                    )
+                )
+            initiator_key = await transports[0].local_public_key()
+            invitation = create_invitation(
+                draft=draft,
+                initiator_public_key=initiator_key,
+                bootstrap_uri="tls://127.0.0.1:9300",
+            )
+            formation_tasks = [
+                asyncio.create_task(
+                    nodes[0].initiate(
+                        bootstrap_uri="tls://127.0.0.1:9300",
+                        checkpoint_path=checkpoint,
+                        tensor_schema=prepared.tensor_schema,
+                    )
+                )
+            ]
+            formation_tasks.extend(
+                asyncio.create_task(node.join(invitation=invitation))
+                for node in nodes[1:]
+            )
+            results = await asyncio.wait_for(
+                asyncio.gather(*formation_tasks), timeout=60.0
+            )
+            assert {result.manifest_hash for result in results} == {
+                expected_manifest_hash
+            }
+            commits = await asyncio.wait_for(
+                asyncio.gather(*(node.run() for node in nodes)), timeout=180.0
+            )
+            assert all(len(records) == draft.round_count for records in commits)
+            assert all(node.state is NodeState.COMPLETE for node in nodes)
+            for records in commits:
+                for commit in records:
+                    assert any(
+                        not np.array_equal(
+                            commit.pre_local.weights[name],
+                            commit.local_bundle.tensors[name],
+                        )
+                        for name in commit.pre_local.weights
+                    )
+                    for name, local_weights in commit.local_bundle.tensors.items():
+                        np.testing.assert_allclose(
+                            commit.post_mix.weights[name],
+                            (local_weights + commit.peer_bundle.tensors[name]) * 0.5,
+                        )
+            evaluations = await asyncio.gather(
+                *(asyncio.to_thread(trainer.evaluate) for trainer in trainers)
+            )
+            assert all(math.isfinite(loss) for loss, _ in evaluations)
+            assert all(0.0 <= accuracy <= 1.0 for _, accuracy in evaluations)
+            for index, ((loss, accuracy), node_id) in enumerate(
+                zip(evaluations, local_keys, strict=True)
+            ):
+                log_path = LOG_ROOT / f"dromeus-training-node-{index}.log"
+                log_text = await asyncio.to_thread(log_path.read_text, encoding="utf-8")
+                records = [
+                    cast(dict[str, object], json.loads(line))
+                    for line in log_text.splitlines()
+                ]
+                metrics = [
+                    record
+                    for record in records
+                    if record.get("event") == "round_metrics"
+                    and record.get("manifest_hash") == expected_manifest_hash
+                    and record.get("node_id") == node_id
+                ]
+                assert [record.get("round_id") for record in metrics] == [0, 1]
+                assert all(
+                    isinstance(record.get("local_loss"), float) for record in metrics
+                )
+                assert cast(float, metrics[-1]["evaluation_loss"]) == pytest.approx(
+                    loss
+                )
+                assert cast(float, metrics[-1]["evaluation_accuracy"]) == pytest.approx(
+                    accuracy
+                )
+        finally:
+            for node in nodes:
+                await node.stop()
+            for process in processes:
+                process.terminate()
+            for process in processes:
+                try:
+                    await asyncio.to_thread(process.wait, timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+
+
 def build_axl_binary(root: Path) -> Path:
     repo = root / "axl"
     subprocess.run(
@@ -184,7 +420,7 @@ def build_axl_binary(root: Path) -> Path:
         stdout=subprocess.DEVNULL,
     )
     subprocess.run(
-        ["git", "checkout", "628e28ace077f26dfe8d0259009b357216a9d8d4"],
+        ["git", "checkout", AXL_COMMIT],
         check=True,
         cwd=repo,
         stdout=subprocess.DEVNULL,

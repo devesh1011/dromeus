@@ -57,14 +57,15 @@ class RuntimeTrainer:
         return 0.0, 0.5
 
 
-def test_future_round_message_is_routed_once_after_round_advances() -> None:
-    asyncio.run(_test_future_round_message_is_routed_once_after_round_advances())
+def test_future_round_message_id_is_deduplicated_per_sender() -> None:
+    asyncio.run(_test_future_round_message_id_is_deduplicated_per_sender())
 
 
-async def _test_future_round_message_is_routed_once_after_round_advances() -> None:
+async def _test_future_round_message_id_is_deduplicated_per_sender() -> None:
     manifest = SealedManifest.model_validate(manifest_data())
     network = InMemoryNetwork()
     sender_transport = InMemoryTransport(network=network, public_key="peer-0")
+    second_sender_transport = InMemoryTransport(network=network, public_key="peer-2")
     receiver_transport = InMemoryTransport(network=network, public_key="peer-1")
     current_round = 0
     receiver = Receiver(
@@ -73,7 +74,7 @@ async def _test_future_round_message_is_routed_once_after_round_advances() -> No
             run_id=manifest.run_id,
             manifest_hash=manifest.draft_hash,
             algorithm_id=manifest.algorithm_id,
-            participant_keys=frozenset({"peer-0", "peer-1"}),
+            participant_keys=frozenset({"peer-0", "peer-1", "peer-2"}),
             current_round=lambda: current_round,
         ),
     )
@@ -89,19 +90,108 @@ async def _test_future_round_message_is_routed_once_after_round_advances() -> No
         payload=b"update",
     )
     await sender_transport.send("peer-1", encode_envelope(envelope))
+    await sender_transport.send("peer-1", encode_envelope(envelope))
+    await second_sender_transport.send(
+        "peer-1",
+        encode_envelope(
+            envelope.model_copy(update={"sender_public_key": "peer-2"})
+        ),
+    )
     await asyncio.sleep(0.05)
     with pytest.raises(TimeoutError):
         await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=0.01)
 
     current_round = 1
     await receiver.advance_round(1)
-    received = await receiver.receive(
-        MessageChannel.PAIR_COMMIT, timeout_seconds=0.1
-    )
-    assert received.message_id == "future-update"
+    received = [
+        await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=0.1)
+        for _ in range(2)
+    ]
+    assert {envelope.sender_public_key for envelope in received} == {
+        "peer-0",
+        "peer-2",
+    }
+    assert all(envelope.message_id == "future-update" for envelope in received)
     with pytest.raises(TimeoutError):
         await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=0.01)
     await receiver.stop()
+
+
+def test_future_round_transfer_sequence_is_buffered_until_round_advances() -> None:
+    asyncio.run(_test_future_round_transfer_sequence_is_buffered())
+
+
+async def _test_future_round_transfer_sequence_is_buffered() -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    network = InMemoryNetwork()
+    sender_transport = InMemoryTransport(network=network, public_key="peer-0")
+    receiver_transport = InMemoryTransport(network=network, public_key="peer-1")
+    current_round = 0
+    receiver = Receiver(
+        receiver_transport,
+        ReceiverPolicy(
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            participant_keys=frozenset({"peer-0", "peer-1"}),
+            current_round=lambda: current_round,
+        ),
+    )
+    envelopes = [
+        create_envelope(
+            message_type=message_type,
+            message_id=f"future-transfer-{index}",
+            correlation_id="future-transfer",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            sender_public_key="peer-0",
+            algorithm_id=manifest.algorithm_id,
+            round_id=1,
+            payload=b"transfer",
+        )
+        for index, message_type in enumerate(
+            (
+                MessageType.TRANSFER_BEGIN,
+                MessageType.CHUNK,
+                MessageType.TRANSFER_COMPLETE,
+            )
+        )
+    ]
+    await receiver.start()
+    try:
+        for envelope in envelopes:
+            await sender_transport.send("peer-1", encode_envelope(envelope))
+        await asyncio.sleep(0.05)
+        assert receiver.stats.rejected_messages == 0
+        second_update = create_envelope(
+            message_type=MessageType.TRANSFER_BEGIN,
+            message_id="second-future-transfer",
+            correlation_id="second-future-transfer",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            sender_public_key="peer-0",
+            algorithm_id=manifest.algorithm_id,
+            round_id=1,
+            payload=b"second-transfer",
+        )
+        await sender_transport.send("peer-1", encode_envelope(second_update))
+        await asyncio.sleep(0.05)
+        assert receiver.stats.rejected_messages == 1
+
+        current_round = 1
+        await receiver.advance_round(1)
+        received = [
+            await receiver.receive(
+                MessageChannel.TRANSFER,
+                timeout_seconds=0.1,
+            )
+            for _ in envelopes
+        ]
+        assert [envelope.message_id for envelope in received] == [
+            envelope.message_id for envelope in envelopes
+        ]
+    finally:
+        await receiver.stop()
 
 
 def test_in_memory_transport_and_formation(tmp_path: Path) -> None:

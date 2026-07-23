@@ -10,6 +10,12 @@ from typing import Any, Literal, cast
 
 import numpy as np
 import torch
+from datasets import (  # pyright: ignore[reportMissingTypeStubs]
+    Dataset as HuggingFaceDataset,  # pyright: ignore[reportMissingTypeStubs]
+)
+from datasets import (  # pyright: ignore[reportMissingTypeStubs]
+    load_dataset,  # pyright: ignore[reportMissingTypeStubs, reportUnknownVariableType]
+)
 from safetensors.torch import (
     load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
 )
@@ -54,7 +60,7 @@ class InitialCheckpoint:
 
 @dataclass(frozen=True, slots=True)
 class CIFAR10Data(Dataset[tuple[Tensor, int]]):
-    """Thin view over a torchvision CIFAR-10 dataset."""
+    """Thin view over a standard CIFAR-10 dataset."""
 
     _dataset: Dataset[tuple[Tensor, int]]
     _indices: tuple[int, ...] | None = None
@@ -78,6 +84,24 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
         except (OSError, RuntimeError, ValueError) as error:
             raise CIFARDataError(f"cannot open CIFAR-10 dataset at {root}") from error
         return cls(cast(Dataset[tuple[Tensor, int]], dataset))
+
+    @classmethod
+    def from_huggingface(
+        cls,
+        *,
+        train: bool = True,
+        cache_dir: Path | None = None,
+    ) -> CIFAR10Data:
+        """Open CIFAR-10 from its Hugging Face dataset source."""
+        try:
+            datasets = load_dataset(
+                "uoft-cs/cifar10",
+                cache_dir=str(cache_dir) if cache_dir is not None else None,
+            )
+            dataset = cast(Any, datasets)["train" if train else "test"]
+        except (KeyError, OSError, RuntimeError, ValueError) as error:
+            raise CIFARDataError("cannot open Hugging Face CIFAR-10 dataset") from error
+        return cls(_HuggingFaceCIFAR10(cast(HuggingFaceDataset, dataset)))
 
     def split_iid(
         self,
@@ -111,6 +135,23 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
         dataset_index = self._indices[index] if self._indices is not None else index
         image, label = self._dataset[dataset_index]
         return image, int(label)
+
+
+class _HuggingFaceCIFAR10(Dataset[tuple[Tensor, int]]):
+    def __init__(self, dataset: HuggingFaceDataset) -> None:
+        self._dataset = dataset
+
+    def __len__(self) -> int:
+        return len(self._dataset)
+
+    def __getitem__(self, index: int) -> tuple[Tensor, int]:
+        row = cast(dict[str, Any], self._dataset[index])
+        image = ToTensor()(row["img"])
+        if tuple(image.shape) != IMAGE_SHAPE:
+            raise CIFARDataError(
+                f"expected CIFAR-10 image shape, got {tuple(image.shape)}"
+            )
+        return image, int(row["label"])
 
 
 class CIFARGroupNormCNN(nn.Module):
