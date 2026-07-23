@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import cast
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from dromeus.algorithms.base import (
     TrainedWeightsBundle,
     checksum_tensors,
 )
+from dromeus.algorithms.codec import IdentityCodec, UpdateCodec
 from dromeus.manifests.models import RoundId, TensorSchema
 from dromeus.training.base import StochasticGradientTrainer, WeightTrainer
 
@@ -29,6 +31,7 @@ class DPSGDAdapter:
     tensor_schema: TensorSchema
     local_steps: int
     learning_rate: float | None = None
+    codec: UpdateCodec = field(default_factory=IdentityCodec)
     _round_id: RoundId = 0
     _phase: str = "created"
 
@@ -82,7 +85,7 @@ class DPSGDAdapter:
         return self.snapshot()
 
     def post_local_bundle(self) -> TrainedWeightsBundle:
-        tensors = self.trainer.weights()
+        tensors = self.codec.encode(self.trainer.weights())
         self._validate_tensors(tensors)
         self._phase = "bundled"
         return TrainedWeightsBundle(
@@ -98,12 +101,20 @@ class DPSGDAdapter:
         self._validate_tensors(peer_bundle.tensors)
         if checksum_tensors(peer_bundle.tensors) != peer_bundle.checksum:
             raise ValueError("peer bundle checksum mismatch")
+        decoded = self.codec.decode(peer_bundle.tensors)
+        self._validate_tensors(decoded)
 
     def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot:
         self.validate_peer(peer_bundle)
         local = self.trainer.weights()
         self._validate_tensors(local)
-        mixed = self._weighted_average(local, (peer_bundle,), (0.5,))
+        decoded = self.codec.decode(peer_bundle.tensors)
+        decoded_bundle = TrainedWeightsBundle(
+            round_id=peer_bundle.round_id,
+            tensors=decoded,
+            checksum=checksum_tensors(decoded),
+        )
+        mixed = self._weighted_average(local, (decoded_bundle,), (0.5,))
         self.trainer.load_weights(mixed)
         self._phase = "post-mix"
         return self.snapshot()
@@ -114,6 +125,62 @@ class DPSGDAdapter:
             phase=self._phase,
             weights=self.trainer.weights(),
         )
+
+    def evaluate(self) -> tuple[float, float]:
+        """Evaluate through the trainer's local test-data seam."""
+        evaluator = getattr(self.trainer, "evaluate", None)
+        if not callable(evaluator):
+            raise TypeError("trainer does not expose evaluation")
+        result = evaluator()
+        if not isinstance(result, tuple):
+            raise ValueError("trainer evaluation must return loss and accuracy")
+        values = cast(tuple[object, object], result)
+        if len(values) != 2:
+            raise ValueError("trainer evaluation must return loss and accuracy")
+        loss = float(cast(float, values[0]))
+        accuracy = float(cast(float, values[1]))
+        if not math.isfinite(loss) or loss < 0:
+            raise ValueError("evaluation loss must be finite and non-negative")
+        if not math.isfinite(accuracy) or not 0 <= accuracy <= 1:
+            raise ValueError("evaluation accuracy must be finite in [0, 1]")
+        return loss, accuracy
+
+    def state_dict(self) -> dict[str, object]:
+        """Return serializable algorithm, model, and codec state."""
+        return {
+            "round_id": self._round_id,
+            "phase": self._phase,
+            "codec_id": self.codec.codec_id,
+            "weights": self.trainer.weights(),
+            "codec": self.codec.state_dict(),
+        }
+
+    def load_state_dict(self, state: Mapping[str, object]) -> None:
+        """Restore state after validating all tensors through the public schema."""
+        round_id = state.get("round_id")
+        phase = state.get("phase")
+        codec_id = state.get("codec_id")
+        weights_value = state.get("weights")
+        codec_value = state.get("codec", {})
+        if not isinstance(round_id, int) or round_id < 0:
+            raise ValueError("algorithm state round_id is invalid")
+        if not isinstance(phase, str) or not phase:
+            raise ValueError("algorithm state phase is invalid")
+        if codec_id != self.codec.codec_id:
+            raise ValueError("algorithm state codec does not match")
+        if not isinstance(weights_value, Mapping) or not all(
+            isinstance(name, str) and isinstance(value, np.ndarray)
+            for name, value in cast(Mapping[object, object], weights_value).items()
+        ):
+            raise ValueError("algorithm state weights are invalid")
+        if not isinstance(codec_value, Mapping):
+            raise ValueError("algorithm codec state is invalid")
+        weights = dict(cast(Mapping[str, np.ndarray], weights_value))
+        self._validate_tensors(weights)
+        self.codec.load_state_dict(cast(Mapping[str, object], codec_value))
+        self.trainer.load_weights(weights)
+        self._round_id = round_id
+        self._phase = phase
 
     def _validate_tensors(self, tensors: dict[str, np.ndarray]) -> None:
         expected = {tensor.name: tensor for tensor in self.tensor_schema.tensors}
@@ -159,6 +226,8 @@ class DPSGDAdapter:
             self._validate_tensors(bundle.tensors)
             if checksum_tensors(bundle.tensors) != bundle.checksum:
                 raise ValueError("peer bundle checksum mismatch")
+            decoded = self.codec.decode(bundle.tensors)
+            self._validate_tensors(decoded)
             for name in mixed:
-                mixed[name] += bundle.tensors[name].astype(np.float32) * weight
+                mixed[name] += decoded[name].astype(np.float32) * weight
         return {name: value.astype(np.float32) for name, value in mixed.items()}
