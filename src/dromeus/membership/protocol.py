@@ -159,6 +159,15 @@ class FormationResult:
     checkpoint_path: Path
 
 
+@dataclass(frozen=True, slots=True)
+class FormationServices:
+    """Validated services retained for post-formation runtime work."""
+
+    receiver: Receiver
+    sender: OutboundScheduler
+    transfer_manager: TransferManager
+
+
 class FormationProtocol:
     """End-to-end fixed-membership formation over receiver/sender/transfer."""
 
@@ -191,12 +200,25 @@ class FormationProtocol:
         )
         self._sender = OutboundScheduler(transport)
         self._transfer_manager: TransferManager | None = None
+        self._formation_complete = False
+
+    @property
+    def services(self) -> FormationServices:
+        """Return transport services after sealed formation completes."""
+        if not self._formation_complete or self._transfer_manager is None:
+            raise FormationError("formation has not completed")
+        return FormationServices(
+            receiver=self._receiver,
+            sender=self._sender,
+            transfer_manager=self._transfer_manager,
+        )
 
     async def start(self) -> None:
         await self._receiver.start()
         await self._sender.start()
 
     async def stop(self) -> None:
+        self._formation_complete = False
         if self._transfer_manager is not None:
             await self._transfer_manager.stop()
         await self._sender.stop()
@@ -312,6 +334,7 @@ class FormationProtocol:
             manifest_hash=manifest_hash,
             sink=self._event_sink,
         )
+        self._formation_complete = True
         return result
 
     async def join(
@@ -417,6 +440,7 @@ class FormationProtocol:
             manifest_hash=manifest_hash,
             sink=self._event_sink,
         )
+        self._formation_complete = True
         return result
 
     async def _broadcast_manifest(

@@ -28,6 +28,7 @@ ALLOWED: dict[str, frozenset[str]] = {
     "persistence": frozenset({"manifests", "persistence"}),
     "runtime": frozenset(
         {
+            "gossip",
             "manifests",
             "membership",
             "persistence",

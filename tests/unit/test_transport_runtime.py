@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
+import numpy as np
 import pytest
+from safetensors.numpy import (
+    load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
+)
 from support.in_memory_transport import (
     InMemoryFaults,
     InMemoryNetwork,
@@ -11,17 +17,44 @@ from support.in_memory_transport import (
 )
 from support.sample_manifest import manifest_data, write_checkpoint
 
+from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.protocol import (
     FormationError,
     FormationResult,
     create_invitation,
 )
-from dromeus.runtime import NodeRuntime, NodeState
+from dromeus.persistence.run_store import RunStore
+from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
 from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import ArtifactStore, TransferError, TransferManager
+
+_load_checkpoint = cast(Callable[[str], dict[str, np.ndarray]], _load_file)
+
+
+class RuntimeTrainer:
+    def __init__(self) -> None:
+        self._weights = {"layer.weight": np.zeros((2, 2), dtype=np.float32)}
+
+    def load_checkpoint(self, path: Path) -> None:
+        self._weights = {
+            name: np.ascontiguousarray(value)
+            for name, value in _load_checkpoint(str(path)).items()
+        }
+
+    def train_local_steps(self, step_count: int) -> None:
+        self._weights["layer.weight"] += np.float32(step_count)
+
+    def weights(self) -> dict[str, np.ndarray]:
+        return {name: value.copy() for name, value in self._weights.items()}
+
+    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
+        self._weights = {name: value.copy() for name, value in weights.items()}
+
+    def evaluate(self) -> tuple[float, float]:
+        return 0.0, 0.5
 
 
 def test_future_round_message_is_routed_once_after_round_advances() -> None:
@@ -140,6 +173,103 @@ async def _test_in_memory_transport_and_formation(tmp_path: Path) -> None:
     for node in nodes:
         await node.stop()
         assert node.state is NodeState.STOPPED
+
+
+def test_runtime_runs_training_after_in_memory_formation(tmp_path: Path) -> None:
+    asyncio.run(_test_runtime_runs_training_after_in_memory_formation(tmp_path))
+
+
+async def _test_runtime_runs_training_after_in_memory_formation(
+    tmp_path: Path,
+) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    draft_data = manifest.model_dump(mode="python")
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    draft_data["round_count"] = 2
+    draft_data["local_steps"] = 1
+    draft_data["transport"]["max_retries"] = 1
+    draft_data["transport"]["retry_timeout_seconds"] = 0.05
+    draft = DraftRunSpec.model_validate(draft_data)
+    network = InMemoryNetwork()
+    transports = [
+        InMemoryTransport(network=network, public_key=f"peer-{index}")
+        for index in range(5)
+    ]
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    write_checkpoint(checkpoint)
+    nodes: list[NodeRuntime] = []
+    for index, transport in enumerate(transports):
+        training = None
+        if index < 4:
+            training_trainer = RuntimeTrainer()
+            training = TrainingConfig(
+                algorithm=DPSGDAdapter(
+                    trainer=training_trainer,
+                    tensor_schema=manifest.tensor_schema,
+                    local_steps=1,
+                ),
+                load_checkpoint=training_trainer.load_checkpoint,
+                run_store=RunStore(tmp_path / f"run-{index}"),
+                artifact_root=tmp_path / f"rounds-{index}",
+            )
+        nodes.append(
+            NodeRuntime(
+                transport=transport,
+                draft=draft,
+                environment=manifest.environment,
+                dataset=manifest.dataset,
+                artifact_store=ArtifactStore(tmp_path / f"artifacts-{index}"),
+                training=training,
+            )
+        )
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key=await transports[0].local_public_key(),
+        bootstrap_uri="axl://bootstrap",
+    )
+    formation_tasks: list[asyncio.Task[FormationResult]] = [
+        asyncio.create_task(
+            nodes[0].initiate(
+                bootstrap_uri="axl://bootstrap",
+                checkpoint_path=checkpoint,
+                tensor_schema=manifest.tensor_schema,
+            )
+        )
+    ]
+    formation_tasks.extend(
+        asyncio.create_task(node.join(invitation=invitation)) for node in nodes[1:]
+    )
+    outcomes = await asyncio.wait_for(
+        asyncio.gather(*formation_tasks, return_exceptions=True), timeout=2.0
+    )
+    assert sum(isinstance(outcome, FormationResult) for outcome in outcomes) == 4
+    assert sum(isinstance(outcome, FormationError) for outcome in outcomes) == 1
+    assert all(
+        isinstance(outcome, (FormationResult, FormationError))
+        for outcome in outcomes
+    )
+
+    commits = await asyncio.wait_for(
+        asyncio.gather(*(node.run() for node in nodes[:4])), timeout=5.0
+    )
+    assert all(len(records) == 2 for records in commits)
+    assert all(node.state is NodeState.COMPLETE for node in nodes[:4])
+    for index in range(4):
+        state = RunStore(tmp_path / f"run-{index}").load_state()
+        assert state["committed_round"] == 1
+        assert len(state["metrics"]) == 2
+        assert state["terminal"] == {
+            "result": "complete",
+            "diagnostics": {"committed_rounds": 2},
+        }
+    await nodes[4].stop()
+    assert nodes[4].state is NodeState.STOPPED
 
 
 def test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> None:
