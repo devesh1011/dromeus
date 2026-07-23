@@ -44,6 +44,15 @@ class CIFARDataError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class InitialCheckpoint:
+    """Canonical checkpoint handoff data for initiator formation."""
+
+    path: Path
+    tensor_schema: TensorSchema
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class CIFAR10Data(Dataset[tuple[Tensor, int]]):
     """Thin view over a torchvision CIFAR-10 dataset."""
 
@@ -146,14 +155,19 @@ def tensor_schema_for_model(model: nn.Module | None = None) -> TensorSchema:
     return TensorSchema(tensors=tuple(specs))
 
 
-def create_initial_checkpoint(path: Path, *, seed: int) -> None:
-    """Write the canonical initial model checkpoint for an initiator."""
+def create_initial_checkpoint(path: Path, *, seed: int) -> InitialCheckpoint:
+    """Write and describe the canonical checkpoint before formation."""
     path.parent.mkdir(parents=True, exist_ok=True)
     model = build_model(seed=seed)
     _save_checkpoint(
         {name: value.detach().cpu() for name, value in model.named_parameters()},
         str(path),
         metadata={"model_definition": MODEL_DEFINITION},
+    )
+    return InitialCheckpoint(
+        path=path,
+        tensor_schema=tensor_schema_for_model(model),
+        sha256=checkpoint_hash(path),
     )
 
 
@@ -338,6 +352,7 @@ __all__ = [
     "CIFAR10Trainer",
     "CIFARDataError",
     "CIFARGroupNormCNN",
+    "InitialCheckpoint",
     "MODEL_DEFINITION",
     "MODEL_DEFINITION_HASH",
     "build_model",

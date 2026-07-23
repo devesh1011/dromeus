@@ -65,10 +65,13 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(
     first_path = tmp_path / "first.safetensors"
     second_path = tmp_path / "second.safetensors"
 
-    create_initial_checkpoint(first_path, seed=17)
-    create_initial_checkpoint(second_path, seed=17)
+    first = create_initial_checkpoint(first_path, seed=17)
+    second = create_initial_checkpoint(second_path, seed=17)
 
     assert first_path.read_bytes() == second_path.read_bytes()
+    assert first.path == first_path
+    assert first.tensor_schema == second.tensor_schema
+    assert first.sha256 == second.sha256
 
     trainer = CIFAR10Trainer(
         train_data=cifar10_data,
@@ -78,6 +81,16 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(
     trainer.load_checkpoint(first_path)
     assert trainer.tensor_schema == trainer.tensor_schema_for_model()
     assert trainer.checkpoint_hash(first_path) == trainer.checkpoint_hash(second_path)
+
+
+def test_initial_checkpoint_returns_formation_handoff(tmp_path: Path) -> None:
+    prepared = create_initial_checkpoint(tmp_path / "checkpoint.safetensors", seed=17)
+
+    assert prepared.path.is_file()
+    assert prepared.tensor_schema.tensors
+    assert prepared.sha256 == create_initial_checkpoint(
+        tmp_path / "checkpoint-2.safetensors", seed=17
+    ).sha256
 
 
 def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:
