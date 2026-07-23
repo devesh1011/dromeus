@@ -11,6 +11,17 @@ from dromeus.telemetry.consensus import (
     normalized_rms_consensus_distance,
 )
 from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
+from dromeus.telemetry.metrics import (
+    JsonlMetricsPublisher,
+    MetricsPublisher,
+    RoundTiming,
+)
+from dromeus.telemetry.report import (
+    ConsensusReportError,
+    ConsensusRoundReport,
+    ExactConsensusReport,
+    build_exact_consensus_report,
+)
 
 __all__ = [
     "COUNT_SKETCH_SIZE",
@@ -20,6 +31,13 @@ __all__ = [
     "ConsensusSketchPublisher",
     "EventSink",
     "JsonlEventSink",
+    "JsonlMetricsPublisher",
+    "MetricsPublisher",
+    "RoundTiming",
+    "ConsensusReportError",
+    "ConsensusRoundReport",
+    "ExactConsensusReport",
+    "build_exact_consensus_report",
     "count_sketch",
     "emit_event",
     "exact_normalized_rms_distance",

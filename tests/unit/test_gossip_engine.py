@@ -19,6 +19,7 @@ from dromeus.gossip.engine import (
 )
 from dromeus.gossip.scheduler import PeerScheduler
 from dromeus.manifests.models import Tensor, TensorSchema
+from dromeus.telemetry.metrics import RoundTiming
 
 
 class LinearTrainer:
@@ -153,6 +154,25 @@ class RecordingPublisher:
 
 
 @dataclass
+class RecordingMetricsPublisher:
+    timings: list[RoundTiming]
+    failures: list[tuple[int, str, str]]
+
+    def submit(self, timing: RoundTiming) -> bool:
+        self.timings.append(timing)
+        return True
+
+    def submit_failure(self, *, round_id: int, error_type: str, reason: str) -> bool:
+        self.failures.append((round_id, error_type, reason))
+        return True
+
+
+class TimedPairTransport(InMemoryPairTransport):
+    last_transfer_id = "transfer-0"
+    last_retry_count = 2
+
+
+@dataclass
 class RecordingFailureBroadcaster:
     failures: list[RunFailure]
 
@@ -163,6 +183,7 @@ class RecordingFailureBroadcaster:
 def test_pair_timeout_fails_once_and_reports_diagnostics() -> None:
     failures: list[RunFailure] = []
     broadcasted: list[RunFailure] = []
+    metrics = RecordingMetricsPublisher([], [])
 
     async def run() -> None:
         schema = TensorSchema(
@@ -180,6 +201,7 @@ def test_pair_timeout_fails_once_and_reports_diagnostics() -> None:
             timeout_seconds=0.01,
             failure_callback=failures.append,
             failure_broadcaster=RecordingFailureBroadcaster(broadcasted),
+            metrics_publisher=metrics,
         )
 
         with pytest.raises(PairCommitError, match="deadline"):
@@ -187,8 +209,47 @@ def test_pair_timeout_fails_once_and_reports_diagnostics() -> None:
         assert engine.failure == failures[0]
         assert len(failures) == 1
         assert broadcasted == failures
+        assert metrics.failures[0][0] == 0
 
     asyncio.run(run())
+
+
+def test_engine_publishes_round_timings_without_waiting_for_metric_writer() -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    channel = SharedPairChannel.create()
+    metrics = RecordingMetricsPublisher([], [])
+    evaluations: list[EvaluationMetrics] = []
+
+    async def run() -> None:
+        engines: list[GossipEngine] = []
+        for key, value in (("peer-0", 1.0), ("peer-1", 3.0)):
+            engines.append(
+                GossipEngine(
+                    local_public_key=key,
+                    round_count=1,
+                    scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
+                    algorithm=DPSGDAdapter(
+                        trainer=LinearTrainer(value),
+                        tensor_schema=schema,
+                        local_steps=1,
+                    ),
+                    transport=TimedPairTransport(key, channel),
+                    commit_callback=lambda commit: None,
+                    evaluation_callback=evaluations.append,
+                    metrics_publisher=metrics,
+                )
+            )
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+    assert len(metrics.timings) == 2
+    assert all(timing.transfer_id == "transfer-0" for timing in metrics.timings)
+    assert all(timing.retries == 2 for timing in metrics.timings)
+    assert all(timing.transfer_seconds >= 0 for timing in metrics.timings)
+    assert all(timing.peer_wait_seconds >= 0 for timing in metrics.timings)
+    assert all(timing.mixing_seconds >= 0 for timing in metrics.timings)
+    assert all(timing.evaluation_seconds >= 0 for timing in metrics.timings)
+    assert all(timing.evaluation_accuracy == 0.5 for timing in metrics.timings)
 
 
 def test_two_nodes_complete_pair_commit_without_group_barrier() -> None:

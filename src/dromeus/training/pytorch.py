@@ -214,6 +214,7 @@ class CIFAR10Trainer:
         self._train_loader = self._make_loader(train_data, shuffle=True)
         self._train_iterator = iter(self._train_loader)
         self._tensor_schema = tensor_schema_for_model(self._model)
+        self._last_local_loss: float | None = None
 
     @property
     def tensor_schema(self) -> TensorSchema:
@@ -246,6 +247,10 @@ class CIFAR10Trainer:
                     ).to(self._device)
                 )
 
+    @property
+    def last_local_loss(self) -> float | None:
+        return self._last_local_loss
+
     def train_local_steps(self, step_count: int) -> None:
         if step_count < 0:
             raise ValueError("step_count must be non-negative")
@@ -254,6 +259,7 @@ class CIFAR10Trainer:
             images, labels = self._next_batch()
             self._optimizer.zero_grad(set_to_none=True)
             loss = nn.functional.cross_entropy(self._model(images), labels)
+            self._last_local_loss = float(loss.detach().cpu().item())
             loss.backward()  # pyright: ignore[reportUnknownMemberType]
             self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
 
@@ -263,6 +269,7 @@ class CIFAR10Trainer:
         images, labels = self._next_batch()
         self._optimizer.zero_grad(set_to_none=True)
         loss = nn.functional.cross_entropy(self._model(images), labels)
+        self._last_local_loss = float(loss.detach().cpu().item())
         loss.backward()  # pyright: ignore[reportUnknownMemberType]
         gradients: dict[str, np.ndarray] = {}
         for name, parameter in self._model.named_parameters():

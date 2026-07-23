@@ -52,6 +52,36 @@ def emit_event(
     **fields: object,
 ) -> None:
     """Write one JSON event, retaining correlation IDs when supplied."""
+    record = event_record(
+        event,
+        run_id=run_id,
+        manifest_hash=manifest_hash,
+        node_id=node_id,
+        message_id=message_id,
+        transfer_id=transfer_id,
+        peer_id=peer_id,
+        round_id=round_id,
+        **fields,
+    )
+    if sink is not None:
+        sink.append(record)
+        return
+    print(json.dumps(record, separators=(",", ":"), sort_keys=True), file=sys.stdout)
+
+
+def event_record(
+    event: str,
+    *,
+    run_id: str | None = None,
+    manifest_hash: str | None = None,
+    node_id: str | None = None,
+    message_id: str | None = None,
+    transfer_id: str | None = None,
+    peer_id: str | None = None,
+    round_id: int | None = None,
+    **fields: object,
+) -> dict[str, object]:
+    """Build one deterministic structured event without writing it."""
     record: dict[str, object] = {
         "timestamp": datetime.now(UTC).isoformat(),
         "event": event,
@@ -69,10 +99,7 @@ def emit_event(
         {key: value for key, value in identifiers.items() if value is not None}
     )
     record.update(fields)
-    if sink is not None:
-        sink.append(record)
-        return
-    print(json.dumps(record, separators=(",", ":"), sort_keys=True), file=sys.stdout)
+    return record
 
 
-__all__ = ["EventSink", "JsonlEventSink", "emit_event"]
+__all__ = ["EventSink", "JsonlEventSink", "emit_event", "event_record"]

@@ -145,6 +145,14 @@ class DPSGDAdapter:
             raise ValueError("evaluation accuracy must be finite in [0, 1]")
         return loss, accuracy
 
+    @property
+    def local_loss(self) -> float | None:
+        """Return the most recent local minibatch loss when the trainer exposes it."""
+        value = getattr(self.trainer, "last_local_loss", None)
+        if isinstance(value, (int, float)) and math.isfinite(value) and value >= 0:
+            return float(value)
+        return None
+
     def state_dict(self) -> dict[str, object]:
         """Return serializable algorithm, model, and codec state."""
         return {

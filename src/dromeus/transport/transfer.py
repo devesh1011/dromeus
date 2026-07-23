@@ -28,7 +28,7 @@ from dromeus.manifests.models import (
     TransferId,
     TransportLimits,
 )
-from dromeus.telemetry.events import emit_event
+from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.envelope import (
     Envelope,
     MessageType,
@@ -36,7 +36,7 @@ from dromeus.transport.envelope import (
     encode_envelope,
 )
 from dromeus.transport.receiver import MessageChannel, Receiver
-from dromeus.transport.sender import OutboundScheduler, Priority
+from dromeus.transport.sender import OutboundScheduler, Priority, SendTiming
 
 
 class TransferError(RuntimeError):
@@ -95,6 +95,14 @@ class ArtifactReceipt:
     sha256: Sha256
     size_bytes: int
     round_id: RoundId | None
+
+
+@dataclass(frozen=True)
+class TransferTiming:
+    """Observable duration and retry count for one outbound artifact."""
+
+    elapsed_seconds: float
+    retry_count: int
 
 
 class ArtifactStore:
@@ -217,6 +225,7 @@ class TransferManager:
         receiver: Receiver,
         sender: OutboundScheduler,
         artifact_store: ArtifactStore,
+        event_sink: EventSink | None = None,
     ) -> None:
         self._local_public_key = local_public_key
         self._run_id = run_id
@@ -226,6 +235,7 @@ class TransferManager:
         self._receiver = receiver
         self._sender = sender
         self._artifact_store = artifact_store
+        self._event_sink = event_sink
         self._incoming: dict[TransferId, _IncomingTransfer] = {}
         self._completed: dict[TransferId, ArtifactReceipt] = {}
         self._completed_futures: dict[TransferId, asyncio.Future[ArtifactReceipt]] = {}
@@ -236,6 +246,11 @@ class TransferManager:
         self._stop = asyncio.Event()
         self._transfer_task: asyncio.Task[None] | None = None
         self._ack_task: asyncio.Task[None] | None = None
+        self._last_timing: TransferTiming | None = None
+
+    @property
+    def last_timing(self) -> TransferTiming | None:
+        return self._last_timing
 
     async def start(self) -> None:
         if self._transfer_task is None:
@@ -264,77 +279,96 @@ class TransferManager:
         tensor_schema: TensorSchema,
         round_id: RoundId | None = None,
     ) -> TransferId:
-        if codec_id != "safetensors-v1":
-            raise TransferError("M1 only supports safetensors-v1 artifacts")
-        _validate_safetensors(artifact_path, tensor_schema)
-        payload_size = artifact_path.stat().st_size
-        chunk_bytes = artifact_path.read_bytes()
-        transfer_id = str(uuid.uuid4())
-        total_sha256 = _file_sha256(artifact_path)
-        begin = TransferBegin(
-            transfer_id=transfer_id,
-            artifact_name=artifact_name,
-            total_size_bytes=payload_size,
-            total_sha256=total_sha256,
-            chunk_count=1,
-            codec_id=codec_id,
-            tensor_schema=tensor_schema,
-        )
-        chunk = Chunk(
-            transfer_id=transfer_id,
-            chunk_index=0,
-            chunk_count=1,
-            chunk_sha256=hashlib.sha256(chunk_bytes).hexdigest(),
-            data=chunk_bytes,
-        )
-        await self._send_message(
-            destination=destination,
-            message_type=MessageType.TRANSFER_BEGIN,
-            message_id=f"{transfer_id}-begin",
-            correlation_id=transfer_id,
-            payload=_pack(begin),
-            round_id=round_id,
-            priority=Priority.CONTROL,
-        )
-        attempts = self._transport_limits.max_retries + 1
-        for _ in range(attempts):
-            ack_key = (transfer_id, 0)
-            loop = asyncio.get_running_loop()
-            ack_future: asyncio.Future[ChunkAck] = loop.create_future()
-            self._ack_waiters[ack_key] = ack_future
-            await self._send_message(
-                destination=destination,
-                message_type=MessageType.CHUNK,
-                message_id=f"{transfer_id}-chunk-0",
-                correlation_id=transfer_id,
-                payload=_pack(chunk),
-                round_id=round_id,
-                priority=Priority.DATA,
+        started = time.perf_counter()
+        retry_count = 0
+        try:
+            if codec_id != "safetensors-v1":
+                raise TransferError("M1 only supports safetensors-v1 artifacts")
+            _validate_safetensors(artifact_path, tensor_schema)
+            payload_size = artifact_path.stat().st_size
+            chunk_bytes = artifact_path.read_bytes()
+            transfer_id = str(uuid.uuid4())
+            total_sha256 = _file_sha256(artifact_path)
+            begin = TransferBegin(
+                transfer_id=transfer_id,
+                artifact_name=artifact_name,
+                total_size_bytes=payload_size,
+                total_sha256=total_sha256,
+                chunk_count=1,
+                codec_id=codec_id,
+                tensor_schema=tensor_schema,
             )
-            try:
-                ack = await asyncio.wait_for(
-                    ack_future, timeout=self._transport_limits.retry_timeout_seconds
+            chunk = Chunk(
+                transfer_id=transfer_id,
+                chunk_index=0,
+                chunk_count=1,
+                chunk_sha256=hashlib.sha256(chunk_bytes).hexdigest(),
+                data=chunk_bytes,
+            )
+            begin_timing = await self._send_message(
+                destination=destination,
+                message_type=MessageType.TRANSFER_BEGIN,
+                message_id=f"{transfer_id}-begin",
+                correlation_id=transfer_id,
+                payload=_pack(begin),
+                round_id=round_id,
+                priority=Priority.CONTROL,
+            )
+            retry_count += begin_timing.retry_count
+            attempts = self._transport_limits.max_retries + 1
+            for attempt in range(attempts):
+                ack_key = (transfer_id, 0)
+                loop = asyncio.get_running_loop()
+                ack_future: asyncio.Future[ChunkAck] = loop.create_future()
+                self._ack_waiters[ack_key] = ack_future
+                chunk_timing = await self._send_message(
+                    destination=destination,
+                    message_type=MessageType.CHUNK,
+                    message_id=f"{transfer_id}-chunk-0",
+                    correlation_id=transfer_id,
+                    payload=_pack(chunk),
+                    round_id=round_id,
+                    priority=Priority.DATA,
                 )
-            except TimeoutError:
-                self._ack_waiters.pop(ack_key, None)
-                continue
-            if ack.chunk_sha256 != chunk.chunk_sha256:
-                raise TransferError("chunk acknowledgement checksum mismatch")
-            break
-        else:
-            raise TransferError("chunk acknowledgement retries exhausted")
-        await self._send_message(
-            destination=destination,
-            message_type=MessageType.TRANSFER_COMPLETE,
-            message_id=f"{transfer_id}-complete",
-            correlation_id=transfer_id,
-            payload=_pack(
-                TransferComplete(transfer_id=transfer_id, total_sha256=total_sha256)
-            ),
-            round_id=round_id,
-            priority=Priority.CONTROL,
-        )
-        return transfer_id
+                retry_count += chunk_timing.retry_count
+                try:
+                    ack = await asyncio.wait_for(
+                        ack_future,
+                        timeout=self._transport_limits.retry_timeout_seconds,
+                    )
+                except TimeoutError:
+                    self._ack_waiters.pop(ack_key, None)
+                    if attempt + 1 < attempts:
+                        retry_count += 1
+                    continue
+                if ack.chunk_sha256 != chunk.chunk_sha256:
+                    raise TransferError("chunk acknowledgement checksum mismatch")
+                break
+            else:
+                raise TransferError("chunk acknowledgement retries exhausted")
+            complete_timing = await self._send_message(
+                destination=destination,
+                message_type=MessageType.TRANSFER_COMPLETE,
+                message_id=f"{transfer_id}-complete",
+                correlation_id=transfer_id,
+                payload=_pack(
+                    TransferComplete(transfer_id=transfer_id, total_sha256=total_sha256)
+                ),
+                round_id=round_id,
+                priority=Priority.CONTROL,
+            )
+            retry_count += complete_timing.retry_count
+            self._last_timing = TransferTiming(
+                elapsed_seconds=time.perf_counter() - started,
+                retry_count=retry_count,
+            )
+            return transfer_id
+        except BaseException:
+            self._last_timing = TransferTiming(
+                elapsed_seconds=time.perf_counter() - started,
+                retry_count=retry_count,
+            )
+            raise
 
     async def wait_for_artifact(
         self, transfer_id: TransferId, *, timeout_seconds: float
@@ -375,6 +409,7 @@ class TransferManager:
                     peer_id=envelope.sender_public_key,
                     round_id=envelope.round_id,
                     error=str(error),
+                    sink=self._event_sink,
                 )
                 continue
 
@@ -400,6 +435,7 @@ class TransferManager:
                     peer_id=envelope.sender_public_key,
                     round_id=envelope.round_id,
                     error=str(error),
+                    sink=self._event_sink,
                 )
 
     async def _handle_transfer(self, envelope: Envelope) -> None:
@@ -531,7 +567,7 @@ class TransferManager:
         payload: bytes,
         round_id: RoundId | None,
         priority: Priority,
-    ) -> None:
+    ) -> SendTiming:
         envelope = create_envelope(
             message_type=message_type,
             message_id=message_id,
@@ -562,4 +598,6 @@ class TransferManager:
             send_seconds=timing.send_seconds,
             retry_count=timing.retry_count,
             completion_seconds=timing.completion_seconds,
+            sink=self._event_sink,
         )
+        return timing

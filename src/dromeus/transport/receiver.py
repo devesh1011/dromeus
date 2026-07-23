@@ -15,7 +15,7 @@ from dromeus.manifests.models import (
     RunId,
     Sha256,
 )
-from dromeus.telemetry.events import emit_event
+from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.base import AsyncTransport, TransportError
 from dromeus.transport.envelope import (
     Envelope,
@@ -81,6 +81,7 @@ class Receiver:
     transport: AsyncTransport
     _policy: ReceiverPolicy = field(default_factory=ReceiverPolicy)
     stats: ReceiverStats = field(default_factory=ReceiverStats)
+    event_sink: EventSink | None = None
 
     def __post_init__(self) -> None:
         self._queues = {
@@ -109,6 +110,7 @@ class Receiver:
                     "transport_receive_failed",
                     run_id=self._policy.run_id,
                     error=str(error),
+                    sink=self.event_sink,
                 )
                 continue
             if inbound is None:
@@ -128,6 +130,7 @@ class Receiver:
                     run_id=self._policy.run_id,
                     peer_id=inbound.sender_public_key,
                     error=str(error),
+                    sink=self.event_sink,
                 )
                 continue
             if should_route:
@@ -142,6 +145,7 @@ class Receiver:
                 round_id=envelope.round_id,
                 message_type=envelope.message_type,
                 routed=should_route,
+                sink=self.event_sink,
             )
 
     def _validate_envelope(self, envelope: Envelope) -> bool:

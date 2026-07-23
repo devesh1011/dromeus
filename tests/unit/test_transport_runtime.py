@@ -238,6 +238,9 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
     )
     receipt = await receiver_manager.wait_for_artifact(transfer_id, timeout_seconds=2.0)
     assert receipt.path.read_bytes() == artifact.read_bytes()
+    assert sender_manager.last_timing is not None
+    assert sender_manager.last_timing.elapsed_seconds >= 0
+    assert sender_manager.last_timing.retry_count == 0
 
     corrupt_sender_transport = InMemoryTransport(
         network=network,

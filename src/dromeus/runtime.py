@@ -13,6 +13,7 @@ from dromeus.manifests.models import (
     TensorSchema,
 )
 from dromeus.membership.protocol import FormationProtocol, FormationResult
+from dromeus.telemetry.events import EventSink
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.transfer import ArtifactStore
 
@@ -40,6 +41,7 @@ class NodeRuntime:
         environment: EnvironmentFingerprint,
         dataset: DatasetContract,
         artifact_store: ArtifactStore,
+        event_sink: EventSink | None = None,
     ) -> None:
         self._formation = FormationProtocol(
             transport=transport,
@@ -48,6 +50,7 @@ class NodeRuntime:
             dataset=dataset,
             transport_limits=draft.transport,
             artifact_store=artifact_store,
+            event_sink=event_sink,
         )
         self._state = NodeState.CREATED
         self._result: FormationResult | None = None

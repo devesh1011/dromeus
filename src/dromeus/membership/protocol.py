@@ -29,7 +29,7 @@ from dromeus.manifests.models import (
     TensorSchema,
     TransportLimits,
 )
-from dromeus.telemetry.events import emit_event
+from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.envelope import (
     Envelope,
@@ -171,6 +171,7 @@ class FormationProtocol:
         dataset: DatasetContract,
         transport_limits: TransportLimits,
         artifact_store: ArtifactStore,
+        event_sink: EventSink | None = None,
     ) -> None:
         self._transport = transport
         self._draft = draft
@@ -178,6 +179,7 @@ class FormationProtocol:
         self._dataset = dataset
         self._transport_limits = transport_limits
         self._artifact_store = artifact_store
+        self._event_sink = event_sink
         self._receiver = Receiver(
             transport,
             ReceiverPolicy(
@@ -185,6 +187,7 @@ class FormationProtocol:
                 algorithm_id=draft.algorithm_id,
                 max_payload_bytes=transport_limits.max_payload_bytes,
             ),
+            event_sink=event_sink,
         )
         self._sender = OutboundScheduler(transport)
         self._transfer_manager: TransferManager | None = None
@@ -212,6 +215,7 @@ class FormationProtocol:
             run_id=self._draft.run_id,
             peer_id=local_key,
             role="initiator",
+            sink=self._event_sink,
         )
         invitation = create_invitation(
             draft=self._draft,
@@ -306,6 +310,7 @@ class FormationProtocol:
             run_id=manifest.run_id,
             peer_id=local_key,
             manifest_hash=manifest_hash,
+            sink=self._event_sink,
         )
         return result
 
@@ -325,6 +330,7 @@ class FormationProtocol:
             run_id=self._draft.run_id,
             peer_id=local_key,
             role="participant",
+            sink=self._event_sink,
         )
         await self._send_control(
             destination=invitation.initiator_public_key,
@@ -409,6 +415,7 @@ class FormationProtocol:
             run_id=manifest.run_id,
             peer_id=local_key,
             manifest_hash=manifest_hash,
+            sink=self._event_sink,
         )
         return result
 
@@ -441,6 +448,7 @@ class FormationProtocol:
             receiver=self._receiver,
             sender=self._sender,
             artifact_store=self._artifact_store,
+            event_sink=self._event_sink,
         )
         await manager.start()
         self._transfer_manager = manager
@@ -457,6 +465,7 @@ class FormationProtocol:
                 "formation_failed",
                 run_id=self._draft.run_id,
                 error="formation control deadline exceeded",
+                sink=self._event_sink,
             )
             raise FormationError("formation control deadline exceeded") from error
 

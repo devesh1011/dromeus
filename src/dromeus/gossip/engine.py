@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,7 @@ from dromeus.manifests.models import (
     TransportLimits,
 )
 from dromeus.telemetry.consensus import encode_sketch
+from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
 from dromeus.transport.envelope import (
     Envelope,
     MessageType,
@@ -176,6 +178,8 @@ class AXLPairTransport:
         self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._ready_cache: dict[RoundId, str] = {}
         self._committed_rounds: dict[RoundId, str] = {}
+        self.last_transfer_id: str | None = None
+        self.last_retry_count = 0
 
     async def broadcast_run_failed(self, failure: RunFailure) -> None:
         """Best-effort failure broadcast using manifest-bounded sender retries."""
@@ -266,7 +270,7 @@ class AXLPairTransport:
             str(artifact_path),
         )
         try:
-            await self._transfer_manager.send_artifact(
+            self.last_transfer_id = await self._transfer_manager.send_artifact(
                 destination=peer,
                 artifact_name=f"round-{round_id}-trained-weights",
                 artifact_path=artifact_path,
@@ -274,6 +278,8 @@ class AXLPairTransport:
                 tensor_schema=self._tensor_schema,
                 round_id=round_id,
             )
+            timing = self._transfer_manager.last_timing
+            self.last_retry_count = timing.retry_count if timing is not None else 0
             receipt = await self._transfer_manager.next_artifact(
                 timeout_seconds=self._timeout_seconds
             )
@@ -436,6 +442,23 @@ def _unpack(data: bytes) -> object:
     )
 
 
+def _algorithm_metric(algorithm: GossipAlgorithm, name: str) -> float | None:
+    value = getattr(algorithm, name, None)
+    if isinstance(value, (int, float)) and np.isfinite(value) and value >= 0:
+        return float(value)
+    return None
+
+
+def _transport_retry_count(transport: PairTransport) -> int:
+    value = getattr(transport, "last_retry_count", 0)
+    return value if isinstance(value, int) and value >= 0 else 0
+
+
+def _transport_transfer_id(transport: PairTransport) -> str | None:
+    value = getattr(transport, "last_transfer_id", None)
+    return value if isinstance(value, str) and value else None
+
+
 @dataclass(frozen=True, slots=True)
 class RoundCommit:
     """Evidence passed to the atomic persistence seam after peer validation."""
@@ -471,6 +494,7 @@ class GossipEngine:
         consensus_publisher: ConsensusPublisher | None = None,
         evaluation_interval: int = 5,
         evaluation_callback: EvaluationCallback | None = None,
+        metrics_publisher: MetricsPublisher | None = None,
     ) -> None:
         if round_count <= 0:
             raise ValueError("round_count must be positive")
@@ -509,6 +533,7 @@ class GossipEngine:
         self._evaluation_interval = evaluation_interval
         self._evaluator = cast(Callable[[], tuple[float, float]] | None, evaluator)
         self._evaluation_callback = evaluation_callback
+        self._metrics_publisher = metrics_publisher
         self._current_round = 0
         self._commits: list[RoundCommit] = []
         self._failure: RunFailure | None = None
@@ -562,17 +587,22 @@ class GossipEngine:
         except KeyError as error:
             raise PairCommitError(str(error)) from error
 
+        local_started = time.perf_counter()
         pre_local = await asyncio.to_thread(self._algorithm.pre_local, round_id)
         await asyncio.to_thread(self._algorithm.local_training)
         local_bundle = await asyncio.to_thread(self._algorithm.post_local_bundle)
         local_checksum = await asyncio.to_thread(checksum_tensors, local_bundle.tensors)
         if local_checksum != local_bundle.checksum:
             raise PairCommitError("local update checksum mismatch")
+        local_compute_seconds = time.perf_counter() - local_started
+
+        transfer_started = time.perf_counter()
         peer_bundle = await self._transport.exchange_update(
             peer=peer,
             round_id=round_id,
             bundle=local_bundle,
         )
+        transfer_seconds = time.perf_counter() - transfer_started
         if peer_bundle.round_id != round_id:
             raise PairCommitError("peer update round does not match current round")
         peer_checksum = await asyncio.to_thread(checksum_tensors, peer_bundle.tensors)
@@ -582,6 +612,8 @@ class GossipEngine:
             await asyncio.to_thread(self._algorithm.validate_peer, peer_bundle)
         except (ValueError, TypeError) as error:
             raise PairCommitError("peer update validation failed") from error
+
+        peer_wait_started = time.perf_counter()
         remote_checksum = await self._transport.exchange_update_ready(
             peer=peer,
             round_id=round_id,
@@ -589,7 +621,9 @@ class GossipEngine:
         )
         if remote_checksum != peer_bundle.checksum:
             raise PairCommitError("peer UPDATE_READY checksum mismatch")
+        peer_wait_seconds = time.perf_counter() - peer_wait_started
 
+        mixing_started = time.perf_counter()
         try:
             post_mix = await asyncio.to_thread(
                 self._algorithm.peer_apply,
@@ -597,6 +631,7 @@ class GossipEngine:
             )
         except (ValueError, TypeError) as error:
             raise PairCommitError("peer update application failed") from error
+        mixing_seconds = time.perf_counter() - mixing_started
         state_checksum = await asyncio.to_thread(checksum_tensors, post_mix.weights)
         commit = RoundCommit(
             round_id=round_id,
@@ -610,12 +645,17 @@ class GossipEngine:
         result = await asyncio.to_thread(self._commit_callback, commit)
         if inspect.isawaitable(result):
             await result
+        commit_wait_started = time.perf_counter()
         await self._transport.exchange_round_committed(
             peer=peer,
             round_id=round_id,
             state_checksum=state_checksum,
         )
-        await self._evaluate_if_due(round_id)
+        peer_wait_seconds += time.perf_counter() - commit_wait_started
+
+        evaluation_started = time.perf_counter()
+        evaluation = await self._evaluate_if_due(round_id)
+        evaluation_seconds = time.perf_counter() - evaluation_started
         self._commits.append(commit)
         self._current_round += 1
         if self._consensus_publisher is not None:
@@ -626,31 +666,52 @@ class GossipEngine:
                 )
             except Exception:
                 pass
+        if self._metrics_publisher is not None:
+            timing = RoundTiming(
+                round_id=round_id,
+                peer_id=peer,
+                local_compute_seconds=local_compute_seconds,
+                peer_wait_seconds=peer_wait_seconds,
+                transfer_seconds=transfer_seconds,
+                mixing_seconds=mixing_seconds,
+                evaluation_seconds=evaluation_seconds,
+                retries=_transport_retry_count(self._transport),
+                local_loss=_algorithm_metric(self._algorithm, "local_loss"),
+                evaluation_loss=evaluation.loss if evaluation is not None else None,
+                evaluation_accuracy=(
+                    evaluation.accuracy if evaluation is not None else None
+                ),
+                transfer_id=_transport_transfer_id(self._transport),
+            )
+            try:
+                self._metrics_publisher.submit(timing)
+            except Exception:
+                pass
         return commit
 
-    async def _evaluate_if_due(self, round_id: RoundId) -> None:
+    async def _evaluate_if_due(self, round_id: RoundId) -> EvaluationMetrics | None:
         if self._evaluator is None:
-            return
+            return None
         completed_round = round_id + 1
         if (
             completed_round % self._evaluation_interval != 0
             and completed_round != self._round_count
         ):
-            return
+            return None
         loss, accuracy = await asyncio.to_thread(self._evaluator)
         metrics = EvaluationMetrics(
             round_id=round_id,
             loss=loss,
             accuracy=accuracy,
         )
-        if self._evaluation_callback is None:
-            return
-        try:
-            result = self._evaluation_callback(metrics)
-            if inspect.isawaitable(result):
-                await result
-        except Exception:
-            pass
+        if self._evaluation_callback is not None:
+            try:
+                result = self._evaluation_callback(metrics)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception:
+                pass
+        return metrics
 
     async def _record_failure(self, round_id: RoundId, error: Exception) -> None:
         if self._failure is not None:
@@ -666,6 +727,15 @@ class GossipEngine:
                 result = self._failure_callback(failure)
                 if inspect.isawaitable(result):
                     await result
+            except Exception:
+                pass
+        if self._metrics_publisher is not None:
+            try:
+                self._metrics_publisher.submit_failure(
+                    round_id=failure.round_id,
+                    error_type=failure.error_type,
+                    reason=failure.reason,
+                )
             except Exception:
                 pass
         if self._failure_broadcaster is not None:
