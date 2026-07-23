@@ -65,6 +65,15 @@ class RunFailure:
     reason: str
 
 
+@dataclass(frozen=True, slots=True)
+class EvaluationMetrics:
+    """One node's deterministic evaluation result for a committed round."""
+
+    round_id: RoundId
+    loss: float
+    accuracy: float
+
+
 class FailureBroadcaster(Protocol):
     async def broadcast_run_failed(self, failure: RunFailure) -> None: ...
 
@@ -73,6 +82,11 @@ class ConsensusPublisher(Protocol):
     def submit(
         self, *, round_id: RoundId, weights: Mapping[str, np.ndarray]
     ) -> bool: ...
+
+
+EvaluationCallback = Callable[
+    [EvaluationMetrics], None | Awaitable[None]
+]
 
 
 class GossipAlgorithm(Protocol):
@@ -455,6 +469,8 @@ class GossipEngine:
         failure_callback: Callable[[RunFailure], None | Awaitable[None]] | None = None,
         failure_broadcaster: FailureBroadcaster | None = None,
         consensus_publisher: ConsensusPublisher | None = None,
+        evaluation_interval: int = 5,
+        evaluation_callback: EvaluationCallback | None = None,
     ) -> None:
         if round_count <= 0:
             raise ValueError("round_count must be positive")
@@ -462,6 +478,11 @@ class GossipEngine:
             raise ValueError("timeout_seconds must be positive")
         if timeout_seconds is not None and transport_limits is not None:
             raise ValueError("pass timeout_seconds or transport_limits, not both")
+        if evaluation_interval <= 0:
+            raise ValueError("evaluation_interval must be positive")
+        evaluator = getattr(algorithm, "evaluate", None)
+        if evaluation_callback is not None and not callable(evaluator):
+            raise ValueError("evaluation callback requires an evaluatable algorithm")
         self._local_public_key = local_public_key
         self._round_count = round_count
         self._scheduler = scheduler
@@ -485,6 +506,9 @@ class GossipEngine:
                 failure_broadcaster = cast(FailureBroadcaster, transport)
         self._failure_broadcaster = failure_broadcaster
         self._consensus_publisher = consensus_publisher
+        self._evaluation_interval = evaluation_interval
+        self._evaluator = cast(Callable[[], tuple[float, float]] | None, evaluator)
+        self._evaluation_callback = evaluation_callback
         self._current_round = 0
         self._commits: list[RoundCommit] = []
         self._failure: RunFailure | None = None
@@ -591,6 +615,7 @@ class GossipEngine:
             round_id=round_id,
             state_checksum=state_checksum,
         )
+        await self._evaluate_if_due(round_id)
         self._commits.append(commit)
         self._current_round += 1
         if self._consensus_publisher is not None:
@@ -602,6 +627,30 @@ class GossipEngine:
             except Exception:
                 pass
         return commit
+
+    async def _evaluate_if_due(self, round_id: RoundId) -> None:
+        if self._evaluator is None:
+            return
+        completed_round = round_id + 1
+        if (
+            completed_round % self._evaluation_interval != 0
+            and completed_round != self._round_count
+        ):
+            return
+        loss, accuracy = await asyncio.to_thread(self._evaluator)
+        metrics = EvaluationMetrics(
+            round_id=round_id,
+            loss=loss,
+            accuracy=accuracy,
+        )
+        if self._evaluation_callback is None:
+            return
+        try:
+            result = self._evaluation_callback(metrics)
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            pass
 
     async def _record_failure(self, round_id: RoundId, error: Exception) -> None:
         if self._failure is not None:
@@ -632,6 +681,8 @@ __all__ = [
     "GossipEngine",
     "FailureBroadcaster",
     "ConsensusPublisher",
+    "EvaluationCallback",
+    "EvaluationMetrics",
     "PairCommitError",
     "PairTransport",
     "RunFailedMessage",

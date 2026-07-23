@@ -10,7 +10,13 @@ import pytest
 
 from dromeus.algorithms.base import TrainedWeightsBundle
 from dromeus.algorithms.dpsgd import DPSGDAdapter, checksum_tensors
-from dromeus.gossip.engine import GossipEngine, PairCommitError, RoundCommit, RunFailure
+from dromeus.gossip.engine import (
+    EvaluationMetrics,
+    GossipEngine,
+    PairCommitError,
+    RoundCommit,
+    RunFailure,
+)
 from dromeus.gossip.scheduler import PeerScheduler
 from dromeus.manifests.models import Tensor, TensorSchema
 
@@ -27,6 +33,15 @@ class LinearTrainer:
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
+
+    def evaluate(self) -> tuple[float, float]:
+        return float(self._weights["weight"][0]), 0.5
+
+
+class ConvexTrainer(LinearTrainer):
+    def train_local_steps(self, step_count: int) -> None:
+        for _ in range(step_count):
+            self._weights["weight"] *= np.float32(0.5)
 
 
 @dataclass
@@ -210,6 +225,70 @@ def test_two_nodes_complete_pair_commit_without_group_barrier() -> None:
         assert publisher.rounds == [0]
 
     asyncio.run(run())
+
+
+def test_evaluation_runs_every_five_rounds_and_on_final_round() -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    channel = SharedPairChannel.create()
+    evaluations: dict[str, list[EvaluationMetrics]] = {"peer-0": [], "peer-1": []}
+
+    async def run() -> None:
+        engines: list[GossipEngine] = []
+        for key, value in (("peer-0", 1.0), ("peer-1", 3.0)):
+            algorithm = DPSGDAdapter(
+                trainer=LinearTrainer(value), tensor_schema=schema, local_steps=1
+            )
+            engines.append(
+                GossipEngine(
+                    local_public_key=key,
+                    round_count=6,
+                    scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
+                    algorithm=algorithm,
+                    transport=InMemoryPairTransport(key, channel),
+                    commit_callback=lambda commit: None,
+                    evaluation_callback=evaluations[key].append,
+                )
+            )
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+    assert [metric.round_id for metric in evaluations["peer-0"]] == [4, 5]
+    assert [metric.round_id for metric in evaluations["peer-1"]] == [4, 5]
+    assert all(
+        metric.accuracy == 0.5
+        for values in evaluations.values()
+        for metric in values
+    )
+
+
+def test_four_in_memory_nodes_reduce_a_shared_convex_objective() -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    channel = SharedPairChannel.create()
+    trainers = {
+        f"peer-{index}": ConvexTrainer(float(8 - index * 2)) for index in range(4)
+    }
+
+    async def run() -> None:
+        engines = [
+            GossipEngine(
+                local_public_key=key,
+                round_count=3,
+                scheduler=PeerScheduler(list(trainers), seed=8),
+                algorithm=DPSGDAdapter(
+                    trainer=trainer, tensor_schema=schema, local_steps=1
+                ),
+                transport=InMemoryPairTransport(key, channel),
+                commit_callback=lambda commit: None,
+            )
+            for key, trainer in trainers.items()
+        ]
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+    assert all(
+        abs(float(trainer.weights()["weight"][0])) < 8.0
+        for trainer in trainers.values()
+    )
 
 
 def test_round_commit_checksum_is_independent_of_transport() -> None:
