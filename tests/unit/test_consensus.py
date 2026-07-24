@@ -7,9 +7,12 @@ import numpy as np
 import pytest
 
 from dromeus.telemetry.consensus import (
+    ConsensusDistance,
     ConsensusSketchBuffer,
     ConsensusSketchError,
+    ConsensusSketchMessage,
     ConsensusSketchPublisher,
+    LiveConsensusTelemetry,
     count_sketch,
     decode_sketch,
     encode_sketch,
@@ -50,7 +53,7 @@ def test_sketch_distance_matches_exact_distance_without_collisions() -> None:
 
 def test_sketch_buffer_computes_once_all_sealed_members_arrive() -> None:
     buffer = ConsensusSketchBuffer(
-        participant_keys=("peer-0", "peer-1", "peer-2", "peer-3"), seed=9
+        participant_keys=("peer-0", "peer-1", "peer-2", "peer-3")
     )
     sketch = np.zeros(4096, dtype=np.float32)
     for peer in ("peer-0", "peer-1", "peer-2"):
@@ -62,6 +65,17 @@ def test_sketch_buffer_computes_once_all_sealed_members_arrive() -> None:
     assert buffer.add(round_id=4, sender_public_key="peer-3", sketch=sketch) == result
     with pytest.raises(ConsensusSketchError, match="not a sealed participant"):
         buffer.add(round_id=4, sender_public_key="outsider", sketch=sketch)
+
+
+def test_sketch_buffer_evicts_old_incomplete_rounds() -> None:
+    buffer = ConsensusSketchBuffer(
+        participant_keys=("peer-0", "peer-1"), max_pending_rounds=1
+    )
+    sketch = np.zeros(4096, dtype=np.float32)
+    assert buffer.add(round_id=0, sender_public_key="peer-0", sketch=sketch) is None
+    assert buffer.add(round_id=1, sender_public_key="peer-0", sketch=sketch) is None
+    assert buffer.pending_rounds() == (1,)
+    assert buffer.dropped == 1
 
 
 def test_sketch_publisher_is_bounded_and_non_blocking() -> None:
@@ -82,5 +96,77 @@ def test_sketch_publisher_is_bounded_and_non_blocking() -> None:
         await asyncio.sleep(0.05)
         await publisher.stop()
         assert [round_id for round_id, _ in published] == [0]
+        assert publisher.dropped == 1
+
+    asyncio.run(run())
+
+
+def test_sketch_publisher_shutdown_is_bounded() -> None:
+    async def run() -> None:
+        async def publish(_round_id: int, _sketch: np.ndarray) -> None:
+            await asyncio.sleep(10)
+
+        publisher = ConsensusSketchPublisher(seed=9, publish=publish)
+        assert publisher.submit(
+            round_id=0, weights={"weight": np.array([1.0], dtype=np.float32)}
+        )
+        await publisher.start()
+        assert not await publisher.stop(timeout_seconds=0.01)
+        assert publisher.dropped >= 1
+
+    asyncio.run(run())
+
+
+def test_live_consensus_joins_local_and_remote_sketches() -> None:
+    async def run() -> None:
+        incoming: asyncio.Queue[ConsensusSketchMessage] = asyncio.Queue()
+        published: list[int] = []
+        distances: list[ConsensusDistance] = []
+        completed = asyncio.Event()
+
+        async def receive(timeout_seconds: float) -> ConsensusSketchMessage:
+            return await asyncio.wait_for(incoming.get(), timeout_seconds)
+
+        async def publish(round_id: int, sketch: np.ndarray) -> None:
+            assert sketch.dtype == np.float32
+            published.append(round_id)
+
+        def on_distance(distance: ConsensusDistance) -> None:
+            distances.append(distance)
+            completed.set()
+
+        telemetry = LiveConsensusTelemetry(
+            local_public_key="peer-0",
+            participant_keys=[f"peer-{index}" for index in range(4)],
+            seed=9,
+            receive=receive,
+            publish=publish,
+            on_distance=on_distance,
+        )
+        await telemetry.start()
+        assert telemetry.submit(
+            round_id=0,
+            weights={"weight": np.array([0.0], dtype=np.float32)},
+        )
+        for index in range(1, 4):
+            sketch = count_sketch(
+                {"weight": np.array([float(index)], dtype=np.float32)}, seed=9
+            )
+            await incoming.put(
+                ConsensusSketchMessage(
+                    sender_public_key=f"peer-{index}",
+                    round_id=0,
+                    payload=encode_sketch(sketch),
+                )
+            )
+        await asyncio.wait_for(completed.wait(), timeout=1.0)
+        await telemetry.stop()
+
+        assert published == [0]
+        assert len(distances) == 1
+        assert distances[0].round_id == 0
+        assert distances[0].sketch_count == 4
+        assert distances[0].normalized_rms == pytest.approx(0.7453559925)
+        assert telemetry.result(0) == distances[0]
 
     asyncio.run(run())

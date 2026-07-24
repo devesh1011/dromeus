@@ -51,3 +51,30 @@ def test_run_store_persists_round_artifacts_and_terminal_result(tmp_path: Path) 
     }
     with pytest.raises(RunStoreError, match="terminal result already recorded"):
         store.record_terminal("failed", {"round": 0})
+
+
+def test_run_store_persists_consensus_result_once(tmp_path: Path) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    store = RunStore(tmp_path / "run")
+    store.initialize(manifest)
+
+    store.record_consensus(
+        round_id=0,
+        normalized_rms=0.125,
+        sketch_count=4,
+    )
+    store.record_consensus(
+        round_id=0,
+        normalized_rms=0.125,
+        sketch_count=4,
+    )
+
+    assert store.load_state()["consensus"] == [
+        {"round_id": 0, "normalized_rms": 0.125, "sketch_count": 4}
+    ]
+    with pytest.raises(RunStoreError, match="consensus result already recorded"):
+        store.record_consensus(
+            round_id=0,
+            normalized_rms=0.25,
+            sketch_count=4,
+        )

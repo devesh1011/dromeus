@@ -391,6 +391,15 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     and record.get("node_id") == node_id
                 ]
                 assert [record.get("round_id") for record in metrics] == [0, 1]
+                consensus = [
+                    record
+                    for record in records
+                    if record.get("event") == "consensus_distance"
+                    and record.get("manifest_hash") == expected_manifest_hash
+                    and record.get("node_id") == node_id
+                ]
+                assert [record.get("round_id") for record in consensus] == [0, 1]
+                assert all(record.get("sketch_count") == 4 for record in consensus)
                 assert all(
                     isinstance(record.get("local_loss"), float) for record in metrics
                 )

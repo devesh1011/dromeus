@@ -9,6 +9,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 
+import numpy as np
+
 from dromeus.gossip.engine import (
     AXLPairTransport,
     GossipAlgorithm,
@@ -17,6 +19,7 @@ from dromeus.gossip.engine import (
 )
 from dromeus.gossip.scheduler import PeerScheduler
 from dromeus.manifests.models import (
+    ConsensusSketchMessage,
     DatasetContract,
     DraftRunSpec,
     EnvironmentFingerprint,
@@ -25,9 +28,15 @@ from dromeus.manifests.models import (
 )
 from dromeus.membership.protocol import FormationProtocol, FormationResult
 from dromeus.persistence.run_store import RunStore
-from dromeus.telemetry.events import EventSink
+from dromeus.telemetry.consensus import (
+    ConsensusDistance,
+    LiveConsensusTelemetry,
+)
+from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.transport.base import AsyncTransport
+from dromeus.transport.envelope import MessageType
+from dromeus.transport.receiver import MessageChannel
 from dromeus.transport.transfer import ArtifactStore
 
 
@@ -93,6 +102,9 @@ class NodeRuntime:
         self._training = training
         self._engine: GossipEngine | None = None
         self._pair_transport: AXLPairTransport | None = None
+        self._consensus_telemetry: LiveConsensusTelemetry | None = None
+        self._event_sink = event_sink
+        self._local_public_key: str | None = None
         self._commits: tuple[RoundCommit, ...] = ()
         self._run_task: asyncio.Task[tuple[RoundCommit, ...]] | None = None
 
@@ -160,12 +172,13 @@ class NodeRuntime:
                 self._training.load_checkpoint, self._result.checkpoint_path
             )
             local_key = await self._transport.local_public_key()
+            self._local_public_key = local_key
             participants = frozenset(
                 participant.public_key
                 for participant in self._result.manifest.participants
             )
             services = self._formation.services
-            self._pair_transport = await asyncio.to_thread(
+            pair_transport = await asyncio.to_thread(
                 AXLPairTransport,
                 local_public_key=local_key,
                 run_id=self._result.manifest.run_id,
@@ -179,6 +192,43 @@ class NodeRuntime:
                 artifact_root=self._training.artifact_root,
                 participant_keys=participants,
             )
+            self._pair_transport = pair_transport
+
+            async def receive_consensus_sketch(
+                timeout_seconds: float,
+            ) -> ConsensusSketchMessage:
+                envelope = await services.receiver.receive(
+                    MessageChannel.TELEMETRY,
+                    timeout_seconds=timeout_seconds,
+                )
+                if (
+                    envelope.message_type is not MessageType.CONSENSUS_SKETCH
+                    or envelope.round_id is None
+                ):
+                    raise ValueError("received invalid consensus sketch envelope")
+                return ConsensusSketchMessage(
+                    sender_public_key=envelope.sender_public_key,
+                    round_id=envelope.round_id,
+                    payload=envelope.payload,
+                )
+
+            async def publish_consensus_sketch(
+                round_id: int, sketch: np.ndarray
+            ) -> None:
+                await pair_transport.broadcast_consensus_sketch(
+                    round_id=round_id,
+                    sketch=sketch,
+                )
+
+            self._consensus_telemetry = LiveConsensusTelemetry(
+                local_public_key=local_key,
+                participant_keys=tuple(sorted(participants)),
+                seed=self._result.manifest.consensus_sketch.seed,
+                receive=receive_consensus_sketch,
+                publish=publish_consensus_sketch,
+                on_distance=self._record_consensus,
+                size=self._result.manifest.consensus_sketch.size,
+            )
             self._engine = GossipEngine(
                 local_public_key=local_key,
                 round_count=self._result.manifest.round_count,
@@ -191,9 +241,11 @@ class NodeRuntime:
                 commit_callback=self._persist_commit,
                 transport_limits=self._result.manifest.transport,
                 failure_broadcaster=self._pair_transport,
+                consensus_publisher=self._consensus_telemetry,
                 metrics_publisher=self._training.metrics_publisher,
             )
             await self._start_metrics()
+            await self._consensus_telemetry.start()
             commits = await self._engine.run()
             await asyncio.to_thread(
                 self._training.run_store.record_terminal,
@@ -260,6 +312,23 @@ class NodeRuntime:
         if self._training is not None and self._training.metrics_publisher is not None:
             await self._training.metrics_publisher.stop()
 
+    async def _stop_consensus(self) -> None:
+        telemetry = self._consensus_telemetry
+        if telemetry is None:
+            return
+        await telemetry.stop()
+        if telemetry.dropped and self._result is not None:
+            await asyncio.to_thread(
+                emit_event,
+                "consensus_telemetry_dropped",
+                run_id=self._result.manifest.run_id,
+                manifest_hash=self._result.manifest_hash,
+                node_id=self._local_public_key,
+                message_id="consensus-telemetry-dropped",
+                dropped=telemetry.dropped,
+                sink=self._event_sink,
+            )
+
     async def _record_terminal_failure(
         self, initialized: bool, *, result: str, error: BaseException
     ) -> None:
@@ -278,11 +347,41 @@ class NodeRuntime:
             pass
 
     async def _cleanup(self) -> None:
-        for cleanup in (self._stop_metrics, self._formation.stop):
+        for cleanup in (
+            self._stop_consensus,
+            self._stop_metrics,
+            self._formation.stop,
+        ):
             try:
                 await cleanup()
             except BaseException:
                 pass
+
+    async def _record_consensus(self, distance: ConsensusDistance) -> None:
+        if (
+            self._training is None
+            or self._result is None
+            or self._local_public_key is None
+        ):
+            return
+        await asyncio.to_thread(
+            self._training.run_store.record_consensus,
+            round_id=distance.round_id,
+            normalized_rms=distance.normalized_rms,
+            sketch_count=distance.sketch_count,
+        )
+        await asyncio.to_thread(
+            emit_event,
+            "consensus_distance",
+            run_id=self._result.manifest.run_id,
+            manifest_hash=self._result.manifest_hash,
+            node_id=self._local_public_key,
+            message_id=f"consensus-distance-{distance.round_id}",
+            round_id=distance.round_id,
+            normalized_rms=distance.normalized_rms,
+            sketch_count=distance.sketch_count,
+            sink=self._event_sink,
+        )
 
     def _persist_commit(self, commit: RoundCommit) -> None:
         assert self._training is not None

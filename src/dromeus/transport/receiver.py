@@ -44,9 +44,11 @@ TELEMETRY_TYPES = {MessageType.CONSENSUS_SKETCH}
 ROUND_TRACKED_TYPES = TRANSFER_TYPES | {
     MessageType.UPDATE_READY,
     MessageType.ROUND_COMMITTED,
+    MessageType.CONSENSUS_SKETCH,
 }
 IDEMPOTENT_TYPES = {MessageType.UPDATE_READY, MessageType.ROUND_COMMITTED}
 MAX_FUTURE_ROUND_MESSAGES = 64
+MAX_TELEMETRY_ROUND_AGE = 64
 
 
 class ReceiverError(RuntimeError):
@@ -177,6 +179,11 @@ class Receiver:
     def _validate_round_window(self, envelope: Envelope) -> bool:
         current_round = self._policy.current_round()
         assert envelope.round_id is not None
+        if envelope.message_type is MessageType.CONSENSUS_SKETCH:
+            if envelope.round_id <= current_round:
+                if current_round - envelope.round_id > MAX_TELEMETRY_ROUND_AGE:
+                    raise ReceiverError("stale telemetry message")
+                return True
         if envelope.round_id < current_round:
             raise ReceiverError("stale message")
         if envelope.round_id > current_round + 1:

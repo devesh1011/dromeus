@@ -7,6 +7,7 @@ import os
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
+from threading import RLock
 from typing import Any, cast
 
 import numpy as np
@@ -33,35 +34,38 @@ class RunStore:
         self._checkpoint_root.mkdir(parents=True, exist_ok=True)
         self._manifest_path = root / "manifest.json"
         self._state_path = root / "state.json"
+        self._lock = RLock()
 
     def initialize(self, manifest: SealedManifest) -> Sha256:
         """Write the sealed manifest once and initialize an empty run state."""
-        manifest_bytes = canonical_json(manifest)
-        manifest_hash = canonical_hash(manifest)
-        if self._manifest_path.exists():
-            if self._manifest_path.read_bytes() != manifest_bytes:
-                raise RunStoreError("run store manifest does not match")
-        else:
-            _atomic_write(self._manifest_path, manifest_bytes)
+        with self._lock:
+            manifest_bytes = canonical_json(manifest)
+            manifest_hash = canonical_hash(manifest)
+            if self._manifest_path.exists():
+                if self._manifest_path.read_bytes() != manifest_bytes:
+                    raise RunStoreError("run store manifest does not match")
+            else:
+                _atomic_write(self._manifest_path, manifest_bytes)
 
-        if self._state_path.exists():
-            state = self.load_state()
-            if state.get("manifest_hash") != manifest_hash:
-                raise RunStoreError("run store state manifest does not match")
-        else:
-            _atomic_write_json(self._state_path, _initial_state(manifest_hash))
-        return manifest_hash
+            if self._state_path.exists():
+                state = self.load_state()
+                if state.get("manifest_hash") != manifest_hash:
+                    raise RunStoreError("run store state manifest does not match")
+            else:
+                _atomic_write_json(self._state_path, _initial_state(manifest_hash))
+            return manifest_hash
 
     def load_state(self) -> dict[str, Any]:
-        if not self._state_path.is_file():
-            raise RunStoreError("run store has not been initialized")
-        try:
-            value = cast(object, json.loads(self._state_path.read_text()))
-        except (OSError, ValueError) as error:
-            raise RunStoreError("run store state is unreadable") from error
-        if not isinstance(value, dict):
-            raise RunStoreError("run store state must be a JSON object")
-        return cast(dict[str, Any], value)
+        with self._lock:
+            if not self._state_path.is_file():
+                raise RunStoreError("run store has not been initialized")
+            try:
+                value = cast(object, json.loads(self._state_path.read_text()))
+            except (OSError, ValueError) as error:
+                raise RunStoreError("run store state is unreadable") from error
+            if not isinstance(value, dict):
+                raise RunStoreError("run store state must be a JSON object")
+            return cast(dict[str, Any], value)
 
     def persist_commit(
         self,
@@ -76,76 +80,111 @@ class RunStore:
         transfer_diagnostics: JsonRecord | None = None,
     ) -> dict[str, Any]:
         """Persist one committed round; state JSON becomes visible last."""
-        if committed_round < 0:
-            raise ValueError("committed_round must be non-negative")
-        state = self.load_state()
-        previous_round = int(state["committed_round"])
-        if committed_round <= previous_round:
-            if (
-                committed_round == previous_round
-                and state.get("state_checksum") == state_checksum
-            ):
-                return state
-            raise RunStoreError("committed round must advance monotonically")
+        with self._lock:
+            if committed_round < 0:
+                raise ValueError("committed_round must be non-negative")
+            state = self.load_state()
+            previous_round = int(state["committed_round"])
+            if committed_round <= previous_round:
+                if (
+                    committed_round == previous_round
+                    and state.get("state_checksum") == state_checksum
+                ):
+                    return state
+                raise RunStoreError("committed round must advance monotonically")
 
-        pre_name = f"pre-mix-round-{committed_round:06d}.safetensors"
-        post_name = f"post-mix-round-{committed_round:06d}.safetensors"
-        committed_name = f"committed-round-{committed_round:06d}.safetensors"
-        pre_path = self._checkpoint_root / pre_name
-        post_path = self._checkpoint_root / post_name
-        committed_path = self._checkpoint_root / committed_name
-        _atomic_save_tensors(pre_path, pre_mix_state)
-        _atomic_save_tensors(post_path, post_mix_state)
-        _atomic_save_tensors(committed_path, algorithm_state)
+            pre_name = f"pre-mix-round-{committed_round:06d}.safetensors"
+            post_name = f"post-mix-round-{committed_round:06d}.safetensors"
+            committed_name = f"committed-round-{committed_round:06d}.safetensors"
+            pre_path = self._checkpoint_root / pre_name
+            post_path = self._checkpoint_root / post_name
+            committed_path = self._checkpoint_root / committed_name
+            _atomic_save_tensors(pre_path, pre_mix_state)
+            _atomic_save_tensors(post_path, post_mix_state)
+            _atomic_save_tensors(committed_path, algorithm_state)
 
-        next_state = dict(state)
-        next_state.update(
-            {
-                "committed_round": committed_round,
-                "state_checksum": state_checksum,
-                "algorithm_state": f"checkpoints/{committed_name}",
+            next_state = dict(state)
+            next_state.update(
+                {
+                    "committed_round": committed_round,
+                    "state_checksum": state_checksum,
+                    "algorithm_state": f"checkpoints/{committed_name}",
+                }
+            )
+            next_state["pre_mix_checkpoints"] = {
+                **cast(dict[str, str], state["pre_mix_checkpoints"]),
+                str(committed_round): f"checkpoints/{pre_name}",
             }
-        )
-        next_state["pre_mix_checkpoints"] = {
-            **cast(dict[str, str], state["pre_mix_checkpoints"]),
-            str(committed_round): f"checkpoints/{pre_name}",
-        }
-        next_state["post_mix_checkpoints"] = {
-            **cast(dict[str, str], state["post_mix_checkpoints"]),
-            str(committed_round): f"checkpoints/{post_name}",
-        }
-        next_state["schedule_history"] = [
-            *cast(list[object], state["schedule_history"]),
-            dict(schedule),
-        ]
-        if metrics is not None:
-            next_state["metrics"] = [
-                *cast(list[object], state["metrics"]),
-                dict(metrics),
+            next_state["post_mix_checkpoints"] = {
+                **cast(dict[str, str], state["post_mix_checkpoints"]),
+                str(committed_round): f"checkpoints/{post_name}",
+            }
+            next_state["schedule_history"] = [
+                *cast(list[object], state["schedule_history"]),
+                dict(schedule),
             ]
-        if transfer_diagnostics is not None:
-            next_state["transfer_diagnostics"] = [
-                *cast(list[object], state["transfer_diagnostics"]),
-                dict(transfer_diagnostics),
-            ]
-        _atomic_write_json(self._state_path, next_state)
-        return next_state
+            if metrics is not None:
+                next_state["metrics"] = [
+                    *cast(list[object], state["metrics"]),
+                    dict(metrics),
+                ]
+            if transfer_diagnostics is not None:
+                next_state["transfer_diagnostics"] = [
+                    *cast(list[object], state["transfer_diagnostics"]),
+                    dict(transfer_diagnostics),
+                ]
+            _atomic_write_json(self._state_path, next_state)
+            return next_state
+
+    def record_consensus(
+        self,
+        *,
+        round_id: int,
+        normalized_rms: float,
+        sketch_count: int,
+    ) -> dict[str, Any]:
+        """Append one completed live consensus result atomically and idempotently."""
+        if round_id < 0:
+            raise ValueError("round_id must be non-negative")
+        if not np.isfinite(normalized_rms) or normalized_rms < 0:
+            raise ValueError("normalized_rms must be finite and non-negative")
+        if sketch_count <= 0:
+            raise ValueError("sketch_count must be positive")
+        with self._lock:
+            state = self.load_state()
+            record = {
+                "round_id": round_id,
+                "normalized_rms": float(normalized_rms),
+                "sketch_count": sketch_count,
+            }
+            records = cast(list[dict[str, object]], state.get("consensus", []))
+            for existing in records:
+                if existing.get("round_id") != round_id:
+                    continue
+                if existing != record:
+                    raise RunStoreError("consensus result already recorded")
+                return state
+            next_state = dict(state)
+            next_state["consensus"] = [*records, record]
+            _atomic_write_json(self._state_path, next_state)
+            return next_state
 
     def record_terminal(
         self, result: str, diagnostics: JsonRecord | None = None
     ) -> None:
         """Record one terminal result; identical duplicate calls are idempotent."""
-        if not result:
-            raise ValueError("terminal result must not be empty")
-        state = self.load_state()
-        terminal = {"result": result, "diagnostics": dict(diagnostics or {})}
-        existing = state.get("terminal")
-        if existing is not None:
-            if existing == terminal:
-                return
-            raise RunStoreError("terminal result already recorded")
-        state["terminal"] = terminal
-        _atomic_write_json(self._state_path, state)
+        with self._lock:
+            if not result:
+                raise ValueError("terminal result must not be empty")
+            state = self.load_state()
+            terminal = {"result": result, "diagnostics": dict(diagnostics or {})}
+            existing = state.get("terminal")
+            if existing is not None:
+                if existing == terminal:
+                    return
+                raise RunStoreError("terminal result already recorded")
+            state["terminal"] = terminal
+            _atomic_write_json(self._state_path, state)
 
 
 def _initial_state(manifest_hash: Sha256) -> dict[str, object]:
@@ -159,6 +198,7 @@ def _initial_state(manifest_hash: Sha256) -> dict[str, object]:
         "schedule_history": [],
         "metrics": [],
         "transfer_diagnostics": [],
+        "consensus": [],
         "terminal": None,
     }
 

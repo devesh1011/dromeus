@@ -37,6 +37,12 @@ class Participant(DomainModel):
     node_index: NodeIndex
 
 
+class ConsensusSketchMessage(DomainModel):
+    sender_public_key: PublicKey
+    round_id: RoundId
+    payload: Annotated[bytes, Field(min_length=1)]
+
+
 class Tensor(DomainModel):
     name: Identifier
     dtype: Literal["float16", "float32", "float64", "int8", "int32", "int64"]
