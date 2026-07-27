@@ -17,6 +17,7 @@ from dromeus.manifests.models import (
     Identifier,
     SealedManifest,
     Sha256,
+    TrainingPolicy,
 )
 from dromeus.training.pytorch import (
     CIFAR10Data,
@@ -45,6 +46,7 @@ class FedAvgConfig:
     batch_size: int = 32
     device: str = "cpu"
     augment: bool = True
+    training: TrainingPolicy | None = None
 
     @classmethod
     def from_manifest(
@@ -52,7 +54,7 @@ class FedAvgConfig:
         manifest: SealedManifest,
         *,
         trainer_seed: int = 17,
-        batch_size: int = 32,
+        batch_size: int | None = None,
         device: str = "cpu",
         augment: bool = True,
     ) -> FedAvgConfig:
@@ -69,9 +71,18 @@ class FedAvgConfig:
             test_sample_count=10_000,
             evaluation_interval=5,
             trainer_seed=trainer_seed,
-            batch_size=batch_size,
+            batch_size=(
+                batch_size
+                if batch_size is not None
+                else (
+                    manifest.training.batch_size
+                    if manifest.training is not None
+                    else 32
+                )
+            ),
             device=device,
             augment=augment,
+            training=manifest.training,
         )
 
     def __post_init__(self) -> None:
@@ -106,6 +117,11 @@ class FedAvgConfig:
             self.batch_size,
             self.device,
             self.augment,
+            (
+                json.dumps(self.training.model_dump(mode="json"), sort_keys=True)
+                if self.training is not None
+                else None
+            ),
         )
 
     def as_dict(self) -> dict[str, object]:
@@ -124,6 +140,11 @@ class FedAvgConfig:
             "batch_size": self.batch_size,
             "device": self.device,
             "augment": self.augment,
+            "training": (
+                self.training.model_dump(mode="json")
+                if self.training is not None
+                else None
+            ),
         }
 
 
@@ -275,10 +296,31 @@ def run_fedavg(
             train_data=partition,
             test_data=test_data,
             seed=trainer_seed + index,
+            model_id=config.model_id,
             batch_size=config.batch_size,
             learning_rate=config.learning_rate,
+            momentum=config.training.momentum if config.training is not None else 0.0,
+            weight_decay=(
+                config.training.weight_decay if config.training is not None else 0.0
+            ),
+            learning_rate_milestones=(
+                config.training.learning_rate_milestones
+                if config.training is not None
+                else ()
+            ),
+            learning_rate_gamma=(
+                config.training.learning_rate_gamma
+                if config.training is not None
+                else 0.1
+            ),
             device=config.device,
             augment=config.augment,
+            crop_padding=(
+                config.training.crop_padding if config.training is not None else 0
+            ),
+            normalize=(
+                config.training.normalize if config.training is not None else False
+            ),
         )
         for index, partition in enumerate(partitions)
     )

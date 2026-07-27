@@ -9,9 +9,11 @@ from support.sample_manifest import manifest_data
 
 from benchmarks.cifar10.official import (
     OfficialBenchmarkError,
+    PilotEvidence,
     load_frozen_benchmark_plan,
     prepare_dpsgd_node_configs,
 )
+from benchmarks.cifar10.runner import create_quality_draft, write_frozen_plan
 from dromeus.manifests.models import DraftRunSpec
 
 
@@ -109,6 +111,62 @@ def test_frozen_plan_rejects_empty_pilot_marker(tmp_path: Path) -> None:
 
     with pytest.raises(OfficialBenchmarkError, match="pilot artifact is invalid"):
         load_frozen_benchmark_plan(path)
+
+
+def test_quality_plan_requires_a_90_percent_pilot(tmp_path: Path) -> None:
+    draft = create_quality_draft(
+        run_id="quality-001",
+        benchmark_seed=17,
+        dromeus_commit="a" * 40,
+        image_digest=f"sha256:{'b' * 64}",
+        pytorch_version="2.13.0+cpu",
+    )
+    draft_path = tmp_path / "draft.json"
+    draft_path.write_text(draft.model_dump_json(), encoding="utf-8")
+    pilot_path = tmp_path / "pilot.json"
+    pilot = PilotEvidence(
+        status="complete",
+        model_definition_hash=draft.model_definition_hash,
+        dataset=draft.dataset,
+        data_source="torchvision-cifar10",
+        local_steps=draft.local_steps,
+        round_count=draft.round_count,
+        learning_rate=draft.learning_rate,
+        training=draft.training,
+        node_ids=("peer-0", "peer-1", "peer-2", "peer-3"),
+        data_artifact_sha256=("1" * 64, "2" * 64, "3" * 64, "4" * 64),
+        final_node_accuracies=(0.91, 0.92, 0.93, 0.94),
+    )
+    pilot_path.write_text(pilot.model_dump_json(), encoding="utf-8")
+    plan_path = tmp_path / "plan.yaml"
+
+    plan = write_frozen_plan(
+        draft_path=draft_path,
+        pilot_artifact=pilot_path,
+        benchmark_seeds=(17, 29, 41),
+        worker_instance_type="g5.xlarge",
+        worker_regions=("us-east-1", "us-east-1", "us-east-2", "us-east-2"),
+        bootstrap_region="us-east-1",
+        worker_root_volume_gib=80,
+        output=plan_path,
+    )
+
+    assert plan.parameter_count >= 450_000
+    assert plan.learning_rate_schedule == "multistep"
+    assert plan.batch_size == 128
+
+    contradictory = plan.model_copy(update={"batch_size": 32})
+    with pytest.raises(ValidationError, match="projected training settings"):
+        type(plan).model_validate(contradictory.model_dump(mode="python"))
+
+    pilot_path.write_text(
+        pilot.model_copy(
+            update={"final_node_accuracies": (0.89, 0.92, 0.93, 0.94)}
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+    with pytest.raises(OfficialBenchmarkError, match="at least 90%"):
+        load_frozen_benchmark_plan(plan_path)
 
 
 def test_frozen_plan_rejects_mismatched_dpsgd_draft(tmp_path: Path) -> None:

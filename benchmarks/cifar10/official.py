@@ -12,11 +12,14 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from benchmarks.cifar10.fedavg_reference import FedAvgConfig
 from dromeus.manifests.canonical import parse_draft_yaml
 from dromeus.manifests.models import (
+    DPSGD_V1_ALGORITHM_ID,
+    DPSGD_V2_ALGORITHM_ID,
     DatasetContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Identifier,
     Sha256,
+    TrainingPolicy,
 )
 from dromeus.node import NodeConfig, NodeRole, load_node_config
 
@@ -37,8 +40,18 @@ class PilotEvidence(BaseModel):
     local_steps: Annotated[int, Field(gt=0)]
     round_count: Annotated[int, Field(gt=0)]
     learning_rate: Annotated[float, Field(gt=0)]
+    training: TrainingPolicy | None = None
     node_ids: tuple[str, str, str, str]
     data_artifact_sha256: tuple[Sha256, Sha256, Sha256, Sha256]
+    final_node_accuracies: (
+        tuple[
+            Annotated[float, Field(ge=0.0, le=1.0)],
+            Annotated[float, Field(ge=0.0, le=1.0)],
+            Annotated[float, Field(ge=0.0, le=1.0)],
+            Annotated[float, Field(ge=0.0, le=1.0)],
+        ]
+        | None
+    ) = None
 
 
 class FrozenBenchmarkPlan(BaseModel):
@@ -56,7 +69,7 @@ class FrozenBenchmarkPlan(BaseModel):
     environment: EnvironmentFingerprint
     data_source: Literal["torchvision-cifar10"]
     optimizer: Literal["sgd"] = "sgd"
-    weight_decay: Annotated[float, Field(ge=0.0, le=0.0)] = 0.0
+    weight_decay: Annotated[float, Field(ge=0.0)] = 0.0
     max_payload_bytes: Annotated[int, Field(gt=0)]
     max_retries: Annotated[int, Field(ge=0)]
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
@@ -66,17 +79,18 @@ class FrozenBenchmarkPlan(BaseModel):
     worker_regions: tuple[str, str, str, str]
     bootstrap_region: Annotated[str, Field(min_length=1)]
     worker_root_volume_gib: Annotated[int, Field(gt=0)]
-    parameter_count: Literal[5514] = 5514
-    learning_rate_schedule: Literal["constant"] = "constant"
+    parameter_count: Annotated[int, Field(gt=0)] = 5514
+    learning_rate_schedule: Literal["constant", "multistep"] = "constant"
     checkpoint_interval: Literal[1] = 1
     receive_poll_seconds: Annotated[float, Field(ge=0.1, le=0.1)] = 0.1
     per_peer_in_flight: Literal[1] = 1
-    batch_size: Literal[32] = 32
+    batch_size: Annotated[int, Field(gt=0)] = 32
     evaluation_interval: Literal[5] = 5
     device: Literal["cpu"] = "cpu"
     augment: Literal[True] = True
     worker_count: Literal[4] = 4
     dpsgd_transport: Literal["axl"] = "axl"
+    training: TrainingPolicy | None = None
 
     @model_validator(mode="after")
     def distinct_seeds(self) -> Self:
@@ -84,6 +98,26 @@ class FrozenBenchmarkPlan(BaseModel):
             raise ValueError("benchmark seeds must be distinct")
         if len(set(self.worker_regions)) < 2:
             raise ValueError("official workers must span at least two regions")
+        expected_batch_size = (
+            self.training.batch_size if self.training is not None else 32
+        )
+        expected_weight_decay = (
+            self.training.weight_decay if self.training is not None else 0.0
+        )
+        expected_schedule = (
+            "multistep"
+            if self.training is not None
+            and self.training.learning_rate_milestones
+            else "constant"
+        )
+        if (
+            self.batch_size != expected_batch_size
+            or self.weight_decay != expected_weight_decay
+            or self.learning_rate_schedule != expected_schedule
+        ):
+            raise ValueError(
+                "projected training settings do not match training policy"
+            )
         return self
 
     def fedavg_configs(self) -> tuple[FedAvgConfig, FedAvgConfig, FedAvgConfig]:
@@ -104,6 +138,7 @@ class FrozenBenchmarkPlan(BaseModel):
                 batch_size=self.batch_size,
                 device=self.device,
                 augment=self.augment,
+                training=self.training,
             )
             for seed in self.benchmark_seeds
         )
@@ -127,6 +162,7 @@ class FrozenBenchmarkPlan(BaseModel):
             draft.transport.max_retries,
             draft.transport.retry_timeout_seconds,
             draft.algorithm_id,
+            draft.training,
         )
         expected = (
             self.model_id,
@@ -141,7 +177,12 @@ class FrozenBenchmarkPlan(BaseModel):
             self.max_payload_bytes,
             self.max_retries,
             self.retry_timeout_seconds,
-            "dpsgd-v1",
+            (
+                DPSGD_V2_ALGORITHM_ID
+                if self.training is not None
+                else DPSGD_V1_ALGORITHM_ID
+            ),
+            self.training,
         )
         if signature != expected:
             raise OfficialBenchmarkError(
@@ -173,6 +214,7 @@ def load_frozen_benchmark_plan(path: Path) -> FrozenBenchmarkPlan:
         pilot.local_steps,
         pilot.round_count,
         pilot.learning_rate,
+        pilot.training,
     ) != (
         plan.model_definition_hash,
         plan.dataset,
@@ -180,9 +222,17 @@ def load_frozen_benchmark_plan(path: Path) -> FrozenBenchmarkPlan:
         plan.local_steps,
         plan.round_count,
         plan.learning_rate,
+        plan.training,
     ):
         raise OfficialBenchmarkError(
             "documented pilot does not match frozen configuration"
+        )
+    if plan.training is not None and (
+        pilot.final_node_accuracies is None
+        or min(pilot.final_node_accuracies) < 0.90
+    ):
+        raise OfficialBenchmarkError(
+            "quality pilot must achieve at least 90% accuracy on every node"
         )
     return plan
 

@@ -25,19 +25,26 @@ from benchmarks.cifar10.report import (
 )
 from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import (
+    DPSGD_V1_ALGORITHM_ID,
+    DPSGD_V2_ALGORITHM_ID,
     ConsensusSketchConfig,
     DatasetContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     SealedManifest,
+    TrainingPolicy,
     TransportLimits,
 )
 from dromeus.training.pytorch import (
     CIFAR10_ARCHIVE_MD5,
     CIFAR10_DATASET_VERSION,
+    CIFAR_RESNET32_MODEL_DEFINITION_HASH,
+    CIFAR_RESNET32_MODEL_ID,
+    CIFAR_RESNET32_PREPROCESSING_HASH,
     MODEL_DEFINITION_HASH,
     PREPROCESSING_HASH,
     CIFAR10Data,
+    build_model,
     create_initial_checkpoint,
     derive_benchmark_seed,
 )
@@ -115,7 +122,7 @@ def create_draft(
         manifest_version=1,
         protocol_version=1,
         run_id=run_id,
-        algorithm_id="dpsgd-v1",
+        algorithm_id=DPSGD_V1_ALGORITHM_ID,
         model_id="cifar-cnn-v1",
         model_definition_hash=MODEL_DEFINITION_HASH,
         dataset=dataset,
@@ -134,6 +141,56 @@ def create_draft(
         consensus_sketch=ConsensusSketchConfig(
             seed=derive_benchmark_seed(benchmark_seed, "consensus-sketch")
         ),
+    )
+
+
+def create_quality_draft(
+    *,
+    run_id: str,
+    benchmark_seed: int,
+    dromeus_commit: str,
+    image_digest: str,
+    pytorch_version: str,
+) -> DraftRunSpec:
+    """Create the public-quality ResNet-32 recipe (~164 local epochs)."""
+    base = create_draft(
+        run_id=run_id,
+        benchmark_seed=benchmark_seed,
+        dromeus_commit=dromeus_commit,
+        image_digest=image_digest,
+        pytorch_version=pytorch_version,
+        round_count=400,
+        local_steps=40,
+        learning_rate=0.1,
+    )
+    return DraftRunSpec.model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "manifest_version": 2,
+            "algorithm_id": DPSGD_V2_ALGORITHM_ID,
+            "model_id": CIFAR_RESNET32_MODEL_ID,
+            "model_definition_hash": CIFAR_RESNET32_MODEL_DEFINITION_HASH,
+            "dataset": base.dataset.model_copy(
+                update={
+                    "preprocessing_hash": CIFAR_RESNET32_PREPROCESSING_HASH,
+                }
+            ),
+            "environment": base.environment.model_copy(
+                update={
+                    "model_definition_hash": CIFAR_RESNET32_MODEL_DEFINITION_HASH,
+                }
+            ),
+            "training": TrainingPolicy(
+                batch_size=128,
+                momentum=0.9,
+                weight_decay=1e-4,
+                learning_rate_milestones=(8_000, 12_000),
+                learning_rate_gamma=0.1,
+                crop_padding=4,
+                normalize=True,
+                final_consensus_rounds=2,
+            ),
+        }
     )
 
 
@@ -217,10 +274,16 @@ def write_pilot_evidence(
             if isinstance(terminal_value, dict)
             else None
         )
+        final_consensus_rounds = (
+            draft.training.final_consensus_rounds
+            if draft.training is not None
+            else 0
+        )
         if (
             terminal is None
             or terminal.get("result") != "complete"
-            or state.get("committed_round") != draft.round_count - 1
+            or state.get("committed_round")
+            != draft.round_count + final_consensus_rounds - 1
         ):
             raise ValueError("pilot node did not complete every round")
         manifest_draft = DraftRunSpec.model_validate(
@@ -236,6 +299,7 @@ def write_pilot_evidence(
         raise ValueError("pilot nodes do not share one sealed manifest")
     manifest_hash = canonical_hash(manifests[0])
     node_ids: list[str] = []
+    final_node_accuracies: list[float] = []
     for path in event_logs:
         events = [
             cast(dict[str, object], json.loads(line))
@@ -262,6 +326,29 @@ def write_pilot_evidence(
         ):
             raise ValueError("pilot node provenance is incomplete")
         node_ids.append(node_id)
+        final_round = (
+            draft.round_count
+            + (
+                draft.training.final_consensus_rounds
+                if draft.training is not None
+                else 0
+            )
+            - 1
+        )
+        final_metrics = [
+            event
+            for event in events
+            if event.get("event") == "round_metrics"
+            and event.get("round_id") == final_round
+            and event.get("run_id") == draft.run_id
+            and event.get("manifest_hash") == manifest_hash
+            and event.get("node_id") == node_id
+            and isinstance(event.get("evaluation_accuracy"), (int, float))
+        ]
+        if len(final_metrics) == 1:
+            final_node_accuracies.append(
+                float(cast(float, final_metrics[0]["evaluation_accuracy"]))
+            )
     if len(set(node_ids)) != 4:
         raise ValueError("pilot logs must identify four distinct nodes")
     artifact_hashes: list[str] = []
@@ -283,9 +370,18 @@ def write_pilot_evidence(
         local_steps=draft.local_steps,
         round_count=draft.round_count,
         learning_rate=draft.learning_rate,
+        training=draft.training,
         node_ids=cast(tuple[str, str, str, str], tuple(node_ids)),
         data_artifact_sha256=cast(
             tuple[str, str, str, str], tuple(artifact_hashes)
+        ),
+        final_node_accuracies=(
+            cast(
+                tuple[float, float, float, float],
+                tuple(final_node_accuracies),
+            )
+            if len(final_node_accuracies) == 4
+            else None
         ),
     )
     _write_json(output, evidence.model_dump(mode="json"))
@@ -321,6 +417,9 @@ def write_frozen_plan(
         dataset=draft.dataset,
         environment=draft.environment,
         data_source="torchvision-cifar10",
+        weight_decay=(
+            draft.training.weight_decay if draft.training is not None else 0.0
+        ),
         max_payload_bytes=draft.transport.max_payload_bytes,
         max_retries=draft.transport.max_retries,
         retry_timeout_seconds=draft.transport.retry_timeout_seconds,
@@ -330,12 +429,31 @@ def write_frozen_plan(
         worker_regions=worker_regions,
         bootstrap_region=bootstrap_region,
         worker_root_volume_gib=worker_root_volume_gib,
+        parameter_count=sum(
+            parameter.numel()
+            for parameter in build_model(seed=0, model_id=draft.model_id).parameters()
+        ),
+        learning_rate_schedule=(
+            "multistep"
+            if draft.training is not None
+            and draft.training.learning_rate_milestones
+            else "constant"
+        ),
+        batch_size=(
+            draft.training.batch_size if draft.training is not None else 32
+        ),
+        training=draft.training,
     )
     _write_yaml(output, plan.model_dump(mode="json"))
     return load_frozen_benchmark_plan(output)
 
 
-def prepare_cifar_data(*, cifar_root: Path, output: Path) -> DatasetArtifact:
+def prepare_cifar_data(
+    *,
+    cifar_root: Path,
+    output: Path,
+    quality_v2: bool = False,
+) -> DatasetArtifact:
     """Download and validate canonical CIFAR-10 on one worker."""
     train_data = CIFAR10Data.from_torchvision(
         root=cifar_root,
@@ -357,7 +475,9 @@ def prepare_cifar_data(*, cifar_root: Path, output: Path) -> DatasetArtifact:
         data_source="torchvision-cifar10",
         archive_md5="c58f30108f718f92721af3b95e74349a",
         dataset_version=CIFAR10_DATASET_VERSION,
-        preprocessing_hash=PREPROCESSING_HASH,
+        preprocessing_hash=(
+            CIFAR_RESNET32_PREPROCESSING_HASH if quality_v2 else PREPROCESSING_HASH
+        ),
         train_sample_count=50_000,
         test_sample_count=10_000,
     )
@@ -399,6 +519,7 @@ def run_fedavg_seed(
     checkpoint = create_initial_checkpoint(
         output.with_suffix(".initial.safetensors"),
         seed=derive_benchmark_seed(benchmark_seed, "model-initialization"),
+        model_id=plan.model_id,
     )
     result = run_fedavg(
         partitions=partitions,
@@ -454,6 +575,14 @@ def _parser() -> argparse.ArgumentParser:
     draft.add_argument("--learning-rate", type=float, default=0.1)
     draft.add_argument("--output", required=True, type=Path)
 
+    quality_draft = subparsers.add_parser("quality-draft")
+    quality_draft.add_argument("--run-id", required=True)
+    quality_draft.add_argument("--seed", required=True, type=int)
+    quality_draft.add_argument("--dromeus-commit", required=True)
+    quality_draft.add_argument("--image-digest", required=True)
+    quality_draft.add_argument("--pytorch-version", required=True)
+    quality_draft.add_argument("--output", required=True, type=Path)
+
     pilot = subparsers.add_parser("pilot-evidence")
     pilot.add_argument("--draft", required=True, type=Path)
     pilot.add_argument("--run-root", required=True, action="append", type=Path)
@@ -473,6 +602,7 @@ def _parser() -> argparse.ArgumentParser:
 
     data = subparsers.add_parser("prepare-data")
     data.add_argument("--cifar-root", required=True, type=Path)
+    data.add_argument("--quality-v2", action="store_true")
     data.add_argument("--output", required=True, type=Path)
 
     nodes = subparsers.add_parser("node-configs")
@@ -510,6 +640,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             ),
             args.output,
         )
+    elif args.command == "quality-draft":
+        write_draft(
+            create_quality_draft(
+                run_id=args.run_id,
+                benchmark_seed=args.seed,
+                dromeus_commit=args.dromeus_commit,
+                image_digest=args.image_digest,
+                pytorch_version=args.pytorch_version,
+            ),
+            args.output,
+        )
     elif args.command == "pilot-evidence":
         write_pilot_evidence(
             draft_path=args.draft,
@@ -539,7 +680,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             output=args.output,
         )
     elif args.command == "prepare-data":
-        prepare_cifar_data(cifar_root=args.cifar_root, output=args.output)
+        prepare_cifar_data(
+            cifar_root=args.cifar_root,
+            output=args.output,
+            quality_v2=args.quality_v2,
+        )
     elif args.command == "node-configs":
         write_node_configs(
             plan_path=args.plan,

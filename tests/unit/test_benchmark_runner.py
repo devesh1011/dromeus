@@ -11,6 +11,7 @@ from benchmarks.cifar10.runner import (
     DatasetArtifact,
     ReportInput,
     create_draft,
+    create_quality_draft,
     write_frozen_plan,
     write_node_configs,
     write_pilot_evidence,
@@ -20,6 +21,9 @@ from dromeus.manifests.models import SealedManifest
 from dromeus.persistence.run_store import RunStore
 from dromeus.training.pytorch import (
     CIFAR10_DATASET_VERSION,
+    CIFAR_RESNET32_MODEL_DEFINITION_HASH,
+    CIFAR_RESNET32_MODEL_ID,
+    CIFAR_RESNET32_PREPROCESSING_HASH,
     MODEL_DEFINITION_HASH,
     PREPROCESSING_HASH,
 )
@@ -129,6 +133,29 @@ def test_create_draft_uses_canonical_production_values() -> None:
     assert draft.environment.pytorch_version == "2.13.0+cpu"
     assert draft.transport.max_payload_bytes == 16 * 1024 * 1024
     assert draft.peer_scheduler_seed == 17
+
+
+def test_quality_draft_freezes_a_160_epoch_resnet_recipe() -> None:
+    draft = create_quality_draft(
+        run_id="quality-001",
+        benchmark_seed=17,
+        dromeus_commit="a" * 40,
+        image_digest=f"sha256:{'b' * 64}",
+        pytorch_version="2.13.0+cpu",
+    )
+
+    assert draft.algorithm_id == "dpsgd-v2"
+    assert draft.manifest_version == 2
+    assert draft.model_id == CIFAR_RESNET32_MODEL_ID
+    assert draft.model_definition_hash == CIFAR_RESNET32_MODEL_DEFINITION_HASH
+    assert draft.dataset.preprocessing_hash == CIFAR_RESNET32_PREPROCESSING_HASH
+    assert draft.local_steps * draft.round_count == 16_000
+    assert draft.training is not None
+    assert draft.training.batch_size == 128
+    assert draft.training.momentum == 0.9
+    assert draft.training.weight_decay == 1e-4
+    assert draft.training.learning_rate_milestones == (8_000, 12_000)
+    assert draft.training.final_consensus_rounds == 2
 
 
 def test_completed_pilot_can_freeze_one_plan(tmp_path: Path) -> None:

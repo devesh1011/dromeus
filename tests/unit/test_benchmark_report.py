@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +31,7 @@ def _write_inputs(
     seed: int = 17,
     round_count: int = 1,
     consensus_sketch_seed: int = 9,
+    accuracies: tuple[float, float, float, float] = (0.94, 0.95, 0.96, 0.97),
 ) -> tuple[list[Path], list[Path]]:
     data = manifest_data()
     data["local_steps"] = 1
@@ -44,7 +46,6 @@ def _write_inputs(
     manifest = SealedManifest.model_validate(data)
     run_roots: list[Path] = []
     event_logs: list[Path] = []
-    accuracies = (0.64, 0.65, 0.66, 0.67)
     for index, accuracy in enumerate(accuracies):
         run_root = root / f"node-{index}"
         store = RunStore(run_root)
@@ -158,6 +159,7 @@ def _fedavg_result(
     *,
     round_count: int = 1,
     consensus_sketch_seed: int = 9,
+    accuracy: float = 0.96,
 ) -> FedAvgResult:
     data = manifest_data()
     data["local_steps"] = 1
@@ -175,7 +177,7 @@ def _fedavg_result(
                     else None
                 ),
                 accuracy=(
-                    0.66
+                    accuracy
                     if (round_id + 1) % 5 == 0 or round_id + 1 == round_count
                     else None
                 ),
@@ -202,9 +204,10 @@ def test_benchmark_report_aggregates_metrics_and_writes_artifacts(
         seed=17,
     )
 
-    assert report.dpsgd_final_accuracy.mean == pytest.approx(0.655)
+    assert report.dpsgd_final_accuracy.mean == pytest.approx(0.955)
     assert report.mean_within_fedavg_3pp
     assert report.no_node_more_than_5pp_below
+    assert report.minimum_accuracy_90
     assert report.aggregate_pass
     assert report.connectivity["edge_count"] == 4
     assert report.topology["classification"] == "partial-participant-mesh"
@@ -231,6 +234,33 @@ def test_benchmark_report_aggregates_metrics_and_writes_artifacts(
     assert event_logs[0].as_uri() in (output / "timing.svg").read_text()
     assert event_logs[0].as_uri() in (output / "goodput.svg").read_text()
     assert "metrics.svg" in (output / "report.md").read_text()
+
+
+def test_relative_parity_cannot_pass_below_90_percent(tmp_path: Path) -> None:
+    run_roots, event_logs = _write_inputs(
+        tmp_path,
+        accuracies=(0.24, 0.25, 0.26, 0.27),
+    )
+
+    report = build_benchmark_report(
+        run_roots=run_roots,
+        event_logs=event_logs,
+        fedavg=_fedavg_result(accuracy=0.26),
+        seed=17,
+    )
+
+    assert report.mean_within_fedavg_3pp
+    assert report.no_node_more_than_5pp_below
+    assert not report.minimum_accuracy_90
+    assert report.aggregate_pass
+    assert not report.publication_ready
+
+    quality_report = replace(
+        report,
+        configuration={**report.configuration, "algorithm_id": "dpsgd-v2"},
+    )
+    assert quality_report.quality_gate_required
+    assert not quality_report.aggregate_pass
 
 
 def test_benchmark_report_rejects_failed_runs(tmp_path: Path) -> None:
@@ -369,7 +399,7 @@ def test_benchmark_report_rejects_invalid_dpsgd_evaluation_schedule(
     ("round_id", "loss", "accuracy"),
     (
         (4, None, None),
-        (0, 0.75, 0.66),
+        (0, 0.75, 0.96),
     ),
 )
 def test_benchmark_report_rejects_invalid_fedavg_evaluation_schedule(
@@ -427,8 +457,8 @@ def test_three_seed_report_requires_three_compatible_seed_inputs(
 
     assert [seed_report.seed for seed_report in report.seeds] == [17, 23, 29]
     assert report.aggregate_pass
-    assert report.dpsgd_final_accuracy.mean == pytest.approx(0.655)
-    assert report.fedavg_final_accuracy.mean == pytest.approx(0.66)
+    assert report.dpsgd_final_accuracy.mean == pytest.approx(0.955)
+    assert report.fedavg_final_accuracy.mean == pytest.approx(0.96)
 
 
 def test_three_seed_report_rejects_mismatched_raw_fedavg_seed(

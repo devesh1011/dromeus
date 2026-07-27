@@ -63,12 +63,19 @@ class ThreeSeedReport:
     fedavg_final_accuracy: SummaryStats
     aggregate_pass: bool
 
+    @property
+    def publication_ready(self) -> bool:
+        return self.aggregate_pass and all(
+            report.publication_ready for report in self.seeds
+        )
+
     def as_dict(self) -> JsonObject:
         return {
             "seeds": [report.as_dict() for report in self.seeds],
             "dpsgd_final_accuracy": self.dpsgd_final_accuracy.as_dict(),
             "fedavg_final_accuracy": self.fedavg_final_accuracy.as_dict(),
             "aggregate_pass": self.aggregate_pass,
+            "publication_ready": self.publication_ready,
         }
 
     def write_artifacts(self, output_dir: Path) -> None:
@@ -91,6 +98,10 @@ class ThreeSeedReport:
                     "# CIFAR-10 three-seed benchmark report",
                     "",
                     f"- status: {'PASS' if self.aggregate_pass else 'FAIL'}",
+                    (
+                        "- publication ready: "
+                        f"{'yes' if self.publication_ready else 'no'}"
+                    ),
                     f"- D-PSGD mean across seeds: {self.dpsgd_final_accuracy.mean:.6f}",
                     (
                         f"- FedAvg mean across seeds: "
@@ -130,6 +141,7 @@ class BenchmarkReport:
     exact_consensus: ExactConsensusReport
     mean_within_fedavg_3pp: bool
     no_node_more_than_5pp_below: bool
+    minimum_accuracy_90: bool
     run_roots: tuple[Path, ...]
     event_logs: tuple[Path, ...]
     fedavg_result_path: Path | None
@@ -139,8 +151,20 @@ class BenchmarkReport:
         return (
             self.mean_within_fedavg_3pp
             and self.no_node_more_than_5pp_below
+            and (
+                self.minimum_accuracy_90
+                or not self.quality_gate_required
+            )
             and self.consensus_evidence_pass
         )
+
+    @property
+    def quality_gate_required(self) -> bool:
+        return self.configuration.get("algorithm_id") == "dpsgd-v2"
+
+    @property
+    def publication_ready(self) -> bool:
+        return self.aggregate_pass and self.minimum_accuracy_90
 
     @property
     def consensus_evidence_pass(self) -> bool:
@@ -187,8 +211,11 @@ class BenchmarkReport:
             "criteria": {
                 "mean_within_fedavg_3pp": self.mean_within_fedavg_3pp,
                 "no_node_more_than_5pp_below": self.no_node_more_than_5pp_below,
+                "minimum_accuracy_90": self.minimum_accuracy_90,
+                "quality_gate_required": self.quality_gate_required,
                 "consensus_evidence_pass": self.consensus_evidence_pass,
                 "aggregate_pass": self.aggregate_pass,
+                "publication_ready": self.publication_ready,
             },
         }
 
@@ -264,6 +291,14 @@ class BenchmarkReport:
                 f"- nodes: {self.node_count}",
                 f"- D-PSGD final accuracy mean: {self.dpsgd_final_accuracy.mean:.6f}",
                 f"- FedAvg final accuracy: {self.fedavg_accuracy:.6f}",
+                (
+                    "- absolute accuracy gate (all nodes >= 90%): "
+                    f"{'PASS' if self.minimum_accuracy_90 else 'FAIL'}"
+                ),
+                (
+                    "- publication ready: "
+                    f"{'yes' if self.publication_ready else 'no'}"
+                ),
                 "",
                 "[Accuracy and loss curves](metrics.svg)",
                 "",
@@ -527,7 +562,8 @@ def build_benchmark_report(
     if len(set(final_rounds.values())) != 1:
         raise BenchmarkReportError("nodes do not share one final round")
     final_round = next(iter(final_rounds.values()))
-    expected_rounds = set(range(manifests[0].round_count))
+    total_round_count = _total_dpsgd_round_count(manifests[0])
+    expected_rounds = set(range(total_round_count))
     if any(
         {
             _integer_value(event, "round_id")
@@ -540,7 +576,8 @@ def build_benchmark_report(
         raise BenchmarkReportError("round metrics are incomplete")
     _validate_dpsgd_evaluation_schedule(
         node_metrics,
-        round_count=manifests[0].round_count,
+        training_round_count=manifests[0].round_count,
+        total_round_count=total_round_count,
     )
     final_accuracies = [
         _metric_value_for_round(
@@ -585,6 +622,7 @@ def build_benchmark_report(
         exact_consensus=exact_consensus,
         mean_within_fedavg_3pp=abs(dpsgd_final_accuracy.mean - fedavg_accuracy) <= 0.03,
         no_node_more_than_5pp_below=min(final_accuracies) >= fedavg_accuracy - 0.05,
+        minimum_accuracy_90=min(final_accuracies) >= 0.90,
         run_roots=tuple(run_roots),
         event_logs=tuple(event_logs),
         fedavg_result_path=fedavg_result_path,
@@ -623,11 +661,7 @@ def build_three_seed_report(
         seeds=reports,
         dpsgd_final_accuracy=dpsgd,
         fedavg_final_accuracy=fedavg,
-        aggregate_pass=(
-            abs(dpsgd.mean - fedavg.mean) <= 0.03
-            and all(report.no_node_more_than_5pp_below for report in reports)
-            and all(report.consensus_evidence_pass for report in reports)
-        ),
+        aggregate_pass=all(report.aggregate_pass for report in reports),
     )
 
 
@@ -652,13 +686,15 @@ def _validate_fedavg_config(
         or config.local_steps != manifest.local_steps
         or config.round_count != manifest.round_count
         or config.learning_rate != manifest.learning_rate
+        or config.training != manifest.training
     ):
         raise BenchmarkReportError("FedAvg frozen configuration mismatches manifest")
     if (
         config.data_source != "torchvision-cifar10"
         or config.test_sample_count != 10_000
         or config.evaluation_interval != 5
-        or config.batch_size != 32
+        or config.batch_size
+        != (manifest.training.batch_size if manifest.training is not None else 32)
         or config.device != "cpu"
         or not config.augment
     ):
@@ -706,6 +742,11 @@ def _manifest_configuration(manifest: SealedManifest) -> JsonObject:
         "codec_id": manifest.codec_id,
         "transport": manifest.transport.model_dump(mode="json"),
         "consensus_sketch": manifest.consensus_sketch.model_dump(mode="json"),
+        "training": (
+            manifest.training.model_dump(mode="json")
+            if manifest.training is not None
+            else None
+        ),
         "tensor_schema": manifest.tensor_schema.model_dump(mode="json"),
     }
 
@@ -828,7 +869,7 @@ def _require_completed_state(root: Path, manifest: SealedManifest) -> None:
     terminal_record = cast(JsonObject, terminal)
     if terminal_record.get("result") != "complete":
         raise BenchmarkReportError(f"run is not complete: {root}")
-    if state_record.get("committed_round") != manifest.round_count - 1:
+    if state_record.get("committed_round") != _total_dpsgd_round_count(manifest) - 1:
         raise BenchmarkReportError(f"run is incomplete: {root}")
 
 
@@ -981,15 +1022,23 @@ def _latest_round(metrics: Sequence[Event], node_id: str) -> int:
 def _validate_dpsgd_evaluation_schedule(
     node_metrics: Mapping[str, Sequence[Event]],
     *,
-    round_count: int,
+    training_round_count: int,
+    total_round_count: int,
 ) -> None:
     for events in node_metrics.values():
-        if len(events) != round_count:
+        if len(events) != total_round_count:
             raise BenchmarkReportError("round metrics are incomplete")
         for event in events:
             round_id = _integer_value(event, "round_id")
             should_evaluate = (
-                (round_id + 1) % 5 == 0 or round_id + 1 == round_count
+                (
+                    round_id < training_round_count
+                    and (
+                        (round_id + 1) % 5 == 0
+                        or round_id + 1 == training_round_count
+                    )
+                )
+                or round_id + 1 == total_round_count
             )
             loss = event.get("evaluation_loss")
             accuracy = event.get("evaluation_accuracy")
@@ -1011,6 +1060,15 @@ def _validate_dpsgd_evaluation_schedule(
                 raise BenchmarkReportError(
                     "D-PSGD evaluation schedule is incomplete or invalid"
                 )
+
+
+def _total_dpsgd_round_count(manifest: SealedManifest) -> int:
+    final_rounds = (
+        manifest.training.final_consensus_rounds
+        if manifest.training is not None
+        else 0
+    )
+    return manifest.round_count + final_rounds
 
 
 def _metric_value_for_round(
