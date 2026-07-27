@@ -491,8 +491,8 @@ def _parser() -> argparse.ArgumentParser:
     draft.add_argument("--dromeus-commit", required=True)
     draft.add_argument("--image-digest", required=True)
     draft.add_argument("--pytorch-version", required=True)
-    draft.add_argument("--round-count", type=int, default=100)
-    draft.add_argument("--local-steps", type=int, default=5)
+    draft.add_argument("--round-count", type=int, default=400)
+    draft.add_argument("--local-steps", type=int, default=40)
     draft.add_argument("--learning-rate", type=float, default=0.1)
     draft.add_argument("--output", required=True, type=Path)
 

@@ -11,11 +11,12 @@ from benchmarks.cifar10.runner import (
     DatasetArtifact,
     ReportInput,
     create_draft,
+    main,
     write_frozen_plan,
     write_node_configs,
     write_pilot_evidence,
 )
-from dromeus.manifests.canonical import canonical_hash
+from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import SealedManifest
 from dromeus.persistence.run_store import RunStore
 from dromeus.training.cifar10 import (
@@ -182,6 +183,35 @@ def test_draft_freezes_a_160_epoch_resnet_recipe() -> None:
     assert draft.training.weight_decay == 1e-4
     assert draft.training.learning_rate_milestones == (8_000, 12_000)
     assert draft.training.final_consensus_rounds == 2
+
+
+def test_draft_cli_defaults_to_the_quality_recipe(tmp_path: Path) -> None:
+    output = tmp_path / "draft.yaml"
+
+    assert (
+        main(
+            [
+                "draft",
+                "--run-id",
+                "quality-cli",
+                "--seed",
+                "17",
+                "--dromeus-commit",
+                "a" * 40,
+                "--image-digest",
+                f"sha256:{'b' * 64}",
+                "--pytorch-version",
+                "2.13.0+cpu",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+
+    draft = parse_draft_yaml(output)
+    assert draft.round_count == 400
+    assert draft.local_steps == 40
 
 
 def test_completed_pilot_can_freeze_one_plan(tmp_path: Path) -> None:
