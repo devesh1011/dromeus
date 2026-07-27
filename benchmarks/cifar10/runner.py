@@ -177,6 +177,7 @@ def write_node_configs(
             draft_path=draft_path,
             seed=benchmark_seed,
             node_config_paths=result,
+            deployed_draft_path=Path("/run/dromeus/draft.yaml"),
         )
     return result
 
