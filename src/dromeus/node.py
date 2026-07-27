@@ -19,7 +19,7 @@ from dromeus.manifests.canonical import (
     canonical_json,
     parse_draft_yaml,
 )
-from dromeus.manifests.models import Invitation
+from dromeus.manifests.models import DraftRunSpec, Invitation
 from dromeus.membership.protocol import create_invitation
 from dromeus.runtime import NodeRuntime, prepare_cifar_training
 from dromeus.telemetry.events import JsonlEventSink, emit_event
@@ -69,15 +69,9 @@ def load_node_config(path: Path) -> NodeConfig:
 
 async def run_node(config: NodeConfig) -> None:
     """Form, train, persist, and stop one production AXL-backed CIFAR node."""
-    draft = parse_draft_yaml(config.draft_path)
-    config.run_root.mkdir(parents=True, exist_ok=True)
-    event_sink = JsonlEventSink(config.run_root / "logs" / "dromeus.jsonl")
-    emit_event(
-        "node_start",
-        run_id=draft.run_id,
-        sink=event_sink,
-        role=config.role,
-        benchmark_seed=config.benchmark_seed,
+    draft, event_sink = await asyncio.to_thread(
+        _prepare_node_start,
+        config,
     )
     prepared_training = await asyncio.to_thread(
         prepare_cifar_training,
@@ -128,7 +122,8 @@ async def run_node(config: NodeConfig) -> None:
             transport,
             run_store_root / "topology-ready.json",
         )
-        emit_event(
+        await asyncio.to_thread(
+            emit_event,
             "benchmark_node_ready",
             run_id=result.manifest.run_id,
             manifest_hash=result.manifest_hash,
@@ -156,7 +151,8 @@ async def run_node(config: NodeConfig) -> None:
             transport,
             run_store_root / "topology-complete.json",
         )
-        emit_event(
+        await asyncio.to_thread(
+            emit_event,
             "node_complete",
             run_id=result.manifest.run_id,
             manifest_hash=result.manifest_hash,
@@ -170,6 +166,22 @@ async def run_node(config: NodeConfig) -> None:
 
 def _write_invitation(path: Path, invitation: Invitation) -> None:
     _atomic_write(path, canonical_json(invitation))
+
+
+def _prepare_node_start(
+    config: NodeConfig,
+) -> tuple[DraftRunSpec, JsonlEventSink]:
+    draft = parse_draft_yaml(config.draft_path)
+    config.run_root.mkdir(parents=True, exist_ok=True)
+    event_sink = JsonlEventSink(config.run_root / "logs" / "dromeus.jsonl")
+    emit_event(
+        "node_start",
+        run_id=draft.run_id,
+        sink=event_sink,
+        role=config.role,
+        benchmark_seed=config.benchmark_seed,
+    )
+    return draft, event_sink
 
 
 async def _read_invitation(path: Path, *, timeout_seconds: float) -> Invitation:

@@ -29,8 +29,8 @@ from torchvision.datasets import (  # pyright: ignore[reportMissingTypeStubs]
 )
 from torchvision.transforms import ToTensor  # pyright: ignore[reportMissingTypeStubs]
 
+from dromeus.manifests.models import DraftRunSpec, SealedManifest, TensorSchema
 from dromeus.manifests.models import Tensor as TensorSpec
-from dromeus.manifests.models import TensorSchema
 
 IMAGE_SHAPE = (3, 32, 32)
 CLASS_COUNT = 10
@@ -395,6 +395,74 @@ class CIFAR10Trainer:
         return images, labels
 
 
+@dataclass(frozen=True, slots=True)
+class PreparedCIFARTraining:
+    """Local CIFAR data retained behind training-owned construction methods."""
+
+    _partitions: tuple[CIFAR10Data, ...]
+    _test_data: CIFAR10Data
+    benchmark_seed: int
+
+    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
+        return create_initial_checkpoint(path, seed=self.benchmark_seed)
+
+    def create_trainer(
+        self,
+        *,
+        manifest: SealedManifest,
+        local_public_key: str,
+    ) -> CIFAR10Trainer:
+        node_indices = {
+            participant.public_key: participant.node_index
+            for participant in manifest.participants
+        }
+        node_index = node_indices[local_public_key]
+        partition_index = manifest.dataset.node_index_partitions[node_index]
+        return CIFAR10Trainer(
+            train_data=self._partitions[partition_index],
+            test_data=self._test_data,
+            seed=self.benchmark_seed + node_index,
+            batch_size=32,
+            learning_rate=manifest.learning_rate,
+            device="cpu",
+            augment=True,
+        )
+
+
+def prepare_cifar_training(
+    *,
+    draft: DraftRunSpec,
+    cifar_root: Path,
+    benchmark_seed: int,
+) -> PreparedCIFARTraining:
+    """Load and validate local CIFAR data before membership becomes ready."""
+    train_data = CIFAR10Data.from_torchvision(
+        root=cifar_root,
+        train=True,
+        download=False,
+    )
+    test_data = CIFAR10Data.from_torchvision(
+        root=cifar_root,
+        train=False,
+        download=False,
+    )
+    if len(train_data) != draft.dataset.sample_count:
+        raise ValueError("local CIFAR-10 sample count does not match draft")
+    partitions = train_data.split_iid(
+        participant_count=4,
+        seed=draft.dataset.iid_partition_seed,
+    )
+    if tuple(len(partition) for partition in partitions) != (
+        draft.dataset.partition_sample_counts
+    ):
+        raise ValueError("local CIFAR-10 partitions do not match draft")
+    return PreparedCIFARTraining(
+        _partitions=partitions,
+        _test_data=test_data,
+        benchmark_seed=benchmark_seed,
+    )
+
+
 __all__ = [
     "CIFAR10Data",
     "CIFAR10Trainer",
@@ -403,8 +471,10 @@ __all__ = [
     "InitialCheckpoint",
     "MODEL_DEFINITION",
     "MODEL_DEFINITION_HASH",
+    "PreparedCIFARTraining",
     "build_model",
     "checkpoint_hash",
     "create_initial_checkpoint",
+    "prepare_cifar_training",
     "tensor_schema_for_model",
 ]

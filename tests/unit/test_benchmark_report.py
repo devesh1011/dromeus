@@ -162,6 +162,8 @@ def test_benchmark_report_aggregates_metrics_and_writes_artifacts(
     assert report.no_node_more_than_5pp_below
     assert report.aggregate_pass
     assert report.connectivity["edge_count"] == 4
+    assert report.topology["classification"] == "partial-participant-mesh"
+    assert report.topology["participant_edge_count"] == 4
     assert report.transport["transfer_count"] == 4
     assert report.transport["payload_bytes_total"] == 400
     assert report.transport["goodput_bytes_per_second"] is not None

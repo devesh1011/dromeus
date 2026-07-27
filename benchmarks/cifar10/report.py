@@ -126,6 +126,7 @@ class BenchmarkReport:
     round_timing: Mapping[str, object]
     transport: Mapping[str, object]
     connectivity: Mapping[str, object]
+    topology: Mapping[str, object]
     failures: tuple[JsonObject, ...]
     exact_consensus: ExactConsensusReport
     mean_within_fedavg_3pp: bool
@@ -180,6 +181,7 @@ class BenchmarkReport:
             "round_timing": dict(self.round_timing),
             "transport": dict(self.transport),
             "connectivity": dict(self.connectivity),
+            "topology": dict(self.topology),
             "failures": list(self.failures),
             "exact_consensus": self.exact_consensus.as_dict(),
             "criteria": {
@@ -504,14 +506,7 @@ def build_benchmark_report(
     expected_nodes = {
         participant.public_key for participant in manifests[0].participants
     }
-    for phase in ("ready", "complete"):
-        topology_nodes = {
-            _read_topology(root, phase=phase) for root in run_roots
-        }
-        if topology_nodes != expected_nodes:
-            raise BenchmarkReportError(
-                f"{phase} topology snapshots do not cover sealed participants"
-            )
+    topology = _topology_summary(run_roots, expected_nodes)
     if benchmark_nodes != expected_nodes:
         raise BenchmarkReportError(
             "benchmark provenance does not cover sealed participants"
@@ -579,6 +574,7 @@ def build_benchmark_report(
         round_timing=round_timing,
         transport=transport,
         connectivity=connectivity,
+        topology=topology,
         failures=failures,
         exact_consensus=exact_consensus,
         mean_within_fedavg_3pp=abs(dpsgd_final_accuracy.mean - fedavg_accuracy) <= 0.03,
@@ -793,7 +789,7 @@ def _require_completed_state(root: Path, manifest: SealedManifest) -> None:
         raise BenchmarkReportError(f"run is incomplete: {root}")
 
 
-def _read_topology(root: Path, *, phase: str) -> str:
+def _read_topology(root: Path, *, phase: str) -> tuple[str, tuple[str, ...]]:
     path = root / f"topology-{phase}.json"
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -804,7 +800,56 @@ def _read_topology(root: Path, *, phase: str) -> str:
     public_key = value.get("our_public_key")
     if not isinstance(public_key, str):
         raise BenchmarkReportError(f"invalid topology snapshots at {root}")
-    return public_key
+    peers = value.get("peers")
+    if not isinstance(peers, list):
+        raise BenchmarkReportError(f"invalid topology snapshots at {root}")
+    peer_keys: list[str] = []
+    for peer in peers:
+        if not isinstance(peer, dict) or not isinstance(
+            peer.get("public_key"), str
+        ):
+            raise BenchmarkReportError(f"invalid topology snapshots at {root}")
+        peer_keys.append(cast(str, peer["public_key"]))
+    return public_key, tuple(peer_keys)
+
+
+def _topology_summary(
+    run_roots: Sequence[Path], expected_nodes: set[str]
+) -> JsonObject:
+    snapshots = {
+        phase: tuple(_read_topology(root, phase=phase) for root in run_roots)
+        for phase in ("ready", "complete")
+    }
+    for phase, records in snapshots.items():
+        if {public_key for public_key, _ in records} != expected_nodes:
+            raise BenchmarkReportError(
+                f"{phase} topology snapshots do not cover sealed participants"
+            )
+    participant_edges: set[tuple[str, str]] = set()
+    external_peers: set[str] = set()
+    for public_key, peers in snapshots["complete"]:
+        for peer in peers:
+            if peer in expected_nodes and peer != public_key:
+                participant_edges.add(tuple(sorted((public_key, peer))))
+            elif peer not in expected_nodes:
+                external_peers.add(peer)
+    possible_edges = len(expected_nodes) * (len(expected_nodes) - 1) // 2
+    if len(participant_edges) == possible_edges:
+        classification = "direct-participant-mesh"
+    elif participant_edges:
+        classification = "partial-participant-mesh"
+    elif external_peers:
+        classification = "relay-only"
+    else:
+        classification = "isolated"
+    return {
+        "classification": classification,
+        "participant_edge_count": len(participant_edges),
+        "possible_participant_edges": possible_edges,
+        "external_peer_count": len(external_peers),
+        "ready_snapshot_count": len(snapshots["ready"]),
+        "complete_snapshot_count": len(snapshots["complete"]),
+    }
 
 
 def _read_events(path: Path, *, run_id: str, manifest_hash: str) -> list[Event]:

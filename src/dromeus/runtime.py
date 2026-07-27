@@ -36,10 +36,13 @@ from dromeus.telemetry.consensus import (
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.training.pytorch import (
-    CIFAR10Data,
-    CIFAR10Trainer,
     InitialCheckpoint,
-    create_initial_checkpoint,
+)
+from dromeus.training.pytorch import (
+    PreparedCIFARTraining as TrainingOwnedCIFAR,
+)
+from dromeus.training.pytorch import (
+    prepare_cifar_training as prepare_training_owned_cifar,
 )
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.envelope import MessageType
@@ -82,14 +85,12 @@ class TrainingConfig:
 
 @dataclass(frozen=True, slots=True)
 class PreparedCIFARTraining:
-    """Validated local CIFAR data ready for one formed benchmark node."""
+    """Runtime composition over training-owned CIFAR data."""
 
-    partitions: tuple[CIFAR10Data, ...]
-    test_data: CIFAR10Data
-    benchmark_seed: int
+    _training: TrainingOwnedCIFAR
 
     def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return create_initial_checkpoint(path, seed=self.benchmark_seed)
+        return self._training.create_initial_checkpoint(path)
 
     def build_config(
         self,
@@ -99,20 +100,9 @@ class PreparedCIFARTraining:
         run_root: Path,
         metrics_publisher: MetricsService,
     ) -> TrainingConfig:
-        node_indices = {
-            participant.public_key: participant.node_index
-            for participant in result.manifest.participants
-        }
-        node_index = node_indices[local_public_key]
-        partition_index = result.manifest.dataset.node_index_partitions[node_index]
-        trainer = CIFAR10Trainer(
-            train_data=self.partitions[partition_index],
-            test_data=self.test_data,
-            seed=self.benchmark_seed + node_index,
-            batch_size=32,
-            learning_rate=result.manifest.learning_rate,
-            device="cpu",
-            augment=True,
+        trainer = self._training.create_trainer(
+            manifest=result.manifest,
+            local_public_key=local_public_key,
         )
         return TrainingConfig(
             algorithm=DPSGDAdapter(
@@ -134,31 +124,13 @@ def prepare_cifar_training(
     cifar_root: Path,
     benchmark_seed: int,
 ) -> PreparedCIFARTraining:
-    """Load and validate local CIFAR data before membership becomes ready."""
-    train_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=True,
-        download=False,
-    )
-    test_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=False,
-        download=False,
-    )
-    if len(train_data) != draft.dataset.sample_count:
-        raise ValueError("local CIFAR-10 sample count does not match draft")
-    partitions = train_data.split_iid(
-        participant_count=4,
-        seed=draft.dataset.iid_partition_seed,
-    )
-    if tuple(len(partition) for partition in partitions) != (
-        draft.dataset.partition_sample_counts
-    ):
-        raise ValueError("local CIFAR-10 partitions do not match draft")
+    """Prepare local data through training-owned interfaces."""
     return PreparedCIFARTraining(
-        partitions=partitions,
-        test_data=test_data,
-        benchmark_seed=benchmark_seed,
+        _training=prepare_training_owned_cifar(
+            draft=draft,
+            cifar_root=cifar_root,
+            benchmark_seed=benchmark_seed,
+        )
     )
 
 
