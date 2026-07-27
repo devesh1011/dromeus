@@ -118,20 +118,6 @@ async def run_node(config: NodeConfig) -> None:
             result = await runtime.join(invitation=invitation)
 
         run_store_root = config.run_root / "run-store"
-        await _write_topology_snapshot(
-            transport,
-            run_store_root / "topology-ready.json",
-        )
-        await asyncio.to_thread(
-            emit_event,
-            "benchmark_node_ready",
-            run_id=result.manifest.run_id,
-            manifest_hash=result.manifest_hash,
-            node_id=local_key,
-            sink=event_sink,
-            benchmark_seed=config.benchmark_seed,
-            transport="axl",
-        )
         metrics = JsonlMetricsPublisher(
             sink=event_sink,
             run_id=result.manifest.run_id,
@@ -146,6 +132,24 @@ async def run_node(config: NodeConfig) -> None:
             metrics_publisher=metrics,
         )
         runtime.configure_training(training_config)
+        try:
+            await _write_topology_snapshot(
+                transport,
+                run_store_root / "topology-ready.json",
+            )
+            await asyncio.to_thread(
+                emit_event,
+                "benchmark_node_ready",
+                run_id=result.manifest.run_id,
+                manifest_hash=result.manifest_hash,
+                node_id=local_key,
+                sink=event_sink,
+                benchmark_seed=config.benchmark_seed,
+                transport="axl",
+            )
+        except BaseException as error:
+            await runtime.fail_before_run(error)
+            raise
         commits = await runtime.run()
         await _write_topology_snapshot(
             transport,

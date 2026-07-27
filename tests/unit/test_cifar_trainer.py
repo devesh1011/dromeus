@@ -11,6 +11,7 @@ from dromeus.training.pytorch import (
     CIFAR10Data,
     CIFAR10Trainer,
     CIFARDataError,
+    IIDPartitionProvenance,
     create_initial_checkpoint,
 )
 
@@ -56,6 +57,15 @@ def test_iid_partitions_are_reproducible_and_disjoint(
     ]
     assert all(part[0][0].shape == (3, 32, 32) for part in first)
     assert len({part[index][1] for part in first for index in range(len(part))}) > 1
+    assert [part.partition_provenance for part in first] == [
+        IIDPartitionProvenance(
+            seed=11,
+            participant_count=4,
+            partition_index=index,
+            source_sample_count=len(cifar10_data),
+        )
+        for index in range(4)
+    ]
 
 
 def test_checkpoint_is_deterministic_and_matches_trainer_schema(

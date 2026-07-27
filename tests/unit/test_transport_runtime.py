@@ -26,7 +26,12 @@ from dromeus.membership.protocol import (
 )
 from dromeus.persistence.run_store import RunStore
 from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
-from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
+from dromeus.transport.envelope import (
+    MessageType,
+    create_envelope,
+    decode_envelope,
+    encode_envelope,
+)
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import ArtifactStore, TransferError, TransferManager
@@ -55,6 +60,16 @@ class RuntimeTrainer:
 
     def evaluate(self) -> tuple[float, float]:
         return 0.0, 0.5
+
+
+class RecordingInMemoryTransport(InMemoryTransport):
+    def __init__(self, *, network: InMemoryNetwork, public_key: str) -> None:
+        super().__init__(network=network, public_key=public_key)
+        self.sent_payloads: list[tuple[str, bytes]] = []
+
+    async def send(self, destination: str, payload: bytes) -> None:
+        self.sent_payloads.append((destination, payload))
+        await super().send(destination, payload)
 
 
 def test_future_round_message_id_is_deduplicated_per_sender() -> None:
@@ -411,6 +426,106 @@ async def _test_runtime_runs_training_after_in_memory_formation(
         }
     await nodes[4].stop()
     assert nodes[4].state is NodeState.STOPPED
+
+
+def test_runtime_persists_and_broadcasts_failure_before_run(tmp_path: Path) -> None:
+    asyncio.run(_test_runtime_persists_and_broadcasts_failure_before_run(tmp_path))
+
+
+async def _test_runtime_persists_and_broadcasts_failure_before_run(
+    tmp_path: Path,
+) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    draft_data = manifest.model_dump(mode="python")
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    draft_data["transport"]["max_retries"] = 1
+    draft_data["transport"]["retry_timeout_seconds"] = 0.05
+    draft = DraftRunSpec.model_validate(draft_data)
+    network = InMemoryNetwork()
+    transports = [
+        RecordingInMemoryTransport(network=network, public_key=f"peer-{index}")
+        for index in range(4)
+    ]
+    nodes: list[NodeRuntime] = []
+    for index, transport in enumerate(transports):
+        trainer = RuntimeTrainer()
+        nodes.append(
+            NodeRuntime(
+                transport=transport,
+                draft=draft,
+                environment=manifest.environment,
+                dataset=manifest.dataset,
+                artifact_store=ArtifactStore(tmp_path / f"artifacts-{index}"),
+                training=TrainingConfig(
+                    algorithm=DPSGDAdapter(
+                        trainer=trainer,
+                        tensor_schema=manifest.tensor_schema,
+                        local_steps=1,
+                    ),
+                    load_checkpoint=trainer.load_checkpoint,
+                    run_store=RunStore(tmp_path / f"run-{index}"),
+                    artifact_root=tmp_path / f"rounds-{index}",
+                ),
+            )
+        )
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    write_checkpoint(checkpoint)
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key=await transports[0].local_public_key(),
+        bootstrap_uri="axl://bootstrap",
+    )
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(
+                nodes[0].initiate(
+                    bootstrap_uri="axl://bootstrap",
+                    checkpoint_path=checkpoint,
+                    tensor_schema=manifest.tensor_schema,
+                ),
+                *(node.join(invitation=invitation) for node in nodes[1:]),
+            ),
+            timeout=2.0,
+        )
+        assert len(results) == 4
+        transports[0].sent_payloads.clear()
+
+        await nodes[0].fail_before_run(RuntimeError("topology unavailable"))
+
+        assert nodes[0].state is NodeState.FAILED
+        state = RunStore(tmp_path / "run-0").load_state()
+        assert state["committed_round"] == -1
+        assert state["terminal"] == {
+            "result": "failed",
+            "diagnostics": {
+                "error_type": "RuntimeError",
+                "error": "topology unavailable",
+            },
+        }
+        participant_keys = frozenset(f"peer-{index}" for index in range(4))
+        sent_envelopes = [
+            decode_envelope(
+                payload,
+                authenticated_sender="peer-0",
+                participant_keys=participant_keys,
+            )
+            for _, payload in transports[0].sent_payloads
+        ]
+        failure_envelopes = [
+            envelope
+            for envelope in sent_envelopes
+            if envelope.message_type is MessageType.RUN_FAILED
+        ]
+        assert len(failure_envelopes) == 3
+        assert {envelope.round_id for envelope in failure_envelopes} == {0}
+    finally:
+        await asyncio.gather(*(node.stop() for node in nodes))
 
 
 def test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> None:

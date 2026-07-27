@@ -50,6 +50,16 @@ class CIFARDataError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class IIDPartitionProvenance:
+    """Identity of one deterministic IID split member."""
+
+    seed: int
+    participant_count: int
+    partition_index: int
+    source_sample_count: int
+
+
+@dataclass(frozen=True, slots=True)
 class InitialCheckpoint:
     """Canonical checkpoint handoff data for initiator formation."""
 
@@ -64,6 +74,7 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
 
     _dataset: Dataset[tuple[Tensor, int]]
     _indices: tuple[int, ...] | None = None
+    _partition_provenance: IIDPartitionProvenance | None = None
 
     @classmethod
     def from_torchvision(
@@ -114,15 +125,28 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
             raise ValueError("sample count must divide participant count exactly")
         generator = np.random.default_rng(seed)
         order = generator.permutation(len(self))
+        source_sample_count = len(self)
         partitions: list[CIFAR10Data] = []
-        for indices in np.array_split(order, participant_count):
+        for partition_index, indices in enumerate(
+            np.array_split(order, participant_count)
+        ):
             partitions.append(
                 CIFAR10Data(
                     self._dataset,
                     tuple(int(index) for index in indices),
+                    IIDPartitionProvenance(
+                        seed=seed,
+                        participant_count=participant_count,
+                        partition_index=partition_index,
+                        source_sample_count=source_sample_count,
+                    ),
                 )
             )
         return tuple(partitions)
+
+    @property
+    def partition_provenance(self) -> IIDPartitionProvenance | None:
+        return self._partition_provenance
 
     def __len__(self) -> int:
         return (
@@ -469,6 +493,7 @@ __all__ = [
     "CIFARDataError",
     "CIFARGroupNormCNN",
     "InitialCheckpoint",
+    "IIDPartitionProvenance",
     "MODEL_DEFINITION",
     "MODEL_DEFINITION_HASH",
     "PreparedCIFARTraining",

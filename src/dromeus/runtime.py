@@ -17,6 +17,7 @@ from dromeus.gossip.engine import (
     GossipAlgorithm,
     GossipEngine,
     RoundCommit,
+    RunFailure,
 )
 from dromeus.gossip.scheduler import PeerScheduler
 from dromeus.manifests.models import (
@@ -191,6 +192,58 @@ class NodeRuntime:
             raise NodeRuntimeError("training is already configured")
         self._training = training
 
+    async def fail_before_run(self, error: BaseException) -> None:
+        """Persist and announce a formed node failure before training starts."""
+        if self._state is not NodeState.READY:
+            raise NodeRuntimeError(f"cannot fail node before run from {self._state}")
+        if self._training is None:
+            raise NodeRuntimeError("training is not configured")
+        assert self._result is not None
+        self._state = NodeState.FAILED
+        initialized = False
+        try:
+            try:
+                await asyncio.to_thread(
+                    self._training.run_store.initialize, self._result.manifest
+                )
+                initialized = True
+            except Exception:
+                pass
+            await self._record_terminal_failure(
+                initialized, result="failed", error=error
+            )
+            try:
+                local_key = await self._transport.local_public_key()
+                self._local_public_key = local_key
+                pair_transport = await self._create_pair_transport(local_key)
+                self._pair_transport = pair_transport
+                await pair_transport.broadcast_run_failed(
+                    RunFailure(
+                        round_id=0,
+                        error_type=type(error).__name__,
+                        reason=str(error)[:1024] or "node failed before training",
+                    )
+                )
+            except Exception:
+                pass
+            try:
+                await asyncio.to_thread(
+                    emit_event,
+                    "run_failed",
+                    run_id=self._result.manifest.run_id,
+                    manifest_hash=self._result.manifest_hash,
+                    node_id=self._local_public_key,
+                    message_id="run-failed-0",
+                    round_id=0,
+                    error_type=type(error).__name__,
+                    reason=str(error)[:1024] or "node failed before training",
+                    sink=self._event_sink,
+                )
+            except Exception:
+                pass
+        finally:
+            await self._cleanup()
+
     async def initiate(
         self,
         *,
@@ -247,20 +300,7 @@ class NodeRuntime:
                 for participant in self._result.manifest.participants
             )
             services = self._formation.services
-            pair_transport = await asyncio.to_thread(
-                AXLPairTransport,
-                local_public_key=local_key,
-                run_id=self._result.manifest.run_id,
-                manifest_hash=self._result.manifest_hash,
-                algorithm_id=self._result.manifest.algorithm_id,
-                tensor_schema=self._result.manifest.tensor_schema,
-                transport_limits=self._result.manifest.transport,
-                receiver=services.receiver,
-                sender=services.sender,
-                transfer_manager=services.transfer_manager,
-                artifact_root=self._training.artifact_root,
-                participant_keys=participants,
-            )
+            pair_transport = await self._create_pair_transport(local_key)
             self._pair_transport = pair_transport
 
             async def receive_consensus_sketch(
@@ -376,6 +416,28 @@ class NodeRuntime:
     async def _start_metrics(self) -> None:
         if self._training is not None and self._training.metrics_publisher is not None:
             await self._training.metrics_publisher.start()
+
+    async def _create_pair_transport(self, local_key: str) -> AXLPairTransport:
+        assert self._result is not None
+        assert self._training is not None
+        participants = frozenset(
+            participant.public_key for participant in self._result.manifest.participants
+        )
+        services = self._formation.services
+        return await asyncio.to_thread(
+            AXLPairTransport,
+            local_public_key=local_key,
+            run_id=self._result.manifest.run_id,
+            manifest_hash=self._result.manifest_hash,
+            algorithm_id=self._result.manifest.algorithm_id,
+            tensor_schema=self._result.manifest.tensor_schema,
+            transport_limits=self._result.manifest.transport,
+            receiver=services.receiver,
+            sender=services.sender,
+            transfer_manager=services.transfer_manager,
+            artifact_root=self._training.artifact_root,
+            participant_keys=participants,
+        )
 
     async def _stop_metrics(self) -> None:
         if self._training is not None and self._training.metrics_publisher is not None:
