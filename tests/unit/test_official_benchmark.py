@@ -185,3 +185,21 @@ def test_prepare_dpsgd_node_configs_connects_frozen_plan_to_four_nodes(
 
     assert len(configs) == 4
     assert sum(config.role == "initiator" for config in configs) == 1
+
+    for path in config_paths:
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                str(draft_path),
+                "/run/dromeus/draft.yaml",
+            ),
+            encoding="utf-8",
+        )
+    deployed = prepare_dpsgd_node_configs(
+        plan_path=plan_path,
+        draft_path=draft_path,
+        seed=17,
+        node_config_paths=config_paths,
+        deployed_draft_path=Path("/run/dromeus/draft.yaml"),
+    )
+
+    assert len(deployed) == 4

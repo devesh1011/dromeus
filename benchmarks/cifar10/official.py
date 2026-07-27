@@ -193,6 +193,7 @@ def prepare_dpsgd_node_configs(
     draft_path: Path,
     seed: int,
     node_config_paths: Sequence[Path],
+    deployed_draft_path: Path | None = None,
 ) -> tuple[NodeConfig, ...]:
     """Validate one frozen four-node D-PSGD launch before deployment."""
     plan = load_frozen_benchmark_plan(plan_path)
@@ -212,8 +213,11 @@ def prepare_dpsgd_node_configs(
         raise OfficialBenchmarkError("node config benchmark seed is not frozen")
     if len({config.bootstrap_uri for config in configs}) != 1:
         raise OfficialBenchmarkError("node configs do not share one bootstrap URI")
-    if any(parse_draft_yaml(config.draft_path) != draft for config in configs):
-        raise OfficialBenchmarkError("node configs do not share the frozen draft")
+    if deployed_draft_path is None:
+        if any(parse_draft_yaml(config.draft_path) != draft for config in configs):
+            raise OfficialBenchmarkError("node configs do not share the frozen draft")
+    elif any(config.draft_path != deployed_draft_path for config in configs):
+        raise OfficialBenchmarkError("node configs use the wrong deployed draft path")
     return configs
 
 
