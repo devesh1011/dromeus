@@ -111,8 +111,13 @@ class PreparedCIFARTraining:
 
     _training: TrainingOwnedCIFAR
 
-    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return self._training.create_initial_checkpoint(path)
+    def create_initial_checkpoint(
+        self,
+        path: Path,
+        *,
+        model_id: str,
+    ) -> InitialCheckpoint:
+        return self._training.create_initial_checkpoint(path, model_id=model_id)
 
     def build_config(
         self,
@@ -132,6 +137,7 @@ class PreparedCIFARTraining:
                 tensor_schema=result.manifest.tensor_schema,
                 local_steps=result.manifest.local_steps,
                 learning_rate=result.manifest.learning_rate,
+                training_round_count=result.manifest.round_count,
             ),
             load_checkpoint=trainer.load_checkpoint,
             run_store=RunStore(run_root / "run-store"),
@@ -374,12 +380,21 @@ class NodeRuntime:
                 on_distance=self._record_consensus,
                 size=self._result.manifest.consensus_sketch.size,
             )
+            final_consensus_rounds = (
+                self._result.manifest.training.final_consensus_rounds
+                if self._result.manifest.training is not None
+                else 0
+            )
             self._engine = GossipEngine(
                 local_public_key=local_key,
-                round_count=self._result.manifest.round_count,
+                round_count=(
+                    self._result.manifest.round_count + final_consensus_rounds
+                ),
                 scheduler=PeerScheduler(
-                    sorted(participants),
+                    self._result.manifest.participants,
                     seed=self._result.manifest.peer_scheduler_seed,
+                    training_round_count=self._result.manifest.round_count,
+                    final_consensus_rounds=final_consensus_rounds,
                 ),
                 algorithm=self._training.algorithm,
                 transport=self._pair_transport,
@@ -659,13 +674,14 @@ class NodeRuntime:
             metrics["local_loss"] = float(local_loss)
         self._training.run_store.persist_commit(
             committed_round=commit.round_id,
-            algorithm_state=commit.post_mix.weights,
+            algorithm_state=commit.algorithm_state,
             pre_mix_state=commit.local_bundle.tensors,
             post_mix_state=commit.post_mix.weights,
             state_checksum=commit.state_checksum,
             schedule={
                 "round_id": commit.round_id,
                 "peer": commit.peer_public_key,
+                "phase": commit.phase,
             },
             metrics=metrics,
             transfer_diagnostics={

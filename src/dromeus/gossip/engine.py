@@ -8,7 +8,7 @@ import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
@@ -101,6 +101,8 @@ class GossipAlgorithm(Protocol):
     def validate_peer(self, peer_bundle: TrainedWeightsBundle) -> None: ...
 
     def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot: ...
+
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]: ...
 
 
 class PairTransport(Protocol):
@@ -514,7 +516,9 @@ class RoundCommit:
     local_bundle: TrainedWeightsBundle
     peer_bundle: TrainedWeightsBundle
     post_mix: AlgorithmSnapshot
+    algorithm_state: dict[str, np.ndarray]
     state_checksum: str
+    phase: Literal["training", "final-consensus"] = "training"
 
 
 CommitCallback = Callable[[RoundCommit], None | Awaitable[None]]
@@ -678,6 +682,9 @@ class GossipEngine:
             raise PairCommitError("peer update application failed") from error
         mixing_seconds = time.perf_counter() - mixing_started
         state_checksum = await asyncio.to_thread(checksum_tensors, post_mix.weights)
+        algorithm_state = await asyncio.to_thread(
+            self._algorithm.checkpoint_tensors
+        )
         commit = RoundCommit(
             round_id=round_id,
             peer_public_key=peer,
@@ -685,7 +692,9 @@ class GossipEngine:
             local_bundle=local_bundle,
             peer_bundle=peer_bundle,
             post_mix=post_mix,
+            algorithm_state=algorithm_state,
             state_checksum=state_checksum,
+            phase=pairing.phase,
         )
         result = await asyncio.to_thread(self._commit_callback, commit)
         if inspect.isawaitable(result):

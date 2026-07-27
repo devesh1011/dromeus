@@ -11,14 +11,19 @@ import torch
 from dromeus.training.pytorch import (
     CIFAR10_ARCHIVE_MD5,
     CIFAR10_DATASET_VERSION,
+    CIFAR_RESNET32_MODEL_ID,
+    CIFAR_RESNET32_PREPROCESSING_DEFINITION,
+    CIFAR_RESNET32_PREPROCESSING_HASH,
     PREPROCESSING_DEFINITION,
     PREPROCESSING_HASH,
     CIFAR10Data,
     CIFAR10Trainer,
     CIFARDataError,
     IIDPartitionProvenance,
+    build_model,
     create_initial_checkpoint,
     derive_benchmark_seed,
+    tensor_schema_for_model,
 )
 
 
@@ -27,6 +32,18 @@ def test_cifar_contract_constants_are_canonical() -> None:
     assert PREPROCESSING_HASH == hashlib.sha256(
         PREPROCESSING_DEFINITION.encode()
     ).hexdigest()
+    assert CIFAR_RESNET32_PREPROCESSING_HASH == hashlib.sha256(
+        CIFAR_RESNET32_PREPROCESSING_DEFINITION.encode()
+    ).hexdigest()
+
+
+def test_resnet32_v2_has_capacity_and_exchanges_batchnorm_state() -> None:
+    model = build_model(seed=17, model_id=CIFAR_RESNET32_MODEL_ID)
+    state_names = {tensor.name for tensor in tensor_schema_for_model(model).tensors}
+
+    assert sum(parameter.numel() for parameter in model.parameters()) >= 450_000
+    assert "stages.0.0.bn1.running_mean" in state_names
+    assert "stages.0.0.bn1.num_batches_tracked" not in state_names
 
 
 def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
@@ -155,3 +172,67 @@ def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:
     )
     assert np.isfinite(loss)
     assert 0.0 <= accuracy <= 1.0
+
+
+def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
+    cifar10_data: CIFAR10Data,
+) -> None:
+    trainer = CIFAR10Trainer(
+        train_data=cifar10_data,
+        seed=3,
+        model_id=CIFAR_RESNET32_MODEL_ID,
+        batch_size=4,
+        learning_rate=0.1,
+        momentum=0.9,
+        weight_decay=1e-4,
+        learning_rate_milestones=(1,),
+        learning_rate_gamma=0.1,
+        crop_padding=4,
+        normalize=True,
+    )
+    before = trainer.weights()
+
+    trainer.train_local_steps(2)
+    checkpoint_state = trainer.checkpoint_tensors()
+
+    assert trainer.learning_rate == pytest.approx(0.01)
+    assert int(checkpoint_state["__dromeus_training__.completed_steps"][0]) == 2
+    assert any(
+        name.startswith("__dromeus_training__.momentum.")
+        for name in checkpoint_state
+    )
+    assert any(name.endswith("running_mean") for name in before)
+    assert any(
+        name.endswith("running_mean")
+        and not np.array_equal(before[name], trainer.weights()[name])
+        for name in before
+    )
+
+    restored = CIFAR10Trainer(
+        train_data=cifar10_data,
+        seed=99,
+        model_id=CIFAR_RESNET32_MODEL_ID,
+        batch_size=4,
+        learning_rate=0.1,
+        momentum=0.9,
+        weight_decay=1e-4,
+        learning_rate_milestones=(1,),
+        learning_rate_gamma=0.1,
+        crop_padding=4,
+        normalize=True,
+    )
+    restored.load_checkpoint_tensors(checkpoint_state)
+
+    assert restored.learning_rate == pytest.approx(0.01)
+    assert all(
+        np.array_equal(value, restored.weights()[name])
+        for name, value in trainer.weights().items()
+    )
+
+    trainer.train_local_steps(1)
+    restored.train_local_steps(1)
+
+    assert all(
+        np.array_equal(value, restored.weights()[name])
+        for name, value in trainer.weights().items()
+    )

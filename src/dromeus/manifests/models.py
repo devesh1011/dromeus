@@ -9,7 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 PROTOCOL_VERSION = 1
 MANIFEST_VERSION = 1
+QUALITY_MANIFEST_VERSION = 2
 M1_PARTICIPANT_COUNT = 4
+CIFAR_CNN_MODEL_ID = "cifar-cnn-v1"
+CIFAR_RESNET32_MODEL_ID = "cifar-resnet32-v2"
+DPSGD_V1_ALGORITHM_ID = "dpsgd-v1"
+DPSGD_V2_ALGORITHM_ID = "dpsgd-v2"
 
 Identifier = Annotated[
     str, StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
@@ -114,8 +119,34 @@ class ConsensusSketchConfig(DomainModel):
     seed: int
 
 
+class TrainingPolicy(DomainModel):
+    """Versioned local-optimizer and final-consensus settings."""
+
+    batch_size: Annotated[int, Field(gt=0)]
+    momentum: Annotated[float, Field(ge=0.0, lt=1.0)]
+    weight_decay: Annotated[float, Field(ge=0.0)]
+    learning_rate_milestones: tuple[Annotated[int, Field(gt=0)], ...] = ()
+    learning_rate_gamma: Annotated[float, Field(gt=0.0, lt=1.0)]
+    crop_padding: Annotated[int, Field(ge=0)]
+    normalize: bool
+    final_consensus_rounds: Literal[0, 2] = 0
+
+    @model_validator(mode="after")
+    def increasing_milestones(self) -> Self:
+        if any(
+            right <= left
+            for left, right in zip(
+                self.learning_rate_milestones,
+                self.learning_rate_milestones[1:],
+                strict=False,
+            )
+        ):
+            raise ValueError("learning-rate milestones must be strictly increasing")
+        return self
+
+
 class DraftRunSpec(DomainModel):
-    manifest_version: Literal[1] = MANIFEST_VERSION
+    manifest_version: Literal[1, 2] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION
     run_id: RunId
     algorithm_id: AlgorithmId
@@ -131,11 +162,24 @@ class DraftRunSpec(DomainModel):
     codec_id: Literal["safetensors-v1"]
     transport: TransportLimits
     consensus_sketch: ConsensusSketchConfig
+    training: TrainingPolicy | None = None
 
     @model_validator(mode="after")
     def compatible_environment(self) -> Self:
         if self.environment.model_definition_hash != self.model_definition_hash:
             raise ValueError("environment model hash does not match draft")
+        if self.training is not None and (
+            self.manifest_version != QUALITY_MANIFEST_VERSION
+        ):
+            raise ValueError("an explicit training policy requires manifest version 2")
+        if self.model_id == CIFAR_RESNET32_MODEL_ID and (
+            self.manifest_version != QUALITY_MANIFEST_VERSION
+            or self.algorithm_id != DPSGD_V2_ALGORITHM_ID
+            or self.training is None
+        ):
+            raise ValueError(
+                "cifar-resnet32-v2 requires dpsgd-v2 and an explicit training policy"
+            )
         return self
 
 

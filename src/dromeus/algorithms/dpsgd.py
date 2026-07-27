@@ -16,7 +16,11 @@ from dromeus.algorithms.base import (
 )
 from dromeus.algorithms.codec import IdentityCodec, UpdateCodec
 from dromeus.manifests.models import RoundId, TensorSchema
-from dromeus.training.base import StochasticGradientTrainer, WeightTrainer
+from dromeus.training.base import (
+    CheckpointTrainer,
+    StochasticGradientTrainer,
+    WeightTrainer,
+)
 
 _DTYPES = {
     "float16": np.dtype(np.float16),
@@ -31,6 +35,7 @@ class DPSGDAdapter:
     tensor_schema: TensorSchema
     local_steps: int
     learning_rate: float | None = None
+    training_round_count: int | None = None
     codec: UpdateCodec = field(default_factory=IdentityCodec)
     _round_id: RoundId = 0
     _phase: str = "created"
@@ -42,6 +47,8 @@ class DPSGDAdapter:
             self.learning_rate <= 0 or not math.isfinite(self.learning_rate)
         ):
             raise ValueError("learning_rate must be positive and finite")
+        if self.training_round_count is not None and self.training_round_count <= 0:
+            raise ValueError("training_round_count must be positive")
 
     def pre_local(self, round_id: RoundId) -> AlgorithmSnapshot:
         self._round_id = round_id
@@ -49,12 +56,10 @@ class DPSGDAdapter:
         return self.snapshot()
 
     def local_training(self) -> AlgorithmSnapshot:
-        if self.learning_rate is not None and isinstance(
-            self.trainer, StochasticGradientTrainer
+        if (
+            self.training_round_count is None
+            or self._round_id < self.training_round_count
         ):
-            for _ in range(self.local_steps):
-                self.step()
-        else:
             self.trainer.train_local_steps(self.local_steps)
         self._phase = "post-local"
         return self.snapshot()
@@ -126,6 +131,12 @@ class DPSGDAdapter:
             weights=self.trainer.weights(),
         )
 
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        """Return complete durable state when the trainer exposes it."""
+        if isinstance(self.trainer, CheckpointTrainer):
+            return self.trainer.checkpoint_tensors()
+        return self.trainer.weights()
+
     def evaluate(self) -> tuple[float, float]:
         """Evaluate through the trainer's local test-data seam."""
         evaluator = getattr(self.trainer, "evaluate", None)
@@ -155,13 +166,16 @@ class DPSGDAdapter:
 
     def state_dict(self) -> dict[str, object]:
         """Return serializable algorithm, model, and codec state."""
-        return {
+        state: dict[str, object] = {
             "round_id": self._round_id,
             "phase": self._phase,
             "codec_id": self.codec.codec_id,
             "weights": self.trainer.weights(),
             "codec": self.codec.state_dict(),
         }
+        if isinstance(self.trainer, CheckpointTrainer):
+            state["trainer"] = self.trainer.checkpoint_tensors()
+        return state
 
     def load_state_dict(self, state: Mapping[str, object]) -> None:
         """Restore state after validating all tensors through the public schema."""
@@ -170,6 +184,7 @@ class DPSGDAdapter:
         codec_id = state.get("codec_id")
         weights_value = state.get("weights")
         codec_value = state.get("codec", {})
+        trainer_value = state.get("trainer")
         if not isinstance(round_id, int) or round_id < 0:
             raise ValueError("algorithm state round_id is invalid")
         if not isinstance(phase, str) or not phase:
@@ -186,7 +201,30 @@ class DPSGDAdapter:
         weights = dict(cast(Mapping[str, np.ndarray], weights_value))
         self._validate_tensors(weights)
         self.codec.load_state_dict(cast(Mapping[str, object], codec_value))
-        self.trainer.load_weights(weights)
+        if trainer_value is not None:
+            if not isinstance(self.trainer, CheckpointTrainer) or not isinstance(
+                trainer_value, Mapping
+            ):
+                raise ValueError("algorithm trainer state is invalid")
+            if not all(
+                isinstance(name, str) and isinstance(value, np.ndarray)
+                for name, value in cast(
+                    Mapping[object, object], trainer_value
+                ).items()
+            ):
+                raise ValueError("algorithm trainer state is invalid")
+            self.trainer.load_checkpoint_tensors(
+                dict(cast(Mapping[str, np.ndarray], trainer_value))
+            )
+            restored = self.trainer.weights()
+            self._validate_tensors(restored)
+            if any(
+                not np.array_equal(restored[name], weights[name])
+                for name in weights
+            ):
+                raise ValueError("algorithm trainer state weights do not match")
+        else:
+            self.trainer.load_weights(weights)
         self._round_id = round_id
         self._phase = phase
 

@@ -95,6 +95,7 @@ async def run_node(config: NodeConfig) -> None:
             checkpoint = await asyncio.to_thread(
                 prepared_training.create_initial_checkpoint,
                 config.run_root / "initial.safetensors",
+                model_id=draft.model_id,
             )
             invitation = create_invitation(
                 draft=draft,

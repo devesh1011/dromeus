@@ -352,6 +352,58 @@ def test_four_in_memory_nodes_reduce_a_shared_convex_objective() -> None:
     )
 
 
+def test_two_final_consensus_stages_exactly_average_four_nodes() -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    channel = SharedPairChannel.create()
+    training_calls = {f"peer-{index}": 0 for index in range(4)}
+
+    class CountingTrainer(LinearTrainer):
+        def __init__(self, key: str, value: float) -> None:
+            super().__init__(value)
+            self._key = key
+
+        def train_local_steps(self, step_count: int) -> None:
+            training_calls[self._key] += 1
+            super().train_local_steps(step_count)
+
+    trainers = {
+        key: CountingTrainer(key, float(index * 2))
+        for index, key in enumerate(training_calls)
+    }
+
+    async def run() -> None:
+        engines = [
+            GossipEngine(
+                local_public_key=key,
+                round_count=3,
+                scheduler=PeerScheduler(
+                    list(trainers),
+                    seed=8,
+                    training_round_count=1,
+                    final_consensus_rounds=2,
+                ),
+                algorithm=DPSGDAdapter(
+                    trainer=trainer,
+                    tensor_schema=schema,
+                    local_steps=1,
+                    training_round_count=1,
+                ),
+                transport=InMemoryPairTransport(key, channel),
+                commit_callback=lambda commit: None,
+            )
+            for key, trainer in trainers.items()
+        ]
+        await asyncio.gather(*(engine.run() for engine in engines))
+        assert all(len(engine.commits) == 3 for engine in engines)
+        assert all(engine.commits[-1].phase == "final-consensus" for engine in engines)
+
+    asyncio.run(run())
+    assert training_calls == {key: 1 for key in trainers}
+    assert {
+        float(trainer.weights()["weight"][0]) for trainer in trainers.values()
+    } == {4.0}
+
+
 def test_round_commit_checksum_is_independent_of_transport() -> None:
     tensors = {"weight": np.array([2.0], dtype=np.float32)}
     bundle = TrainedWeightsBundle(

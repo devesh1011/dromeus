@@ -23,13 +23,20 @@ from safetensors.torch import (
     save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
 )
 from torch import Tensor, nn
+from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 from torchvision.datasets import (  # pyright: ignore[reportMissingTypeStubs]
     CIFAR10 as TorchvisionCIFAR10,  # pyright: ignore[reportMissingTypeStubs]
 )
 from torchvision.transforms import ToTensor  # pyright: ignore[reportMissingTypeStubs]
 
-from dromeus.manifests.models import DraftRunSpec, SealedManifest, TensorSchema
+from dromeus.manifests.models import (
+    CIFAR_CNN_MODEL_ID,
+    CIFAR_RESNET32_MODEL_ID,
+    DraftRunSpec,
+    SealedManifest,
+    TensorSchema,
+)
 from dromeus.manifests.models import Tensor as TensorSpec
 
 IMAGE_SHAPE = (3, 32, 32)
@@ -42,6 +49,34 @@ PREPROCESSING_DEFINITION = (
 PREPROCESSING_HASH = hashlib.sha256(PREPROCESSING_DEFINITION.encode()).hexdigest()
 MODEL_DEFINITION = "cifar-cnn-v1:conv3x3-16:gn4:conv3x3-32:gn4:gap:linear"
 MODEL_DEFINITION_HASH = hashlib.sha256(MODEL_DEFINITION.encode()).hexdigest()
+CIFAR_RESNET32_PREPROCESSING_DEFINITION = (
+    "torchvision.ToTensor;seeded-reflect-crop:padding=4;"
+    "seeded-horizontal-flip:p=0.5;"
+    "channel-normalization:mean=0.4914,0.4822,0.4465:"
+    "std=0.2470,0.2435,0.2616"
+)
+CIFAR_RESNET32_PREPROCESSING_HASH = hashlib.sha256(
+    CIFAR_RESNET32_PREPROCESSING_DEFINITION.encode()
+).hexdigest()
+CIFAR_RESNET32_MODEL_DEFINITION = (
+    "cifar-resnet32-v2:conv3x3-16:bn:"
+    "basic-blocks=5,5,5:channels=16,32,64:option-a-shortcut:gap:linear"
+)
+CIFAR_RESNET32_MODEL_DEFINITION_HASH = hashlib.sha256(
+    CIFAR_RESNET32_MODEL_DEFINITION.encode()
+).hexdigest()
+CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+CIFAR10_STD = (0.2470, 0.2435, 0.2616)
+_MODEL_DEFINITIONS = {
+    CIFAR_CNN_MODEL_ID: MODEL_DEFINITION,
+    CIFAR_RESNET32_MODEL_ID: CIFAR_RESNET32_MODEL_DEFINITION,
+}
+_TRAINING_STATE_PREFIX = "__dromeus_training__."
+_COMPLETED_STEPS = f"{_TRAINING_STATE_PREFIX}completed_steps"
+_BATCHES_CONSUMED = f"{_TRAINING_STATE_PREFIX}batches_consumed"
+_AUGMENTATION_RNG = f"{_TRAINING_STATE_PREFIX}augmentation_rng"
+_LOADER_EPOCH_RNG = f"{_TRAINING_STATE_PREFIX}loader_epoch_rng"
+_MOMENTUM_PREFIX = f"{_TRAINING_STATE_PREFIX}momentum."
 _TORCH_TO_SCHEMA_DTYPE: dict[torch.dtype, Literal["float16", "float32", "float64"]] = {
     torch.float16: "float16",
     torch.float32: "float32",
@@ -294,11 +329,99 @@ class CIFARGroupNormCNN(nn.Module):
         return self.classifier(features)
 
 
-def build_model(*, seed: int) -> CIFARGroupNormCNN:
+class CIFARBasicBlock(nn.Module):
+    """Original CIFAR ResNet basic block with parameter-free option-A shortcut."""
+
+    def __init__(self, in_channels: int, out_channels: int, *, stride: int) -> None:
+        super().__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=False,
+        )
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+        )
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self._stride = stride
+        self._channel_padding = out_channels - in_channels
+
+    def forward(self, images: Tensor) -> Tensor:
+        residual = images
+        output = F.relu(self.bn1(self.conv1(images)), inplace=False)
+        output = self.bn2(self.conv2(output))
+        if self._stride != 1:
+            residual = residual[:, :, :: self._stride, :: self._stride]
+        if self._channel_padding:
+            left = self._channel_padding // 2
+            right = self._channel_padding - left
+            residual = F.pad(residual, (0, 0, 0, 0, left, right))
+        return F.relu(output + residual, inplace=False)
+
+
+class CIFARResNet32(nn.Module):
+    """ResNet-32 for 32x32 CIFAR inputs (6n+2 with n=5)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.stem = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=False),
+        )
+        stages: list[nn.Module] = []
+        in_channels = 16
+        for stage_index, out_channels in enumerate((16, 32, 64)):
+            blocks: list[nn.Module] = []
+            for block_index in range(5):
+                stride = 2 if stage_index > 0 and block_index == 0 else 1
+                blocks.append(
+                    CIFARBasicBlock(in_channels, out_channels, stride=stride)
+                )
+                in_channels = out_channels
+            stages.append(nn.Sequential(*blocks))
+        self.stages = nn.Sequential(*stages)
+        self.classifier = nn.Linear(64, CLASS_COUNT)
+        self._initialize()
+
+    def _initialize(self) -> None:
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                nn.init.kaiming_normal_(
+                    module.weight, mode="fan_out", nonlinearity="relu"
+                )
+            elif isinstance(module, nn.BatchNorm2d):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+            elif isinstance(module, nn.Linear):
+                nn.init.normal_(module.weight, std=0.01)
+                nn.init.zeros_(module.bias)
+
+    def forward(self, images: Tensor) -> Tensor:
+        features = self.stages(self.stem(images))
+        features = F.avg_pool2d(features, features.shape[-1]).flatten(1)
+        return self.classifier(features)
+
+
+def build_model(
+    *, seed: int, model_id: str = CIFAR_CNN_MODEL_ID
+) -> nn.Module:
     """Construct a reproducibly initialized model without changing caller RNG."""
     with torch.random.fork_rng(devices=[]):  # pyright: ignore[reportUnknownMemberType]
         torch.manual_seed(seed)  # pyright: ignore[reportUnknownMemberType]
-        return CIFARGroupNormCNN()
+        if model_id == CIFAR_CNN_MODEL_ID:
+            return CIFARGroupNormCNN()
+        if model_id == CIFAR_RESNET32_MODEL_ID:
+            return CIFARResNet32()
+        raise ValueError(f"unsupported CIFAR model_id: {model_id}")
 
 
 def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
@@ -307,28 +430,50 @@ def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
     return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
 
 
+def _model_definition(model_id: str) -> str:
+    try:
+        return _MODEL_DEFINITIONS[model_id]
+    except KeyError as error:
+        raise ValueError(f"unsupported CIFAR model_id: {model_id}") from error
+
+
+def _floating_model_state(model: nn.Module) -> dict[str, Tensor]:
+    """Return exchangeable state, excluding integer BatchNorm counters."""
+    return {
+        name: value
+        for name, value in model.state_dict().items()
+        if value.is_floating_point()
+    }
+
+
 def tensor_schema_for_model(model: nn.Module | None = None) -> TensorSchema:
-    """Derive the wire tensor schema from model parameters."""
+    """Derive the wire schema from parameters and floating-point model buffers."""
     target = model or CIFARGroupNormCNN()
     specs: list[TensorSpec] = []
-    for name, parameter in target.named_parameters():
-        dtype = _TORCH_TO_SCHEMA_DTYPE.get(parameter.dtype)
+    for name, value in _floating_model_state(target).items():
+        dtype = _TORCH_TO_SCHEMA_DTYPE.get(value.dtype)
         if dtype is None:
-            raise CIFARDataError(
-                f"unsupported model parameter dtype: {parameter.dtype}"
-            )
-        specs.append(TensorSpec(name=name, dtype=dtype, shape=tuple(parameter.shape)))
+            raise CIFARDataError(f"unsupported model state dtype: {value.dtype}")
+        specs.append(TensorSpec(name=name, dtype=dtype, shape=tuple(value.shape)))
     return TensorSchema(tensors=tuple(specs))
 
 
-def create_initial_checkpoint(path: Path, *, seed: int) -> InitialCheckpoint:
+def create_initial_checkpoint(
+    path: Path,
+    *,
+    seed: int,
+    model_id: str = CIFAR_CNN_MODEL_ID,
+) -> InitialCheckpoint:
     """Write and describe the canonical checkpoint before formation."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    model = build_model(seed=seed)
+    model = build_model(seed=seed, model_id=model_id)
     _save_checkpoint(
-        {name: value.detach().cpu() for name, value in model.named_parameters()},
+        {
+            name: value.detach().cpu()
+            for name, value in _floating_model_state(model).items()
+        },
         str(path),
-        metadata={"model_definition": MODEL_DEFINITION},
+        metadata={"model_definition": _model_definition(model_id)},
     )
     return InitialCheckpoint(
         path=path,
@@ -355,21 +500,58 @@ class CIFAR10Trainer:
         train_data: CIFAR10Data,
         test_data: CIFAR10Data | None = None,
         seed: int = 0,
+        model_id: str = CIFAR_CNN_MODEL_ID,
         batch_size: int = 32,
         learning_rate: float = 0.1,
+        momentum: float = 0.0,
+        weight_decay: float = 0.0,
+        learning_rate_milestones: tuple[int, ...] = (),
+        learning_rate_gamma: float = 0.1,
         device: str = "cpu",
         augment: bool = True,
+        crop_padding: int = 0,
+        normalize: bool = False,
     ) -> None:
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
         if learning_rate <= 0 or not np.isfinite(learning_rate):
             raise ValueError("learning_rate must be positive and finite")
+        if not 0 <= momentum < 1 or not np.isfinite(momentum):
+            raise ValueError("momentum must be finite in [0, 1)")
+        if weight_decay < 0 or not np.isfinite(weight_decay):
+            raise ValueError("weight_decay must be finite and non-negative")
+        if (
+            any(milestone <= 0 for milestone in learning_rate_milestones)
+            or any(
+                right <= left
+                for left, right in zip(
+                    learning_rate_milestones,
+                    learning_rate_milestones[1:],
+                    strict=False,
+                )
+            )
+        ):
+            raise ValueError("learning-rate milestones must be strictly increasing")
+        if not 0 < learning_rate_gamma < 1 or not np.isfinite(learning_rate_gamma):
+            raise ValueError("learning_rate_gamma must be finite in (0, 1)")
+        if crop_padding < 0:
+            raise ValueError("crop_padding must be non-negative")
         self._device = torch.device(device)
-        self._model = build_model(seed=seed).to(self._device)
+        self._model_id = model_id
+        self._model = build_model(seed=seed, model_id=model_id).to(self._device)
         self._optimizer = torch.optim.SGD(
-            self._model.parameters(), lr=learning_rate, momentum=0.0
+            self._model.parameters(),
+            lr=learning_rate,
+            momentum=momentum,
+            weight_decay=weight_decay,
         )
+        self._base_learning_rate = learning_rate
+        self._learning_rate_milestones = learning_rate_milestones
+        self._learning_rate_gamma = learning_rate_gamma
+        self._completed_steps = 0
         self._augment = augment
+        self._crop_padding = crop_padding
+        self._normalize = normalize
         self._augmentation_generator = torch.Generator(device="cpu")
         self._augmentation_generator.manual_seed(seed + 1)
         self._loader_generator = torch.Generator(device="cpu")
@@ -378,6 +560,8 @@ class CIFAR10Trainer:
         self._train_data = train_data
         self._test_data = test_data or train_data
         self._train_loader = self._make_loader(train_data, shuffle=True)
+        self._batches_consumed = 0
+        self._epoch_generator_state = self._loader_generator.get_state().clone()
         self._train_iterator = iter(self._train_loader)
         self._tensor_schema = tensor_schema_for_model(self._model)
         self._last_local_loss: float | None = None
@@ -387,47 +571,130 @@ class CIFAR10Trainer:
         return self._tensor_schema
 
     @staticmethod
-    def tensor_schema_for_model() -> TensorSchema:
-        return tensor_schema_for_model()
+    def tensor_schema_for_model(
+        model_id: str = CIFAR_CNN_MODEL_ID,
+    ) -> TensorSchema:
+        return tensor_schema_for_model(build_model(seed=0, model_id=model_id))
 
     def weights(self) -> dict[str, np.ndarray]:
         return {
-            name: parameter.detach().cpu().numpy().copy()
-            for name, parameter in self._model.named_parameters()
+            name: value.detach().cpu().numpy().copy()
+            for name, value in _floating_model_state(self._model).items()
         }
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
-        expected = {
-            name: parameter for name, parameter in self._model.named_parameters()
-        }
+        expected = _floating_model_state(self._model)
         if set(weights) != set(expected):
             raise ValueError("weight names do not match model")
         with torch.no_grad():
-            for name, parameter in expected.items():
+            for name, target in expected.items():
                 value = np.asarray(weights[name])
-                if value.shape != tuple(parameter.shape) or value.dtype != np.float32:
+                if value.shape != tuple(target.shape) or value.dtype != np.float32:
                     raise ValueError(f"weight {name} does not match model")
-                parameter.copy_(
+                target.copy_(
                     torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
                         cast(Any, np.ascontiguousarray(value))
                     ).to(self._device)
                 )
 
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        """Return model, optimizer, schedule, and stochastic-loader state."""
+        state = self.weights()
+        state[_COMPLETED_STEPS] = np.array(
+            [self._completed_steps], dtype=np.int64
+        )
+        state[_BATCHES_CONSUMED] = np.array(
+            [self._batches_consumed], dtype=np.int64
+        )
+        state[_AUGMENTATION_RNG] = (
+            self._augmentation_generator.get_state().cpu().numpy().copy()
+        )
+        state[_LOADER_EPOCH_RNG] = (
+            self._epoch_generator_state.cpu().numpy().copy()
+        )
+        for name, parameter in self._model.named_parameters():
+            momentum = self._optimizer.state.get(parameter, {}).get(
+                "momentum_buffer"
+            )
+            if isinstance(momentum, Tensor):
+                state[f"{_MOMENTUM_PREFIX}{name}"] = (
+                    momentum.detach().cpu().numpy().copy()
+                )
+        return state
+
+    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
+        """Restore a complete tensor checkpoint produced by `checkpoint_tensors`."""
+        required = {
+            _COMPLETED_STEPS,
+            _BATCHES_CONSUMED,
+            _AUGMENTATION_RNG,
+            _LOADER_EPOCH_RNG,
+        }
+        if not required.issubset(state):
+            raise ValueError("training checkpoint metadata is incomplete")
+        model_names = set(_floating_model_state(self._model))
+        self.load_weights({name: state[name] for name in model_names})
+        completed_steps = _single_non_negative_int(state[_COMPLETED_STEPS])
+        batches_consumed = _single_non_negative_int(state[_BATCHES_CONSUMED])
+        if batches_consumed > len(self._train_loader):
+            raise ValueError("training checkpoint batch position is invalid")
+
+        self._optimizer.state.clear()
+        for name, parameter in self._model.named_parameters():
+            key = f"{_MOMENTUM_PREFIX}{name}"
+            if key not in state:
+                continue
+            value = np.asarray(state[key])
+            if value.dtype != np.float32 or value.shape != tuple(parameter.shape):
+                raise ValueError(f"momentum state {name} does not match model")
+            self._optimizer.state[parameter]["momentum_buffer"] = (
+                torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+                    cast(Any, np.ascontiguousarray(value))
+                ).to(self._device)
+            )
+
+        augmentation_state = _rng_state_tensor(
+            state[_AUGMENTATION_RNG], name="augmentation"
+        )
+        loader_epoch_state = _rng_state_tensor(
+            state[_LOADER_EPOCH_RNG], name="loader"
+        )
+        self._augmentation_generator.set_state(augmentation_state)
+        self._loader_generator.set_state(loader_epoch_state)
+        self._epoch_generator_state = loader_epoch_state.clone()
+        self._train_iterator = iter(self._train_loader)
+        for _ in range(batches_consumed):
+            try:
+                next(self._train_iterator)
+            except StopIteration as error:
+                raise ValueError(
+                    "training checkpoint batch position is invalid"
+                ) from error
+        self._batches_consumed = batches_consumed
+        self._completed_steps = completed_steps
+        self._apply_learning_rate()
+
     @property
     def last_local_loss(self) -> float | None:
         return self._last_local_loss
+
+    @property
+    def learning_rate(self) -> float:
+        return float(self._optimizer.param_groups[0]["lr"])
 
     def train_local_steps(self, step_count: int) -> None:
         if step_count < 0:
             raise ValueError("step_count must be non-negative")
         self._model.train()
         for _ in range(step_count):
+            self._apply_learning_rate()
             images, labels = self._next_batch()
             self._optimizer.zero_grad(set_to_none=True)
             loss = nn.functional.cross_entropy(self._model(images), labels)
             self._last_local_loss = float(loss.detach().cpu().item())
             loss.backward()  # pyright: ignore[reportUnknownMemberType]
             self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
+            self._completed_steps += 1
 
     def stochastic_gradients(self) -> dict[str, np.ndarray]:
         """Compute one minibatch gradient without mutating model weights."""
@@ -455,6 +722,8 @@ class CIFAR10Trainer:
         total = 0
         with torch.no_grad():
             for images, labels in loader:
+                images = self._prepare_images(images.to(self._device), augment=False)
+                labels = labels.to(self._device)
                 logits = self._model(images)
                 batch_size = labels.shape[0]
                 total_loss += (
@@ -471,10 +740,10 @@ class CIFAR10Trainer:
         _save_checkpoint(
             {
                 name: value.detach().cpu()
-                for name, value in self._model.named_parameters()
+                for name, value in _floating_model_state(self._model).items()
             },
             str(path),
-            metadata={"model_definition": MODEL_DEFINITION},
+            metadata={"model_definition": _model_definition(self._model_id)},
         )
 
     def load_checkpoint(self, path: Path) -> None:
@@ -505,19 +774,89 @@ class CIFAR10Trainer:
         try:
             images, labels = next(self._train_iterator)
         except StopIteration:
+            self._epoch_generator_state = self._loader_generator.get_state().clone()
             self._train_iterator = iter(self._train_loader)
+            self._batches_consumed = 0
             images, labels = next(self._train_iterator)
-        images = images.to(self._device)
+        self._batches_consumed += 1
+        images = self._prepare_images(images.to(self._device), augment=self._augment)
         labels = labels.to(self._device)
-        if self._augment:
+        return images, labels
+
+    def _prepare_images(self, images: Tensor, *, augment: bool) -> Tensor:
+        if augment and self._crop_padding:
+            padded = F.pad(
+                images,
+                (self._crop_padding,) * 4,
+                mode="reflect",
+            )
+            maximum = self._crop_padding * 2 + 1
+            rows = torch.randint(
+                maximum,
+                (images.shape[0],),
+                generator=self._augmentation_generator,
+            )
+            columns = torch.randint(
+                maximum,
+                (images.shape[0],),
+                generator=self._augmentation_generator,
+            )
+            rows = rows.to(images.device)
+            columns = columns.to(images.device)
+            batch_indices = torch.arange(
+                images.shape[0], device=images.device
+            ).view(-1, 1, 1)
+            row_indices = rows.view(-1, 1, 1) + torch.arange(
+                IMAGE_SHAPE[1], device=images.device
+            ).view(1, -1, 1)
+            column_indices = columns.view(-1, 1, 1) + torch.arange(
+                IMAGE_SHAPE[2], device=images.device
+            ).view(1, 1, -1)
+            images = padded.permute(0, 2, 3, 1)[
+                batch_indices,
+                row_indices,
+                column_indices,
+            ].permute(0, 3, 1, 2)
+        if augment:
             flips = (
                 torch.rand(images.shape[0], generator=self._augmentation_generator)
                 < 0.5
-            )
+            ).to(images.device)
             if bool(flips.any()):
                 images = images.clone()
                 images[flips] = torch.flip(images[flips], dims=(3,))
-        return images, labels
+        if self._normalize:
+            mean = images.new_tensor(CIFAR10_MEAN).view(1, 3, 1, 1)
+            std = images.new_tensor(CIFAR10_STD).view(1, 3, 1, 1)
+            images = (images - mean) / std
+        return images
+
+    def _apply_learning_rate(self) -> None:
+        decay_count = sum(
+            self._completed_steps >= milestone
+            for milestone in self._learning_rate_milestones
+        )
+        learning_rate = self._base_learning_rate * (
+            self._learning_rate_gamma**decay_count
+        )
+        for group in self._optimizer.param_groups:
+            group["lr"] = learning_rate
+
+
+def _single_non_negative_int(value: np.ndarray) -> int:
+    array = np.asarray(value)
+    if array.dtype != np.int64 or array.shape != (1,) or int(array[0]) < 0:
+        raise ValueError("training checkpoint counter is invalid")
+    return int(array[0])
+
+
+def _rng_state_tensor(value: np.ndarray, *, name: str) -> Tensor:
+    array = np.asarray(value)
+    if array.dtype != np.uint8 or array.ndim != 1:
+        raise ValueError(f"{name} RNG state is invalid")
+    return torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+        cast(Any, np.ascontiguousarray(array))
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -529,8 +868,17 @@ class PreparedCIFARTraining:
     initialization_seed: int
     trainer_seed: int
 
-    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return create_initial_checkpoint(path, seed=self.initialization_seed)
+    def create_initial_checkpoint(
+        self,
+        path: Path,
+        *,
+        model_id: str = CIFAR_CNN_MODEL_ID,
+    ) -> InitialCheckpoint:
+        return create_initial_checkpoint(
+            path,
+            seed=self.initialization_seed,
+            model_id=model_id,
+        )
 
     def create_trainer(
         self,
@@ -544,14 +892,26 @@ class PreparedCIFARTraining:
         }
         node_index = node_indices[local_public_key]
         partition_index = manifest.dataset.node_index_partitions[node_index]
+        policy = manifest.training
         return CIFAR10Trainer(
             train_data=self._partitions[partition_index],
             test_data=self._test_data,
             seed=self.trainer_seed + node_index,
-            batch_size=32,
+            model_id=manifest.model_id,
+            batch_size=policy.batch_size if policy is not None else 32,
             learning_rate=manifest.learning_rate,
+            momentum=policy.momentum if policy is not None else 0.0,
+            weight_decay=policy.weight_decay if policy is not None else 0.0,
+            learning_rate_milestones=(
+                policy.learning_rate_milestones if policy is not None else ()
+            ),
+            learning_rate_gamma=(
+                policy.learning_rate_gamma if policy is not None else 0.1
+            ),
             device="cpu",
             augment=True,
+            crop_padding=policy.crop_padding if policy is not None else 0,
+            normalize=policy.normalize if policy is not None else False,
         )
 
 
@@ -598,9 +958,17 @@ __all__ = [
     "CIFAR10_DATASET_VERSION",
     "CIFAR10Data",
     "CIFAR10Trainer",
+    "CIFARBasicBlock",
     "CIFARDataProvenance",
     "CIFARDataError",
     "CIFARGroupNormCNN",
+    "CIFARResNet32",
+    "CIFAR_CNN_MODEL_ID",
+    "CIFAR_RESNET32_MODEL_DEFINITION",
+    "CIFAR_RESNET32_MODEL_DEFINITION_HASH",
+    "CIFAR_RESNET32_MODEL_ID",
+    "CIFAR_RESNET32_PREPROCESSING_DEFINITION",
+    "CIFAR_RESNET32_PREPROCESSING_HASH",
     "InitialCheckpoint",
     "IIDPartitionProvenance",
     "MODEL_DEFINITION",

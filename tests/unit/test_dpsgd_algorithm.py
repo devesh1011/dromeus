@@ -49,6 +49,19 @@ class QuadraticTrainer:
         self._weights = {name: value.copy() for name, value in weights.items()}
 
 
+class OptimizerOwningTrainer(QuadraticTrainer):
+    def __init__(self) -> None:
+        super().__init__(1.0)
+        self.optimizer_calls: list[int] = []
+
+    def train_local_steps(self, step_count: int) -> None:
+        self.optimizer_calls.append(step_count)
+        self._weights["weight"] -= np.float32(0.25)
+
+    def stochastic_gradients(self) -> dict[str, np.ndarray]:
+        raise AssertionError("adapter bypassed trainer-owned optimizer")
+
+
 def test_dpsgd_step_matches_paper_weighted_average_then_gradient_update() -> None:
     trainer = QuadraticTrainer(1.0)
     schema = TensorSchema(
@@ -89,6 +102,28 @@ def test_dpsgd_local_training_runs_k_stochastic_gradient_steps() -> None:
     algorithm.local_training()
 
     assert np.allclose(algorithm.snapshot().weights["weight"], np.array([0.81]))
+
+
+def test_dpsgd_local_training_never_bypasses_trainer_optimizer() -> None:
+    trainer = OptimizerOwningTrainer()
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+    )
+    algorithm = DPSGDAdapter(
+        trainer=trainer,
+        tensor_schema=schema,
+        local_steps=7,
+        learning_rate=0.1,
+    )
+
+    algorithm.pre_local(round_id=0)
+    algorithm.local_training()
+
+    assert trainer.optimizer_calls == [7]
+    assert np.array_equal(
+        algorithm.snapshot().weights["weight"],
+        np.array([0.75], dtype=np.float32),
+    )
 
 
 def test_dpsgd_runs_local_steps_and_averages_peer_weights() -> None:

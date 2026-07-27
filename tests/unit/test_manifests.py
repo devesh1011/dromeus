@@ -13,7 +13,12 @@ from dromeus.manifests.canonical import (
     parse_draft_yaml,
     parse_sealed_json,
 )
-from dromeus.manifests.models import DraftRunSpec, Invitation, SealedManifest
+from dromeus.manifests.models import (
+    DraftRunSpec,
+    Invitation,
+    SealedManifest,
+    TrainingPolicy,
+)
 
 GOLDEN = Path(__file__).parents[1] / "golden" / "sealed_manifest.json"
 GOLDEN_HASH = "dd9ef12063cd632283f8c5fad1570d106f2876d6575e6190d49aa2cce101583b"
@@ -26,6 +31,49 @@ def test_canonical_manifest_matches_golden_file_and_hash() -> None:
     assert canonical_json(manifest) == golden
     assert canonical_hash(manifest) == GOLDEN_HASH
     assert canonical_hash(parse_sealed_json(golden)) == canonical_hash(manifest)
+
+
+def test_training_policy_validates_quality_recipe() -> None:
+    policy = TrainingPolicy(
+        batch_size=128,
+        momentum=0.9,
+        weight_decay=1e-4,
+        learning_rate_milestones=(8_000, 12_000),
+        learning_rate_gamma=0.1,
+        crop_padding=4,
+        normalize=True,
+        final_consensus_rounds=2,
+    )
+
+    assert policy.batch_size == 128
+    assert policy.learning_rate_milestones == (8_000, 12_000)
+
+    with pytest.raises(ValidationError, match="strictly increasing"):
+        TrainingPolicy(
+            batch_size=128,
+            momentum=0.9,
+            weight_decay=1e-4,
+            learning_rate_milestones=(12_000, 8_000),
+            learning_rate_gamma=0.1,
+            crop_padding=4,
+            normalize=True,
+            final_consensus_rounds=2,
+        )
+
+
+def test_resnet32_manifest_requires_versioned_training_policy() -> None:
+    data = manifest_data()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del data[field]
+    data["model_id"] = "cifar-resnet32-v2"
+
+    with pytest.raises(ValidationError, match="explicit training policy"):
+        DraftRunSpec.model_validate(data)
 
 
 def test_hash_is_stable_regardless_of_input_key_order() -> None:
@@ -78,10 +126,13 @@ def test_environment_accepts_cpu_wheel_version() -> None:
     )
 
 
-@pytest.mark.parametrize("field", ["protocol_version", "manifest_version"])
-def test_unknown_versions_are_rejected(field: str) -> None:
+@pytest.mark.parametrize(
+    ("field", "version"),
+    [("protocol_version", 2), ("manifest_version", 3)],
+)
+def test_unknown_versions_are_rejected(field: str, version: int) -> None:
     data = manifest_data()
-    data[field] = 2
+    data[field] = version
 
     with pytest.raises(ValidationError):
         SealedManifest.model_validate(data)
