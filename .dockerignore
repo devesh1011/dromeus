@@ -1,0 +1,12 @@
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.pyright
+.ruff_cache
+.DS_Store
+AGENTS.md
+benchmarks/results
+demo
+graphify-out
+tests
