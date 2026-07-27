@@ -7,43 +7,29 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+from PIL import Image
 
-from dromeus.training.pytorch import (
-    CIFAR10_ARCHIVE_MD5,
-    CIFAR10_DATASET_VERSION,
-    CIFAR_RESNET32_MODEL_ID,
-    CIFAR_RESNET32_PREPROCESSING_DEFINITION,
-    CIFAR_RESNET32_PREPROCESSING_HASH,
+import dromeus.training.cifar10 as cifar10_recipe
+from dromeus.training.cifar10 import (
+    DATASET_REPOSITORY,
+    DATASET_REVISION,
+    DATASET_VERSION,
     PREPROCESSING_DEFINITION,
     PREPROCESSING_HASH,
-    CIFAR10Data,
-    CIFAR10Trainer,
-    CIFARDataError,
-    IIDPartitionProvenance,
-    build_model,
+    CIFAR10DataError,
     create_initial_checkpoint,
-    derive_benchmark_seed,
-    tensor_schema_for_model,
+    create_trainer,
+    load_cifar10,
 )
+from dromeus.training.data import ClassificationData, IIDPartitionProvenance
+from dromeus.training.trainer import derive_benchmark_seed
 
 
 def test_cifar_contract_constants_are_canonical() -> None:
-    assert CIFAR10_DATASET_VERSION == f"torchvision-python-{CIFAR10_ARCHIVE_MD5}"
+    assert DATASET_VERSION == f"huggingface-{DATASET_REVISION}"
     assert PREPROCESSING_HASH == hashlib.sha256(
         PREPROCESSING_DEFINITION.encode()
     ).hexdigest()
-    assert CIFAR_RESNET32_PREPROCESSING_HASH == hashlib.sha256(
-        CIFAR_RESNET32_PREPROCESSING_DEFINITION.encode()
-    ).hexdigest()
-
-
-def test_resnet32_v2_has_capacity_and_exchanges_batchnorm_state() -> None:
-    model = build_model(seed=17, model_id=CIFAR_RESNET32_MODEL_ID)
-    state_names = {tensor.name for tensor in tensor_schema_for_model(model).tensors}
-
-    assert sum(parameter.numel() for parameter in model.parameters()) >= 450_000
-    assert "stages.0.0.bn1.running_mean" in state_names
-    assert "stages.0.0.bn1.num_batches_tracked" not in state_names
 
 
 def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
@@ -63,7 +49,7 @@ def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
 
 
 @pytest.fixture(scope="session")
-def cifar10_data() -> CIFAR10Data:
+def cifar10_data() -> ClassificationData:
     cache_dir = Path(
         os.environ.get(
             "DROMEUS_CIFAR_CACHE",
@@ -73,17 +59,19 @@ def cifar10_data() -> CIFAR10Data:
     if not cache_dir.exists():
         pytest.skip("real CIFAR-10 data unavailable in DROMEUS_CIFAR_CACHE")
     try:
-        return CIFAR10Data.from_huggingface(
+        return load_cifar10(
             cache_dir=cache_dir,
             train=False,
         )
-    except CIFARDataError:
+    except CIFAR10DataError:
         pytest.skip(
             "real CIFAR-10 data unavailable; set DROMEUS_CIFAR_CACHE to writable cache"
         )
 
 
-def test_huggingface_loader_returns_real_cifar10(cifar10_data: CIFAR10Data) -> None:
+def test_huggingface_loader_returns_real_cifar10(
+    cifar10_data: ClassificationData,
+) -> None:
     image, label = cifar10_data[0]
 
     assert len(cifar10_data) == 10_000
@@ -92,8 +80,48 @@ def test_huggingface_loader_returns_real_cifar10(cifar10_data: CIFAR10Data) -> N
     assert 0 <= label < 10
 
 
+def test_huggingface_loader_pins_source_revision_and_decodes_image(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeDataset:
+        def __len__(self) -> int:
+            return 1
+
+        def __getitem__(self, index: int) -> dict[str, object]:
+            assert index == 0
+            return {"img": Image.new("RGB", (32, 32), "red"), "label": 3}
+
+    def fake_load_dataset(repository: str, **kwargs: object) -> FakeDataset:
+        calls.append({"repository": repository, **kwargs})
+        return FakeDataset()
+
+    monkeypatch.setattr(cifar10_recipe, "load_dataset", fake_load_dataset)
+
+    data = load_cifar10(cache_dir=tmp_path, train=False)
+    image, label = data[0]
+
+    assert calls == [
+        {
+            "repository": DATASET_REPOSITORY,
+            "split": "test",
+            "revision": DATASET_REVISION,
+            "cache_dir": str(tmp_path),
+        }
+    ]
+    assert data.matches_source(
+        source="huggingface-uoft-cs-cifar10",
+        split="test",
+    )
+    assert image.shape == (3, 32, 32)
+    assert image.dtype == torch.float32
+    assert label == 3
+
+
 def test_iid_partitions_are_reproducible_and_disjoint(
-    cifar10_data: CIFAR10Data,
+    cifar10_data: ClassificationData,
 ) -> None:
     first = cifar10_data.split_iid(participant_count=4, seed=11)
     second = cifar10_data.split_iid(participant_count=4, seed=11)
@@ -118,7 +146,7 @@ def test_iid_partitions_are_reproducible_and_disjoint(
 
 def test_checkpoint_is_deterministic_and_matches_trainer_schema(
     tmp_path: Path,
-    cifar10_data: CIFAR10Data,
+    cifar10_data: ClassificationData,
 ) -> None:
     first_path = tmp_path / "first.safetensors"
     second_path = tmp_path / "second.safetensors"
@@ -131,13 +159,13 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(
     assert first.tensor_schema == second.tensor_schema
     assert first.sha256 == second.sha256
 
-    trainer = CIFAR10Trainer(
+    trainer = create_trainer(
         train_data=cifar10_data,
         seed=17,
         batch_size=4,
     )
     trainer.load_checkpoint(first_path)
-    assert trainer.tensor_schema == trainer.tensor_schema_for_model()
+    assert trainer.tensor_schema == first.tensor_schema
     assert trainer.checkpoint_hash(first_path) == trainer.checkpoint_hash(second_path)
 
 
@@ -154,8 +182,10 @@ def test_initial_checkpoint_returns_formation_handoff(tmp_path: Path) -> None:
     )
 
 
-def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:
-    trainer = CIFAR10Trainer(
+def test_trainer_runs_sgd_and_evaluates(
+    cifar10_data: ClassificationData,
+) -> None:
+    trainer = create_trainer(
         train_data=cifar10_data,
         seed=3,
         batch_size=4,
@@ -175,12 +205,11 @@ def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:
 
 
 def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
-    cifar10_data: CIFAR10Data,
+    cifar10_data: ClassificationData,
 ) -> None:
-    trainer = CIFAR10Trainer(
+    trainer = create_trainer(
         train_data=cifar10_data,
         seed=3,
-        model_id=CIFAR_RESNET32_MODEL_ID,
         batch_size=4,
         learning_rate=0.1,
         momentum=0.9,
@@ -208,10 +237,9 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
         for name in before
     )
 
-    restored = CIFAR10Trainer(
+    restored = create_trainer(
         train_data=cifar10_data,
         seed=99,
-        model_id=CIFAR_RESNET32_MODEL_ID,
         batch_size=4,
         learning_rate=0.1,
         momentum=0.9,
