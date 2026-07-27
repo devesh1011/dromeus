@@ -38,6 +38,7 @@ explicit = true
 
 [dependency-groups]
 dev = [
+  "matplotlib>=3.9,<4",
   "pyright>=1.1.400",
   "pytest>=8.4",
   "ruff>=0.12",

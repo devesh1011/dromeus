@@ -7,13 +7,13 @@ import math
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from html import escape
 from pathlib import Path
 from typing import cast
 
 import numpy as np
 
 from benchmarks.cifar10.fedavg_reference import FedAvgResult, load_fedavg_result
+from benchmarks.cifar10.plots import write_line_plot, write_panel_plot
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import SealedManifest
 from dromeus.telemetry.report import ExactConsensusReport, build_exact_consensus_report
@@ -220,7 +220,7 @@ class BenchmarkReport:
         }
 
     def write_artifacts(self, output_dir: Path) -> None:
-        """Write JSON, human-readable Markdown, and linked SVG charts."""
+        """Write JSON, human-readable Markdown, and Matplotlib PNG charts."""
         output_dir.mkdir(parents=True, exist_ok=True)
         (output_dir / "report.json").write_text(
             json.dumps(self.as_dict(), allow_nan=False, sort_keys=True, indent=2)
@@ -228,28 +228,149 @@ class BenchmarkReport:
             encoding="utf-8",
         )
         provenance = self._provenance(output_dir)
-        (output_dir / "metrics.svg").write_text(
-            _add_provenance(self.render_metrics_svg(), provenance), encoding="utf-8"
-        )
-        (output_dir / "approximate-consensus.svg").write_text(
-            _add_provenance(self.render_consensus_svg(), provenance),
-            encoding="utf-8",
-        )
-        (output_dir / "consensus.svg").write_text(
-            _add_provenance(self.exact_consensus.render_svg(), provenance),
-            encoding="utf-8",
-        )
-        (output_dir / "timing.svg").write_text(
-            _add_provenance(self.render_timing_svg(), provenance), encoding="utf-8"
-        )
-        (output_dir / "goodput.svg").write_text(
-            _add_provenance(self.render_goodput_svg(), provenance), encoding="utf-8"
-        )
+        self._write_plots(output_dir, provenance)
         (output_dir / "provenance.json").write_text(
             json.dumps(provenance, allow_nan=False, sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
         (output_dir / "report.md").write_text(self.render_markdown(), encoding="utf-8")
+
+    def _write_plots(
+        self, output_dir: Path, provenance: Mapping[str, object]
+    ) -> None:
+        fedavg_rounds = {
+            _integer_value(round_value, "round_id"): round_value
+            for round_value in _mapping_sequence(self.fedavg.get("rounds", []))
+            if isinstance(round_value.get("round_id"), int)
+        }
+        write_panel_plot(
+            output_dir / "metrics.png",
+            title="CIFAR-10 accuracy and loss",
+            panels=(
+                (
+                    "Accuracy",
+                    "Accuracy",
+                    (
+                        (
+                            "D-PSGD mean",
+                            _curve_values(self.accuracy_curve, "mean_accuracy"),
+                            "#2563eb",
+                        ),
+                        (
+                            "FedAvg",
+                            _fedavg_values(fedavg_rounds, "accuracy"),
+                            "#dc2626",
+                        ),
+                    ),
+                ),
+                (
+                    "Loss",
+                    "Cross-entropy loss",
+                    (
+                        (
+                            "D-PSGD local loss",
+                            _curve_values(self.loss_curve, "mean_local_loss"),
+                            "#2563eb",
+                        ),
+                        (
+                            "D-PSGD evaluation loss",
+                            _curve_values(self.loss_curve, "mean_evaluation_loss"),
+                            "#16a34a",
+                        ),
+                        (
+                            "FedAvg",
+                            _fedavg_values(fedavg_rounds, "loss"),
+                            "#dc2626",
+                        ),
+                    ),
+                ),
+            ),
+            provenance=provenance,
+        )
+        write_line_plot(
+            output_dir / "approximate-consensus.png",
+            title="Approximate consensus distance",
+            y_label="Normalized RMS",
+            series=(
+                (
+                    "Approximate",
+                    _curve_values(self.consensus, "mean_normalized_rms"),
+                    "#2563eb",
+                ),
+            ),
+            provenance=provenance,
+        )
+        exact_rounds = {
+            round_report.round_id: round_report
+            for round_report in self.exact_consensus.rounds
+        }
+        write_line_plot(
+            output_dir / "consensus.png",
+            title="Exact consensus distance",
+            y_label="Normalized RMS",
+            series=(
+                (
+                    "Pre-mix",
+                    {
+                        round_id: value.pre_mix_distance
+                        for round_id, value in exact_rounds.items()
+                    },
+                    "#2563eb",
+                ),
+                (
+                    "Post-mix",
+                    {
+                        round_id: value.post_mix_distance
+                        for round_id, value in exact_rounds.items()
+                    },
+                    "#dc2626",
+                ),
+                (
+                    "Smoothed post-mix",
+                    {
+                        round_id: value.smoothed_post_mix_distance
+                        for round_id, value in exact_rounds.items()
+                    },
+                    "#16a34a",
+                ),
+            ),
+            provenance=provenance,
+        )
+        round_curve = _mapping_sequence(self.round_timing.get("curve", []))
+        transport_curve = _mapping_sequence(self.transport.get("curve", []))
+        write_line_plot(
+            output_dir / "timing.png",
+            title="AXL latency and round timing",
+            y_label="Seconds",
+            series=(
+                (
+                    "Round total",
+                    _curve_values(round_curve, "total_seconds"),
+                    "#2563eb",
+                ),
+                (
+                    "AXL completion",
+                    _curve_values(transport_curve, "mean_completion_seconds"),
+                    "#dc2626",
+                ),
+            ),
+            provenance=provenance,
+        )
+        write_line_plot(
+            output_dir / "goodput.png",
+            title="AXL payload goodput",
+            y_label="Bytes per second",
+            series=(
+                (
+                    "Goodput",
+                    _curve_values(
+                        transport_curve, "mean_goodput_bytes_per_second"
+                    ),
+                    "#16a34a",
+                ),
+            ),
+            provenance=provenance,
+        )
 
     def _provenance(self, output_dir: Path) -> JsonObject:
         return {
@@ -300,15 +421,15 @@ class BenchmarkReport:
                     f"{'yes' if self.publication_ready else 'no'}"
                 ),
                 "",
-                "[Accuracy and loss curves](metrics.svg)",
+                "[Accuracy and loss curves](metrics.png)",
                 "",
-                "[Approximate consensus curves](approximate-consensus.svg)",
+                "[Approximate consensus curves](approximate-consensus.png)",
                 "",
-                "[Exact consensus curves](consensus.svg)",
+                "[Exact consensus curves](consensus.png)",
                 "",
-                "[AXL latency and round timing](timing.svg)",
+                "[AXL latency and round timing](timing.png)",
                 "",
-                "[AXL payload goodput](goodput.svg)",
+                "[AXL payload goodput](goodput.png)",
                 "",
                 f"Observed final approximate/exact consensus error: {consensus_error}",
                 "",
@@ -317,148 +438,11 @@ class BenchmarkReport:
             )
         )
 
-    def render_consensus_svg(self, *, width: int = 900, height: int = 420) -> str:
-        """Render approximate normalized-RMS consensus over rounds."""
-        values = {
-            _integer_value(point, "round_id"): _numeric_value(
-                point, "mean_normalized_rms"
-            )
-            for point in self.consensus
-        }
-        return _render_simple_svg(
-            title="Approximate consensus distance",
-            y_label="normalized RMS",
-            series=(("approximate", values, "#2563eb"),),
-            width=width,
-            height=height,
-        )
-
-    def render_timing_svg(self, *, width: int = 900, height: int = 520) -> str:
-        """Render round timing and AXL transfer latency in seconds."""
-        round_curve = _mapping_sequence(self.round_timing.get("curve", []))
-        transport_curve = _mapping_sequence(self.transport.get("curve", []))
-        round_values = {
-            _integer_value(point, "round_id"): _numeric_value(point, "total_seconds")
-            for point in round_curve
-        }
-        transport_values = {
-            _integer_value(point, "round_id"): _numeric_value(
-                point, "mean_completion_seconds"
-            )
-            for point in transport_curve
-        }
-        return _render_simple_svg(
-            title="AXL latency and round timing",
-            y_label="seconds",
-            series=(
-                ("round total seconds", round_values, "#2563eb"),
-                ("AXL completion seconds", transport_values, "#dc2626"),
-            ),
-            width=width,
-            height=height,
-        )
-
-    def render_goodput_svg(self, *, width: int = 900, height: int = 420) -> str:
-        """Render payload goodput in bytes per second."""
-        transport_curve = _mapping_sequence(self.transport.get("curve", []))
-        goodput_values = {
-            _integer_value(point, "round_id"): _numeric_value(
-                point, "mean_goodput_bytes_per_second"
-            )
-            for point in transport_curve
-            if _is_number(point.get("mean_goodput_bytes_per_second"))
-        }
-        return _render_simple_svg(
-            title="AXL payload goodput",
-            y_label="bytes per second",
-            series=(("goodput bytes/second", goodput_values, "#16a34a"),),
-            width=width,
-            height=height,
-        )
-
     @property
     def fedavg_accuracy(self) -> float:
         value = self.fedavg.get("final_accuracy")
         assert isinstance(value, float)
         return value
-
-    def render_metrics_svg(self, *, width: int = 900, height: int = 620) -> str:
-        """Render deterministic accuracy and loss curves.
-
-        The benchmark has no plotting dependency, so this emits plain SVG.
-        """
-        if width <= 0 or height <= 0:
-            raise ValueError("SVG dimensions must be positive")
-        rounds = sorted(
-            {
-                _integer_value(point, "round_id")
-                for point in (*self.accuracy_curve, *self.loss_curve)
-                if isinstance(point.get("round_id"), int)
-            }
-            | {
-                _integer_value(round_value, "round_id")
-                for round_value in _mapping_sequence(self.fedavg.get("rounds", []))
-                if isinstance(round_value.get("round_id"), int)
-            }
-        )
-        rounds = rounds or [0]
-        fedavg_rounds = {
-            _integer_value(round_value, "round_id"): round_value
-            for round_value in _mapping_sequence(self.fedavg.get("rounds", []))
-            if isinstance(round_value.get("round_id"), int)
-        }
-
-        lines = [
-            (
-                '<svg xmlns="http://www.w3.org/2000/svg" '
-                f'width="{width}" height="{height}" '
-                f'viewBox="0 0 {width} {height}">'
-            ),
-            '<rect width="100%" height="100%" fill="white"/>',
-            '<text x="30" y="25" font-family="sans-serif" font-size="16">'
-            "CIFAR-10 accuracy and loss</text>",
-        ]
-        lines.extend(
-            _render_panel(
-                title="accuracy",
-                top=45,
-                width=width,
-                height=250,
-                rounds=rounds,
-                series=(
-                    (
-                        "D-PSGD mean",
-                        _curve_values(self.accuracy_curve, "mean_accuracy"),
-                        "#2563eb",
-                    ),
-                    ("FedAvg", _fedavg_values(fedavg_rounds, "accuracy"), "#dc2626"),
-                ),
-            )
-        )
-        lines.extend(
-            _render_panel(
-                title="loss",
-                top=330,
-                width=width,
-                height=250,
-                rounds=rounds,
-                series=(
-                    (
-                        "D-PSGD local loss",
-                        _curve_values(self.loss_curve, "mean_local_loss"),
-                        "#2563eb",
-                    ),
-                    (
-                        "D-PSGD eval loss",
-                        _curve_values(self.loss_curve, "mean_evaluation_loss"),
-                        "#16a34a",
-                    ),
-                    ("FedAvg", _fedavg_values(fedavg_rounds, "loss"), "#dc2626"),
-                ),
-            )
-        )
-        lines.append("</svg>")
-        return "\n".join(lines)
 
 
 def build_benchmark_report(
@@ -749,97 +733,6 @@ def _manifest_configuration(manifest: SealedManifest) -> JsonObject:
         ),
         "tensor_schema": manifest.tensor_schema.model_dump(mode="json"),
     }
-
-
-def _add_provenance(svg: str, provenance: Mapping[str, object]) -> str:
-    metadata = escape(json.dumps(dict(provenance), sort_keys=True))
-    raw_paths = [
-        value
-        for key in (
-            "event_logs",
-            "manifest_files",
-            "topology_files",
-            "fedavg_results",
-        )
-        for value in cast(list[object], provenance.get(key, []))
-        if isinstance(value, str)
-    ]
-    anchors = "".join(
-        f'<a href="{escape(Path(path).as_uri(), quote=True)}">raw artifact</a>'
-        for path in raw_paths
-    )
-    marker = ">"
-    insertion = f"<metadata>{metadata}</metadata>{anchors}"
-    return svg.replace(marker, f">{insertion}", 1)
-
-
-def _render_simple_svg(
-    *,
-    title: str,
-    y_label: str,
-    series: Sequence[tuple[str, Mapping[int, float], str]],
-    width: int,
-    height: int,
-) -> str:
-    if width <= 0 or height <= 0:
-        raise ValueError("SVG dimensions must be positive")
-    rounds = sorted({round_id for _, values, _ in series for round_id in values}) or [0]
-    left, right, top, bottom = 70, 30, 45, 50
-    plot_width = width - left - right
-    plot_height = height - top - bottom
-    maximum = max(
-        (value for _, values, _ in series for value in values.values()), default=1.0
-    )
-    maximum = maximum if maximum > 0 else 1.0
-    last_round = max(rounds)
-
-    def point(round_id: int, value: float) -> tuple[float, float]:
-        x = left + (plot_width * round_id / last_round if last_round else 0)
-        y = top + plot_height * (1 - value / maximum)
-        return x, y
-
-    lines = [
-        (
-            '<svg xmlns="http://www.w3.org/2000/svg" '
-            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
-        ),
-        '<rect width="100%" height="100%" fill="white"/>',
-        (
-            f'<text x="{left}" y="25" font-family="sans-serif" '
-            f'font-size="16">{title}</text>'
-        ),
-        (
-            f'<text x="15" y="{top + plot_height / 2}" '
-            f'transform="rotate(-90 15 {top + plot_height / 2})" '
-            f'font-family="sans-serif" font-size="12">{y_label}</text>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top + plot_height}" '
-            f'x2="{width - right}" y2="{top + plot_height}" stroke="#333"/>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top}" '
-            f'x2="{left}" y2="{top + plot_height}" stroke="#333"/>'
-        ),
-    ]
-    for index, (label, values, color) in enumerate(series):
-        commands: list[str] = []
-        for round_id in rounds:
-            if round_id not in values:
-                continue
-            x, y = point(round_id, values[round_id])
-            commands.append(f"{'M' if not commands else 'L'} {x:.2f},{y:.2f}")
-        if commands:
-            lines.append(
-                f'<path d="{" ".join(commands)}" fill="none" '
-                f'stroke="{color}" stroke-width="2"/>'
-            )
-        lines.append(
-            f'<text x="{width - 220}" y="{25 + 16 * index}" '
-            f'font-family="sans-serif" font-size="12" fill="{color}">{label}</text>'
-        )
-    lines.append("</svg>")
-    return "\n".join(lines)
 
 
 def _read_manifest(root: Path) -> SealedManifest:
@@ -1352,7 +1245,9 @@ def _fedavg_payload(fedavg: FedAvgResult) -> JsonObject:
     return payload
 
 
-def _curve_values(curve: Sequence[JsonObject], field: str) -> dict[int, float]:
+def _curve_values(
+    curve: Sequence[Mapping[str, object]], field: str
+) -> dict[int, float]:
     return {
         cast(int, point["round_id"]): cast(float, point[field])
         for point in curve
@@ -1398,61 +1293,6 @@ def _integer_value(value: Mapping[str, object], field: str) -> int:
     if not isinstance(field_value, int) or isinstance(field_value, bool):
         raise BenchmarkReportError(f"report value {field} is invalid")
     return field_value
-
-
-def _render_panel(
-    *,
-    title: str,
-    top: int,
-    width: int,
-    height: int,
-    rounds: Sequence[int],
-    series: Sequence[tuple[str, Mapping[int, float], str]],
-) -> list[str]:
-    left, right, bottom = 70, 30, 35
-    plot_width = width - left - right
-    plot_height = height - bottom - 25
-    values = [value for _, points, _ in series for value in points.values()]
-    maximum = max(values, default=1.0)
-    maximum = maximum if maximum > 0 else 1.0
-    last_round = max(rounds, default=0)
-
-    def point(round_id: int, value: float) -> tuple[float, float]:
-        x = left + (plot_width * round_id / last_round if last_round else 0)
-        y = top + 25 + plot_height * (1 - value / maximum)
-        return x, y
-
-    output = [
-        (
-            f'<text x="{left}" y="{top + 15}" '
-            f'font-family="sans-serif" font-size="14">{title}</text>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top + 25 + plot_height}" '
-            f'x2="{width - right}" y2="{top + 25 + plot_height}" stroke="#333"/>'
-        ),
-        (
-            f'<line x1="{left}" y1="{top + 25}" '
-            f'x2="{left}" y2="{top + 25 + plot_height}" stroke="#333"/>'
-        ),
-    ]
-    for series_index, (label, points, color) in enumerate(series):
-        commands = [
-            f"{'M' if point_index == 0 else 'L'} {x:.2f},{y:.2f}"
-            for point_index, round_id in enumerate(rounds)
-            if round_id in points
-            for x, y in (point(round_id, points[round_id]),)
-        ]
-        if commands:
-            output.append(
-                f'<path d="{" ".join(commands)}" fill="none" '
-                f'stroke="{color}" stroke-width="2"/>'
-            )
-        output.append(
-            f'<text x="{width - 170}" y="{top + 15 + 16 * series_index}" '
-            f'font-family="sans-serif" font-size="12" fill="{color}">{label}</text>'
-        )
-    return output
 
 
 __all__ = [

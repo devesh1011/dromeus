@@ -52,15 +52,11 @@ def test_exact_report_computes_before_after_smoothed_and_final_distance(
     assert report.final_normalized_distance == pytest.approx(0.6666666667)
 
     json_path = tmp_path / "consensus.json"
-    svg_path = tmp_path / "consensus.svg"
     report.write_json(json_path)
-    report.write_svg(svg_path)
     payload = json.loads(json_path.read_text())
     assert payload["final_normalized_distance"] == pytest.approx(
         report.final_normalized_distance
     )
-    assert "pre-mix" in svg_path.read_text()
-    assert svg_path.read_text().startswith("<svg")
 
 
 def test_exact_report_surfaces_non_monotonic_mixing(tmp_path: Path) -> None:

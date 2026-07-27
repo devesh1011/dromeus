@@ -222,17 +222,18 @@ def test_benchmark_report_aggregates_metrics_and_writes_artifacts(
     report.write_artifacts(output)
     payload = json.loads((output / "report.json").read_text())
     assert payload == report.as_dict()
-    assert (output / "metrics.svg").read_text().startswith("<svg")
-    assert (output / "approximate-consensus.svg").read_text().startswith("<svg")
-    assert (output / "consensus.svg").read_text().startswith("<svg")
-    assert (output / "timing.svg").read_text().startswith("<svg")
-    assert (output / "goodput.svg").read_text().startswith("<svg")
-    assert event_logs[0].as_uri() in (output / "metrics.svg").read_text()
-    assert event_logs[0].as_uri() in (output / "approximate-consensus.svg").read_text()
-    assert event_logs[0].as_uri() in (output / "consensus.svg").read_text()
-    assert event_logs[0].as_uri() in (output / "timing.svg").read_text()
-    assert event_logs[0].as_uri() in (output / "goodput.svg").read_text()
-    assert "metrics.svg" in (output / "report.md").read_text()
+    png_signature = b"\x89PNG\r\n\x1a\n"
+    for name in (
+        "metrics.png",
+        "approximate-consensus.png",
+        "consensus.png",
+        "timing.png",
+        "goodput.png",
+    ):
+        assert (output / name).read_bytes().startswith(png_signature)
+    provenance = json.loads((output / "provenance.json").read_text())
+    assert str(event_logs[0].resolve()) in provenance["event_logs"]
+    assert "metrics.png" in (output / "report.md").read_text()
 
 
 def test_relative_parity_cannot_pass_below_90_percent(tmp_path: Path) -> None:
