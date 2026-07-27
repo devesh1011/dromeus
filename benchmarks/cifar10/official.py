@@ -60,6 +60,7 @@ class FrozenBenchmarkPlan(BaseModel):
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
     pilot_artifact: Path
     batch_size: Literal[32] = 32
+    evaluation_interval: Literal[5] = 5
     device: Literal["cpu"] = "cpu"
     augment: Literal[True] = True
     worker_count: Literal[4] = 4
@@ -84,6 +85,7 @@ class FrozenBenchmarkPlan(BaseModel):
                 environment=self.environment,
                 data_source=self.data_source,
                 test_sample_count=10_000,
+                evaluation_interval=self.evaluation_interval,
                 trainer_seed=seed,
                 batch_size=self.batch_size,
                 device=self.device,
