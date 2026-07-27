@@ -25,7 +25,7 @@ from dromeus.membership.protocol import (
     create_invitation,
 )
 from dromeus.persistence.run_store import RunStore
-from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
+from dromeus.runtime import FailureConfig, NodeRuntime, NodeState, TrainingConfig
 from dromeus.transport.envelope import (
     MessageType,
     create_envelope,
@@ -70,6 +70,11 @@ class RecordingInMemoryTransport(InMemoryTransport):
     async def send(self, destination: str, payload: bytes) -> None:
         self.sent_payloads.append((destination, payload))
         await super().send(destination, payload)
+
+
+class FailingRunStore(RunStore):
+    def initialize(self, manifest: SealedManifest) -> str:
+        raise OSError("run store unavailable")
 
 
 def test_future_round_message_id_is_deduplicated_per_sender() -> None:
@@ -429,11 +434,27 @@ async def _test_runtime_runs_training_after_in_memory_formation(
 
 
 def test_runtime_persists_and_broadcasts_failure_before_run(tmp_path: Path) -> None:
-    asyncio.run(_test_runtime_persists_and_broadcasts_failure_before_run(tmp_path))
+    asyncio.run(
+        _test_runtime_persists_and_broadcasts_failure_before_run(
+            tmp_path,
+            persistence_fails=False,
+        )
+    )
+
+
+def test_runtime_broadcasts_when_failure_persistence_fails(tmp_path: Path) -> None:
+    asyncio.run(
+        _test_runtime_persists_and_broadcasts_failure_before_run(
+            tmp_path,
+            persistence_fails=True,
+        )
+    )
 
 
 async def _test_runtime_persists_and_broadcasts_failure_before_run(
     tmp_path: Path,
+    *,
+    persistence_fails: bool,
 ) -> None:
     manifest = SealedManifest.model_validate(manifest_data())
     draft_data = manifest.model_dump(mode="python")
@@ -452,9 +473,30 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
         RecordingInMemoryTransport(network=network, public_key=f"peer-{index}")
         for index in range(4)
     ]
+    blocked_artifact_parent = tmp_path / "blocked-artifact-parent"
+    blocked_artifact_parent.write_text("not a directory", encoding="utf-8")
     nodes: list[NodeRuntime] = []
     for index, transport in enumerate(transports):
         trainer = RuntimeTrainer()
+        run_store = (
+            FailingRunStore(tmp_path / f"run-{index}")
+            if persistence_fails and index == 0
+            else RunStore(tmp_path / f"run-{index}")
+        )
+        training = (
+            None
+            if index == 0
+            else TrainingConfig(
+                algorithm=DPSGDAdapter(
+                    trainer=trainer,
+                    tensor_schema=manifest.tensor_schema,
+                    local_steps=1,
+                ),
+                load_checkpoint=trainer.load_checkpoint,
+                run_store=run_store,
+                artifact_root=tmp_path / f"rounds-{index}",
+            )
+        )
         nodes.append(
             NodeRuntime(
                 transport=transport,
@@ -462,15 +504,14 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
                 environment=manifest.environment,
                 dataset=manifest.dataset,
                 artifact_store=ArtifactStore(tmp_path / f"artifacts-{index}"),
-                training=TrainingConfig(
-                    algorithm=DPSGDAdapter(
-                        trainer=trainer,
-                        tensor_schema=manifest.tensor_schema,
-                        local_steps=1,
+                training=training,
+                failure=FailureConfig(
+                    run_store=run_store,
+                    artifact_root=(
+                        blocked_artifact_parent / "rounds"
+                        if persistence_fails and index == 0
+                        else tmp_path / f"rounds-{index}"
                     ),
-                    load_checkpoint=trainer.load_checkpoint,
-                    run_store=RunStore(tmp_path / f"run-{index}"),
-                    artifact_root=tmp_path / f"rounds-{index}",
                 ),
             )
         )
@@ -496,18 +537,29 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
         assert len(results) == 4
         transports[0].sent_payloads.clear()
 
-        await nodes[0].fail_before_run(RuntimeError("topology unavailable"))
+        if persistence_fails:
+            with pytest.raises(OSError, match="run store unavailable"):
+                await nodes[0].fail_before_run(
+                    RuntimeError("topology unavailable")
+                )
+        else:
+            await nodes[0].fail_before_run(RuntimeError("topology unavailable"))
+        for _ in range(100):
+            if all(node.state is NodeState.FAILED for node in nodes):
+                break
+            await asyncio.sleep(0.01)
 
-        assert nodes[0].state is NodeState.FAILED
-        state = RunStore(tmp_path / "run-0").load_state()
-        assert state["committed_round"] == -1
-        assert state["terminal"] == {
-            "result": "failed",
-            "diagnostics": {
-                "error_type": "RuntimeError",
-                "error": "topology unavailable",
-            },
-        }
+        assert all(node.state is NodeState.FAILED for node in nodes)
+        if not persistence_fails:
+            state = RunStore(tmp_path / "run-0").load_state()
+            assert state["committed_round"] == -1
+            assert state["terminal"] == {
+                "result": "failed",
+                "diagnostics": {
+                    "error_type": "RuntimeError",
+                    "error": "topology unavailable",
+                },
+            }
         participant_keys = frozenset(f"peer-{index}" for index in range(4))
         sent_envelopes = [
             decode_envelope(
@@ -524,6 +576,18 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
         ]
         assert len(failure_envelopes) == 3
         assert {envelope.round_id for envelope in failure_envelopes} == {0}
+        for index in range(1, 4):
+            peer_state = RunStore(tmp_path / f"run-{index}").load_state()
+            assert peer_state["terminal"] == {
+                "result": "failed",
+                "diagnostics": {
+                    "error_type": "PeerRunFailureError",
+                    "error": (
+                        "peer peer-0 failed at round 0: "
+                        "RuntimeError: topology unavailable"
+                    ),
+                },
+            }
     finally:
         await asyncio.gather(*(node.stop() for node in nodes))
 

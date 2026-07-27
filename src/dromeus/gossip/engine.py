@@ -146,8 +146,18 @@ class RunFailedMessage(DomainModel):
     reason: str
 
 
-class AXLPairTransport:
-    """Pair transport backed by reliable safetensors transfer and AXL envelopes."""
+def decode_run_failure(payload: bytes) -> RunFailure:
+    """Decode validated terminal failure evidence from a control envelope."""
+    message = RunFailedMessage.model_validate(_unpack(payload))
+    return RunFailure(
+        round_id=message.round_id,
+        error_type=message.error_type,
+        reason=message.reason,
+    )
+
+
+class AXLFailureBroadcaster:
+    """Failure-only control broadcaster with no artifact filesystem dependency."""
 
     def __init__(
         self,
@@ -156,30 +166,17 @@ class AXLPairTransport:
         run_id: RunId,
         manifest_hash: Sha256,
         algorithm_id: AlgorithmId,
-        tensor_schema: TensorSchema,
         transport_limits: TransportLimits,
-        receiver: Receiver,
         sender: OutboundScheduler,
-        transfer_manager: TransferManager,
-        artifact_root: Path,
-        participant_keys: frozenset[PublicKey] | None = None,
+        participant_keys: frozenset[PublicKey],
     ) -> None:
         self._local_public_key = local_public_key
         self._run_id = run_id
         self._manifest_hash = manifest_hash
         self._algorithm_id = algorithm_id
-        self._tensor_schema = tensor_schema
         self._transport_limits = transport_limits
-        self._receiver = receiver
         self._sender = sender
-        self._transfer_manager = transfer_manager
-        self._artifact_root = artifact_root
-        self._participant_keys = participant_keys or frozenset()
-        self._artifact_root.mkdir(parents=True, exist_ok=True)
-        self._ready_cache: dict[RoundId, str] = {}
-        self._committed_rounds: dict[RoundId, str] = {}
-        self.last_transfer_id: str | None = None
-        self.last_retry_count = 0
+        self._participant_keys = participant_keys
 
     async def broadcast_run_failed(self, failure: RunFailure) -> None:
         """Best-effort failure broadcast using manifest-bounded sender retries."""
@@ -215,6 +212,54 @@ class AXLPairTransport:
             )
 
         await asyncio.gather(*(send(peer) for peer in peers), return_exceptions=True)
+
+
+class AXLPairTransport:
+    """Pair transport backed by reliable safetensors transfer and AXL envelopes."""
+
+    def __init__(
+        self,
+        *,
+        local_public_key: PublicKey,
+        run_id: RunId,
+        manifest_hash: Sha256,
+        algorithm_id: AlgorithmId,
+        tensor_schema: TensorSchema,
+        transport_limits: TransportLimits,
+        receiver: Receiver,
+        sender: OutboundScheduler,
+        transfer_manager: TransferManager,
+        artifact_root: Path,
+        participant_keys: frozenset[PublicKey] | None = None,
+    ) -> None:
+        self._local_public_key = local_public_key
+        self._run_id = run_id
+        self._manifest_hash = manifest_hash
+        self._algorithm_id = algorithm_id
+        self._tensor_schema = tensor_schema
+        self._transport_limits = transport_limits
+        self._receiver = receiver
+        self._sender = sender
+        self._transfer_manager = transfer_manager
+        self._artifact_root = artifact_root
+        self._participant_keys = participant_keys or frozenset()
+        self._failure_broadcaster = AXLFailureBroadcaster(
+            local_public_key=local_public_key,
+            run_id=run_id,
+            manifest_hash=manifest_hash,
+            algorithm_id=algorithm_id,
+            transport_limits=transport_limits,
+            sender=sender,
+            participant_keys=self._participant_keys,
+        )
+        self._artifact_root.mkdir(parents=True, exist_ok=True)
+        self._ready_cache: dict[RoundId, str] = {}
+        self._committed_rounds: dict[RoundId, str] = {}
+        self.last_transfer_id: str | None = None
+        self.last_retry_count = 0
+
+    async def broadcast_run_failed(self, failure: RunFailure) -> None:
+        await self._failure_broadcaster.broadcast_run_failed(failure)
 
     async def broadcast_consensus_sketch(
         self, *, round_id: RoundId, sketch: np.ndarray
@@ -747,10 +792,12 @@ class GossipEngine:
 
 __all__ = [
     "AXLPairTransport",
+    "AXLFailureBroadcaster",
     "GossipAlgorithm",
     "GossipEngine",
     "FailureBroadcaster",
     "ConsensusPublisher",
+    "decode_run_failure",
     "EvaluationCallback",
     "EvaluationMetrics",
     "PairCommitError",

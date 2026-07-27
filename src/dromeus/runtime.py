@@ -13,11 +13,13 @@ import numpy as np
 
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.gossip.engine import (
+    AXLFailureBroadcaster,
     AXLPairTransport,
     GossipAlgorithm,
     GossipEngine,
     RoundCommit,
     RunFailure,
+    decode_run_failure,
 )
 from dromeus.gossip.scheduler import PeerScheduler
 from dromeus.manifests.models import (
@@ -55,6 +57,10 @@ class NodeRuntimeError(RuntimeError):
     """The node runtime lifecycle was used out of order."""
 
 
+class PeerRunFailureError(RuntimeError):
+    """A sealed peer announced terminal run failure."""
+
+
 class NodeState(StrEnum):
     CREATED = "created"
     FORMING = "forming"
@@ -82,6 +88,21 @@ class TrainingConfig:
     run_store: RunStore
     artifact_root: Path
     metrics_publisher: MetricsService | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FailureConfig:
+    """Durable dependencies available immediately after formation."""
+
+    run_store: RunStore
+    artifact_root: Path
+
+    @classmethod
+    def for_run_root(cls, run_root: Path) -> FailureConfig:
+        return cls(
+            run_store=RunStore(run_root / "run-store"),
+            artifact_root=run_root / "rounds",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,6 +169,7 @@ class NodeRuntime:
         artifact_store: ArtifactStore,
         event_sink: EventSink | None = None,
         training: TrainingConfig | None = None,
+        failure: FailureConfig | None = None,
     ) -> None:
         self._transport = transport
         self._formation = FormationProtocol(
@@ -162,6 +184,7 @@ class NodeRuntime:
         self._state = NodeState.CREATED
         self._result: FormationResult | None = None
         self._training = training
+        self._failure = failure
         self._engine: GossipEngine | None = None
         self._pair_transport: AXLPairTransport | None = None
         self._consensus_telemetry: LiveConsensusTelemetry | None = None
@@ -169,6 +192,9 @@ class NodeRuntime:
         self._local_public_key: str | None = None
         self._commits: tuple[RoundCommit, ...] = ()
         self._run_task: asyncio.Task[tuple[RoundCommit, ...]] | None = None
+        self._control_task: asyncio.Task[None] | None = None
+        self._remote_failure: PeerRunFailureError | None = None
+        self._terminal_lock = asyncio.Lock()
 
     @property
     def state(self) -> NodeState:
@@ -194,30 +220,35 @@ class NodeRuntime:
 
     async def fail_before_run(self, error: BaseException) -> None:
         """Persist and announce a formed node failure before training starts."""
-        if self._state is not NodeState.READY:
-            raise NodeRuntimeError(f"cannot fail node before run from {self._state}")
-        if self._training is None:
-            raise NodeRuntimeError("training is not configured")
         assert self._result is not None
-        self._state = NodeState.FAILED
-        initialized = False
+        run_store, _ = self._failure_dependencies()
+        persistence_error: Exception | None = None
         try:
-            try:
-                await asyncio.to_thread(
-                    self._training.run_store.initialize, self._result.manifest
-                )
-                initialized = True
-            except Exception:
-                pass
-            await self._record_terminal_failure(
-                initialized, result="failed", error=error
-            )
+            async with self._terminal_lock:
+                if self._state is not NodeState.READY:
+                    raise NodeRuntimeError(
+                        f"cannot fail node before run from {self._state}"
+                    )
+                self._state = NodeState.FAILED
+                try:
+                    await asyncio.to_thread(
+                        run_store.initialize, self._result.manifest
+                    )
+                    await asyncio.to_thread(
+                        run_store.record_terminal,
+                        "failed",
+                        {
+                            "error_type": type(error).__name__,
+                            "error": str(error)[:1024],
+                        },
+                    )
+                except Exception as failure:
+                    persistence_error = failure
             try:
                 local_key = await self._transport.local_public_key()
                 self._local_public_key = local_key
-                pair_transport = await self._create_pair_transport(local_key)
-                self._pair_transport = pair_transport
-                await pair_transport.broadcast_run_failed(
+                failure_broadcaster = self._create_failure_broadcaster(local_key)
+                await failure_broadcaster.broadcast_run_failed(
                     RunFailure(
                         round_id=0,
                         error_type=type(error).__name__,
@@ -243,6 +274,8 @@ class NodeRuntime:
                 pass
         finally:
             await self._cleanup()
+        if persistence_error is not None:
+            raise persistence_error
 
     async def initiate(
         self,
@@ -275,12 +308,13 @@ class NodeRuntime:
 
     async def run(self) -> tuple[RoundCommit, ...]:
         """Load formed checkpoint, run gossip rounds, and persist terminal state."""
-        if self._state is not NodeState.READY:
-            raise NodeRuntimeError(f"cannot run node from {self._state}")
-        if self._training is None:
-            raise NodeRuntimeError("training is not configured")
-        assert self._result is not None
-        self._state = NodeState.RUNNING
+        async with self._terminal_lock:
+            if self._state is not NodeState.READY:
+                raise NodeRuntimeError(f"cannot run node from {self._state}")
+            if self._training is None:
+                raise NodeRuntimeError("training is not configured")
+            assert self._result is not None
+            self._state = NodeState.RUNNING
         run_task = asyncio.current_task()
         assert run_task is not None
         self._run_task = run_task
@@ -300,7 +334,9 @@ class NodeRuntime:
                 for participant in self._result.manifest.participants
             )
             services = self._formation.services
-            pair_transport = await self._create_pair_transport(local_key)
+            pair_transport = await self._create_pair_transport(
+                local_key, artifact_root=self._training.artifact_root
+            )
             self._pair_transport = pair_transport
 
             async def receive_consensus_sketch(
@@ -356,19 +392,31 @@ class NodeRuntime:
             await self._start_metrics()
             await self._consensus_telemetry.start()
             commits = await self._engine.run()
-            await asyncio.to_thread(
-                self._training.run_store.record_terminal,
-                "complete",
-                {"committed_rounds": len(commits)},
-            )
-            self._commits = commits
-            self._state = NodeState.COMPLETE
+            async with self._terminal_lock:
+                if self._remote_failure is not None:
+                    raise self._remote_failure
+                write_task = asyncio.create_task(
+                    asyncio.to_thread(
+                        self._training.run_store.record_terminal,
+                        "complete",
+                        {"committed_rounds": len(commits)},
+                    )
+                )
+                try:
+                    await asyncio.shield(write_task)
+                except asyncio.CancelledError:
+                    await write_task
+                self._commits = commits
+                self._state = NodeState.COMPLETE
             return commits
         except asyncio.CancelledError as error:
             self._state = NodeState.FAILED
+            failure = self._remote_failure or error
             await self._record_terminal_failure(
-                initialized, result="failed", error=error
+                initialized, result="failed", error=failure
             )
+            if self._remote_failure is not None:
+                raise self._remote_failure from error
             raise
         except Exception as error:
             self._state = NodeState.FAILED
@@ -395,6 +443,7 @@ class NodeRuntime:
                 await task
             except BaseException:
                 pass
+        await self._stop_control_monitor()
         if self._state is not NodeState.CREATED:
             await self._formation.stop()
         self._state = NodeState.STOPPED
@@ -417,9 +466,10 @@ class NodeRuntime:
         if self._training is not None and self._training.metrics_publisher is not None:
             await self._training.metrics_publisher.start()
 
-    async def _create_pair_transport(self, local_key: str) -> AXLPairTransport:
+    async def _create_pair_transport(
+        self, local_key: str, *, artifact_root: Path
+    ) -> AXLPairTransport:
         assert self._result is not None
-        assert self._training is not None
         participants = frozenset(
             participant.public_key for participant in self._result.manifest.participants
         )
@@ -435,9 +485,93 @@ class NodeRuntime:
             receiver=services.receiver,
             sender=services.sender,
             transfer_manager=services.transfer_manager,
-            artifact_root=self._training.artifact_root,
+            artifact_root=artifact_root,
             participant_keys=participants,
         )
+
+    def _create_failure_broadcaster(
+        self, local_key: str
+    ) -> AXLFailureBroadcaster:
+        assert self._result is not None
+        participants = frozenset(
+            participant.public_key for participant in self._result.manifest.participants
+        )
+        return AXLFailureBroadcaster(
+            local_public_key=local_key,
+            run_id=self._result.manifest.run_id,
+            manifest_hash=self._result.manifest_hash,
+            algorithm_id=self._result.manifest.algorithm_id,
+            transport_limits=self._result.manifest.transport,
+            sender=self._formation.services.sender,
+            participant_keys=participants,
+        )
+
+    def _failure_dependencies(self) -> tuple[RunStore, Path]:
+        if self._training is not None:
+            return self._training.run_store, self._training.artifact_root
+        if self._failure is not None:
+            return self._failure.run_store, self._failure.artifact_root
+        raise NodeRuntimeError("failure persistence is not configured")
+
+    async def _monitor_run_failures(self) -> None:
+        services = self._formation.services
+        while self._state in {NodeState.READY, NodeState.RUNNING}:
+            try:
+                envelope = await services.receiver.receive(
+                    MessageChannel.CONTROL,
+                    timeout_seconds=0.1,
+                )
+            except TimeoutError:
+                continue
+            if envelope.message_type is not MessageType.RUN_FAILED:
+                continue
+            try:
+                failure = decode_run_failure(envelope.payload)
+            except ValueError:
+                continue
+            error = PeerRunFailureError(
+                f"peer {envelope.sender_public_key} failed at round "
+                f"{failure.round_id}: {failure.error_type}: {failure.reason}"
+            )
+            async with self._terminal_lock:
+                if self._state not in {NodeState.READY, NodeState.RUNNING}:
+                    return
+                self._remote_failure = error
+                task = self._run_task
+                if self._state is NodeState.RUNNING and task is not None:
+                    task.cancel()
+                    return
+                self._state = NodeState.FAILED
+                try:
+                    run_store, _ = self._failure_dependencies()
+                    assert self._result is not None
+                    await asyncio.to_thread(
+                        run_store.initialize, self._result.manifest
+                    )
+                    await asyncio.to_thread(
+                        run_store.record_terminal,
+                        "failed",
+                        {
+                            "error_type": type(error).__name__,
+                            "error": str(error)[:1024],
+                        },
+                    )
+                finally:
+                    await self._cleanup()
+            return
+
+    async def _stop_control_monitor(self) -> None:
+        task = self._control_task
+        if task is None:
+            return
+        self._control_task = None
+        if task is asyncio.current_task():
+            return
+        task.cancel()
+        try:
+            await task
+        except BaseException:
+            pass
 
     async def _stop_metrics(self) -> None:
         if self._training is not None and self._training.metrics_publisher is not None:
@@ -465,20 +599,22 @@ class NodeRuntime:
     ) -> None:
         if not initialized or self._training is None:
             return
-        try:
-            await asyncio.to_thread(
-                self._training.run_store.record_terminal,
-                result,
-                {
-                    "error_type": type(error).__name__,
-                    "error": str(error)[:1024],
-                },
-            )
-        except Exception:
-            pass
+        async with self._terminal_lock:
+            try:
+                await asyncio.to_thread(
+                    self._training.run_store.record_terminal,
+                    result,
+                    {
+                        "error_type": type(error).__name__,
+                        "error": str(error)[:1024],
+                    },
+                )
+            except Exception:
+                pass
 
     async def _cleanup(self) -> None:
         for cleanup in (
+            self._stop_control_monitor,
             self._stop_consensus,
             self._stop_metrics,
             self._formation.stop,
@@ -541,4 +677,8 @@ class NodeRuntime:
     def _ready(self, result: FormationResult) -> FormationResult:
         self._result = result
         self._state = NodeState.READY
+        self._control_task = asyncio.create_task(
+            self._monitor_run_failures(),
+            name="dromeus-control-monitor",
+        )
         return result

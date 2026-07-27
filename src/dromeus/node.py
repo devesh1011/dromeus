@@ -21,7 +21,7 @@ from dromeus.manifests.canonical import (
 )
 from dromeus.manifests.models import DraftRunSpec, Invitation
 from dromeus.membership.protocol import create_invitation
-from dromeus.runtime import NodeRuntime, prepare_cifar_training
+from dromeus.runtime import FailureConfig, NodeRuntime, prepare_cifar_training
 from dromeus.telemetry.events import JsonlEventSink, emit_event
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
@@ -88,6 +88,7 @@ async def run_node(config: NodeConfig) -> None:
         dataset=draft.dataset,
         artifact_store=ArtifactStore(config.run_root / "formation-artifacts"),
         event_sink=event_sink,
+        failure=FailureConfig.for_run_root(config.run_root),
     )
     try:
         if config.role is NodeRole.INITIATOR:
@@ -118,21 +119,21 @@ async def run_node(config: NodeConfig) -> None:
             result = await runtime.join(invitation=invitation)
 
         run_store_root = config.run_root / "run-store"
-        metrics = JsonlMetricsPublisher(
-            sink=event_sink,
-            run_id=result.manifest.run_id,
-            manifest_hash=result.manifest_hash,
-            node_id=local_key,
-        )
-        training_config = await asyncio.to_thread(
-            prepared_training.build_config,
-            result=result,
-            local_public_key=local_key,
-            run_root=config.run_root,
-            metrics_publisher=metrics,
-        )
-        runtime.configure_training(training_config)
         try:
+            metrics = JsonlMetricsPublisher(
+                sink=event_sink,
+                run_id=result.manifest.run_id,
+                manifest_hash=result.manifest_hash,
+                node_id=local_key,
+            )
+            training_config = await asyncio.to_thread(
+                prepared_training.build_config,
+                result=result,
+                local_public_key=local_key,
+                run_root=config.run_root,
+                metrics_publisher=metrics,
+            )
+            runtime.configure_training(training_config)
             await _write_topology_snapshot(
                 transport,
                 run_store_root / "topology-ready.json",
