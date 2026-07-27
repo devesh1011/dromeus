@@ -54,6 +54,10 @@ class AXLTransport:
     async def recv(self, timeout_seconds: float) -> ReceivedBytes | None:
         return await self._get_recv(timeout_seconds)
 
+    async def topology(self) -> dict[str, object]:
+        """Return one raw local AXL topology snapshot off the event loop."""
+        return await asyncio.to_thread(self._load_topology)
+
     async def _request_public_key(self) -> PublicKey:
         def load_topology() -> PublicKey:
             payload = self._load_topology()

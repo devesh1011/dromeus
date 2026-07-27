@@ -24,7 +24,7 @@ from dromeus.persistence.run_store import RunStore
 from dromeus.telemetry.events import JsonlEventSink, event_record
 
 
-def _write_inputs(root: Path) -> tuple[list[Path], list[Path]]:
+def _write_inputs(root: Path, *, seed: int = 17) -> tuple[list[Path], list[Path]]:
     data = manifest_data()
     data["local_steps"] = 1
     data["round_count"] = 1
@@ -51,8 +51,30 @@ def _write_inputs(root: Path) -> tuple[list[Path], list[Path]]:
             schedule={"round_id": 0, "peer": f"peer-{(index + 1) % 4}"},
         )
         store.record_terminal("complete", {"committed_rounds": 1})
+        for phase in ("ready", "complete"):
+            (run_root / f"topology-{phase}.json").write_text(
+                json.dumps(
+                    {
+                        "our_public_key": f"peer-{index}",
+                        "peers": [
+                            {"public_key": f"peer-{(index + 1) % 4}"}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
         log_path = root / f"node-{index}.jsonl"
         sink = JsonlEventSink(log_path)
+        sink.append(
+            event_record(
+                "benchmark_node_ready",
+                run_id=manifest.run_id,
+                manifest_hash=manifest_hash,
+                node_id=f"peer-{index}",
+                benchmark_seed=seed,
+                transport="axl",
+            )
+        )
         sink.append(
             event_record(
                 "round_metrics",
@@ -205,12 +227,50 @@ def test_benchmark_report_rejects_incomplete_run_store(tmp_path: Path) -> None:
         )
 
 
+def test_benchmark_report_rejects_dpsgd_seed_without_node_provenance(
+    tmp_path: Path,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    records = [
+        json.loads(line)
+        for line in event_logs[0].read_text(encoding="utf-8").splitlines()
+    ]
+    records[0]["benchmark_seed"] = 23
+    event_logs[0].write_text(
+        "".join(f"{json.dumps(record)}\n" for record in records),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BenchmarkReportError, match="benchmark seed"):
+        build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
+def test_benchmark_report_rejects_missing_topology_snapshot(tmp_path: Path) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    (run_roots[0] / "topology-complete.json").unlink()
+
+    with pytest.raises(BenchmarkReportError, match="topology snapshots"):
+        build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
 def test_three_seed_report_requires_three_compatible_seed_inputs(
     tmp_path: Path,
 ) -> None:
     inputs: list[SeedBenchmarkInput] = []
     for seed in (17, 23, 29):
-        run_roots, event_logs = _write_inputs(tmp_path / f"seed-{seed}")
+        run_roots, event_logs = _write_inputs(
+            tmp_path / f"seed-{seed}", seed=seed
+        )
         inputs.append(
             SeedBenchmarkInput(
                 seed=seed,

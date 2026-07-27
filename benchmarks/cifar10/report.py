@@ -229,6 +229,11 @@ class BenchmarkReport:
             "manifest_files": [
                 str((root / "manifest.json").resolve()) for root in self.run_roots
             ],
+            "topology_files": [
+                str((root / f"topology-{phase}.json").resolve())
+                for root in self.run_roots
+                for phase in ("ready", "complete")
+            ],
             "run_stores": [str(root.resolve()) for root in self.run_roots],
             "event_logs": [str(path.resolve()) for path in self.event_logs],
             "fedavg_results": (
@@ -456,6 +461,30 @@ def build_benchmark_report(
         for event in events
     ):
         raise BenchmarkReportError("failed run cannot be included")
+    benchmark_nodes: set[str] = set()
+    for events in all_events:
+        ready = [
+            event
+            for event in events
+            if event.get("event") == "benchmark_node_ready"
+        ]
+        if len(ready) != 1:
+            raise BenchmarkReportError(
+                "each event log must contain one benchmark node provenance record"
+            )
+        record = ready[0]
+        if record.get("benchmark_seed") != seed:
+            raise BenchmarkReportError("D-PSGD benchmark seed does not match report")
+        if record.get("transport") != "axl":
+            raise BenchmarkReportError("official D-PSGD transport is not AXL")
+        node_id = record.get("node_id")
+        if (
+            record.get("run_id") != manifests[0].run_id
+            or record.get("manifest_hash") != manifest_hashes[0]
+            or not isinstance(node_id, str)
+        ):
+            raise BenchmarkReportError("benchmark node provenance is incomplete")
+        benchmark_nodes.add(node_id)
 
     metrics = [
         event
@@ -475,6 +504,18 @@ def build_benchmark_report(
     expected_nodes = {
         participant.public_key for participant in manifests[0].participants
     }
+    for phase in ("ready", "complete"):
+        topology_nodes = {
+            _read_topology(root, phase=phase) for root in run_roots
+        }
+        if topology_nodes != expected_nodes:
+            raise BenchmarkReportError(
+                f"{phase} topology snapshots do not cover sealed participants"
+            )
+    if benchmark_nodes != expected_nodes:
+        raise BenchmarkReportError(
+            "benchmark provenance does not cover sealed participants"
+        )
     if set(node_metrics) != expected_nodes:
         raise BenchmarkReportError("round metrics do not cover sealed participants")
 
@@ -641,7 +682,12 @@ def _add_provenance(svg: str, provenance: Mapping[str, object]) -> str:
     metadata = escape(json.dumps(dict(provenance), sort_keys=True))
     raw_paths = [
         value
-        for key in ("event_logs", "manifest_files", "fedavg_results")
+        for key in (
+            "event_logs",
+            "manifest_files",
+            "topology_files",
+            "fedavg_results",
+        )
         for value in cast(list[object], provenance.get(key, []))
         if isinstance(value, str)
     ]
@@ -745,6 +791,20 @@ def _require_completed_state(root: Path, manifest: SealedManifest) -> None:
         raise BenchmarkReportError(f"run is not complete: {root}")
     if state.get("committed_round") != manifest.round_count - 1:
         raise BenchmarkReportError(f"run is incomplete: {root}")
+
+
+def _read_topology(root: Path, *, phase: str) -> str:
+    path = root / f"topology-{phase}.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise BenchmarkReportError(f"invalid topology snapshots at {root}") from error
+    if not isinstance(value, dict):
+        raise BenchmarkReportError(f"invalid topology snapshots at {root}")
+    public_key = value.get("our_public_key")
+    if not isinstance(public_key, str):
+        raise BenchmarkReportError(f"invalid topology snapshots at {root}")
+    return public_key
 
 
 def _read_events(path: Path, *, run_id: str, manifest_hash: str) -> list[Event]:

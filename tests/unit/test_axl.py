@@ -1,3 +1,4 @@
+import asyncio
 from typing import cast
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
@@ -73,6 +74,16 @@ def test_sender_resolution_uses_claimed_sender_when_topology_stays_ambiguous() -
     )
 
     assert transport.resolve_sender(bridge_sender, payload) == actual_sender
+
+
+def test_topology_returns_raw_axl_snapshot() -> None:
+    snapshot: dict[str, object] = {
+        "our_public_key": "peer-0",
+        "peers": [{"public_key": "peer-1"}],
+    }
+    transport = SequencedTopologyTransport([snapshot])
+
+    assert asyncio.run(transport.topology()) == snapshot
 
 
 def test_sender_resolution_uses_header_matching_claim_absent_from_topology(
