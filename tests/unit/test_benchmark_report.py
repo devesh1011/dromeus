@@ -29,10 +29,12 @@ def _write_inputs(
     *,
     seed: int = 17,
     round_count: int = 1,
+    consensus_sketch_seed: int = 9,
 ) -> tuple[list[Path], list[Path]]:
     data = manifest_data()
     data["local_steps"] = 1
     data["round_count"] = round_count
+    data["consensus_sketch"]["seed"] = consensus_sketch_seed
     draft_data = data.copy()
     del draft_data["participants"]
     del draft_data["initial_checkpoint_hash"]
@@ -151,10 +153,16 @@ def _write_inputs(
     return run_roots, event_logs
 
 
-def _fedavg_result(seed: int = 17, *, round_count: int = 1) -> FedAvgResult:
+def _fedavg_result(
+    seed: int = 17,
+    *,
+    round_count: int = 1,
+    consensus_sketch_seed: int = 9,
+) -> FedAvgResult:
     data = manifest_data()
     data["local_steps"] = 1
     data["round_count"] = round_count
+    data["consensus_sketch"]["seed"] = consensus_sketch_seed
     manifest = SealedManifest.model_validate(data)
     return FedAvgResult(
         rounds=tuple(
@@ -398,7 +406,11 @@ def test_three_seed_report_requires_three_compatible_seed_inputs(
 ) -> None:
     inputs: list[SeedBenchmarkInput] = []
     for seed in (17, 23, 29):
-        run_roots, event_logs = _write_inputs(tmp_path / f"seed-{seed}", seed=seed)
+        run_roots, event_logs = _write_inputs(
+            tmp_path / f"seed-{seed}",
+            seed=seed,
+            consensus_sketch_seed=seed,
+        )
         inputs.append(
             SeedBenchmarkInput(
                 seed=seed,
@@ -407,7 +419,9 @@ def test_three_seed_report_requires_three_compatible_seed_inputs(
                 fedavg_result_path=(tmp_path / f"seed-{seed}" / "fedavg.json"),
             )
         )
-        _fedavg_result(seed).write(inputs[-1].fedavg_result_path)
+        _fedavg_result(seed, consensus_sketch_seed=seed).write(
+            inputs[-1].fedavg_result_path
+        )
 
     report = build_three_seed_report(inputs)
 

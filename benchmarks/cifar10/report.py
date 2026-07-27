@@ -610,9 +610,7 @@ def build_three_seed_report(
         )
     except ValueError as error:
         raise BenchmarkReportError("FedAvg raw result file is invalid") from error
-    signatures = {
-        json.dumps(report.configuration, sort_keys=True) for report in reports
-    }
+    signatures = {_shared_configuration_signature(report) for report in reports}
     if len(signatures) != 1:
         raise BenchmarkReportError(
             "seed manifests do not share one benchmark configuration"
@@ -631,6 +629,13 @@ def build_three_seed_report(
             and all(report.consensus_evidence_pass for report in reports)
         ),
     )
+
+
+def _shared_configuration_signature(report: BenchmarkReport) -> str:
+    configuration = dict(report.configuration)
+    sketch = cast(Mapping[str, object], configuration["consensus_sketch"])
+    configuration["consensus_sketch"] = {"size": sketch["size"]}
+    return json.dumps(configuration, sort_keys=True)
 
 
 def _validate_fedavg_config(
