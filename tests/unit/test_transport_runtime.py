@@ -599,7 +599,11 @@ def test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> None:
 async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> None:
     manifest = SealedManifest.model_validate(manifest_data())
     network = InMemoryNetwork()
-    sender_transport = InMemoryTransport(network=network, public_key="peer-0")
+    sender_transport = InMemoryTransport(
+        network=network,
+        public_key="peer-0",
+        faults=InMemoryFaults(drop_send_calls=frozenset({2})),
+    )
     receiver_transport = InMemoryTransport(
         network=network,
         public_key="peer-1",
@@ -690,7 +694,7 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
     assert receipt.path.read_bytes() == artifact.read_bytes()
     assert sender_manager.last_timing is not None
     assert sender_manager.last_timing.elapsed_seconds >= 0
-    assert sender_manager.last_timing.retry_count == 0
+    assert sender_manager.last_timing.retry_count == 1
 
     corrupt_sender_transport = InMemoryTransport(
         network=network,

@@ -321,6 +321,17 @@ class TransferManager:
                 loop = asyncio.get_running_loop()
                 ack_future: asyncio.Future[ChunkAck] = loop.create_future()
                 self._ack_waiters[ack_key] = ack_future
+                if attempt > 0:
+                    begin_timing = await self._send_message(
+                        destination=destination,
+                        message_type=MessageType.TRANSFER_BEGIN,
+                        message_id=f"{transfer_id}-begin",
+                        correlation_id=transfer_id,
+                        payload=_pack(begin),
+                        round_id=round_id,
+                        priority=Priority.CONTROL,
+                    )
+                    retry_count += begin_timing.retry_count
                 chunk_timing = await self._send_message(
                     destination=destination,
                     message_type=MessageType.CHUNK,
