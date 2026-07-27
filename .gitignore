@@ -38,6 +38,6 @@ logs/*.log
 # Local formation dashboard runtime
 .demo-cache/
 
-
 # Misc
 .DS_Store
+benchmarks/results/

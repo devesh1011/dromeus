@@ -38,7 +38,7 @@ dev = [
 packages = ["src/dromeus"]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "benchmarks"]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
