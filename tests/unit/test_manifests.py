@@ -61,7 +61,7 @@ def test_training_policy_validates_quality_recipe() -> None:
         )
 
 
-def test_resnet32_manifest_requires_versioned_training_policy() -> None:
+def test_active_manifest_requires_training_policy() -> None:
     data = manifest_data()
     for field in (
         "draft_hash",
@@ -70,10 +70,61 @@ def test_resnet32_manifest_requires_versioned_training_policy() -> None:
         "tensor_schema",
     ):
         del data[field]
-    data["model_id"] = "cifar-resnet32-v2"
+    data["manifest_version"] = 2
 
-    with pytest.raises(ValidationError, match="explicit training policy"):
+    with pytest.raises(ValidationError, match="requires"):
         DraftRunSpec.model_validate(data)
+
+
+def test_historical_manifest_rejects_training_policy() -> None:
+    data = manifest_data()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del data[field]
+    data["training"] = {
+        "batch_size": 128,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "learning_rate_milestones": [8000, 12000],
+        "learning_rate_gamma": 0.1,
+        "crop_padding": 4,
+        "normalize": True,
+        "final_consensus_rounds": 2,
+    }
+
+    with pytest.raises(ValidationError, match="excludes"):
+        DraftRunSpec.model_validate(data)
+
+
+def test_active_manifest_enforces_executable_identifiers() -> None:
+    draft = manifest_data()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft[field]
+    draft["manifest_version"] = 2
+    draft["algorithm_id"] = "other-algorithm"
+    draft["model_id"] = "other-model"
+    draft["training"] = {
+        "batch_size": 128,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "learning_rate_milestones": [8000, 12000],
+        "learning_rate_gamma": 0.1,
+        "crop_padding": 4,
+        "normalize": True,
+        "final_consensus_rounds": 2,
+    }
+
+    with pytest.raises(ValidationError, match="requires dpsgd and resnet32"):
+        DraftRunSpec.model_validate(draft)
 
 
 def test_hash_is_stable_regardless_of_input_key_order() -> None:
