@@ -12,8 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from benchmarks.cifar10.fedavg_reference import FedAvgConfig
 from dromeus.manifests.canonical import parse_draft_yaml
 from dromeus.manifests.models import (
-    DPSGD_V1_ALGORITHM_ID,
-    DPSGD_V2_ALGORITHM_ID,
+    DPSGD_ALGORITHM_ID,
     DatasetContract,
     DraftRunSpec,
     EnvironmentFingerprint,
@@ -36,7 +35,10 @@ class PilotEvidence(BaseModel):
     status: Literal["complete"]
     model_definition_hash: Sha256
     dataset: DatasetContract
-    data_source: Literal["torchvision-cifar10"]
+    data_source: Literal[
+        "torchvision-cifar10",
+        "huggingface-uoft-cs-cifar10",
+    ]
     local_steps: Annotated[int, Field(gt=0)]
     round_count: Annotated[int, Field(gt=0)]
     learning_rate: Annotated[float, Field(gt=0)]
@@ -67,7 +69,10 @@ class FrozenBenchmarkPlan(BaseModel):
     model_definition_hash: Sha256
     dataset: DatasetContract
     environment: EnvironmentFingerprint
-    data_source: Literal["torchvision-cifar10"]
+    data_source: Literal[
+        "torchvision-cifar10",
+        "huggingface-uoft-cs-cifar10",
+    ]
     optimizer: Literal["sgd"] = "sgd"
     weight_decay: Annotated[float, Field(ge=0.0)] = 0.0
     max_payload_bytes: Annotated[int, Field(gt=0)]
@@ -177,11 +182,7 @@ class FrozenBenchmarkPlan(BaseModel):
             self.max_payload_bytes,
             self.max_retries,
             self.retry_timeout_seconds,
-            (
-                DPSGD_V2_ALGORITHM_ID
-                if self.training is not None
-                else DPSGD_V1_ALGORITHM_ID
-            ),
+            DPSGD_ALGORITHM_ID if self.training is not None else "dpsgd-v1",
             self.training,
         )
         if signature != expected:

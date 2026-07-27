@@ -25,8 +25,7 @@ from benchmarks.cifar10.report import (
 )
 from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import (
-    DPSGD_V1_ALGORITHM_ID,
-    DPSGD_V2_ALGORITHM_ID,
+    DPSGD_ALGORITHM_ID,
     ConsensusSketchConfig,
     DatasetContract,
     DraftRunSpec,
@@ -35,19 +34,16 @@ from dromeus.manifests.models import (
     TrainingPolicy,
     TransportLimits,
 )
-from dromeus.training.pytorch import (
-    CIFAR10_ARCHIVE_MD5,
-    CIFAR10_DATASET_VERSION,
-    CIFAR_RESNET32_MODEL_DEFINITION_HASH,
-    CIFAR_RESNET32_MODEL_ID,
-    CIFAR_RESNET32_PREPROCESSING_HASH,
-    MODEL_DEFINITION_HASH,
+from dromeus.training.cifar10 import (
+    DATA_SOURCE,
+    DATASET_REVISION,
+    DATASET_VERSION,
     PREPROCESSING_HASH,
-    CIFAR10Data,
-    build_model,
     create_initial_checkpoint,
-    derive_benchmark_seed,
+    load_cifar10,
 )
+from dromeus.training.models import MODEL_DEFINITION_HASH, MODEL_ID, build_model
+from dromeus.training.trainer import derive_benchmark_seed
 
 PINNED_AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
@@ -78,8 +74,8 @@ class DatasetArtifact(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    data_source: Literal["torchvision-cifar10"]
-    archive_md5: Literal["c58f30108f718f92721af3b95e74349a"]
+    data_source: Literal["huggingface-uoft-cs-cifar10"]
+    dataset_revision: Literal["0b2714987fa478483af9968de7c934580d0bb9a2"]
     dataset_version: str
     preprocessing_hash: str
     train_sample_count: Literal[50_000]
@@ -93,14 +89,14 @@ def create_draft(
     dromeus_commit: str,
     image_digest: str,
     pytorch_version: str,
-    round_count: int = 100,
-    local_steps: int = 5,
+    round_count: int = 400,
+    local_steps: int = 40,
     learning_rate: float = 0.1,
 ) -> DraftRunSpec:
     """Create one production CIFAR draft from measured, explicit values."""
     dataset = DatasetContract(
         dataset_id="cifar10",
-        version=CIFAR10_DATASET_VERSION,
+        version=DATASET_VERSION,
         preprocessing_hash=PREPROCESSING_HASH,
         iid_partition_seed=7,
         image_shape=(3, 32, 32),
@@ -119,11 +115,11 @@ def create_draft(
         container_image_digest=image_digest,
     )
     return DraftRunSpec(
-        manifest_version=1,
+        manifest_version=2,
         protocol_version=1,
         run_id=run_id,
-        algorithm_id=DPSGD_V1_ALGORITHM_ID,
-        model_id="cifar-cnn-v1",
+        algorithm_id=DPSGD_ALGORITHM_ID,
+        model_id=MODEL_ID,
         model_definition_hash=MODEL_DEFINITION_HASH,
         dataset=dataset,
         environment=environment,
@@ -141,61 +137,27 @@ def create_draft(
         consensus_sketch=ConsensusSketchConfig(
             seed=derive_benchmark_seed(benchmark_seed, "consensus-sketch")
         ),
-    )
-
-
-def create_quality_draft(
-    *,
-    run_id: str,
-    benchmark_seed: int,
-    dromeus_commit: str,
-    image_digest: str,
-    pytorch_version: str,
-) -> DraftRunSpec:
-    """Create the public-quality ResNet-32 recipe (~164 local epochs)."""
-    base = create_draft(
-        run_id=run_id,
-        benchmark_seed=benchmark_seed,
-        dromeus_commit=dromeus_commit,
-        image_digest=image_digest,
-        pytorch_version=pytorch_version,
-        round_count=400,
-        local_steps=40,
-        learning_rate=0.1,
-    )
-    return DraftRunSpec.model_validate(
-        {
-            **base.model_dump(mode="python"),
-            "manifest_version": 2,
-            "algorithm_id": DPSGD_V2_ALGORITHM_ID,
-            "model_id": CIFAR_RESNET32_MODEL_ID,
-            "model_definition_hash": CIFAR_RESNET32_MODEL_DEFINITION_HASH,
-            "dataset": base.dataset.model_copy(
-                update={
-                    "preprocessing_hash": CIFAR_RESNET32_PREPROCESSING_HASH,
-                }
-            ),
-            "environment": base.environment.model_copy(
-                update={
-                    "model_definition_hash": CIFAR_RESNET32_MODEL_DEFINITION_HASH,
-                }
-            ),
-            "training": TrainingPolicy(
-                batch_size=128,
-                momentum=0.9,
-                weight_decay=1e-4,
-                learning_rate_milestones=(8_000, 12_000),
-                learning_rate_gamma=0.1,
-                crop_padding=4,
-                normalize=True,
-                final_consensus_rounds=2,
-            ),
-        }
+        training=TrainingPolicy(
+            batch_size=128,
+            momentum=0.9,
+            weight_decay=1e-4,
+            learning_rate_milestones=(8_000, 12_000),
+            learning_rate_gamma=0.1,
+            crop_padding=4,
+            normalize=True,
+            final_consensus_rounds=2,
+        ),
     )
 
 
 def write_draft(draft: DraftRunSpec, output: Path) -> None:
     _write_yaml(output, draft.model_dump(mode="json"))
+
+
+def _training_policy(draft: DraftRunSpec) -> TrainingPolicy:
+    if draft.training is None:
+        raise ValueError("benchmark requires an active training policy")
+    return draft.training
 
 
 def write_node_configs(
@@ -219,7 +181,7 @@ def write_node_configs(
                 "draft_path": "/run/dromeus/draft.yaml",
                 "axl_bridge_url": "http://127.0.0.1:9302",
                 "run_root": f"/var/lib/dromeus/{draft.run_id}/node-{index}",
-                "cifar_root": "/var/cache/dromeus/cifar10",
+                "dataset_cache": "/var/cache/dromeus/cifar10",
                 "invitation_path": f"/run/dromeus/{draft.run_id}/invitation.json",
                 "bootstrap_uri": bootstrap_uri,
                 "benchmark_seed": benchmark_seed,
@@ -258,6 +220,7 @@ def write_pilot_evidence(
         if len({path.resolve() for path in paths}) != 4:
             raise ValueError(f"pilot {label} must be distinct")
     draft = parse_draft_yaml(draft_path)
+    training = _training_policy(draft)
     manifests: list[SealedManifest] = []
     for root in run_roots:
         store_root = root / "run-store"
@@ -274,11 +237,7 @@ def write_pilot_evidence(
             if isinstance(terminal_value, dict)
             else None
         )
-        final_consensus_rounds = (
-            draft.training.final_consensus_rounds
-            if draft.training is not None
-            else 0
-        )
+        final_consensus_rounds = training.final_consensus_rounds
         if (
             terminal is None
             or terminal.get("result") != "complete"
@@ -326,15 +285,7 @@ def write_pilot_evidence(
         ):
             raise ValueError("pilot node provenance is incomplete")
         node_ids.append(node_id)
-        final_round = (
-            draft.round_count
-            + (
-                draft.training.final_consensus_rounds
-                if draft.training is not None
-                else 0
-            )
-            - 1
-        )
+        final_round = draft.round_count + training.final_consensus_rounds - 1
         final_metrics = [
             event
             for event in events
@@ -366,11 +317,11 @@ def write_pilot_evidence(
         status="complete",
         model_definition_hash=draft.model_definition_hash,
         dataset=draft.dataset,
-        data_source="torchvision-cifar10",
+        data_source=DATA_SOURCE,
         local_steps=draft.local_steps,
         round_count=draft.round_count,
         learning_rate=draft.learning_rate,
-        training=draft.training,
+        training=training,
         node_ids=cast(tuple[str, str, str, str], tuple(node_ids)),
         data_artifact_sha256=cast(
             tuple[str, str, str, str], tuple(artifact_hashes)
@@ -401,6 +352,7 @@ def write_frozen_plan(
 ) -> FrozenBenchmarkPlan:
     """Freeze one pilot-backed configuration before official results exist."""
     draft = parse_draft_yaml(draft_path)
+    training = _training_policy(draft)
     try:
         portable_pilot_path = pilot_artifact.resolve().relative_to(
             output.parent.resolve()
@@ -416,10 +368,8 @@ def write_frozen_plan(
         model_definition_hash=draft.model_definition_hash,
         dataset=draft.dataset,
         environment=draft.environment,
-        data_source="torchvision-cifar10",
-        weight_decay=(
-            draft.training.weight_decay if draft.training is not None else 0.0
-        ),
+        data_source=DATA_SOURCE,
+        weight_decay=training.weight_decay,
         max_payload_bytes=draft.transport.max_payload_bytes,
         max_retries=draft.transport.max_retries,
         retry_timeout_seconds=draft.transport.retry_timeout_seconds,
@@ -431,18 +381,13 @@ def write_frozen_plan(
         worker_root_volume_gib=worker_root_volume_gib,
         parameter_count=sum(
             parameter.numel()
-            for parameter in build_model(seed=0, model_id=draft.model_id).parameters()
+            for parameter in build_model(seed=0).parameters()
         ),
         learning_rate_schedule=(
-            "multistep"
-            if draft.training is not None
-            and draft.training.learning_rate_milestones
-            else "constant"
+            "multistep" if training.learning_rate_milestones else "constant"
         ),
-        batch_size=(
-            draft.training.batch_size if draft.training is not None else 32
-        ),
-        training=draft.training,
+        batch_size=training.batch_size,
+        training=training,
     )
     _write_yaml(output, plan.model_dump(mode="json"))
     return load_frozen_benchmark_plan(output)
@@ -450,34 +395,19 @@ def write_frozen_plan(
 
 def prepare_cifar_data(
     *,
-    cifar_root: Path,
+    dataset_cache: Path,
     output: Path,
-    quality_v2: bool = False,
 ) -> DatasetArtifact:
     """Download and validate canonical CIFAR-10 on one worker."""
-    train_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=True,
-        download=True,
-    )
-    test_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=False,
-        download=True,
-    )
-    archive = cifar_root / "cifar-10-python.tar.gz"
-    archive_md5 = hashlib.md5(archive.read_bytes(), usedforsecurity=False).hexdigest()
-    if archive_md5 != CIFAR10_ARCHIVE_MD5:
-        raise ValueError("downloaded CIFAR-10 archive checksum does not match")
+    train_data = load_cifar10(cache_dir=dataset_cache, train=True)
+    test_data = load_cifar10(cache_dir=dataset_cache, train=False)
     if len(train_data) != 50_000 or len(test_data) != 10_000:
         raise ValueError("downloaded CIFAR-10 sample counts do not match")
     artifact = DatasetArtifact(
-        data_source="torchvision-cifar10",
-        archive_md5="c58f30108f718f92721af3b95e74349a",
-        dataset_version=CIFAR10_DATASET_VERSION,
-        preprocessing_hash=(
-            CIFAR_RESNET32_PREPROCESSING_HASH if quality_v2 else PREPROCESSING_HASH
-        ),
+        data_source=DATA_SOURCE,
+        dataset_revision=DATASET_REVISION,
+        dataset_version=DATASET_VERSION,
+        preprocessing_hash=PREPROCESSING_HASH,
         train_sample_count=50_000,
         test_sample_count=10_000,
     )
@@ -489,7 +419,7 @@ def run_fedavg_seed(
     *,
     plan_path: Path,
     benchmark_seed: int,
-    cifar_root: Path,
+    dataset_cache: Path,
     output: Path,
 ) -> None:
     """Run and archive one frozen centralized control."""
@@ -501,16 +431,8 @@ def run_fedavg_seed(
         config = configs[benchmark_seed]
     except KeyError as error:
         raise ValueError("FedAvg seed is not frozen") from error
-    train_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=True,
-        download=False,
-    )
-    test_data = CIFAR10Data.from_torchvision(
-        root=cifar_root,
-        train=False,
-        download=False,
-    )
+    train_data = load_cifar10(cache_dir=dataset_cache, train=True)
+    test_data = load_cifar10(cache_dir=dataset_cache, train=False)
     partitions = train_data.split_iid(
         participant_count=4,
         seed=plan.dataset.iid_partition_seed,
@@ -519,7 +441,6 @@ def run_fedavg_seed(
     checkpoint = create_initial_checkpoint(
         output.with_suffix(".initial.safetensors"),
         seed=derive_benchmark_seed(benchmark_seed, "model-initialization"),
-        model_id=plan.model_id,
     )
     result = run_fedavg(
         partitions=partitions,
@@ -575,14 +496,6 @@ def _parser() -> argparse.ArgumentParser:
     draft.add_argument("--learning-rate", type=float, default=0.1)
     draft.add_argument("--output", required=True, type=Path)
 
-    quality_draft = subparsers.add_parser("quality-draft")
-    quality_draft.add_argument("--run-id", required=True)
-    quality_draft.add_argument("--seed", required=True, type=int)
-    quality_draft.add_argument("--dromeus-commit", required=True)
-    quality_draft.add_argument("--image-digest", required=True)
-    quality_draft.add_argument("--pytorch-version", required=True)
-    quality_draft.add_argument("--output", required=True, type=Path)
-
     pilot = subparsers.add_parser("pilot-evidence")
     pilot.add_argument("--draft", required=True, type=Path)
     pilot.add_argument("--run-root", required=True, action="append", type=Path)
@@ -601,8 +514,7 @@ def _parser() -> argparse.ArgumentParser:
     freeze.add_argument("--output", required=True, type=Path)
 
     data = subparsers.add_parser("prepare-data")
-    data.add_argument("--cifar-root", required=True, type=Path)
-    data.add_argument("--quality-v2", action="store_true")
+    data.add_argument("--dataset-cache", required=True, type=Path)
     data.add_argument("--output", required=True, type=Path)
 
     nodes = subparsers.add_parser("node-configs")
@@ -615,7 +527,7 @@ def _parser() -> argparse.ArgumentParser:
     fedavg = subparsers.add_parser("fedavg")
     fedavg.add_argument("--plan", required=True, type=Path)
     fedavg.add_argument("--seed", required=True, type=int)
-    fedavg.add_argument("--cifar-root", required=True, type=Path)
+    fedavg.add_argument("--dataset-cache", required=True, type=Path)
     fedavg.add_argument("--output", required=True, type=Path)
 
     report = subparsers.add_parser("report")
@@ -637,17 +549,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 round_count=args.round_count,
                 local_steps=args.local_steps,
                 learning_rate=args.learning_rate,
-            ),
-            args.output,
-        )
-    elif args.command == "quality-draft":
-        write_draft(
-            create_quality_draft(
-                run_id=args.run_id,
-                benchmark_seed=args.seed,
-                dromeus_commit=args.dromeus_commit,
-                image_digest=args.image_digest,
-                pytorch_version=args.pytorch_version,
             ),
             args.output,
         )
@@ -681,9 +582,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     elif args.command == "prepare-data":
         prepare_cifar_data(
-            cifar_root=args.cifar_root,
+            dataset_cache=args.dataset_cache,
             output=args.output,
-            quality_v2=args.quality_v2,
         )
     elif args.command == "node-configs":
         write_node_configs(
@@ -697,7 +597,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_fedavg_seed(
             plan_path=args.plan,
             benchmark_seed=args.seed,
-            cifar_root=args.cifar_root,
+            dataset_cache=args.dataset_cache,
             output=args.output,
         )
     else:

@@ -19,13 +19,12 @@ from dromeus.manifests.models import (
     Sha256,
     TrainingPolicy,
 )
-from dromeus.training.pytorch import (
-    CIFAR10Data,
-    CIFAR10Trainer,
-    checkpoint_hash,
-    derive_benchmark_seed,
+from dromeus.training.cifar10 import DATA_SOURCE, create_trainer
+from dromeus.training.data import (
+    ClassificationData,
     iid_partition_index_hashes,
 )
+from dromeus.training.trainer import checkpoint_hash, derive_benchmark_seed
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,7 +66,11 @@ class FedAvgConfig:
             model_definition_hash=manifest.model_definition_hash,
             dataset=manifest.dataset,
             environment=manifest.environment,
-            data_source="torchvision-cifar10",
+            data_source=(
+                DATA_SOURCE
+                if manifest.training is not None
+                else "torchvision-cifar10"
+            ),
             test_sample_count=10_000,
             evaluation_interval=5,
             trainer_seed=trainer_seed,
@@ -248,8 +251,8 @@ def average_weights(
 
 def run_fedavg(
     *,
-    partitions: Sequence[CIFAR10Data],
-    test_data: CIFAR10Data,
+    partitions: Sequence[ClassificationData],
+    test_data: ClassificationData,
     initial_checkpoint: Path,
     config: FedAvgConfig,
 ) -> FedAvgResult:
@@ -292,11 +295,10 @@ def run_fedavg(
 
     trainer_seed = derive_benchmark_seed(config.trainer_seed, "local-training")
     trainers = tuple(
-        CIFAR10Trainer(
+        create_trainer(
             train_data=partition,
             test_data=test_data,
             seed=trainer_seed + index,
-            model_id=config.model_id,
             batch_size=config.batch_size,
             learning_rate=config.learning_rate,
             momentum=config.training.momentum if config.training is not None else 0.0,
@@ -360,8 +362,8 @@ class FedAvgSeedInput:
     """Inputs for one frozen-seed centralized reference run."""
 
     seed: int
-    partitions: tuple[CIFAR10Data, ...]
-    test_data: CIFAR10Data
+    partitions: tuple[ClassificationData, ...]
+    test_data: ClassificationData
     initial_checkpoint: Path
     config: FedAvgConfig
 

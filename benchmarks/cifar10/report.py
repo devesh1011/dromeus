@@ -151,16 +151,13 @@ class BenchmarkReport:
         return (
             self.mean_within_fedavg_3pp
             and self.no_node_more_than_5pp_below
-            and (
-                self.minimum_accuracy_90
-                or not self.quality_gate_required
-            )
+            and self.minimum_accuracy_90
             and self.consensus_evidence_pass
         )
 
     @property
     def quality_gate_required(self) -> bool:
-        return self.configuration.get("algorithm_id") == "dpsgd-v2"
+        return True
 
     @property
     def publication_ready(self) -> bool:
@@ -673,8 +670,13 @@ def _validate_fedavg_config(
         or config.training != manifest.training
     ):
         raise BenchmarkReportError("FedAvg frozen configuration mismatches manifest")
+    expected_data_source = (
+        "huggingface-uoft-cs-cifar10"
+        if manifest.training is not None
+        else "torchvision-cifar10"
+    )
     if (
-        config.data_source != "torchvision-cifar10"
+        config.data_source != expected_data_source
         or config.test_sample_count != 10_000
         or config.evaluation_interval != 5
         or config.batch_size
