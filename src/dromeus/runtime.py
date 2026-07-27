@@ -38,15 +38,11 @@ from dromeus.telemetry.consensus import (
 )
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.telemetry.metrics import MetricsPublisher
-from dromeus.training.pytorch import (
-    InitialCheckpoint,
+from dromeus.training.cifar10 import (
+    PreparedCIFAR10Training as TrainingOwnedCIFAR,
 )
-from dromeus.training.pytorch import (
-    PreparedCIFARTraining as TrainingOwnedCIFAR,
-)
-from dromeus.training.pytorch import (
-    prepare_cifar_training as prepare_training_owned_cifar,
-)
+from dromeus.training.cifar10 import prepare_training as prepare_training_owned_cifar
+from dromeus.training.trainer import InitialCheckpoint
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.envelope import MessageType
 from dromeus.transport.receiver import MessageChannel
@@ -114,10 +110,8 @@ class PreparedCIFARTraining:
     def create_initial_checkpoint(
         self,
         path: Path,
-        *,
-        model_id: str,
     ) -> InitialCheckpoint:
-        return self._training.create_initial_checkpoint(path, model_id=model_id)
+        return self._training.create_initial_checkpoint(path)
 
     def build_config(
         self,
@@ -149,14 +143,14 @@ class PreparedCIFARTraining:
 def prepare_cifar_training(
     *,
     draft: DraftRunSpec,
-    cifar_root: Path,
+    dataset_cache: Path,
     benchmark_seed: int,
 ) -> PreparedCIFARTraining:
     """Prepare local data through training-owned interfaces."""
     return PreparedCIFARTraining(
         _training=prepare_training_owned_cifar(
             draft=draft,
-            cifar_root=cifar_root,
+            cache_dir=dataset_cache,
             benchmark_seed=benchmark_seed,
         )
     )
@@ -380,10 +374,9 @@ class NodeRuntime:
                 on_distance=self._record_consensus,
                 size=self._result.manifest.consensus_sketch.size,
             )
+            policy = self._result.manifest.training
             final_consensus_rounds = (
-                self._result.manifest.training.final_consensus_rounds
-                if self._result.manifest.training is not None
-                else 0
+                policy.final_consensus_rounds if policy is not None else 0
             )
             self._engine = GossipEngine(
                 local_public_key=local_key,

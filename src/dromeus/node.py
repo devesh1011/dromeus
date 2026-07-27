@@ -42,7 +42,7 @@ class NodeConfig(BaseModel):
     draft_path: Path
     axl_bridge_url: Annotated[str, Field(min_length=1)]
     run_root: Path
-    cifar_root: Path
+    dataset_cache: Path
     invitation_path: Path
     bootstrap_uri: Annotated[str, Field(min_length=1)]
     benchmark_seed: int
@@ -76,7 +76,7 @@ async def run_node(config: NodeConfig) -> None:
     prepared_training = await asyncio.to_thread(
         prepare_cifar_training,
         draft=draft,
-        cifar_root=config.cifar_root,
+        dataset_cache=config.dataset_cache,
         benchmark_seed=config.benchmark_seed,
     )
     transport = AXLTransport(AXLBridgeConfig(base_url=config.axl_bridge_url))
@@ -95,7 +95,6 @@ async def run_node(config: NodeConfig) -> None:
             checkpoint = await asyncio.to_thread(
                 prepared_training.create_initial_checkpoint,
                 config.run_root / "initial.safetensors",
-                model_id=draft.model_id,
             )
             invitation = create_invitation(
                 draft=draft,

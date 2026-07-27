@@ -8,13 +8,10 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 PROTOCOL_VERSION = 1
-MANIFEST_VERSION = 1
-QUALITY_MANIFEST_VERSION = 2
+MANIFEST_VERSION = 2
 M1_PARTICIPANT_COUNT = 4
-CIFAR_CNN_MODEL_ID = "cifar-cnn-v1"
-CIFAR_RESNET32_MODEL_ID = "cifar-resnet32-v2"
-DPSGD_V1_ALGORITHM_ID = "dpsgd-v1"
-DPSGD_V2_ALGORITHM_ID = "dpsgd-v2"
+DPSGD_ALGORITHM_ID = "dpsgd"
+RESNET32_MODEL_ID = "resnet32"
 
 Identifier = Annotated[
     str, StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
@@ -168,17 +165,17 @@ class DraftRunSpec(DomainModel):
     def compatible_environment(self) -> Self:
         if self.environment.model_definition_hash != self.model_definition_hash:
             raise ValueError("environment model hash does not match draft")
-        if self.training is not None and (
-            self.manifest_version != QUALITY_MANIFEST_VERSION
-        ):
-            raise ValueError("an explicit training policy requires manifest version 2")
-        if self.model_id == CIFAR_RESNET32_MODEL_ID and (
-            self.manifest_version != QUALITY_MANIFEST_VERSION
-            or self.algorithm_id != DPSGD_V2_ALGORITHM_ID
-            or self.training is None
+        if (self.manifest_version == 1) != (self.training is None):
+            raise ValueError(
+                "manifest version 1 excludes training policy; "
+                "manifest version 2 requires it"
+            )
+        if self.manifest_version == 2 and (
+            self.algorithm_id != DPSGD_ALGORITHM_ID
+            or self.model_id != RESNET32_MODEL_ID
         ):
             raise ValueError(
-                "cifar-resnet32-v2 requires dpsgd-v2 and an explicit training policy"
+                "manifest version 2 requires dpsgd and resnet32"
             )
         return self
 
