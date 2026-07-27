@@ -11,7 +11,6 @@ from benchmarks.cifar10.runner import (
     DatasetArtifact,
     ReportInput,
     create_draft,
-    create_quality_draft,
     write_frozen_plan,
     write_node_configs,
     write_pilot_evidence,
@@ -19,14 +18,12 @@ from benchmarks.cifar10.runner import (
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import SealedManifest
 from dromeus.persistence.run_store import RunStore
-from dromeus.training.pytorch import (
-    CIFAR10_DATASET_VERSION,
-    CIFAR_RESNET32_MODEL_DEFINITION_HASH,
-    CIFAR_RESNET32_MODEL_ID,
-    CIFAR_RESNET32_PREPROCESSING_HASH,
-    MODEL_DEFINITION_HASH,
+from dromeus.training.cifar10 import (
+    DATASET_REVISION,
+    DATASET_VERSION,
     PREPROCESSING_HASH,
 )
+from dromeus.training.models import MODEL_DEFINITION_HASH, MODEL_ID
 
 
 def _draft():
@@ -43,6 +40,7 @@ def _draft():
 
 def _write_completed_roots(root: Path) -> tuple[Path, Path, Path, Path]:
     draft = _draft()
+    assert draft.training is not None
     sealed = SealedManifest.model_validate(
         {
             **draft.model_dump(mode="json"),
@@ -64,7 +62,9 @@ def _write_completed_roots(root: Path) -> tuple[Path, Path, Path, Path]:
         run_root = root / f"node-{index}"
         store = RunStore(run_root / "run-store")
         store.initialize(sealed)
-        for round_id in range(draft.round_count):
+        for round_id in range(
+            draft.round_count + draft.training.final_consensus_rounds
+        ):
             store.persist_commit(
                 committed_round=round_id,
                 algorithm_state={"weight": np.array([1], dtype=np.float32)},
@@ -73,7 +73,14 @@ def _write_completed_roots(root: Path) -> tuple[Path, Path, Path, Path]:
                 state_checksum=f"{index * 2 + round_id + 1:064x}",
                 schedule={"round_id": round_id, "peer": f"peer-{index}"},
             )
-        store.record_terminal("complete", {"committed_rounds": draft.round_count})
+        store.record_terminal(
+            "complete",
+            {
+                "committed_rounds": (
+                    draft.round_count + draft.training.final_consensus_rounds
+                )
+            },
+        )
         roots.append(run_root)
     return roots[0], roots[1], roots[2], roots[3]
 
@@ -85,21 +92,40 @@ def _write_pilot_inputs(
     manifest = SealedManifest.model_validate_json(
         (run_roots[0] / "run-store" / "manifest.json").read_text(encoding="utf-8")
     )
+    assert manifest.training is not None
     manifest_hash = canonical_hash(manifest)
     logs: list[Path] = []
     artifacts: list[Path] = []
     for index in range(4):
         log = root / f"node-{index}.jsonl"
         log.write_text(
-            json.dumps(
-                {
-                    "event": "benchmark_node_ready",
-                    "run_id": manifest.run_id,
-                    "manifest_hash": manifest_hash,
-                    "node_id": f"peer-{index}",
-                    "benchmark_seed": 17,
-                    "transport": "axl",
-                }
+            "\n".join(
+                (
+                    json.dumps(
+                        {
+                            "event": "benchmark_node_ready",
+                            "run_id": manifest.run_id,
+                            "manifest_hash": manifest_hash,
+                            "node_id": f"peer-{index}",
+                            "benchmark_seed": 17,
+                            "transport": "axl",
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "event": "round_metrics",
+                            "run_id": manifest.run_id,
+                            "manifest_hash": manifest_hash,
+                            "node_id": f"peer-{index}",
+                            "round_id": (
+                                manifest.round_count
+                                + manifest.training.final_consensus_rounds
+                                - 1
+                            ),
+                            "evaluation_accuracy": 0.91,
+                        }
+                    ),
+                )
             )
             + "\n",
             encoding="utf-8",
@@ -107,9 +133,9 @@ def _write_pilot_inputs(
         artifact = root / f"data-{index}.json"
         artifact.write_text(
             DatasetArtifact(
-                data_source="torchvision-cifar10",
-                archive_md5="c58f30108f718f92721af3b95e74349a",
-                dataset_version=CIFAR10_DATASET_VERSION,
+                data_source="huggingface-uoft-cs-cifar10",
+                dataset_revision=DATASET_REVISION,
+                dataset_version=DATASET_VERSION,
                 preprocessing_hash=PREPROCESSING_HASH,
                 train_sample_count=50_000,
                 test_sample_count=10_000,
@@ -128,29 +154,29 @@ def test_create_draft_uses_canonical_production_values() -> None:
     draft = _draft()
 
     assert draft.model_definition_hash == MODEL_DEFINITION_HASH
-    assert draft.dataset.version == CIFAR10_DATASET_VERSION
+    assert draft.dataset.version == DATASET_VERSION
     assert draft.dataset.preprocessing_hash == PREPROCESSING_HASH
     assert draft.environment.pytorch_version == "2.13.0+cpu"
     assert draft.transport.max_payload_bytes == 16 * 1024 * 1024
     assert draft.peer_scheduler_seed == 17
 
 
-def test_quality_draft_freezes_a_160_epoch_resnet_recipe() -> None:
-    draft = create_quality_draft(
+def test_draft_freezes_a_160_epoch_resnet_recipe() -> None:
+    draft = create_draft(
         run_id="quality-001",
         benchmark_seed=17,
         dromeus_commit="a" * 40,
         image_digest=f"sha256:{'b' * 64}",
         pytorch_version="2.13.0+cpu",
     )
-
-    assert draft.algorithm_id == "dpsgd-v2"
-    assert draft.manifest_version == 2
-    assert draft.model_id == CIFAR_RESNET32_MODEL_ID
-    assert draft.model_definition_hash == CIFAR_RESNET32_MODEL_DEFINITION_HASH
-    assert draft.dataset.preprocessing_hash == CIFAR_RESNET32_PREPROCESSING_HASH
-    assert draft.local_steps * draft.round_count == 16_000
     assert draft.training is not None
+
+    assert draft.algorithm_id == "dpsgd"
+    assert draft.manifest_version == 2
+    assert draft.model_id == MODEL_ID
+    assert draft.model_definition_hash == MODEL_DEFINITION_HASH
+    assert draft.dataset.preprocessing_hash == PREPROCESSING_HASH
+    assert draft.local_steps * draft.round_count == 16_000
     assert draft.training.batch_size == 128
     assert draft.training.momentum == 0.9
     assert draft.training.weight_decay == 1e-4

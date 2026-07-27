@@ -20,11 +20,8 @@ from benchmarks.cifar10.fedavg_reference import (
     run_fedavg_seeds,
 )
 from dromeus.manifests.models import SealedManifest
-from dromeus.training.pytorch import (
-    CIFAR10Data,
-    CIFARDataProvenance,
-    create_initial_checkpoint,
-)
+from dromeus.training.cifar10 import create_initial_checkpoint
+from dromeus.training.data import ClassificationData, DataProvenance
 
 
 def _config(
@@ -59,12 +56,12 @@ def _data(
     *,
     split: Literal["train", "test"],
     source: str = "test-fixture",
-) -> CIFAR10Data:
+) -> ClassificationData:
     images = torch.zeros((8, 3, 32, 32), dtype=torch.float32)
     labels = torch.tensor([0, 1, 2, 3, 4, 5, 6, 7])
-    return CIFAR10Data(
+    return ClassificationData(
         cast(Dataset[tuple[torch.Tensor, int]], TensorDataset(images, labels)),
-        _source_provenance=CIFARDataProvenance(
+        _source_provenance=DataProvenance(
             source=source,
             split=split,
         ),
@@ -163,11 +160,11 @@ def test_run_fedavg_rejects_partitions_from_different_seed(tmp_path: Path) -> No
         )
 
 
-def test_run_fedavg_rejects_fixture_claiming_official_torchvision_source(
+def test_run_fedavg_rejects_data_source_mismatch(
     tmp_path: Path,
 ) -> None:
-    data = _data(split="train", source="torchvision-cifar10")
-    test_data = _data(split="test", source="torchvision-cifar10")
+    data = _data(split="train")
+    test_data = _data(split="test")
     checkpoint = create_initial_checkpoint(tmp_path / "initial.safetensors", seed=17)
 
     with pytest.raises(ValueError, match="test data source"):
@@ -175,5 +172,8 @@ def test_run_fedavg_rejects_fixture_claiming_official_torchvision_source(
             partitions=data.split_iid(participant_count=4, seed=7),
             test_data=test_data,
             initial_checkpoint=checkpoint.path,
-            config=replace(_config(), data_source="torchvision-cifar10"),
+            config=replace(
+                _config(),
+                data_source="huggingface-uoft-cs-cifar10",
+            ),
         )

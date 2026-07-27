@@ -13,12 +13,34 @@ from benchmarks.cifar10.official import (
     load_frozen_benchmark_plan,
     prepare_dpsgd_node_configs,
 )
-from benchmarks.cifar10.runner import create_quality_draft, write_frozen_plan
+from benchmarks.cifar10.runner import create_draft, write_frozen_plan
 from dromeus.manifests.models import DraftRunSpec
 
 
-def _write_plan(root: Path) -> Path:
+def _training_policy() -> dict[str, object]:
+    return {
+        "batch_size": 128,
+        "momentum": 0.9,
+        "weight_decay": 0.0001,
+        "learning_rate_milestones": [8000, 12000],
+        "learning_rate_gamma": 0.1,
+        "crop_padding": 4,
+        "normalize": True,
+        "final_consensus_rounds": 2,
+    }
+
+
+def _active_draft_data() -> dict[str, object]:
     data = manifest_data()
+    data["manifest_version"] = 2
+    data["algorithm_id"] = "dpsgd"
+    data["model_id"] = "resnet32"
+    data["training"] = _training_policy()
+    return data
+
+
+def _write_plan(root: Path) -> Path:
+    data = _active_draft_data()
     pilot = root / "pilot.json"
     pilot.write_text(
         json.dumps(
@@ -26,10 +48,12 @@ def _write_plan(root: Path) -> Path:
                 "status": "complete",
                 "model_definition_hash": "0" * 64,
                 "dataset": data["dataset"],
-                "data_source": "torchvision-cifar10",
+                "data_source": "huggingface-uoft-cs-cifar10",
                 "local_steps": 5,
                 "round_count": 100,
                 "learning_rate": 0.1,
+                "training": _training_policy(),
+                "final_node_accuracies": [0.91, 0.92, 0.93, 0.94],
                 "node_ids": ["node-0", "node-1", "node-2", "node-3"],
                 "data_artifact_sha256": [
                     "1" * 64,
@@ -49,11 +73,15 @@ def _write_plan(root: Path) -> Path:
                 "local_steps: 5",
                 "round_count: 100",
                 "learning_rate: 0.1",
-                "model_id: cifar-cnn-v1",
+                "model_id: resnet32",
                 f'model_definition_hash: "{"0" * 64}"',
                 f"dataset: {json.dumps(data['dataset'])}",
                 f"environment: {json.dumps(data['environment'])}",
-                "data_source: torchvision-cifar10",
+                "data_source: huggingface-uoft-cs-cifar10",
+                f"training: {json.dumps(_training_policy())}",
+                "batch_size: 128",
+                "weight_decay: 0.0001",
+                "learning_rate_schedule: multistep",
                 "max_payload_bytes: 8388608",
                 "max_retries: 3",
                 "retry_timeout_seconds: 5.0",
@@ -114,13 +142,14 @@ def test_frozen_plan_rejects_empty_pilot_marker(tmp_path: Path) -> None:
 
 
 def test_quality_plan_requires_a_90_percent_pilot(tmp_path: Path) -> None:
-    draft = create_quality_draft(
+    draft = create_draft(
         run_id="quality-001",
         benchmark_seed=17,
         dromeus_commit="a" * 40,
         image_digest=f"sha256:{'b' * 64}",
         pytorch_version="2.13.0+cpu",
     )
+    assert draft.training is not None
     draft_path = tmp_path / "draft.json"
     draft_path.write_text(draft.model_dump_json(), encoding="utf-8")
     pilot_path = tmp_path / "pilot.json"
@@ -128,7 +157,7 @@ def test_quality_plan_requires_a_90_percent_pilot(tmp_path: Path) -> None:
         status="complete",
         model_definition_hash=draft.model_definition_hash,
         dataset=draft.dataset,
-        data_source="torchvision-cifar10",
+        data_source="huggingface-uoft-cs-cifar10",
         local_steps=draft.local_steps,
         round_count=draft.round_count,
         learning_rate=draft.learning_rate,
@@ -171,7 +200,7 @@ def test_quality_plan_requires_a_90_percent_pilot(tmp_path: Path) -> None:
 
 def test_frozen_plan_rejects_mismatched_dpsgd_draft(tmp_path: Path) -> None:
     plan = load_frozen_benchmark_plan(_write_plan(tmp_path))
-    data = manifest_data()
+    data = _active_draft_data()
     for field in (
         "draft_hash",
         "participants",
@@ -203,7 +232,7 @@ def test_prepare_dpsgd_node_configs_connects_frozen_plan_to_four_nodes(
     tmp_path: Path,
 ) -> None:
     plan_path = _write_plan(tmp_path)
-    data = manifest_data()
+    data = _active_draft_data()
     for field in (
         "draft_hash",
         "participants",
@@ -224,7 +253,7 @@ def test_prepare_dpsgd_node_configs_connects_frozen_plan_to_four_nodes(
                     f"draft_path: {draft_path}",
                     f"axl_bridge_url: http://127.0.0.1:{9002 + index}",
                     f"run_root: {tmp_path / f'run-{index}'}",
-                    f"cifar_root: {tmp_path / 'cifar'}",
+                    f"dataset_cache: {tmp_path / 'cifar'}",
                     f"invitation_path: {tmp_path / 'invitation.json'}",
                     "bootstrap_uri: tls://bootstrap.example:9000",
                     "benchmark_seed: 17",

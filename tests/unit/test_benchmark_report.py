@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -252,15 +251,9 @@ def test_relative_parity_cannot_pass_below_90_percent(tmp_path: Path) -> None:
     assert report.mean_within_fedavg_3pp
     assert report.no_node_more_than_5pp_below
     assert not report.minimum_accuracy_90
-    assert report.aggregate_pass
+    assert not report.aggregate_pass
     assert not report.publication_ready
-
-    quality_report = replace(
-        report,
-        configuration={**report.configuration, "algorithm_id": "dpsgd-v2"},
-    )
-    assert quality_report.quality_gate_required
-    assert not quality_report.aggregate_pass
+    assert report.quality_gate_required
 
 
 def test_benchmark_report_rejects_failed_runs(tmp_path: Path) -> None:
