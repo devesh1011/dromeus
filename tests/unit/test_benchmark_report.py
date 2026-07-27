@@ -24,10 +24,15 @@ from dromeus.persistence.run_store import RunStore
 from dromeus.telemetry.events import JsonlEventSink, event_record
 
 
-def _write_inputs(root: Path, *, seed: int = 17) -> tuple[list[Path], list[Path]]:
+def _write_inputs(
+    root: Path,
+    *,
+    seed: int = 17,
+    round_count: int = 1,
+) -> tuple[list[Path], list[Path]]:
     data = manifest_data()
     data["local_steps"] = 1
-    data["round_count"] = 1
+    data["round_count"] = round_count
     draft_data = data.copy()
     del draft_data["participants"]
     del draft_data["initial_checkpoint_hash"]
@@ -42,15 +47,19 @@ def _write_inputs(root: Path, *, seed: int = 17) -> tuple[list[Path], list[Path]
         run_root = root / f"node-{index}"
         store = RunStore(run_root)
         manifest_hash = store.initialize(manifest)
-        store.persist_commit(
-            committed_round=0,
-            algorithm_state={"weight": np.array([1], dtype=np.float32)},
-            pre_mix_state={"weight": np.array([index], dtype=np.float32)},
-            post_mix_state={"weight": np.array([1], dtype=np.float32)},
-            state_checksum=f"{index + 1:064x}",
-            schedule={"round_id": 0, "peer": f"peer-{(index + 1) % 4}"},
-        )
-        store.record_terminal("complete", {"committed_rounds": 1})
+        for round_id in range(round_count):
+            store.persist_commit(
+                committed_round=round_id,
+                algorithm_state={"weight": np.array([1], dtype=np.float32)},
+                pre_mix_state={"weight": np.array([index], dtype=np.float32)},
+                post_mix_state={"weight": np.array([1], dtype=np.float32)},
+                state_checksum=f"{index * round_count + round_id + 1:064x}",
+                schedule={
+                    "round_id": round_id,
+                    "peer": f"peer-{(index + 1) % 4}",
+                },
+            )
+        store.record_terminal("complete", {"committed_rounds": round_count})
         for phase in ("ready", "complete"):
             (run_root / f"topology-{phase}.json").write_text(
                 json.dumps(
@@ -88,69 +97,82 @@ def _write_inputs(root: Path, *, seed: int = 17) -> tuple[list[Path], list[Path]
                 transport="axl",
             )
         )
-        sink.append(
-            event_record(
-                "round_metrics",
-                run_id=manifest.run_id,
-                manifest_hash=manifest_hash,
-                node_id=f"peer-{index}",
-                peer_id=f"peer-{(index + 1) % 4}",
-                round_id=0,
-                local_loss=1.0 - index / 10,
-                evaluation_loss=0.8 - index / 10,
-                evaluation_accuracy=accuracy,
-                local_compute_seconds=1.0,
-                peer_wait_seconds=0.2,
-                transfer_seconds=0.3,
-                mixing_seconds=0.1,
-                evaluation_seconds=0.4,
-                retries=index,
+        for round_id in range(round_count):
+            should_evaluate = (
+                (round_id + 1) % 5 == 0 or round_id + 1 == round_count
             )
-        )
-        sink.append(
-            event_record(
-                "consensus_distance",
-                run_id=manifest.run_id,
-                manifest_hash=manifest_hash,
-                node_id=f"peer-{index}",
-                round_id=0,
-                normalized_rms=0.2 + index / 100,
-                sketch_count=4,
+            sink.append(
+                event_record(
+                    "round_metrics",
+                    run_id=manifest.run_id,
+                    manifest_hash=manifest_hash,
+                    node_id=f"peer-{index}",
+                    peer_id=f"peer-{(index + 1) % 4}",
+                    round_id=round_id,
+                    local_loss=1.0 - index / 10,
+                    evaluation_loss=0.8 - index / 10 if should_evaluate else None,
+                    evaluation_accuracy=accuracy if should_evaluate else None,
+                    local_compute_seconds=1.0,
+                    peer_wait_seconds=0.2,
+                    transfer_seconds=0.3,
+                    mixing_seconds=0.1,
+                    evaluation_seconds=0.4,
+                    retries=index,
+                )
             )
-        )
-        sink.append(
-            event_record(
-                "transfer_message_sent",
-                run_id=manifest.run_id,
-                manifest_hash=manifest_hash,
-                node_id=f"peer-{index}",
-                peer_id=f"peer-{(index + 1) % 4}",
-                round_id=0,
-                queue_seconds=0.05,
-                send_seconds=0.1,
-                retry_count=index,
-                completion_seconds=0.2,
-                payload_bytes=100,
+            sink.append(
+                event_record(
+                    "consensus_distance",
+                    run_id=manifest.run_id,
+                    manifest_hash=manifest_hash,
+                    node_id=f"peer-{index}",
+                    round_id=round_id,
+                    normalized_rms=0.2 + index / 100,
+                    sketch_count=4,
+                )
             )
-        )
+            sink.append(
+                event_record(
+                    "transfer_message_sent",
+                    run_id=manifest.run_id,
+                    manifest_hash=manifest_hash,
+                    node_id=f"peer-{index}",
+                    peer_id=f"peer-{(index + 1) % 4}",
+                    round_id=round_id,
+                    queue_seconds=0.05,
+                    send_seconds=0.1,
+                    retry_count=index,
+                    completion_seconds=0.2,
+                    payload_bytes=100,
+                )
+            )
         run_roots.append(run_root)
         event_logs.append(log_path)
     return run_roots, event_logs
 
 
-def _fedavg_result(seed: int = 17) -> FedAvgResult:
+def _fedavg_result(seed: int = 17, *, round_count: int = 1) -> FedAvgResult:
     data = manifest_data()
     data["local_steps"] = 1
-    data["round_count"] = 1
+    data["round_count"] = round_count
     manifest = SealedManifest.model_validate(data)
     return FedAvgResult(
-        rounds=(
+        rounds=tuple(
             FedAvgRound(
-                round_id=0,
+                round_id=round_id,
                 local_losses=(1.0, 0.9, 0.8, 0.7),
-                loss=0.75,
-                accuracy=0.66,
-            ),
+                loss=(
+                    0.75
+                    if (round_id + 1) % 5 == 0 or round_id + 1 == round_count
+                    else None
+                ),
+                accuracy=(
+                    0.66
+                    if (round_id + 1) % 5 == 0 or round_id + 1 == round_count
+                    else None
+                ),
+            )
+            for round_id in range(round_count)
         ),
         config=FedAvgConfig.from_manifest(
             manifest,
@@ -290,6 +312,83 @@ def test_benchmark_report_rejects_missing_hardware_metadata(tmp_path: Path) -> N
             run_roots=run_roots,
             event_logs=event_logs,
             fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
+@pytest.mark.parametrize(
+    ("round_id", "evaluation_loss", "evaluation_accuracy"),
+    (
+        (4, None, None),
+        (0, 0.8, 0.6),
+        (0, 0.8, None),
+    ),
+)
+def test_benchmark_report_rejects_invalid_dpsgd_evaluation_schedule(
+    tmp_path: Path,
+    round_id: int,
+    evaluation_loss: float | None,
+    evaluation_accuracy: float | None,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path, round_count=6)
+    records = [
+        json.loads(line)
+        for line in event_logs[0].read_text(encoding="utf-8").splitlines()
+    ]
+    metric = next(
+        record
+        for record in records
+        if record.get("event") == "round_metrics"
+        and record.get("round_id") == round_id
+    )
+    metric["evaluation_loss"] = evaluation_loss
+    metric["evaluation_accuracy"] = evaluation_accuracy
+    event_logs[0].write_text(
+        "".join(f"{json.dumps(record)}\n" for record in records),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BenchmarkReportError, match="D-PSGD evaluation schedule"):
+        build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
+@pytest.mark.parametrize(
+    ("round_id", "loss", "accuracy"),
+    (
+        (4, None, None),
+        (0, 0.75, 0.66),
+    ),
+)
+def test_benchmark_report_rejects_invalid_fedavg_evaluation_schedule(
+    tmp_path: Path,
+    round_id: int,
+    loss: float | None,
+    accuracy: float | None,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path, round_count=6)
+    result = _fedavg_result(round_count=6)
+    rounds = list(result.rounds)
+    rounds[round_id] = FedAvgRound(
+        round_id=round_id,
+        local_losses=rounds[round_id].local_losses,
+        loss=loss,
+        accuracy=accuracy,
+    )
+
+    with pytest.raises(BenchmarkReportError, match="FedAvg evaluation schedule"):
+        build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=FedAvgResult(
+                rounds=tuple(rounds),
+                config=result.config,
+                initial_checkpoint_hash=result.initial_checkpoint_hash,
+            ),
             seed=17,
         )
 

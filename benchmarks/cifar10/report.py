@@ -538,6 +538,10 @@ def build_benchmark_report(
         for node_events in node_metrics.values()
     ):
         raise BenchmarkReportError("round metrics are incomplete")
+    _validate_dpsgd_evaluation_schedule(
+        node_metrics,
+        round_count=manifests[0].round_count,
+    )
     final_accuracies = [
         _metric_value_for_round(
             node_metrics[node_id],
@@ -648,6 +652,7 @@ def _validate_fedavg_config(
     if (
         config.data_source != "torchvision-cifar10"
         or config.test_sample_count != 10_000
+        or config.evaluation_interval != 5
         or config.batch_size != 32
         or config.device != "cpu"
         or not config.augment
@@ -663,6 +668,22 @@ def _validate_fedavg_config(
         raise BenchmarkReportError("FedAvg round ids are not contiguous")
     if any(len(round_result.local_losses) != 4 for round_result in result.rounds):
         raise BenchmarkReportError("FedAvg result does not contain four local losses")
+    for round_result in result.rounds:
+        should_evaluate = (
+            (round_result.round_id + 1) % config.evaluation_interval == 0
+            or round_result.round_id + 1 == config.round_count
+        )
+        has_evaluation = (
+            round_result.loss is not None and round_result.accuracy is not None
+        )
+        if should_evaluate != has_evaluation:
+            raise BenchmarkReportError("FedAvg evaluation schedule is incomplete")
+        if has_evaluation and (
+            not math.isfinite(cast(float, round_result.loss))
+            or not math.isfinite(cast(float, round_result.accuracy))
+            or not 0 <= cast(float, round_result.accuracy) <= 1
+        ):
+            raise BenchmarkReportError("FedAvg evaluation metrics are invalid")
 
 
 def _manifest_configuration(manifest: SealedManifest) -> JsonObject:
@@ -950,6 +971,41 @@ def _latest_round(metrics: Sequence[Event], node_id: str) -> int:
     if not rounds:
         raise BenchmarkReportError(f"node {node_id} has no metric rounds")
     return max(rounds)
+
+
+def _validate_dpsgd_evaluation_schedule(
+    node_metrics: Mapping[str, Sequence[Event]],
+    *,
+    round_count: int,
+) -> None:
+    for events in node_metrics.values():
+        if len(events) != round_count:
+            raise BenchmarkReportError("round metrics are incomplete")
+        for event in events:
+            round_id = _integer_value(event, "round_id")
+            should_evaluate = (
+                (round_id + 1) % 5 == 0 or round_id + 1 == round_count
+            )
+            loss = event.get("evaluation_loss")
+            accuracy = event.get("evaluation_accuracy")
+            has_loss = loss is not None
+            has_accuracy = accuracy is not None
+            if has_loss != has_accuracy or should_evaluate != has_loss:
+                raise BenchmarkReportError(
+                    "D-PSGD evaluation schedule is incomplete or invalid"
+                )
+            if has_loss and (
+                not isinstance(loss, (int, float))
+                or isinstance(loss, bool)
+                or not math.isfinite(float(loss))
+                or not isinstance(accuracy, (int, float))
+                or isinstance(accuracy, bool)
+                or not math.isfinite(float(accuracy))
+                or not 0 <= float(accuracy) <= 1
+            ):
+                raise BenchmarkReportError(
+                    "D-PSGD evaluation schedule is incomplete or invalid"
+                )
 
 
 def _metric_value_for_round(
