@@ -14,6 +14,10 @@ M1_PARTICIPANT_COUNT = 4
 Identifier = Annotated[
     str, StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
 ]
+PackageVersion = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:+-]+$"),
+]
 RunId = Identifier
 MessageId = Identifier
 TransferId = Identifier
@@ -91,7 +95,7 @@ class EnvironmentFingerprint(DomainModel):
         str, StringConstraints(min_length=7, max_length=64, pattern=r"^[0-9a-f]+$")
     ]
     protocol_version: Literal[1] = PROTOCOL_VERSION
-    pytorch_version: Identifier
+    pytorch_version: PackageVersion
     axl_version: Identifier
     model_definition_hash: Sha256
     container_image_digest: Annotated[

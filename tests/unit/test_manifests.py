@@ -66,6 +66,18 @@ def test_draft_yaml_is_validated() -> None:
     assert draft.run_id == "run-001"
 
 
+def test_environment_accepts_cpu_wheel_version() -> None:
+    data = manifest_data()
+    environment = data["environment"]
+    assert isinstance(environment, dict)
+    environment["pytorch_version"] = "2.13.0+cpu"
+
+    assert (
+        SealedManifest.model_validate(data).environment.pytorch_version
+        == "2.13.0+cpu"
+    )
+
+
 @pytest.mark.parametrize("field", ["protocol_version", "manifest_version"])
 def test_unknown_versions_are_rejected(field: str) -> None:
     data = manifest_data()
