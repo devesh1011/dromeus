@@ -18,6 +18,7 @@ from dromeus.training.pytorch import (
     CIFARDataError,
     IIDPartitionProvenance,
     create_initial_checkpoint,
+    derive_benchmark_seed,
 )
 
 
@@ -26,6 +27,22 @@ def test_cifar_contract_constants_are_canonical() -> None:
     assert PREPROCESSING_HASH == hashlib.sha256(
         PREPROCESSING_DEFINITION.encode()
     ).hexdigest()
+
+
+def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
+    values = {
+        derive_benchmark_seed(17, purpose)
+        for purpose in (
+            "model-initialization",
+            "local-training",
+            "consensus-sketch",
+        )
+    }
+
+    assert len(values) == 3
+    assert derive_benchmark_seed(17, "local-training") == derive_benchmark_seed(
+        17, "local-training"
+    )
 
 
 @pytest.fixture(scope="session")

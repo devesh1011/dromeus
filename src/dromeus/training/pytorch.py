@@ -301,6 +301,12 @@ def build_model(*, seed: int) -> CIFARGroupNormCNN:
         return CIFARGroupNormCNN()
 
 
+def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
+    """Derive one stable RNG seed for a named benchmark concern."""
+    digest = hashlib.sha256(f"{benchmark_seed}:{purpose}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
 def tensor_schema_for_model(model: nn.Module | None = None) -> TensorSchema:
     """Derive the wire tensor schema from model parameters."""
     target = model or CIFARGroupNormCNN()
@@ -520,10 +526,11 @@ class PreparedCIFARTraining:
 
     _partitions: tuple[CIFAR10Data, ...]
     _test_data: CIFAR10Data
-    benchmark_seed: int
+    initialization_seed: int
+    trainer_seed: int
 
     def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return create_initial_checkpoint(path, seed=self.benchmark_seed)
+        return create_initial_checkpoint(path, seed=self.initialization_seed)
 
     def create_trainer(
         self,
@@ -540,7 +547,7 @@ class PreparedCIFARTraining:
         return CIFAR10Trainer(
             train_data=self._partitions[partition_index],
             test_data=self._test_data,
-            seed=self.benchmark_seed + node_index,
+            seed=self.trainer_seed + node_index,
             batch_size=32,
             learning_rate=manifest.learning_rate,
             device="cpu",
@@ -578,7 +585,11 @@ def prepare_cifar_training(
     return PreparedCIFARTraining(
         _partitions=partitions,
         _test_data=test_data,
-        benchmark_seed=benchmark_seed,
+        initialization_seed=derive_benchmark_seed(
+            benchmark_seed,
+            "model-initialization",
+        ),
+        trainer_seed=derive_benchmark_seed(benchmark_seed, "local-training"),
     )
 
 
@@ -600,6 +611,7 @@ __all__ = [
     "build_model",
     "checkpoint_hash",
     "create_initial_checkpoint",
+    "derive_benchmark_seed",
     "iid_partition_index_hashes",
     "iid_partition_indices",
     "prepare_cifar_training",
