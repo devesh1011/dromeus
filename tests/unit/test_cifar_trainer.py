@@ -57,15 +57,17 @@ def test_iid_partitions_are_reproducible_and_disjoint(
     ]
     assert all(part[0][0].shape == (3, 32, 32) for part in first)
     assert len({part[index][1] for part in first for index in range(len(part))}) > 1
-    assert [part.partition_provenance for part in first] == [
-        IIDPartitionProvenance(
-            seed=11,
-            participant_count=4,
-            partition_index=index,
-            source_sample_count=len(cifar10_data),
-        )
-        for index in range(4)
-    ]
+    provenance = [part.partition_provenance for part in first]
+    assert all(isinstance(value, IIDPartitionProvenance) for value in provenance)
+    assert [
+        (value.seed, value.participant_count, value.partition_index)
+        for value in provenance
+        if value
+    ] == [(11, 4, index) for index in range(4)]
+    assert all(
+        value and value.source_sample_count == len(cifar10_data) for value in provenance
+    )
+    assert len({value.indices_sha256 for value in provenance if value}) == 4
 
 
 def test_checkpoint_is_deterministic_and_matches_trainer_schema(
@@ -98,9 +100,12 @@ def test_initial_checkpoint_returns_formation_handoff(tmp_path: Path) -> None:
 
     assert prepared.path.is_file()
     assert prepared.tensor_schema.tensors
-    assert prepared.sha256 == create_initial_checkpoint(
-        tmp_path / "checkpoint-2.safetensors", seed=17
-    ).sha256
+    assert (
+        prepared.sha256
+        == create_initial_checkpoint(
+            tmp_path / "checkpoint-2.safetensors", seed=17
+        ).sha256
+    )
 
 
 def test_trainer_runs_sgd_and_evaluates(cifar10_data: CIFAR10Data) -> None:

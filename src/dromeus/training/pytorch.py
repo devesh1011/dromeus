@@ -57,6 +57,15 @@ class IIDPartitionProvenance:
     participant_count: int
     partition_index: int
     source_sample_count: int
+    indices_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class CIFARDataProvenance:
+    """Canonical CIFAR source and split identity."""
+
+    source: str
+    split: Literal["train", "test"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +84,7 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
     _dataset: Dataset[tuple[Tensor, int]]
     _indices: tuple[int, ...] | None = None
     _partition_provenance: IIDPartitionProvenance | None = None
+    _source_provenance: CIFARDataProvenance | None = None
 
     @classmethod
     def from_torchvision(
@@ -94,7 +104,13 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
             )
         except (OSError, RuntimeError, ValueError) as error:
             raise CIFARDataError(f"cannot open CIFAR-10 dataset at {root}") from error
-        return cls(cast(Dataset[tuple[Tensor, int]], dataset))
+        return cls(
+            cast(Dataset[tuple[Tensor, int]], dataset),
+            _source_provenance=CIFARDataProvenance(
+                source="torchvision-cifar10",
+                split="train" if train else "test",
+            ),
+        )
 
     @classmethod
     def from_huggingface(
@@ -112,7 +128,13 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
             dataset = cast(Any, datasets)["train" if train else "test"]
         except (KeyError, OSError, RuntimeError, ValueError) as error:
             raise CIFARDataError("cannot open Hugging Face CIFAR-10 dataset") from error
-        return cls(_HuggingFaceCIFAR10(cast(HuggingFaceDataset, dataset)))
+        return cls(
+            _HuggingFaceCIFAR10(cast(HuggingFaceDataset, dataset)),
+            _source_provenance=CIFARDataProvenance(
+                source="huggingface-uoft-cs-cifar10",
+                split="train" if train else "test",
+            ),
+        )
 
     def split_iid(
         self,
@@ -123,23 +145,26 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
         """Return equal, disjoint, deterministic IID partitions."""
         if participant_count <= 0 or len(self) % participant_count:
             raise ValueError("sample count must divide participant count exactly")
-        generator = np.random.default_rng(seed)
-        order = generator.permutation(len(self))
         source_sample_count = len(self)
+        index_groups = iid_partition_indices(
+            source_sample_count=source_sample_count,
+            participant_count=participant_count,
+            seed=seed,
+        )
         partitions: list[CIFAR10Data] = []
-        for partition_index, indices in enumerate(
-            np.array_split(order, participant_count)
-        ):
+        for partition_index, indices in enumerate(index_groups):
             partitions.append(
                 CIFAR10Data(
                     self._dataset,
-                    tuple(int(index) for index in indices),
+                    indices,
                     IIDPartitionProvenance(
                         seed=seed,
                         participant_count=participant_count,
                         partition_index=partition_index,
                         source_sample_count=source_sample_count,
+                        indices_sha256=_indices_hash(indices),
                     ),
+                    self._source_provenance,
                 )
             )
         return tuple(partitions)
@@ -147,6 +172,30 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
     @property
     def partition_provenance(self) -> IIDPartitionProvenance | None:
         return self._partition_provenance
+
+    @property
+    def source_provenance(self) -> CIFARDataProvenance | None:
+        return self._source_provenance
+
+    def matches_source(
+        self,
+        *,
+        source: str,
+        split: Literal["train", "test"],
+    ) -> bool:
+        """Return whether this view came from the declared trusted loader."""
+        provenance = self._source_provenance
+        if (
+            provenance is None
+            or provenance.source != source
+            or provenance.split != split
+        ):
+            return False
+        if source == "torchvision-cifar10":
+            return isinstance(self._dataset, TorchvisionCIFAR10) and bool(
+                self._dataset.train
+            ) == (split == "train")
+        return True
 
     def __len__(self) -> int:
         return (
@@ -159,6 +208,46 @@ class CIFAR10Data(Dataset[tuple[Tensor, int]]):
         dataset_index = self._indices[index] if self._indices is not None else index
         image, label = self._dataset[dataset_index]
         return image, int(label)
+
+
+def iid_partition_indices(
+    *,
+    source_sample_count: int,
+    participant_count: int,
+    seed: int,
+) -> tuple[tuple[int, ...], ...]:
+    """Return the canonical deterministic IID index groups."""
+    if source_sample_count <= 0 or participant_count <= 0:
+        raise ValueError("sample and participant counts must be positive")
+    if source_sample_count % participant_count:
+        raise ValueError("sample count must divide participant count exactly")
+    order = np.random.default_rng(seed).permutation(source_sample_count)
+    return tuple(
+        tuple(int(index) for index in indices)
+        for indices in np.array_split(order, participant_count)
+    )
+
+
+def iid_partition_index_hashes(
+    *,
+    source_sample_count: int,
+    participant_count: int,
+    seed: int,
+) -> tuple[str, ...]:
+    """Return stable identities for the canonical IID index groups."""
+    return tuple(
+        _indices_hash(indices)
+        for indices in iid_partition_indices(
+            source_sample_count=source_sample_count,
+            participant_count=participant_count,
+            seed=seed,
+        )
+    )
+
+
+def _indices_hash(indices: tuple[int, ...]) -> str:
+    values = np.asarray(indices, dtype="<i8")
+    return hashlib.sha256(values.tobytes()).hexdigest()
 
 
 class _HuggingFaceCIFAR10(Dataset[tuple[Tensor, int]]):
@@ -490,6 +579,7 @@ def prepare_cifar_training(
 __all__ = [
     "CIFAR10Data",
     "CIFAR10Trainer",
+    "CIFARDataProvenance",
     "CIFARDataError",
     "CIFARGroupNormCNN",
     "InitialCheckpoint",
@@ -500,6 +590,8 @@ __all__ = [
     "build_model",
     "checkpoint_hash",
     "create_initial_checkpoint",
+    "iid_partition_index_hashes",
+    "iid_partition_indices",
     "prepare_cifar_training",
     "tensor_schema_for_model",
 ]
