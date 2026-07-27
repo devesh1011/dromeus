@@ -22,6 +22,7 @@ from dromeus.training.pytorch import (
     CIFAR10Data,
     CIFAR10Trainer,
     checkpoint_hash,
+    derive_benchmark_seed,
     iid_partition_index_hashes,
 )
 
@@ -268,11 +269,12 @@ def run_fedavg(
         ):
             raise ValueError("FedAvg partition provenance does not match config")
 
+    trainer_seed = derive_benchmark_seed(config.trainer_seed, "local-training")
     trainers = tuple(
         CIFAR10Trainer(
             train_data=partition,
             test_data=test_data,
-            seed=config.trainer_seed + index,
+            seed=trainer_seed + index,
             batch_size=config.batch_size,
             learning_rate=config.learning_rate,
             device=config.device,

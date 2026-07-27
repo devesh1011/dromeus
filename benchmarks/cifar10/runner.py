@@ -39,6 +39,7 @@ from dromeus.training.pytorch import (
     PREPROCESSING_HASH,
     CIFAR10Data,
     create_initial_checkpoint,
+    derive_benchmark_seed,
 )
 
 PINNED_AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
@@ -130,7 +131,9 @@ def create_draft(
             max_retries=3,
             retry_timeout_seconds=10.0,
         ),
-        consensus_sketch=ConsensusSketchConfig(seed=benchmark_seed),
+        consensus_sketch=ConsensusSketchConfig(
+            seed=derive_benchmark_seed(benchmark_seed, "consensus-sketch")
+        ),
     )
 
 
@@ -393,7 +396,7 @@ def run_fedavg_seed(
     output.parent.mkdir(parents=True, exist_ok=True)
     checkpoint = create_initial_checkpoint(
         output.with_suffix(".initial.safetensors"),
-        seed=benchmark_seed,
+        seed=derive_benchmark_seed(benchmark_seed, "model-initialization"),
     )
     result = run_fedavg(
         partitions=partitions,
