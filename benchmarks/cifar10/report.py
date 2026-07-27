@@ -7,6 +7,7 @@ import math
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 from typing import cast
 
@@ -44,14 +45,80 @@ class SummaryStats:
 
 
 @dataclass(frozen=True, slots=True)
+class SeedBenchmarkInput:
+    """Archived D-PSGD and FedAvg inputs for one benchmark seed."""
+
+    seed: int
+    partition_seed: int
+    run_roots: tuple[Path, ...]
+    event_logs: tuple[Path, ...]
+    fedavg: FedAvgResult
+    fedavg_result_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class ThreeSeedReport:
+    """Aggregate report for the three frozen benchmark seeds."""
+
+    seeds: tuple[BenchmarkReport, ...]
+    dpsgd_final_accuracy: SummaryStats
+    fedavg_final_accuracy: SummaryStats
+    aggregate_pass: bool
+
+    def as_dict(self) -> JsonObject:
+        return {
+            "seeds": [report.as_dict() for report in self.seeds],
+            "dpsgd_final_accuracy": self.dpsgd_final_accuracy.as_dict(),
+            "fedavg_final_accuracy": self.fedavg_final_accuracy.as_dict(),
+            "aggregate_pass": self.aggregate_pass,
+        }
+
+    def write_artifacts(self, output_dir: Path) -> None:
+        """Write each seed report and one deterministic aggregate report."""
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for report in self.seeds:
+            report.write_artifacts(output_dir / f"seed-{report.seed}")
+        (output_dir / "report.json").write_text(
+            json.dumps(self.as_dict(), allow_nan=False, sort_keys=True, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+        links = "\n".join(
+            f"- [seed {report.seed} report](seed-{report.seed}/report.md)"
+            for report in self.seeds
+        )
+        (output_dir / "report.md").write_text(
+            "\n".join(
+                (
+                    "# CIFAR-10 three-seed benchmark report",
+                    "",
+                    f"- status: {'PASS' if self.aggregate_pass else 'FAIL'}",
+                    f"- D-PSGD mean across seeds: {self.dpsgd_final_accuracy.mean:.6f}",
+                    (
+                        f"- FedAvg mean across seeds: "
+                        f"{self.fedavg_final_accuracy.mean:.6f}"
+                    ),
+                    "",
+                    links,
+                    "",
+                )
+            ),
+            encoding="utf-8",
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class BenchmarkReport:
     """Machine-readable aggregate plus links to deterministic chart artifacts."""
 
+    seed: int
     run_id: str
     manifest_hash: str
     environment: Mapping[str, object]
+    configuration: Mapping[str, object]
     node_count: int
     dpsgd_final_accuracy: SummaryStats
+    final_node_accuracies: tuple[float, ...]
     fedavg: JsonObject
     accuracy_curve: tuple[JsonObject, ...]
     loss_curve: tuple[JsonObject, ...]
@@ -63,22 +130,53 @@ class BenchmarkReport:
     exact_consensus: ExactConsensusReport
     mean_within_fedavg_3pp: bool
     no_node_more_than_5pp_below: bool
+    run_roots: tuple[Path, ...]
+    event_logs: tuple[Path, ...]
+    fedavg_result_path: Path | None
 
     @property
     def aggregate_pass(self) -> bool:
-        return self.mean_within_fedavg_3pp and self.no_node_more_than_5pp_below
+        return (
+            self.mean_within_fedavg_3pp
+            and self.no_node_more_than_5pp_below
+            and self.consensus_evidence_pass
+        )
+
+    @property
+    def consensus_evidence_pass(self) -> bool:
+        return bool(self.consensus) and self.exact_consensus.mixing_non_increasing
+
+    @property
+    def consensus_comparison(self) -> JsonObject:
+        """Report the observed final sketch-vs-checkpoint distance error."""
+        if not self.consensus:
+            return {"available": False}
+        approximate = self.consensus[-1]["mean_normalized_rms"]
+        exact = self.exact_consensus.final_normalized_distance
+        if not isinstance(approximate, (int, float)):
+            return {"available": False}
+        return {
+            "available": True,
+            "approximate_final_normalized_rms": float(approximate),
+            "exact_final_normalized_rms": exact,
+            "absolute_difference": abs(float(approximate) - exact),
+        }
 
     def as_dict(self) -> JsonObject:
         return {
+            "seed": self.seed,
             "run_id": self.run_id,
             "manifest_hash": self.manifest_hash,
             "environment": dict(self.environment),
+            "configuration": dict(self.configuration),
             "node_count": self.node_count,
             "dpsgd_final_accuracy": self.dpsgd_final_accuracy.as_dict(),
+            "final_node_accuracies": list(self.final_node_accuracies),
             "fedavg": dict(self.fedavg),
             "accuracy_curve": list(self.accuracy_curve),
             "loss_curve": list(self.loss_curve),
             "consensus": list(self.consensus),
+            "consensus_comparison": self.consensus_comparison,
             "round_timing": dict(self.round_timing),
             "transport": dict(self.transport),
             "connectivity": dict(self.connectivity),
@@ -87,6 +185,7 @@ class BenchmarkReport:
             "criteria": {
                 "mean_within_fedavg_3pp": self.mean_within_fedavg_3pp,
                 "no_node_more_than_5pp_below": self.no_node_more_than_5pp_below,
+                "consensus_evidence_pass": self.consensus_evidence_pass,
                 "aggregate_pass": self.aggregate_pass,
             },
         }
@@ -99,15 +198,53 @@ class BenchmarkReport:
             + "\n",
             encoding="utf-8",
         )
+        provenance = self._provenance(output_dir)
         (output_dir / "metrics.svg").write_text(
-            self.render_metrics_svg(), encoding="utf-8"
+            _add_provenance(self.render_metrics_svg(), provenance), encoding="utf-8"
         )
-        self.exact_consensus.write_svg(output_dir / "consensus.svg")
+        (output_dir / "approximate-consensus.svg").write_text(
+            _add_provenance(self.render_consensus_svg(), provenance),
+            encoding="utf-8",
+        )
+        (output_dir / "consensus.svg").write_text(
+            _add_provenance(self.exact_consensus.render_svg(), provenance),
+            encoding="utf-8",
+        )
+        (output_dir / "timing.svg").write_text(
+            _add_provenance(self.render_timing_svg(), provenance), encoding="utf-8"
+        )
+        (output_dir / "goodput.svg").write_text(
+            _add_provenance(self.render_goodput_svg(), provenance), encoding="utf-8"
+        )
+        (output_dir / "provenance.json").write_text(
+            json.dumps(provenance, allow_nan=False, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
         (output_dir / "report.md").write_text(self.render_markdown(), encoding="utf-8")
+
+    def _provenance(self, output_dir: Path) -> JsonObject:
+        return {
+            "manifest_hash": self.manifest_hash,
+            "environment": dict(self.environment),
+            "manifest_files": [
+                str((root / "manifest.json").resolve()) for root in self.run_roots
+            ],
+            "run_stores": [str(root.resolve()) for root in self.run_roots],
+            "event_logs": [str(path.resolve()) for path in self.event_logs],
+            "fedavg_results": (
+                [str(self.fedavg_result_path.resolve())]
+                if self.fedavg_result_path is not None
+                else []
+            ),
+            "report_directory": str(output_dir.resolve()),
+        }
 
     def render_markdown(self) -> str:
         """Render a concise report that links charts and preserves provenance."""
         status = "PASS" if self.aggregate_pass else "FAIL"
+        consensus_error = self.consensus_comparison.get(
+            "absolute_difference", "unavailable"
+        )
         return "\n".join(
             (
                 f"# CIFAR-10 benchmark report: {status}",
@@ -120,9 +257,75 @@ class BenchmarkReport:
                 "",
                 "[Accuracy and loss curves](metrics.svg)",
                 "",
+                "[Approximate consensus curves](approximate-consensus.svg)",
+                "",
                 "[Exact consensus curves](consensus.svg)",
                 "",
+                "[AXL latency and round timing](timing.svg)",
+                "",
+                "[AXL payload goodput](goodput.svg)",
+                "",
+                f"Observed final approximate/exact consensus error: {consensus_error}",
+                "",
+                "[Raw-data provenance](provenance.json)",
+                "",
             )
+        )
+
+    def render_consensus_svg(self, *, width: int = 900, height: int = 420) -> str:
+        """Render approximate normalized-RMS consensus over rounds."""
+        values = {
+            int(point["round_id"]): float(point["mean_normalized_rms"])
+            for point in self.consensus
+        }
+        return _render_simple_svg(
+            title="Approximate consensus distance",
+            y_label="normalized RMS",
+            series=(("approximate", values, "#2563eb"),),
+            width=width,
+            height=height,
+        )
+
+    def render_timing_svg(self, *, width: int = 900, height: int = 520) -> str:
+        """Render round timing and AXL transfer latency in seconds."""
+        round_curve = cast(list[object], self.round_timing.get("curve", []))
+        transport_curve = cast(list[object], self.transport.get("curve", []))
+        round_values = {
+            int(point["round_id"]): float(point["total_seconds"])
+            for point in round_curve
+            if isinstance(point, Mapping)
+        }
+        transport_values = {
+            int(point["round_id"]): float(point["mean_completion_seconds"])
+            for point in transport_curve
+            if isinstance(point, Mapping)
+        }
+        return _render_simple_svg(
+            title="AXL latency and round timing",
+            y_label="seconds",
+            series=(
+                ("round total seconds", round_values, "#2563eb"),
+                ("AXL completion seconds", transport_values, "#dc2626"),
+            ),
+            width=width,
+            height=height,
+        )
+
+    def render_goodput_svg(self, *, width: int = 900, height: int = 420) -> str:
+        """Render payload goodput in bytes per second."""
+        transport_curve = cast(list[object], self.transport.get("curve", []))
+        goodput_values = {
+            int(point["round_id"]): float(point["mean_goodput_bytes_per_second"])
+            for point in transport_curve
+            if isinstance(point, Mapping)
+            and isinstance(point.get("mean_goodput_bytes_per_second"), (int, float))
+        }
+        return _render_simple_svg(
+            title="AXL payload goodput",
+            y_label="bytes per second",
+            series=(("goodput bytes/second", goodput_values, "#16a34a"),),
+            width=width,
+            height=height,
         )
 
     @property
@@ -216,7 +419,10 @@ def build_benchmark_report(
     *,
     run_roots: Sequence[Path],
     event_logs: Sequence[Path],
-    fedavg: FedAvgResult | float,
+    fedavg: FedAvgResult,
+    seed: int,
+    partition_seed: int | None = None,
+    fedavg_result_path: Path | None = None,
 ) -> BenchmarkReport:
     """Aggregate four compatible completed runs and one FedAvg reference."""
     if len(run_roots) != 4 or len(event_logs) != 4:
@@ -238,8 +444,8 @@ def build_benchmark_report(
     if any(manifest.run_id != manifests[0].run_id for manifest in manifests[1:]):
         raise BenchmarkReportError("run stores do not share one run id")
 
-    for root in run_roots:
-        _require_completed_state(root)
+    for root, manifest in zip(run_roots, manifests, strict=True):
+        _require_completed_state(root, manifest)
     all_events = [
         _read_events(path, run_id=manifests[0].run_id, manifest_hash=manifest_hashes[0])
         for path in event_logs
@@ -279,6 +485,17 @@ def build_benchmark_report(
     if len(set(final_rounds.values())) != 1:
         raise BenchmarkReportError("nodes do not share one final round")
     final_round = next(iter(final_rounds.values()))
+    expected_rounds = set(range(manifests[0].round_count))
+    if any(
+        {
+            int(event["round_id"])
+            for event in node_events
+            if isinstance(event.get("round_id"), int)
+        }
+        != expected_rounds
+        for node_events in node_metrics.values()
+    ):
+        raise BenchmarkReportError("round metrics are incomplete")
     final_accuracies = [
         _metric_value_for_round(
             node_metrics[node_id],
@@ -290,6 +507,12 @@ def build_benchmark_report(
     ]
     dpsgd_final_accuracy = _summary(final_accuracies)
     fedavg_payload = _fedavg_payload(fedavg)
+    _validate_fedavg_config(manifests[0], fedavg, seed)
+    if (
+        partition_seed is not None
+        and partition_seed != manifests[0].dataset.iid_partition_seed
+    ):
+        raise BenchmarkReportError("FedAvg partitions mismatch manifest")
     fedavg_accuracy = cast(float, fedavg_payload["final_accuracy"])
     accuracy_curve = _metric_curve(metrics, "evaluation_accuracy", "accuracy")
     loss_curve = _loss_curve(metrics)
@@ -300,11 +523,14 @@ def build_benchmark_report(
     failures = _failure_summary(all_events)
     exact_consensus = build_exact_consensus_report(run_roots)
     return BenchmarkReport(
+        seed=seed,
         run_id=manifests[0].run_id,
         manifest_hash=manifest_hashes[0],
         environment=cast(Mapping[str, object], environments[0]),
+        configuration=_manifest_configuration(manifests[0]),
         node_count=4,
         dpsgd_final_accuracy=dpsgd_final_accuracy,
+        final_node_accuracies=tuple(final_accuracies),
         fedavg=fedavg_payload,
         accuracy_curve=accuracy_curve,
         loss_curve=loss_curve,
@@ -316,7 +542,185 @@ def build_benchmark_report(
         exact_consensus=exact_consensus,
         mean_within_fedavg_3pp=abs(dpsgd_final_accuracy.mean - fedavg_accuracy) <= 0.03,
         no_node_more_than_5pp_below=min(final_accuracies) >= fedavg_accuracy - 0.05,
+        run_roots=tuple(run_roots),
+        event_logs=tuple(event_logs),
+        fedavg_result_path=fedavg_result_path,
     )
+
+
+def build_three_seed_report(
+    inputs: Sequence[SeedBenchmarkInput],
+) -> ThreeSeedReport:
+    """Build one report per seed and one aggregate across exactly three seeds."""
+    if len(inputs) != 3 or len({item.seed for item in inputs}) != 3:
+        raise BenchmarkReportError("exactly three distinct seed inputs are required")
+    if any(not item.fedavg_result_path.is_file() for item in inputs):
+        raise BenchmarkReportError("FedAvg raw result file is missing")
+    reports = tuple(
+        build_benchmark_report(
+            run_roots=item.run_roots,
+            event_logs=item.event_logs,
+            fedavg=item.fedavg,
+            seed=item.seed,
+            partition_seed=item.partition_seed,
+            fedavg_result_path=item.fedavg_result_path,
+        )
+        for item in sorted(inputs, key=lambda value: value.seed)
+    )
+    signatures = {
+        json.dumps(report.configuration, sort_keys=True) for report in reports
+    }
+    if len(signatures) != 1:
+        raise BenchmarkReportError(
+            "seed manifests do not share one benchmark configuration"
+        )
+    dpsgd = _summary(
+        [accuracy for report in reports for accuracy in report.final_node_accuracies]
+    )
+    fedavg = _summary([report._fedavg_accuracy for report in reports])
+    return ThreeSeedReport(
+        seeds=reports,
+        dpsgd_final_accuracy=dpsgd,
+        fedavg_final_accuracy=fedavg,
+        aggregate_pass=(
+            abs(dpsgd.mean - fedavg.mean) <= 0.03
+            and all(report.no_node_more_than_5pp_below for report in reports)
+            and all(report.consensus_evidence_pass for report in reports)
+        ),
+    )
+
+
+def _validate_fedavg_config(
+    manifest: SealedManifest, result: FedAvgResult, seed: int
+) -> None:
+    config = result.config
+    if config is None:
+        raise BenchmarkReportError("FedAvg result is missing configuration")
+    if config.trainer_seed != seed:
+        raise BenchmarkReportError("FedAvg seed does not match benchmark seed")
+    if (
+        config.local_steps != manifest.local_steps
+        or config.round_count != manifest.round_count
+        or config.learning_rate != manifest.learning_rate
+    ):
+        raise BenchmarkReportError("FedAvg optimizer configuration mismatches manifest")
+    if config.batch_size != 32 or config.device != "cpu" or not config.augment:
+        raise BenchmarkReportError("FedAvg trainer configuration mismatches D-PSGD")
+    if result.initial_checkpoint_hash != manifest.initial_checkpoint_hash:
+        raise BenchmarkReportError("FedAvg initialization mismatches manifest")
+    if len(result.rounds) != config.round_count:
+        raise BenchmarkReportError("FedAvg result has an incomplete round archive")
+    if tuple(round_result.round_id for round_result in result.rounds) != tuple(
+        range(config.round_count)
+    ):
+        raise BenchmarkReportError("FedAvg round ids are not contiguous")
+    if any(len(round_result.local_losses) != 4 for round_result in result.rounds):
+        raise BenchmarkReportError("FedAvg result does not contain four local losses")
+
+
+def _manifest_configuration(manifest: SealedManifest) -> JsonObject:
+    """Return the shared comparison config, excluding run-specific identities."""
+    return {
+        "algorithm_id": manifest.algorithm_id,
+        "model_id": manifest.model_id,
+        "model_definition_hash": manifest.model_definition_hash,
+        "dataset": manifest.dataset.model_dump(mode="json"),
+        "environment": manifest.environment.model_dump(mode="json"),
+        "local_steps": manifest.local_steps,
+        "round_count": manifest.round_count,
+        "optimizer": manifest.optimizer,
+        "learning_rate": manifest.learning_rate,
+        "codec_id": manifest.codec_id,
+        "transport": manifest.transport.model_dump(mode="json"),
+        "consensus_sketch": manifest.consensus_sketch.model_dump(mode="json"),
+        "tensor_schema": manifest.tensor_schema.model_dump(mode="json"),
+    }
+
+
+def _add_provenance(svg: str, provenance: Mapping[str, object]) -> str:
+    metadata = escape(json.dumps(dict(provenance), sort_keys=True))
+    raw_paths = [
+        value
+        for key in ("event_logs", "manifest_files", "fedavg_results")
+        for value in cast(list[object], provenance.get(key, []))
+        if isinstance(value, str)
+    ]
+    anchors = "".join(
+        f'<a href="{escape(Path(path).as_uri(), quote=True)}">raw artifact</a>'
+        for path in raw_paths
+    )
+    marker = ">"
+    insertion = f"<metadata>{metadata}</metadata>{anchors}"
+    return svg.replace(marker, f">{insertion}", 1)
+
+
+def _render_simple_svg(
+    *,
+    title: str,
+    y_label: str,
+    series: Sequence[tuple[str, Mapping[int, float], str]],
+    width: int,
+    height: int,
+) -> str:
+    if width <= 0 or height <= 0:
+        raise ValueError("SVG dimensions must be positive")
+    rounds = sorted({round_id for _, values, _ in series for round_id in values}) or [0]
+    left, right, top, bottom = 70, 30, 45, 50
+    plot_width = width - left - right
+    plot_height = height - top - bottom
+    maximum = max(
+        (value for _, values, _ in series for value in values.values()), default=1.0
+    )
+    maximum = maximum if maximum > 0 else 1.0
+    last_round = max(rounds)
+
+    def point(round_id: int, value: float) -> tuple[float, float]:
+        x = left + (plot_width * round_id / last_round if last_round else 0)
+        y = top + plot_height * (1 - value / maximum)
+        return x, y
+
+    lines = [
+        (
+            '<svg xmlns="http://www.w3.org/2000/svg" '
+            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
+        ),
+        '<rect width="100%" height="100%" fill="white"/>',
+        (
+            f'<text x="{left}" y="25" font-family="sans-serif" '
+            f'font-size="16">{title}</text>'
+        ),
+        (
+            f'<text x="15" y="{top + plot_height / 2}" '
+            f'transform="rotate(-90 15 {top + plot_height / 2})" '
+            f'font-family="sans-serif" font-size="12">{y_label}</text>'
+        ),
+        (
+            f'<line x1="{left}" y1="{top + plot_height}" '
+            f'x2="{width - right}" y2="{top + plot_height}" stroke="#333"/>'
+        ),
+        (
+            f'<line x1="{left}" y1="{top}" '
+            f'x2="{left}" y2="{top + plot_height}" stroke="#333"/>'
+        ),
+    ]
+    for index, (label, values, color) in enumerate(series):
+        commands: list[str] = []
+        for round_id in rounds:
+            if round_id not in values:
+                continue
+            x, y = point(round_id, values[round_id])
+            commands.append(f"{'M' if not commands else 'L'} {x:.2f},{y:.2f}")
+        if commands:
+            lines.append(
+                f'<path d="{" ".join(commands)}" fill="none" '
+                f'stroke="{color}" stroke-width="2"/>'
+            )
+        lines.append(
+            f'<text x="{width - 220}" y="{25 + 16 * index}" '
+            f'font-family="sans-serif" font-size="12" fill="{color}">{label}</text>'
+        )
+    lines.append("</svg>")
+    return "\n".join(lines)
 
 
 def _read_manifest(root: Path) -> SealedManifest:
@@ -327,16 +731,20 @@ def _read_manifest(root: Path) -> SealedManifest:
         raise BenchmarkReportError(f"invalid run manifest at {root}") from error
 
 
-def _require_completed_state(root: Path) -> None:
+def _require_completed_state(root: Path, manifest: SealedManifest) -> None:
     try:
         state = json.loads((root / "state.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise BenchmarkReportError(f"invalid run state at {root}") from error
     if not isinstance(state, Mapping):
         raise BenchmarkReportError(f"invalid run state at {root}")
+    if state.get("manifest_hash") != canonical_hash(manifest):
+        raise BenchmarkReportError(f"manifest hash mismatch in {root}")
     terminal = state.get("terminal")
     if not isinstance(terminal, Mapping) or terminal.get("result") != "complete":
         raise BenchmarkReportError(f"run is not complete: {root}")
+    if state.get("committed_round") != manifest.round_count - 1:
+        raise BenchmarkReportError(f"run is incomplete: {root}")
 
 
 def _read_events(path: Path, *, run_id: str, manifest_hash: str) -> list[Event]:
@@ -505,6 +913,26 @@ def _round_timing(metrics: Sequence[Event]) -> dict[str, object]:
         ]
         if values:
             result[field] = _summary(values).as_dict()
+    by_round: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for event in metrics:
+        round_id = event.get("round_id")
+        if not isinstance(round_id, int):
+            continue
+        for field in fields:
+            value = event.get(field)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                by_round[round_id][field].append(float(value))
+    result["curve"] = [
+        {
+            "round_id": round_id,
+            "total_seconds": sum(
+                _summary(by_round[round_id][field]).mean
+                for field in fields
+                if by_round[round_id][field]
+            ),
+        }
+        for round_id in sorted(by_round)
+    ]
     return result
 
 
@@ -532,12 +960,62 @@ def _transport_summary(all_events: Sequence[Sequence[Event]]) -> dict[str, objec
         if isinstance(event.get("retry_count"), int)
         and not isinstance(event.get("retry_count"), bool)
     ]
+    payload_sizes = [
+        int(event["payload_bytes"])
+        for event in events
+        if isinstance(event.get("payload_bytes"), int)
+        and not isinstance(event.get("payload_bytes"), bool)
+        and int(event["payload_bytes"]) >= 0
+    ]
+    goodputs = [
+        int(event["payload_bytes"]) / float(event["completion_seconds"])
+        for event in events
+        if isinstance(event.get("payload_bytes"), int)
+        and isinstance(event.get("completion_seconds"), (int, float))
+        and not isinstance(event.get("completion_seconds"), bool)
+        and float(event["completion_seconds"]) > 0
+    ]
+    by_round: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for event in events:
+        round_id = event.get("round_id")
+        if not isinstance(round_id, int):
+            continue
+        for field in fields:
+            value = event.get(field)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                by_round[round_id][field].append(float(value))
+        if (
+            isinstance(event.get("payload_bytes"), int)
+            and isinstance(event.get("completion_seconds"), (int, float))
+            and float(event["completion_seconds"]) > 0
+        ):
+            by_round[round_id]["goodput_bytes_per_second"].append(
+                int(event["payload_bytes"]) / float(event["completion_seconds"])
+            )
+    curve = []
+    for round_id in sorted(by_round):
+        values = by_round[round_id]
+        curve.append(
+            {
+                "round_id": round_id,
+                "mean_completion_seconds": _summary(values["completion_seconds"]).mean
+                if values["completion_seconds"]
+                else 0.0,
+                "mean_goodput_bytes_per_second": _summary(
+                    values["goodput_bytes_per_second"]
+                ).mean
+                if values["goodput_bytes_per_second"]
+                else None,
+            }
+        )
     return {
         "transfer_count": len(events),
         "retry_count_total": sum(retries),
         "retry_count_maximum": max(retries, default=0),
         "timings_seconds": timings,
-        "goodput_bytes_per_second": None,
+        "payload_bytes_total": sum(payload_sizes),
+        "goodput_bytes_per_second": _summary(goodputs).as_dict() if goodputs else None,
+        "curve": curve,
     }
 
 
@@ -583,12 +1061,8 @@ def _failure_summary(all_events: Sequence[Sequence[Event]]) -> tuple[JsonObject,
     return tuple(result)
 
 
-def _fedavg_payload(fedavg: FedAvgResult | float) -> JsonObject:
-    payload = (
-        fedavg.as_dict()
-        if isinstance(fedavg, FedAvgResult)
-        else {"final_accuracy": fedavg}
-    )
+def _fedavg_payload(fedavg: FedAvgResult) -> JsonObject:
+    payload = fedavg.as_dict()
     value = payload.get("final_accuracy")
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         raise BenchmarkReportError("FedAvg result has no final accuracy")
@@ -676,6 +1150,9 @@ def _render_panel(
 __all__ = [
     "BenchmarkReport",
     "BenchmarkReportError",
+    "SeedBenchmarkInput",
     "SummaryStats",
+    "ThreeSeedReport",
     "build_benchmark_report",
+    "build_three_seed_report",
 ]

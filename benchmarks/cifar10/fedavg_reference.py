@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 
 from dromeus.manifests.models import SealedManifest
-from dromeus.training.pytorch import CIFAR10Data, CIFAR10Trainer
+from dromeus.training.pytorch import CIFAR10Data, CIFAR10Trainer, checkpoint_hash
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +54,28 @@ class FedAvgConfig:
         if self.learning_rate <= 0 or not math.isfinite(self.learning_rate):
             raise ValueError("learning_rate must be positive and finite")
 
+    def training_signature(self) -> tuple[object, ...]:
+        """Return settings that must remain equal across benchmark methods."""
+        return (
+            self.local_steps,
+            self.round_count,
+            self.learning_rate,
+            self.batch_size,
+            self.device,
+            self.augment,
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "local_steps": self.local_steps,
+            "round_count": self.round_count,
+            "learning_rate": self.learning_rate,
+            "trainer_seed": self.trainer_seed,
+            "batch_size": self.batch_size,
+            "device": self.device,
+            "augment": self.augment,
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class FedAvgRound:
@@ -78,6 +100,8 @@ class FedAvgResult:
     """Deterministic centralized reference output."""
 
     rounds: tuple[FedAvgRound, ...]
+    config: FedAvgConfig | None = None
+    initial_checkpoint_hash: str | None = None
 
     @property
     def final_loss(self) -> float:
@@ -92,6 +116,8 @@ class FedAvgResult:
             "rounds": [round_result.as_dict() for round_result in self.rounds],
             "final_loss": self.final_loss,
             "final_accuracy": self.final_accuracy,
+            "config": self.config.as_dict() if self.config is not None else None,
+            "initial_checkpoint_hash": self.initial_checkpoint_hash,
         }
 
 
@@ -119,9 +145,9 @@ def average_weights(
             for value in values
         ):
             raise ValueError(f"tensor {name} schemas or values do not match")
-        averaged[name] = np.mean(
-            np.stack(values), axis=0, dtype=np.float64
-        ).astype(reference.dtype)
+        averaged[name] = np.mean(np.stack(values), axis=0, dtype=np.float64).astype(
+            reference.dtype
+        )
     return averaged
 
 
@@ -171,13 +197,55 @@ def run_fedavg(
                 accuracy=float(accuracy),
             )
         )
-    return FedAvgResult(rounds=tuple(round_results))
+    return FedAvgResult(
+        rounds=tuple(round_results),
+        config=config,
+        initial_checkpoint_hash=checkpoint_hash(initial_checkpoint),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class FedAvgSeedInput:
+    """Inputs for one frozen-seed centralized reference run."""
+
+    seed: int
+    partitions: tuple[CIFAR10Data, ...]
+    test_data: CIFAR10Data
+    initial_checkpoint: Path
+    config: FedAvgConfig
+
+
+def run_fedavg_seeds(
+    inputs: Sequence[FedAvgSeedInput],
+) -> tuple[tuple[int, FedAvgResult], ...]:
+    """Run exactly three FedAvg references with one shared configuration."""
+    if len(inputs) != 3 or len({item.seed for item in inputs}) != 3:
+        raise ValueError("exactly three distinct FedAvg seeds are required")
+    if any(item.seed != item.config.trainer_seed for item in inputs):
+        raise ValueError("FedAvg seed must match its trainer seed")
+    signatures = {item.config.training_signature() for item in inputs}
+    if len(signatures) != 1:
+        raise ValueError("FedAvg seed configurations do not match")
+    return tuple(
+        (
+            item.seed,
+            run_fedavg(
+                partitions=item.partitions,
+                test_data=item.test_data,
+                initial_checkpoint=item.initial_checkpoint,
+                config=item.config,
+            ),
+        )
+        for item in sorted(inputs, key=lambda value: value.seed)
+    )
 
 
 __all__ = [
     "FedAvgConfig",
     "FedAvgResult",
     "FedAvgRound",
+    "FedAvgSeedInput",
     "average_weights",
     "run_fedavg",
+    "run_fedavg_seeds",
 ]
