@@ -43,7 +43,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LOG_ROOT = REPO_ROOT / "logs"
+LOG_ROOT = Path(os.environ.get("DROMEUS_AXL_LOG_ROOT", REPO_ROOT / "logs"))
 AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
 
@@ -197,6 +197,18 @@ def test_four_local_axl_nodes_train_cifar10() -> None:
 
 
 async def _test_four_local_axl_nodes_train_cifar10() -> None:
+    pilot_data_source_override = os.environ.get("DROMEUS_PILOT_DATA_SOURCE")
+    if pilot_data_source_override is None and any(
+        name in os.environ
+        for name in (
+            "DROMEUS_PILOT_ROUNDS",
+            "DROMEUS_PILOT_LOCAL_STEPS",
+            "DROMEUS_PILOT_LEARNING_RATE",
+            "DROMEUS_PILOT_RETRY_TIMEOUT_SECONDS",
+            "DROMEUS_PILOT_TIMEOUT_SECONDS",
+        )
+    ):
+        raise ValueError("pilot runs must declare DROMEUS_PILOT_DATA_SOURCE")
     draft_data = manifest_data()
     draft_data["model_definition_hash"] = MODEL_DEFINITION_HASH
     environment = cast(dict[str, object], draft_data["environment"])
@@ -229,9 +241,15 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
         "tensor_schema",
     ):
         del draft_data[field]
-    draft_data["round_count"] = 2
-    draft_data["local_steps"] = 1
-    draft_data["learning_rate"] = 0.01
+    draft_data["round_count"] = int(os.environ.get("DROMEUS_PILOT_ROUNDS", "2"))
+    draft_data["local_steps"] = int(os.environ.get("DROMEUS_PILOT_LOCAL_STEPS", "1"))
+    draft_data["learning_rate"] = float(
+        os.environ.get("DROMEUS_PILOT_LEARNING_RATE", "0.01")
+    )
+    pilot_retry_timeout = os.environ.get("DROMEUS_PILOT_RETRY_TIMEOUT_SECONDS")
+    if pilot_retry_timeout is not None:
+        transport = cast(dict[str, object], draft_data["transport"])
+        transport["retry_timeout_seconds"] = float(pilot_retry_timeout)
     draft = DraftRunSpec.model_validate(draft_data)
     cache_dir = Path(
         os.environ.get(
@@ -239,12 +257,39 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
             Path.home() / ".cache" / "dromeus" / "cifar10",
         )
     )
-    train_data = await asyncio.to_thread(
-        CIFAR10Data.from_huggingface, cache_dir=cache_dir, train=True
+    pilot_data_source = (
+        pilot_data_source_override or "huggingface-uoft-cs-cifar10"
     )
-    test_data = await asyncio.to_thread(
-        CIFAR10Data.from_huggingface, cache_dir=cache_dir, train=False
-    )
+    if pilot_data_source == "torchvision-cifar10":
+        train_data, test_data = await asyncio.gather(
+            asyncio.to_thread(
+                CIFAR10Data.from_torchvision,
+                root=cache_dir,
+                train=True,
+                download=False,
+            ),
+            asyncio.to_thread(
+                CIFAR10Data.from_torchvision,
+                root=cache_dir,
+                train=False,
+                download=False,
+            ),
+        )
+    else:
+        train_data, test_data = await asyncio.gather(
+            asyncio.to_thread(
+                CIFAR10Data.from_huggingface,
+                cache_dir=cache_dir,
+                train=True,
+            ),
+            asyncio.to_thread(
+                CIFAR10Data.from_huggingface,
+                cache_dir=cache_dir,
+                train=False,
+            ),
+        )
+    assert train_data.matches_source(source=pilot_data_source, split="train")
+    assert test_data.matches_source(source=pilot_data_source, split="test")
     partitions = await asyncio.to_thread(
         train_data.split_iid,
         participant_count=len(draft.dataset.partition_sample_counts),
@@ -351,7 +396,8 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                 expected_manifest_hash
             }
             commits = await asyncio.wait_for(
-                asyncio.gather(*(node.run() for node in nodes)), timeout=180.0
+                asyncio.gather(*(node.run() for node in nodes)),
+                timeout=float(os.environ.get("DROMEUS_PILOT_TIMEOUT_SECONDS", "180")),
             )
             assert all(len(records) == draft.round_count for records in commits)
             assert all(node.state is NodeState.COMPLETE for node in nodes)
@@ -390,7 +436,9 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     and record.get("manifest_hash") == expected_manifest_hash
                     and record.get("node_id") == node_id
                 ]
-                assert [record.get("round_id") for record in metrics] == [0, 1]
+                assert [record.get("round_id") for record in metrics] == list(
+                    range(draft.round_count)
+                )
                 consensus = [
                     record
                     for record in records
@@ -398,7 +446,9 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     and record.get("manifest_hash") == expected_manifest_hash
                     and record.get("node_id") == node_id
                 ]
-                assert [record.get("round_id") for record in consensus] == [0, 1]
+                assert [record.get("round_id") for record in consensus] == list(
+                    range(draft.round_count)
+                )
                 assert all(record.get("sketch_count") == 4 for record in consensus)
                 assert all(
                     isinstance(record.get("local_loss"), float) for record in metrics
