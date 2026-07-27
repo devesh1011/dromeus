@@ -3,7 +3,7 @@
 FROM golang:1.25-bookworm AS axl-builder
 
 ARG AXL_GIT_COMMIT=628e28ace077f26dfe8d0259009b357216a9d8d4
-ARG AXL_BINARY_SHA256=af914d445ff16f00a70444342e23a226a6e2f3ca8bcabf8d9390d59cae5681e7
+ARG AXL_BINARY_SHA256=8ddebe8ceecc630cb8f0cf0c560c2c343697fb82ef86ea098dd758f7e0256385
 
 RUN git clone https://github.com/gensyn-ai/axl.git /tmp/axl \
     && git -C /tmp/axl checkout "$AXL_GIT_COMMIT" \
@@ -16,7 +16,7 @@ FROM python:3.12-slim-bookworm
 
 ARG DROMEUS_COMMIT
 ARG AXL_GIT_COMMIT=628e28ace077f26dfe8d0259009b357216a9d8d4
-ARG AXL_BINARY_SHA256=af914d445ff16f00a70444342e23a226a6e2f3ca8bcabf8d9390d59cae5681e7
+ARG AXL_BINARY_SHA256=8ddebe8ceecc630cb8f0cf0c560c2c343697fb82ef86ea098dd758f7e0256385
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.3 /uv /uvx /bin/
 
