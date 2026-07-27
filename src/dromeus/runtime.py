@@ -122,6 +122,14 @@ class NodeRuntime:
     def training_commits(self) -> tuple[RoundCommit, ...]:
         return self._commits
 
+    def configure_training(self, training: TrainingConfig) -> None:
+        """Attach the local trainer once fixed membership has formed."""
+        if self._state is not NodeState.READY:
+            raise NodeRuntimeError(f"cannot configure training from {self._state}")
+        if self._training is not None:
+            raise NodeRuntimeError("training is already configured")
+        self._training = training
+
     async def initiate(
         self,
         *,
