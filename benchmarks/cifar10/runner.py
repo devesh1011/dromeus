@@ -143,7 +143,7 @@ def write_draft(draft: DraftRunSpec, output: Path) -> None:
 
 def write_node_configs(
     *,
-    plan_path: Path,
+    plan_path: Path | None,
     draft_path: Path,
     benchmark_seed: int,
     bootstrap_uri: str,
@@ -171,12 +171,13 @@ def write_node_configs(
         )
         paths.append(path)
     result = cast(tuple[Path, Path, Path, Path], tuple(paths))
-    prepare_dpsgd_node_configs(
-        plan_path=plan_path,
-        draft_path=draft_path,
-        seed=benchmark_seed,
-        node_config_paths=result,
-    )
+    if plan_path is not None:
+        prepare_dpsgd_node_configs(
+            plan_path=plan_path,
+            draft_path=draft_path,
+            seed=benchmark_seed,
+            node_config_paths=result,
+        )
     return result
 
 
@@ -474,7 +475,7 @@ def _parser() -> argparse.ArgumentParser:
     data.add_argument("--output", required=True, type=Path)
 
     nodes = subparsers.add_parser("node-configs")
-    nodes.add_argument("--plan", required=True, type=Path)
+    nodes.add_argument("--plan", type=Path)
     nodes.add_argument("--draft", required=True, type=Path)
     nodes.add_argument("--seed", required=True, type=int)
     nodes.add_argument("--bootstrap-uri", required=True)

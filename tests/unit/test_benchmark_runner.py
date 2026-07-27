@@ -12,6 +12,7 @@ from benchmarks.cifar10.runner import (
     ReportInput,
     create_draft,
     write_frozen_plan,
+    write_node_configs,
     write_pilot_evidence,
 )
 from dromeus.manifests.canonical import canonical_hash
@@ -181,6 +182,25 @@ def test_pilot_rejects_reused_node_root(tmp_path: Path) -> None:
             data_artifacts=data_artifacts,
             output=tmp_path / "pilot.json",
         )
+
+
+def test_pilot_node_configs_do_not_require_a_frozen_plan(tmp_path: Path) -> None:
+    draft_path = tmp_path / "draft.yaml"
+    draft_path.write_text(
+        json.dumps(_draft().model_dump(mode="json")),
+        encoding="utf-8",
+    )
+
+    paths = write_node_configs(
+        plan_path=None,
+        draft_path=draft_path,
+        benchmark_seed=17,
+        bootstrap_uri="tls://bootstrap.example:9300",
+        output_dir=tmp_path / "configs",
+    )
+
+    assert len(paths) == 4
+    assert all(path.is_file() for path in paths)
 
 
 def test_report_input_requires_three_seed_archives() -> None:
