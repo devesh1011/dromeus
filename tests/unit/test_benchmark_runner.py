@@ -8,6 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from benchmarks.cifar10.runner import (
+    DatasetArtifact,
     ReportInput,
     create_draft,
     write_frozen_plan,
@@ -72,6 +73,52 @@ def _write_completed_roots(root: Path) -> tuple[Path, Path, Path, Path]:
     return roots[0], roots[1], roots[2], roots[3]
 
 
+def _write_pilot_inputs(
+    root: Path,
+    run_roots: tuple[Path, Path, Path, Path],
+) -> tuple[tuple[Path, Path, Path, Path], tuple[Path, Path, Path, Path]]:
+    manifest = SealedManifest.model_validate_json(
+        (run_roots[0] / "run-store" / "manifest.json").read_text(encoding="utf-8")
+    )
+    manifest_hash = canonical_hash(manifest)
+    logs: list[Path] = []
+    artifacts: list[Path] = []
+    for index in range(4):
+        log = root / f"node-{index}.jsonl"
+        log.write_text(
+            json.dumps(
+                {
+                    "event": "benchmark_node_ready",
+                    "run_id": manifest.run_id,
+                    "manifest_hash": manifest_hash,
+                    "node_id": f"peer-{index}",
+                    "benchmark_seed": 17,
+                    "transport": "axl",
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        artifact = root / f"data-{index}.json"
+        artifact.write_text(
+            DatasetArtifact(
+                data_source="torchvision-cifar10",
+                archive_md5="c58f30108f718f92721af3b95e74349a",
+                dataset_version=CIFAR10_DATASET_VERSION,
+                preprocessing_hash=PREPROCESSING_HASH,
+                train_sample_count=50_000,
+                test_sample_count=10_000,
+            ).model_dump_json(),
+            encoding="utf-8",
+        )
+        logs.append(log)
+        artifacts.append(artifact)
+    return (
+        (logs[0], logs[1], logs[2], logs[3]),
+        (artifacts[0], artifacts[1], artifacts[2], artifacts[3]),
+    )
+
+
 def test_create_draft_uses_canonical_production_values() -> None:
     draft = _draft()
 
@@ -90,9 +137,13 @@ def test_completed_pilot_can_freeze_one_plan(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     evidence_path = tmp_path / "pilot.json"
+    run_roots = _write_completed_roots(tmp_path)
+    event_logs, data_artifacts = _write_pilot_inputs(tmp_path, run_roots)
     evidence = write_pilot_evidence(
         draft_path=draft_path,
-        run_roots=_write_completed_roots(tmp_path),
+        run_roots=run_roots,
+        event_logs=event_logs,
+        data_artifacts=data_artifacts,
         output=evidence_path,
     )
 
@@ -100,12 +151,36 @@ def test_completed_pilot_can_freeze_one_plan(tmp_path: Path) -> None:
         draft_path=draft_path,
         pilot_artifact=evidence_path,
         benchmark_seeds=(17, 29, 41),
+        worker_instance_type="c7i.xlarge",
+        worker_regions=("us-east-1", "us-east-1", "us-east-2", "us-east-2"),
+        bootstrap_region="us-east-1",
+        worker_root_volume_gib=40,
         output=tmp_path / "plan.yaml",
     )
 
     assert evidence.status == "complete"
     assert plan.benchmark_seeds == (17, 29, 41)
     assert plan.dataset.preprocessing_hash == PREPROCESSING_HASH
+    assert len(set(evidence.node_ids)) == 4
+
+
+def test_pilot_rejects_reused_node_root(tmp_path: Path) -> None:
+    draft_path = tmp_path / "draft.yaml"
+    draft_path.write_text(
+        json.dumps(_draft().model_dump(mode="json")),
+        encoding="utf-8",
+    )
+    run_roots = _write_completed_roots(tmp_path)
+    event_logs, data_artifacts = _write_pilot_inputs(tmp_path, run_roots)
+
+    with pytest.raises(ValueError, match="run roots must be distinct"):
+        write_pilot_evidence(
+            draft_path=draft_path,
+            run_roots=(run_roots[0],) * 4,
+            event_logs=event_logs,
+            data_artifacts=data_artifacts,
+            output=tmp_path / "pilot.json",
+        )
 
 
 def test_report_input_requires_three_seed_archives() -> None:
