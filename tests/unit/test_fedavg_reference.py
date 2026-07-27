@@ -12,6 +12,8 @@ from torch.utils.data import Dataset, TensorDataset
 
 from benchmarks.cifar10.fedavg_reference import (
     FedAvgConfig,
+    FedAvgResult,
+    FedAvgRound,
     FedAvgSeedInput,
     average_weights,
     run_fedavg,
@@ -92,12 +94,16 @@ def test_run_fedavg_reuses_four_partitions_and_common_test_set(tmp_path: Path) -
         partitions=partitions,
         test_data=test_data,
         initial_checkpoint=checkpoint.path,
-        config=_config(round_count=2),
+        config=_config(round_count=6),
     )
 
-    assert [round_result.round_id for round_result in result.rounds] == [0, 1]
+    assert [round_result.round_id for round_result in result.rounds] == list(range(6))
     assert all(len(round_result.local_losses) == 4 for round_result in result.rounds)
-    assert all(0.0 <= round_result.accuracy <= 1.0 for round_result in result.rounds)
+    assert all(round_result.accuracy is None for round_result in result.rounds[:4])
+    assert all(round_result.loss is None for round_result in result.rounds[:4])
+    assert result.rounds[4].accuracy is not None
+    assert result.rounds[5].accuracy is not None
+    assert 0.0 <= result.rounds[5].accuracy <= 1.0
     assert result.final_accuracy == result.rounds[-1].accuracy
 
 
@@ -124,6 +130,22 @@ def test_run_fedavg_seeds_requires_three_matching_frozen_configs(
 
     assert [seed for seed, _ in results] == [17, 23, 29]
     assert all(result.config is not None for _, result in results)
+
+
+def test_fedavg_result_rejects_partial_evaluation_metrics() -> None:
+    with pytest.raises(ValueError, match="complete pairs"):
+        FedAvgResult(
+            rounds=(
+                FedAvgRound(
+                    round_id=0,
+                    local_losses=(1.0, 0.9, 0.8, 0.7),
+                    loss=0.75,
+                    accuracy=None,
+                ),
+            ),
+            config=_config(),
+            initial_checkpoint_hash="2" * 64,
+        )
 
 
 def test_run_fedavg_rejects_partitions_from_different_seed(tmp_path: Path) -> None:

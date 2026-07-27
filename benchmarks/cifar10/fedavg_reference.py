@@ -39,6 +39,7 @@ class FedAvgConfig:
     environment: EnvironmentFingerprint
     data_source: str
     test_sample_count: int
+    evaluation_interval: int = 5
     trainer_seed: int = 17
     batch_size: int = 32
     device: str = "cpu"
@@ -65,6 +66,7 @@ class FedAvgConfig:
             environment=manifest.environment,
             data_source="torchvision-cifar10",
             test_sample_count=10_000,
+            evaluation_interval=5,
             trainer_seed=trainer_seed,
             batch_size=batch_size,
             device=device,
@@ -78,6 +80,8 @@ class FedAvgConfig:
             raise ValueError("batch_size must be positive")
         if self.test_sample_count <= 0:
             raise ValueError("test_sample_count must be positive")
+        if self.evaluation_interval <= 0:
+            raise ValueError("evaluation_interval must be positive")
         if not self.data_source:
             raise ValueError("data_source must not be empty")
         if self.learning_rate <= 0 or not math.isfinite(self.learning_rate):
@@ -97,6 +101,7 @@ class FedAvgConfig:
             json.dumps(self.environment.model_dump(mode="json"), sort_keys=True),
             self.data_source,
             self.test_sample_count,
+            self.evaluation_interval,
             self.batch_size,
             self.device,
             self.augment,
@@ -113,6 +118,7 @@ class FedAvgConfig:
             "environment": self.environment.model_dump(mode="json"),
             "data_source": self.data_source,
             "test_sample_count": self.test_sample_count,
+            "evaluation_interval": self.evaluation_interval,
             "trainer_seed": self.trainer_seed,
             "batch_size": self.batch_size,
             "device": self.device,
@@ -126,8 +132,8 @@ class FedAvgRound:
 
     round_id: int
     local_losses: tuple[float, ...]
-    loss: float
-    accuracy: float
+    loss: float | None
+    accuracy: float | None
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -146,13 +152,28 @@ class FedAvgResult:
     config: FedAvgConfig
     initial_checkpoint_hash: Sha256
 
+    def __post_init__(self) -> None:
+        if not self.rounds:
+            raise ValueError("FedAvg result must contain rounds")
+        if any(
+            (round_result.loss is None) != (round_result.accuracy is None)
+            for round_result in self.rounds
+        ):
+            raise ValueError("FedAvg evaluation metrics must be complete pairs")
+        if self.rounds[-1].loss is None or self.rounds[-1].accuracy is None:
+            raise ValueError("FedAvg final round must contain evaluation")
+
     @property
     def final_loss(self) -> float:
-        return self.rounds[-1].loss
+        value = self.rounds[-1].loss
+        assert value is not None
+        return value
 
     @property
     def final_accuracy(self) -> float:
-        return self.rounds[-1].accuracy
+        value = self.rounds[-1].accuracy
+        assert value is not None
+        return value
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -269,15 +290,18 @@ def run_fedavg(
         averaged = average_weights([trainer.weights() for trainer in trainers])
         for trainer in trainers:
             trainer.load_weights(averaged)
-        loss, accuracy = trainers[0].evaluate()
+        should_evaluate = (
+            round_id + 1
+        ) % config.evaluation_interval == 0 or round_id + 1 == config.round_count
+        loss, accuracy = trainers[0].evaluate() if should_evaluate else (None, None)
         round_results.append(
             FedAvgRound(
                 round_id=round_id,
                 local_losses=tuple(
                     float(trainer.last_local_loss or 0.0) for trainer in trainers
                 ),
-                loss=float(loss),
-                accuracy=float(accuracy),
+                loss=float(loss) if loss is not None else None,
+                accuracy=float(accuracy) if accuracy is not None else None,
             )
         )
     return FedAvgResult(
