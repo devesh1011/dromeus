@@ -34,6 +34,12 @@ from dromeus.manifests.models import Tensor as TensorSpec
 
 IMAGE_SHAPE = (3, 32, 32)
 CLASS_COUNT = 10
+CIFAR10_ARCHIVE_MD5 = "c58f30108f718f92721af3b95e74349a"
+CIFAR10_DATASET_VERSION = f"torchvision-python-{CIFAR10_ARCHIVE_MD5}"
+PREPROCESSING_DEFINITION = (
+    "torchvision.ToTensor;seeded-horizontal-flip:p=0.5;normalization=none"
+)
+PREPROCESSING_HASH = hashlib.sha256(PREPROCESSING_DEFINITION.encode()).hexdigest()
 MODEL_DEFINITION = "cifar-cnn-v1:conv3x3-16:gn4:conv3x3-32:gn4:gap:linear"
 MODEL_DEFINITION_HASH = hashlib.sha256(MODEL_DEFINITION.encode()).hexdigest()
 _TORCH_TO_SCHEMA_DTYPE: dict[torch.dtype, Literal["float16", "float32", "float64"]] = {
@@ -577,6 +583,8 @@ def prepare_cifar_training(
 
 
 __all__ = [
+    "CIFAR10_ARCHIVE_MD5",
+    "CIFAR10_DATASET_VERSION",
     "CIFAR10Data",
     "CIFAR10Trainer",
     "CIFARDataProvenance",
@@ -586,6 +594,8 @@ __all__ = [
     "IIDPartitionProvenance",
     "MODEL_DEFINITION",
     "MODEL_DEFINITION_HASH",
+    "PREPROCESSING_DEFINITION",
+    "PREPROCESSING_HASH",
     "PreparedCIFARTraining",
     "build_model",
     "checkpoint_hash",

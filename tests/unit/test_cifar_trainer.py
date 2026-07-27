@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 
@@ -8,12 +9,23 @@ import pytest
 import torch
 
 from dromeus.training.pytorch import (
+    CIFAR10_ARCHIVE_MD5,
+    CIFAR10_DATASET_VERSION,
+    PREPROCESSING_DEFINITION,
+    PREPROCESSING_HASH,
     CIFAR10Data,
     CIFAR10Trainer,
     CIFARDataError,
     IIDPartitionProvenance,
     create_initial_checkpoint,
 )
+
+
+def test_cifar_contract_constants_are_canonical() -> None:
+    assert CIFAR10_DATASET_VERSION == f"torchvision-python-{CIFAR10_ARCHIVE_MD5}"
+    assert PREPROCESSING_HASH == hashlib.sha256(
+        PREPROCESSING_DEFINITION.encode()
+    ).hexdigest()
 
 
 @pytest.fixture(scope="session")
