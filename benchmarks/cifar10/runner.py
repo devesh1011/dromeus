@@ -19,10 +19,6 @@ from benchmarks.cifar10.official import (
     load_frozen_benchmark_plan,
     prepare_dpsgd_node_configs,
 )
-from benchmarks.cifar10.report import (
-    SeedBenchmarkInput,
-    build_three_seed_report,
-)
 from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import (
     DPSGD_ALGORITHM_ID,
@@ -452,6 +448,11 @@ def run_fedavg_seed(
 
 
 def write_three_seed_report(input_path: Path, output_dir: Path) -> None:
+    from benchmarks.cifar10.report import (
+        SeedBenchmarkInput,
+        build_three_seed_report,
+    )
+
     value = ReportInput.model_validate_json(input_path.read_text(encoding="utf-8"))
     inputs = tuple(
         SeedBenchmarkInput(

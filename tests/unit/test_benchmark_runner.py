@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +27,30 @@ from dromeus.training.cifar10 import (
     PREPROCESSING_HASH,
 )
 from dromeus.training.models import MODEL_DEFINITION_HASH, MODEL_ID
+
+
+def test_worker_cli_import_does_not_require_matplotlib() -> None:
+    script = """
+import builtins
+
+original_import = builtins.__import__
+
+def import_without_matplotlib(name, *args, **kwargs):
+    if name == "matplotlib" or name.startswith("matplotlib."):
+        raise ModuleNotFoundError("No module named 'matplotlib'")
+    return original_import(name, *args, **kwargs)
+
+builtins.__import__ = import_without_matplotlib
+import benchmarks.cifar10.runner
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def _draft():
