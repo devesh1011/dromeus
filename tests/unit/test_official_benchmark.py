@@ -28,6 +28,13 @@ def _write_plan(root: Path) -> Path:
                 "local_steps": 5,
                 "round_count": 100,
                 "learning_rate": 0.1,
+                "node_ids": ["node-0", "node-1", "node-2", "node-3"],
+                "data_artifact_sha256": [
+                    "1" * 64,
+                    "2" * 64,
+                    "3" * 64,
+                    "4" * 64,
+                ],
             }
         ),
         encoding="utf-8",
@@ -49,6 +56,11 @@ def _write_plan(root: Path) -> Path:
                 "max_retries: 3",
                 "retry_timeout_seconds: 5.0",
                 f"pilot_artifact: {pilot}",
+                "cloud_provider: aws",
+                "worker_instance_type: c7i.xlarge",
+                "worker_regions: [us-east-1, us-east-1, us-east-2, us-east-2]",
+                "bootstrap_region: us-east-1",
+                "worker_root_volume_gib: 40",
             )
         ),
         encoding="utf-8",
@@ -67,6 +79,12 @@ def test_frozen_plan_requires_pilot_and_builds_three_fedavg_configs(
     assert all(config.dataset == plan.dataset for config in plan.fedavg_configs())
     assert all(
         config.environment == plan.environment for config in plan.fedavg_configs()
+    )
+    assert plan.worker_regions == (
+        "us-east-1",
+        "us-east-1",
+        "us-east-2",
+        "us-east-2",
     )
 
     plan.pilot_artifact.unlink()

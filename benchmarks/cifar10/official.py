@@ -37,6 +37,8 @@ class PilotEvidence(BaseModel):
     local_steps: Annotated[int, Field(gt=0)]
     round_count: Annotated[int, Field(gt=0)]
     learning_rate: Annotated[float, Field(gt=0)]
+    node_ids: tuple[str, str, str, str]
+    data_artifact_sha256: tuple[Sha256, Sha256, Sha256, Sha256]
 
 
 class FrozenBenchmarkPlan(BaseModel):
@@ -59,6 +61,16 @@ class FrozenBenchmarkPlan(BaseModel):
     max_retries: Annotated[int, Field(ge=0)]
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
     pilot_artifact: Path
+    cloud_provider: Literal["aws"]
+    worker_instance_type: Annotated[str, Field(min_length=1)]
+    worker_regions: tuple[str, str, str, str]
+    bootstrap_region: Annotated[str, Field(min_length=1)]
+    worker_root_volume_gib: Annotated[int, Field(gt=0)]
+    parameter_count: Literal[5514] = 5514
+    learning_rate_schedule: Literal["constant"] = "constant"
+    checkpoint_interval: Literal[1] = 1
+    receive_poll_seconds: Annotated[float, Field(ge=0.1, le=0.1)] = 0.1
+    per_peer_in_flight: Literal[1] = 1
     batch_size: Literal[32] = 32
     evaluation_interval: Literal[5] = 5
     device: Literal["cpu"] = "cpu"
@@ -70,6 +82,8 @@ class FrozenBenchmarkPlan(BaseModel):
     def distinct_seeds(self) -> Self:
         if len(set(self.benchmark_seeds)) != 3:
             raise ValueError("benchmark seeds must be distinct")
+        if len(set(self.worker_regions)) < 2:
+            raise ValueError("official workers must span at least two regions")
         return self
 
     def fedavg_configs(self) -> tuple[FedAvgConfig, FedAvgConfig, FedAvgConfig]:
