@@ -12,9 +12,11 @@ import numpy as np
 from dromeus.algorithms.base import (
     AlgorithmSnapshot,
     TrainedWeightsBundle,
+    UpdateBundle,
+    ValidatedUpdate,
     checksum_tensors,
 )
-from dromeus.algorithms.codec import IdentityCodec, UpdateCodec
+from dromeus.algorithms.codec import IdentityCodec, UpdateBundleCodec, UpdateCodec
 from dromeus.manifests.models import RoundId, TensorSchema
 from dromeus.training.base import (
     CheckpointTrainer,
@@ -37,6 +39,7 @@ class DPSGDAdapter:
     learning_rate: float | None = None
     training_round_count: int | None = None
     codec: UpdateCodec = field(default_factory=IdentityCodec)
+    bundle_codec: UpdateBundleCodec | None = None
     _round_id: RoundId = 0
     _phase: str = "created"
 
@@ -89,40 +92,55 @@ class DPSGDAdapter:
         self._phase = "post-local"
         return self.snapshot()
 
-    def post_local_bundle(self) -> TrainedWeightsBundle:
-        tensors = self.codec.encode(self.trainer.weights())
+    def post_local_bundle(self) -> UpdateBundle:
+        if self.bundle_codec is None:
+            raise RuntimeError("update bundle codec is not configured")
+        tensors = self.trainer.weights()
         self._validate_tensors(tensors)
         self._phase = "bundled"
-        return TrainedWeightsBundle(
+        return self.bundle_codec.encode(
             round_id=self._round_id,
             tensors=tensors,
-            checksum=checksum_tensors(tensors),
         )
 
-    def validate_peer(self, peer_bundle: TrainedWeightsBundle) -> None:
+    def validate_peer(self, peer_bundle: UpdateBundle) -> ValidatedUpdate:
         """Validate a peer update without mutating local model state."""
-        if peer_bundle.round_id != self._round_id:
+        if self.bundle_codec is None:
+            raise RuntimeError("update bundle codec is not configured")
+        if peer_bundle.metadata.round_id != self._round_id:
             raise ValueError("peer bundle round does not match current round")
-        self._validate_tensors(peer_bundle.tensors)
-        if checksum_tensors(peer_bundle.tensors) != peer_bundle.checksum:
-            raise ValueError("peer bundle checksum mismatch")
-        decoded = self.codec.decode(peer_bundle.tensors)
+        decoded = self.bundle_codec.decode(peer_bundle)
         self._validate_tensors(decoded)
-
-    def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot:
-        self.validate_peer(peer_bundle)
-        local = self.trainer.weights()
-        self._validate_tensors(local)
-        decoded = self.codec.decode(peer_bundle.tensors)
-        decoded_bundle = TrainedWeightsBundle(
-            round_id=peer_bundle.round_id,
+        return ValidatedUpdate(
+            round_id=self._round_id,
             tensors=decoded,
             checksum=checksum_tensors(decoded),
         )
-        mixed = self._weighted_average(local, (decoded_bundle,), (0.5,))
+
+    def peer_apply(self, peer_update: ValidatedUpdate) -> AlgorithmSnapshot:
+        if peer_update.round_id != self._round_id:
+            raise ValueError("peer update round does not match current round")
+        local = self.trainer.weights()
+        self._validate_tensors(local)
+        decoded = dict(peer_update.tensors)
+        self._validate_tensors(decoded)
+        if checksum_tensors(decoded) != peer_update.checksum:
+            raise ValueError("peer update checksum mismatch")
+        mixed = {
+            name: (
+                local[name].astype(np.float32) * np.float32(0.5)
+                + decoded[name].astype(np.float32) * np.float32(0.5)
+            ).astype(np.float32)
+            for name in local
+        }
         self.trainer.load_weights(mixed)
         self._phase = "post-mix"
         return self.snapshot()
+
+    def release_bundle(self, bundle: UpdateBundle) -> None:
+        if self.bundle_codec is None:
+            raise RuntimeError("update bundle codec is not configured")
+        self.bundle_codec.release(bundle)
 
     def snapshot(self) -> AlgorithmSnapshot:
         return AlgorithmSnapshot(
