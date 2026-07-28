@@ -11,6 +11,7 @@ from typing import Protocol
 
 import numpy as np
 
+from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.gossip.engine import (
     AXLFailureBroadcaster,
@@ -329,13 +330,26 @@ class NodeRuntime:
             )
             local_key = await self._transport.local_public_key()
             self._local_public_key = local_key
+            if (
+                isinstance(self._training.algorithm, DPSGDAdapter)
+                and self._training.algorithm.bundle_codec is None
+            ):
+                self._training.algorithm.bundle_codec = SafetensorsUpdateBundleCodec(
+                    artifact_root=self._training.artifact_root / "bundles",
+                    run_id=self._result.manifest.run_id,
+                    manifest_hash=self._result.manifest_hash,
+                    sender_public_key=local_key,
+                    algorithm_id=self._result.manifest.algorithm_id,
+                    tensor_schema=self._result.manifest.tensor_schema,
+                )
             participants = frozenset(
                 participant.public_key
                 for participant in self._result.manifest.participants
             )
             services = self._formation.services
             pair_transport = await self._create_pair_transport(
-                local_key, artifact_root=self._training.artifact_root
+                local_key,
+                metadata_root=self._training.artifact_root / "bundle-metadata",
             )
             self._pair_transport = pair_transport
 
@@ -475,7 +489,7 @@ class NodeRuntime:
             await self._training.metrics_publisher.start()
 
     async def _create_pair_transport(
-        self, local_key: str, *, artifact_root: Path
+        self, local_key: str, *, metadata_root: Path
     ) -> AXLPairTransport:
         assert self._result is not None
         participants = frozenset(
@@ -488,12 +502,11 @@ class NodeRuntime:
             run_id=self._result.manifest.run_id,
             manifest_hash=self._result.manifest_hash,
             algorithm_id=self._result.manifest.algorithm_id,
-            tensor_schema=self._result.manifest.tensor_schema,
             transport_limits=self._result.manifest.transport,
             receiver=services.receiver,
             sender=services.sender,
             transfer_manager=services.transfer_manager,
-            artifact_root=artifact_root,
+            metadata_root=metadata_root,
             participant_keys=participants,
         )
 
@@ -667,8 +680,8 @@ class NodeRuntime:
             metrics["local_loss"] = float(local_loss)
         self._training.run_store.persist_commit(
             committed_round=commit.round_id,
-            algorithm_state=commit.algorithm_state,
-            pre_mix_state=commit.local_bundle.tensors,
+            algorithm_state=self._training.algorithm.checkpoint_tensors(),
+            pre_mix_state=commit.post_local.weights,
             post_mix_state=commit.post_mix.weights,
             state_checksum=commit.state_checksum,
             schedule={
