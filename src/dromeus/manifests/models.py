@@ -110,6 +110,11 @@ class TransportLimits(DomainModel):
     max_retries: Annotated[int, Field(ge=0)]
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
 
+    @property
+    def max_update_bundle_bytes(self) -> int:
+        """Return the v1 wire field with its bundle-total semantics."""
+        return self.max_payload_bytes
+
 
 class ConsensusSketchConfig(DomainModel):
     size: Literal[4096] = 4096
@@ -208,6 +213,8 @@ class SealedManifest(DraftRunSpec):
 
 
 class ArtifactMetadata(DomainModel):
+    """Immutable bundle metadata v1 artifact."""
+
     name: Identifier
     size_bytes: Annotated[int, Field(gt=0)]
     sha256: Sha256
@@ -215,6 +222,8 @@ class ArtifactMetadata(DomainModel):
 
 
 class UpdateBundleMetadata(DomainModel):
+    """Immutable historical bundle metadata v1."""
+
     version: Literal[1] = 1
     run_id: RunId
     manifest_hash: Sha256
@@ -222,6 +231,37 @@ class UpdateBundleMetadata(DomainModel):
     algorithm_id: AlgorithmId
     round_id: RoundId
     artifacts: tuple[ArtifactMetadata, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_artifacts(self) -> Self:
+        names = [artifact.name for artifact in self.artifacts]
+        if len(names) != len(set(names)):
+            raise ValueError("artifact names must be unique")
+        return self
+
+
+class OpaqueArtifactMetadata(DomainModel):
+    name: Identifier
+    size_bytes: Annotated[int, Field(gt=0)]
+    sha256: Sha256
+    codec_id: Identifier
+    codec_version: Annotated[int, Field(gt=0)]
+    logical_schema_hash: Sha256
+    encoded_schema_hash: Sha256
+
+
+class OpaqueUpdateBundleMetadata(DomainModel):
+    """Current independently versioned opaque bundle metadata."""
+
+    version: Literal[2] = 2
+    run_id: RunId
+    manifest_hash: Sha256
+    sender_public_key: PublicKey
+    algorithm_id: AlgorithmId
+    round_id: RoundId
+    artifacts: tuple[OpaqueArtifactMetadata, ...] = Field(
+        min_length=1, max_length=16
+    )
 
     @model_validator(mode="after")
     def unique_artifacts(self) -> Self:
