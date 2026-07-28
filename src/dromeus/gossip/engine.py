@@ -12,28 +12,28 @@ from typing import Literal, Protocol, cast
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
-from safetensors.numpy import (
-    load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
-)
-from safetensors.numpy import (
-    save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
-)
 
 from dromeus.algorithms.base import (
     AlgorithmSnapshot,
-    TrainedWeightsBundle,
+    MaterializedArtifact,
+    UpdateBundle,
+    ValidatedUpdate,
     checksum_tensors,
 )
 from dromeus.gossip.scheduler import PeerScheduler
+from dromeus.manifests.canonical import (
+    materialize_bundle_metadata,
+    parse_bundle_metadata,
+)
 from dromeus.manifests.models import (
     AlgorithmId,
     DomainModel,
     MessageId,
+    OpaqueUpdateBundleMetadata,
     PublicKey,
     RoundId,
     RunId,
     Sha256,
-    TensorSchema,
     TransportLimits,
 )
 from dromeus.telemetry.consensus import encode_sketch
@@ -46,12 +46,7 @@ from dromeus.transport.envelope import (
 )
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.sender import OutboundScheduler, Priority
-from dromeus.transport.transfer import TransferError, TransferManager
-
-_load_safetensors = Callable[[str], dict[str, np.ndarray]]
-_save_safetensors = Callable[[dict[str, np.ndarray], str], None]
-load_file = cast(_load_safetensors, _load_file)
-save_file = cast(_save_safetensors, _save_file)
+from dromeus.transport.transfer import ArtifactReceipt, TransferError, TransferManager
 
 
 class PairCommitError(RuntimeError):
@@ -96,11 +91,13 @@ class GossipAlgorithm(Protocol):
 
     def local_training(self) -> AlgorithmSnapshot: ...
 
-    def post_local_bundle(self) -> TrainedWeightsBundle: ...
+    def post_local_bundle(self) -> UpdateBundle: ...
 
-    def validate_peer(self, peer_bundle: TrainedWeightsBundle) -> None: ...
+    def validate_peer(self, peer_bundle: UpdateBundle) -> ValidatedUpdate: ...
 
-    def peer_apply(self, peer_bundle: TrainedWeightsBundle) -> AlgorithmSnapshot: ...
+    def peer_apply(self, peer_update: ValidatedUpdate) -> AlgorithmSnapshot: ...
+
+    def release_bundle(self, bundle: UpdateBundle) -> None: ...
 
     def checkpoint_tensors(self) -> dict[str, np.ndarray]: ...
 
@@ -113,8 +110,8 @@ class PairTransport(Protocol):
         *,
         peer: PublicKey,
         round_id: RoundId,
-        bundle: TrainedWeightsBundle,
-    ) -> TrainedWeightsBundle: ...
+        bundle: UpdateBundle,
+    ) -> UpdateBundle: ...
 
     async def exchange_update_ready(
         self,
@@ -217,7 +214,7 @@ class AXLFailureBroadcaster:
 
 
 class AXLPairTransport:
-    """Pair transport backed by reliable safetensors transfer and AXL envelopes."""
+    """Pair transport backed by reliable opaque artifact transfer."""
 
     def __init__(
         self,
@@ -226,24 +223,22 @@ class AXLPairTransport:
         run_id: RunId,
         manifest_hash: Sha256,
         algorithm_id: AlgorithmId,
-        tensor_schema: TensorSchema,
         transport_limits: TransportLimits,
         receiver: Receiver,
         sender: OutboundScheduler,
         transfer_manager: TransferManager,
-        artifact_root: Path,
+        metadata_root: Path,
         participant_keys: frozenset[PublicKey] | None = None,
     ) -> None:
         self._local_public_key = local_public_key
         self._run_id = run_id
         self._manifest_hash = manifest_hash
         self._algorithm_id = algorithm_id
-        self._tensor_schema = tensor_schema
         self._transport_limits = transport_limits
         self._receiver = receiver
         self._sender = sender
         self._transfer_manager = transfer_manager
-        self._artifact_root = artifact_root
+        self._metadata_root = metadata_root
         self._participant_keys = participant_keys or frozenset()
         self._failure_broadcaster = AXLFailureBroadcaster(
             local_public_key=local_public_key,
@@ -254,7 +249,6 @@ class AXLPairTransport:
             sender=sender,
             participant_keys=self._participant_keys,
         )
-        self._artifact_root.mkdir(parents=True, exist_ok=True)
         self._ready_cache: dict[RoundId, str] = {}
         self._committed_rounds: dict[RoundId, str] = {}
         self.last_transfer_id: str | None = None
@@ -301,51 +295,114 @@ class AXLPairTransport:
         *,
         peer: PublicKey,
         round_id: RoundId,
-        bundle: TrainedWeightsBundle,
-    ) -> TrainedWeightsBundle:
-        if bundle.round_id != round_id:
-            raise PairCommitError("local update round does not match current round")
-        artifact_path = (
-            self._artifact_root / f"round-{round_id}-trained-weights.safetensors"
+        bundle: UpdateBundle,
+    ) -> UpdateBundle:
+        self._validate_bundle(
+            bundle.metadata,
+            sender=self._local_public_key,
+            round_id=round_id,
         )
         await asyncio.to_thread(
-            save_file,
-            {
-                name: np.ascontiguousarray(value)
-                for name, value in bundle.tensors.items()
-            },
-            str(artifact_path),
+            bundle.validate_materialized,
+            self._transport_limits.max_update_bundle_bytes,
+        )
+        receipts: list[ArtifactReceipt] = []
+        metadata_receipt: ArtifactReceipt | None = None
+        claimed = False
+        carrier_task = asyncio.create_task(
+            asyncio.to_thread(
+                materialize_bundle_metadata,
+                bundle.metadata,
+                self._metadata_root,
+            )
         )
         try:
+            metadata_carrier = await asyncio.shield(carrier_task)
+        except asyncio.CancelledError:
+            metadata_carrier = await carrier_task
+            await asyncio.to_thread(metadata_carrier.path.unlink, missing_ok=True)
+            raise
+        try:
+            retry_count = 0
             self.last_transfer_id = await self._transfer_manager.send_artifact(
                 destination=peer,
-                artifact_name=f"round-{round_id}-trained-weights",
-                artifact_path=artifact_path,
+                artifact_name="update-bundle-metadata",
+                artifact_path=metadata_carrier.path,
                 codec_id="safetensors-v1",
-                tensor_schema=self._tensor_schema,
+                tensor_schema=metadata_carrier.tensor_schema,
                 round_id=round_id,
             )
             timing = self._transfer_manager.last_timing
-            self.last_retry_count = timing.retry_count if timing is not None else 0
-            receipt = await self._transfer_manager.next_artifact(
-                timeout_seconds=self._timeout_seconds
+            retry_count += timing.retry_count if timing is not None else 0
+            metadata_receipt = await self._next_peer_receipt(
+                peer=peer, round_id=round_id
             )
-            if (
-                receipt.sender_public_key != peer
-                or receipt.round_id != round_id
-                or receipt.artifact_name != f"round-{round_id}-trained-weights"
+            if metadata_receipt.artifact_name != "update-bundle-metadata":
+                raise PairCommitError("peer update metadata artifact is missing")
+            peer_metadata = await asyncio.to_thread(
+                parse_bundle_metadata, metadata_receipt.path
+            )
+            self._validate_bundle(peer_metadata, sender=peer, round_id=round_id)
+            await self._transfer_manager.release_receipt(metadata_receipt)
+            metadata_receipt = None
+
+            for artifact, materialized in zip(
+                bundle.metadata.artifacts,
+                bundle.artifacts,
+                strict=True,
             ):
-                raise PairCommitError("received unexpected peer update artifact")
-            values = await asyncio.to_thread(load_file, str(receipt.path))
-            tensors = {
-                name: np.ascontiguousarray(value) for name, value in values.items()
-            }
-            checksum = checksum_tensors(tensors)
-            return TrainedWeightsBundle(
-                round_id=round_id,
-                tensors=tensors,
-                checksum=checksum,
+                self.last_transfer_id = (
+                    await self._transfer_manager.send_artifact(
+                        destination=peer,
+                        artifact_name=artifact.name,
+                        artifact_path=materialized.path,
+                        codec_id=materialized.transfer_codec_id,
+                        tensor_schema=materialized.transfer_schema,
+                        round_id=round_id,
+                    )
+                )
+                timing = self._transfer_manager.last_timing
+                retry_count += timing.retry_count if timing is not None else 0
+            for _ in peer_metadata.artifacts:
+                receipt = await self._next_peer_receipt(
+                    peer=peer, round_id=round_id
+                )
+                receipts.append(receipt)
+            self.last_retry_count = retry_count
+            receipt_by_name = {receipt.artifact_name: receipt for receipt in receipts}
+            if len(receipt_by_name) != len(receipts):
+                raise PairCommitError("peer update contains duplicate artifacts")
+            for artifact in peer_metadata.artifacts:
+                receipt = receipt_by_name.get(artifact.name)
+                if (
+                    receipt is None
+                    or receipt.size_bytes != artifact.size_bytes
+                    or receipt.sha256 != artifact.sha256
+                ):
+                    raise PairCommitError("peer update artifact metadata mismatch")
+            peer_bundle = UpdateBundle(
+                metadata=peer_metadata,
+                artifacts=tuple(
+                    MaterializedArtifact(
+                        path=receipt_by_name[artifact.name].path,
+                        transfer_codec_id=receipt_by_name[
+                            artifact.name
+                        ].codec_id,
+                        transfer_schema=receipt_by_name[
+                            artifact.name
+                        ].tensor_schema,
+                    )
+                    for artifact in peer_metadata.artifacts
+                ),
             )
+            await asyncio.to_thread(
+                peer_bundle.validate_materialized,
+                self._transport_limits.max_update_bundle_bytes,
+            )
+            for receipt in receipts:
+                self._transfer_manager.claim_receipt(receipt)
+            claimed = True
+            return peer_bundle
         except (
             OSError,
             ValueError,
@@ -355,7 +412,47 @@ class AXLPairTransport:
         ) as error:
             raise PairCommitError("peer update transfer failed") from error
         finally:
-            artifact_path.unlink(missing_ok=True)
+            if not claimed:
+                await self._transfer_manager.discard_round_transfers(
+                    sender=peer, round_id=round_id
+                )
+                for receipt in receipts:
+                    await self._transfer_manager.release_receipt(receipt)
+            if metadata_receipt is not None:
+                await self._transfer_manager.release_receipt(metadata_receipt)
+            await asyncio.to_thread(metadata_carrier.path.unlink, missing_ok=True)
+
+    async def _next_peer_receipt(
+        self, *, peer: PublicKey, round_id: RoundId
+    ) -> ArtifactReceipt:
+        receipt = await self._transfer_manager.next_artifact(
+            timeout_seconds=self._timeout_seconds
+        )
+        if receipt.sender_public_key != peer or receipt.round_id != round_id:
+            await self._transfer_manager.release_receipt(receipt)
+            raise PairCommitError("received unexpected peer update artifact")
+        return receipt
+
+    def _validate_bundle(
+        self,
+        metadata: OpaqueUpdateBundleMetadata,
+        *,
+        sender: PublicKey,
+        round_id: RoundId,
+    ) -> None:
+        if (
+            metadata.run_id != self._run_id
+            or metadata.manifest_hash != self._manifest_hash
+            or metadata.algorithm_id != self._algorithm_id
+            or metadata.sender_public_key != sender
+            or metadata.round_id != round_id
+        ):
+            raise PairCommitError("update bundle context mismatch")
+        if (
+            sum(artifact.size_bytes for artifact in metadata.artifacts)
+            > self._transport_limits.max_update_bundle_bytes
+        ):
+            raise PairCommitError("update bundle exceeds manifest payload limit")
 
     async def exchange_update_ready(
         self,
@@ -513,10 +610,10 @@ class RoundCommit:
     round_id: RoundId
     peer_public_key: PublicKey
     pre_local: AlgorithmSnapshot
-    local_bundle: TrainedWeightsBundle
-    peer_bundle: TrainedWeightsBundle
+    post_local: AlgorithmSnapshot
     post_mix: AlgorithmSnapshot
-    algorithm_state: dict[str, np.ndarray]
+    local_bundle_digest: str
+    peer_bundle_digest: str
     state_checksum: str
     phase: Literal["training", "final-consensus"] = "training"
 
@@ -636,112 +733,133 @@ class GossipEngine:
         except KeyError as error:
             raise PairCommitError(str(error)) from error
 
-        local_started = time.perf_counter()
-        pre_local = await asyncio.to_thread(self._algorithm.pre_local, round_id)
-        await asyncio.to_thread(self._algorithm.local_training)
-        local_bundle = await asyncio.to_thread(self._algorithm.post_local_bundle)
-        local_checksum = await asyncio.to_thread(checksum_tensors, local_bundle.tensors)
-        if local_checksum != local_bundle.checksum:
-            raise PairCommitError("local update checksum mismatch")
-        local_compute_seconds = time.perf_counter() - local_started
-
-        transfer_started = time.perf_counter()
-        peer_bundle = await self._transport.exchange_update(
-            peer=peer,
-            round_id=round_id,
-            bundle=local_bundle,
-        )
-        transfer_seconds = time.perf_counter() - transfer_started
-        if peer_bundle.round_id != round_id:
-            raise PairCommitError("peer update round does not match current round")
-        peer_checksum = await asyncio.to_thread(checksum_tensors, peer_bundle.tensors)
-        if peer_checksum != peer_bundle.checksum:
-            raise PairCommitError("peer update checksum mismatch")
+        local_bundle: UpdateBundle | None = None
+        peer_bundle: UpdateBundle | None = None
         try:
-            await asyncio.to_thread(self._algorithm.validate_peer, peer_bundle)
-        except (ValueError, TypeError) as error:
-            raise PairCommitError("peer update validation failed") from error
-
-        peer_wait_started = time.perf_counter()
-        remote_checksum = await self._transport.exchange_update_ready(
-            peer=peer,
-            round_id=round_id,
-            bundle_checksum=local_bundle.checksum,
-        )
-        if remote_checksum != peer_bundle.checksum:
-            raise PairCommitError("peer UPDATE_READY checksum mismatch")
-        peer_wait_seconds = time.perf_counter() - peer_wait_started
-
-        mixing_started = time.perf_counter()
-        try:
-            post_mix = await asyncio.to_thread(
-                self._algorithm.peer_apply,
-                peer_bundle,
+            local_started = time.perf_counter()
+            pre_local = await asyncio.to_thread(self._algorithm.pre_local, round_id)
+            post_local = await asyncio.to_thread(self._algorithm.local_training)
+            bundle_task = asyncio.create_task(
+                asyncio.to_thread(self._algorithm.post_local_bundle)
             )
-        except (ValueError, TypeError) as error:
-            raise PairCommitError("peer update application failed") from error
-        mixing_seconds = time.perf_counter() - mixing_started
-        state_checksum = await asyncio.to_thread(checksum_tensors, post_mix.weights)
-        algorithm_state = await asyncio.to_thread(
-            self._algorithm.checkpoint_tensors
-        )
-        commit = RoundCommit(
-            round_id=round_id,
-            peer_public_key=peer,
-            pre_local=pre_local,
-            local_bundle=local_bundle,
-            peer_bundle=peer_bundle,
-            post_mix=post_mix,
-            algorithm_state=algorithm_state,
-            state_checksum=state_checksum,
-            phase=pairing.phase,
-        )
-        result = await asyncio.to_thread(self._commit_callback, commit)
-        if inspect.isawaitable(result):
-            await result
-        commit_wait_started = time.perf_counter()
-        await self._transport.exchange_round_committed(
-            peer=peer,
-            round_id=round_id,
-            state_checksum=state_checksum,
-        )
-        peer_wait_seconds += time.perf_counter() - commit_wait_started
-
-        evaluation_started = time.perf_counter()
-        evaluation = await self._evaluate_if_due(round_id)
-        evaluation_seconds = time.perf_counter() - evaluation_started
-        self._commits.append(commit)
-        self._current_round += 1
-        if self._consensus_publisher is not None:
             try:
-                self._consensus_publisher.submit(
-                    round_id=round_id,
-                    weights=post_mix.weights,
-                )
-            except Exception:
-                pass
-        if self._metrics_publisher is not None:
-            timing = RoundTiming(
+                materialized = await asyncio.shield(bundle_task)
+            except asyncio.CancelledError:
+                local_bundle = await bundle_task
+                raise
+            local_bundle = materialized
+            if materialized.metadata.round_id != round_id:
+                raise PairCommitError("local update round does not match current round")
+            local_compute_seconds = time.perf_counter() - local_started
+
+            transfer_started = time.perf_counter()
+            peer_bundle = await self._transport.exchange_update(
+                peer=peer,
                 round_id=round_id,
-                peer_id=peer,
-                local_compute_seconds=local_compute_seconds,
-                peer_wait_seconds=peer_wait_seconds,
-                transfer_seconds=transfer_seconds,
-                mixing_seconds=mixing_seconds,
-                evaluation_seconds=evaluation_seconds,
-                retries=_transport_retry_count(self._transport),
-                local_loss=_algorithm_metric(self._algorithm, "local_loss"),
-                evaluation_loss=evaluation.loss if evaluation is not None else None,
-                evaluation_accuracy=(
-                    evaluation.accuracy if evaluation is not None else None
-                ),
-                transfer_id=_transport_transfer_id(self._transport),
+                bundle=materialized,
             )
+            transfer_seconds = time.perf_counter() - transfer_started
+            if peer_bundle.metadata.round_id != round_id:
+                raise PairCommitError("peer update round does not match current round")
             try:
-                self._metrics_publisher.submit(timing)
-            except Exception:
-                pass
-        return commit
+                peer_update = await asyncio.to_thread(
+                    self._algorithm.validate_peer, peer_bundle
+                )
+            except (ValueError, TypeError) as error:
+                raise PairCommitError("peer update validation failed") from error
+
+            peer_wait_started = time.perf_counter()
+            remote_digest = await self._transport.exchange_update_ready(
+                peer=peer,
+                round_id=round_id,
+                bundle_checksum=materialized.digest,
+            )
+            if remote_digest != peer_bundle.digest:
+                raise PairCommitError("peer UPDATE_READY bundle digest mismatch")
+            peer_wait_seconds = time.perf_counter() - peer_wait_started
+
+            mixing_started = time.perf_counter()
+            try:
+                post_mix = await asyncio.to_thread(
+                    self._algorithm.peer_apply,
+                    peer_update,
+                )
+            except (ValueError, TypeError) as error:
+                raise PairCommitError("peer update application failed") from error
+            mixing_seconds = time.perf_counter() - mixing_started
+            state_checksum = await asyncio.to_thread(
+                checksum_tensors, post_mix.weights
+            )
+            commit = RoundCommit(
+                round_id=round_id,
+                peer_public_key=peer,
+                pre_local=pre_local,
+                post_local=post_local,
+                post_mix=post_mix,
+                local_bundle_digest=materialized.digest,
+                peer_bundle_digest=peer_bundle.digest,
+                state_checksum=state_checksum,
+                phase=pairing.phase,
+            )
+            result = await asyncio.to_thread(self._commit_callback, commit)
+            if inspect.isawaitable(result):
+                await result
+            commit_wait_started = time.perf_counter()
+            await self._transport.exchange_round_committed(
+                peer=peer,
+                round_id=round_id,
+                state_checksum=state_checksum,
+            )
+            peer_wait_seconds += time.perf_counter() - commit_wait_started
+
+            evaluation_started = time.perf_counter()
+            evaluation = await self._evaluate_if_due(round_id)
+            evaluation_seconds = time.perf_counter() - evaluation_started
+            self._commits.append(commit)
+            self._current_round += 1
+            if self._consensus_publisher is not None:
+                try:
+                    self._consensus_publisher.submit(
+                        round_id=round_id,
+                        weights=post_mix.weights,
+                    )
+                except Exception:
+                    pass
+            if self._metrics_publisher is not None:
+                timing = RoundTiming(
+                    round_id=round_id,
+                    peer_id=peer,
+                    local_compute_seconds=local_compute_seconds,
+                    peer_wait_seconds=peer_wait_seconds,
+                    transfer_seconds=transfer_seconds,
+                    mixing_seconds=mixing_seconds,
+                    evaluation_seconds=evaluation_seconds,
+                    retries=_transport_retry_count(self._transport),
+                    local_loss=_algorithm_metric(self._algorithm, "local_loss"),
+                    evaluation_loss=(
+                        evaluation.loss if evaluation is not None else None
+                    ),
+                    evaluation_accuracy=(
+                        evaluation.accuracy if evaluation is not None else None
+                    ),
+                    transfer_id=_transport_transfer_id(self._transport),
+                )
+                try:
+                    self._metrics_publisher.submit(timing)
+                except Exception:
+                    pass
+            return commit
+        finally:
+            try:
+                if peer_bundle is not None:
+                    await asyncio.to_thread(
+                        self._algorithm.release_bundle, peer_bundle
+                    )
+            finally:
+                if local_bundle is not None:
+                    await asyncio.to_thread(
+                        self._algorithm.release_bundle, local_bundle
+                    )
 
     async def _evaluate_if_due(self, round_id: RoundId) -> EvaluationMetrics | None:
         if self._evaluator is None:
