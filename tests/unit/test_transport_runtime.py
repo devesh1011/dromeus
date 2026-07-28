@@ -33,7 +33,7 @@ from dromeus.transport.envelope import (
     encode_envelope,
 )
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
-from dromeus.transport.sender import OutboundScheduler
+from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import ArtifactStore, TransferError, TransferManager
 
 _load_checkpoint = cast(Callable[[str], dict[str, np.ndarray]], _load_file)
@@ -75,6 +75,43 @@ class RecordingInMemoryTransport(InMemoryTransport):
 class FailingRunStore(RunStore):
     def initialize(self, manifest: SealedManifest) -> str:
         raise OSError("run store unavailable")
+
+
+class BlockingTransport:
+    def __init__(self) -> None:
+        self.send_started = asyncio.Event()
+        self.release_send = asyncio.Event()
+
+    async def local_public_key(self) -> str:
+        return "peer-0"
+
+    async def send(self, destination: str, payload: bytes) -> None:
+        self.send_started.set()
+        await self.release_send.wait()
+
+    async def recv(self, timeout_seconds: float) -> None:
+        return None
+
+
+def test_outbound_scheduler_stops_after_canceled_send() -> None:
+    asyncio.run(_test_outbound_scheduler_stops_after_canceled_send())
+
+
+async def _test_outbound_scheduler_stops_after_canceled_send() -> None:
+    transport = BlockingTransport()
+    scheduler = OutboundScheduler(transport)
+    await scheduler.start()
+    send_task = asyncio.create_task(
+        scheduler.send("peer-1", b"payload", priority=Priority.DATA)
+    )
+    await transport.send_started.wait()
+
+    send_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await send_task
+
+    transport.release_send.set()
+    await scheduler.stop()
 
 
 def test_future_round_message_id_is_deduplicated_per_sender() -> None:

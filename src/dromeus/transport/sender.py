@@ -108,10 +108,14 @@ class OutboundScheduler:
         started = time.monotonic()
         retry_count = 0
         while True:
+            if scheduled.result.done():
+                return
             send_started = time.monotonic()
             try:
                 await self._transport.send(scheduled.destination, scheduled.payload)
             except Exception as error:
+                if scheduled.result.done():
+                    return
                 if retry_count >= scheduled.retries:
                     scheduled.result.set_exception(error)
                     return
@@ -119,12 +123,13 @@ class OutboundScheduler:
                 await asyncio.sleep(scheduled.retry_delay_seconds)
                 continue
             completed = time.monotonic()
-            scheduled.result.set_result(
-                SendTiming(
-                    queue_seconds=send_started - scheduled.enqueued_at,
-                    send_seconds=completed - send_started,
-                    retry_count=retry_count,
-                    completion_seconds=completed - started,
+            if not scheduled.result.done():
+                scheduled.result.set_result(
+                    SendTiming(
+                        queue_seconds=send_started - scheduled.enqueued_at,
+                        send_seconds=completed - send_started,
+                        retry_count=retry_count,
+                        completion_seconds=completed - started,
+                    )
                 )
-            )
             return
