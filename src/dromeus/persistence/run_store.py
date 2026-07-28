@@ -79,7 +79,35 @@ class RunStore:
         metrics: JsonRecord | None = None,
         transfer_diagnostics: JsonRecord | None = None,
     ) -> dict[str, Any]:
-        """Persist one committed round; state JSON becomes visible last."""
+        """Persist and immediately confirm one committed round."""
+        self.persist_prepared_commit(
+            committed_round=committed_round,
+            algorithm_state=algorithm_state,
+            pre_mix_state=pre_mix_state,
+            post_mix_state=post_mix_state,
+            state_checksum=state_checksum,
+            schedule=schedule,
+            metrics=metrics,
+            transfer_diagnostics=transfer_diagnostics,
+        )
+        return self.confirm_prepared_commit(
+            committed_round=committed_round,
+            state_checksum=state_checksum,
+        )
+
+    def persist_prepared_commit(
+        self,
+        *,
+        committed_round: int,
+        algorithm_state: Mapping[str, np.ndarray],
+        pre_mix_state: Mapping[str, np.ndarray],
+        post_mix_state: Mapping[str, np.ndarray],
+        state_checksum: str,
+        schedule: JsonRecord,
+        metrics: JsonRecord | None = None,
+        transfer_diagnostics: JsonRecord | None = None,
+    ) -> dict[str, Any]:
+        """Persist round artifacts without exposing the round as committed."""
         with self._lock:
             if committed_round < 0:
                 raise ValueError("committed_round must be non-negative")
@@ -92,6 +120,20 @@ class RunStore:
                 ):
                     return state
                 raise RunStoreError("committed round must advance monotonically")
+            prepared_value = state.get("prepared_commit")
+            if prepared_value is not None:
+                prepared = (
+                    cast(dict[str, object], prepared_value)
+                    if isinstance(prepared_value, dict)
+                    else None
+                )
+                if (
+                    prepared is not None
+                    and prepared.get("round_id") == committed_round
+                    and prepared.get("state_checksum") == state_checksum
+                ):
+                    return state
+                raise RunStoreError("another prepared commit already exists")
 
             pre_name = f"pre-mix-round-{committed_round:06d}.safetensors"
             post_name = f"post-mix-round-{committed_round:06d}.safetensors"
@@ -104,34 +146,85 @@ class RunStore:
             _atomic_save_tensors(committed_path, algorithm_state)
 
             next_state = dict(state)
+            next_state["prepared_commit"] = {
+                "round_id": committed_round,
+                "state_checksum": state_checksum,
+                "algorithm_state": f"checkpoints/{committed_name}",
+                "pre_mix_checkpoint": f"checkpoints/{pre_name}",
+                "post_mix_checkpoint": f"checkpoints/{post_name}",
+                "schedule": dict(schedule),
+                "metrics": dict(metrics) if metrics is not None else None,
+                "transfer_diagnostics": (
+                    dict(transfer_diagnostics)
+                    if transfer_diagnostics is not None
+                    else None
+                ),
+            }
+            _atomic_write_json(self._state_path, next_state)
+            return next_state
+
+    def confirm_prepared_commit(
+        self,
+        *,
+        committed_round: int,
+        state_checksum: str,
+    ) -> dict[str, Any]:
+        """Expose a prepared round after the peer confirms its commit."""
+        with self._lock:
+            if committed_round < 0:
+                raise ValueError("committed_round must be non-negative")
+            state = self.load_state()
+            previous_round = int(state["committed_round"])
+            if committed_round <= previous_round:
+                if (
+                    committed_round == previous_round
+                    and state.get("state_checksum") == state_checksum
+                ):
+                    return state
+                raise RunStoreError("committed round must advance monotonically")
+            prepared_value = state.get("prepared_commit")
+            if not isinstance(prepared_value, dict):
+                raise RunStoreError("prepared commit does not match confirmation")
+            prepared = cast(dict[str, object], prepared_value)
+            if (
+                prepared.get("round_id") != committed_round
+                or prepared.get("state_checksum") != state_checksum
+            ):
+                raise RunStoreError("prepared commit does not match confirmation")
+
+            round_key = str(committed_round)
+            next_state = dict(state)
             next_state.update(
                 {
                     "committed_round": committed_round,
                     "state_checksum": state_checksum,
-                    "algorithm_state": f"checkpoints/{committed_name}",
+                    "algorithm_state": prepared["algorithm_state"],
+                    "prepared_commit": None,
                 }
             )
             next_state["pre_mix_checkpoints"] = {
                 **cast(dict[str, str], state["pre_mix_checkpoints"]),
-                str(committed_round): f"checkpoints/{pre_name}",
+                round_key: prepared["pre_mix_checkpoint"],
             }
             next_state["post_mix_checkpoints"] = {
                 **cast(dict[str, str], state["post_mix_checkpoints"]),
-                str(committed_round): f"checkpoints/{post_name}",
+                round_key: prepared["post_mix_checkpoint"],
             }
             next_state["schedule_history"] = [
                 *cast(list[object], state["schedule_history"]),
-                dict(schedule),
+                prepared["schedule"],
             ]
+            metrics = prepared.get("metrics")
             if metrics is not None:
                 next_state["metrics"] = [
                     *cast(list[object], state["metrics"]),
-                    dict(metrics),
+                    metrics,
                 ]
+            transfer_diagnostics = prepared.get("transfer_diagnostics")
             if transfer_diagnostics is not None:
                 next_state["transfer_diagnostics"] = [
                     *cast(list[object], state["transfer_diagnostics"]),
-                    dict(transfer_diagnostics),
+                    transfer_diagnostics,
                 ]
             _atomic_write_json(self._state_path, next_state)
             return next_state
@@ -193,6 +286,7 @@ def _initial_state(manifest_hash: Sha256) -> dict[str, object]:
         "committed_round": -1,
         "state_checksum": None,
         "algorithm_state": None,
+        "prepared_commit": None,
         "pre_mix_checkpoints": {},
         "post_mix_checkpoints": {},
         "schedule_history": [],

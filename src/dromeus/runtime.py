@@ -405,7 +405,8 @@ class NodeRuntime:
                 ),
                 algorithm=self._training.algorithm,
                 transport=self._pair_transport,
-                commit_callback=self._persist_commit,
+                commit_callback=self._prepare_commit,
+                confirm_callback=self._confirm_commit,
                 transport_limits=self._result.manifest.transport,
                 failure_broadcaster=self._pair_transport,
                 consensus_publisher=self._consensus_telemetry,
@@ -671,14 +672,14 @@ class NodeRuntime:
             sink=self._event_sink,
         )
 
-    def _persist_commit(self, commit: RoundCommit) -> None:
+    def _prepare_commit(self, commit: RoundCommit) -> None:
         assert self._training is not None
         assert self._pair_transport is not None
         metrics: dict[str, object] = {"round_id": commit.round_id}
         local_loss = getattr(self._training.algorithm, "local_loss", None)
         if isinstance(local_loss, (int, float)):
             metrics["local_loss"] = float(local_loss)
-        self._training.run_store.persist_commit(
+        self._training.run_store.persist_prepared_commit(
             committed_round=commit.round_id,
             algorithm_state=self._training.algorithm.checkpoint_tensors(),
             pre_mix_state=commit.post_local.weights,
@@ -694,6 +695,13 @@ class NodeRuntime:
                 "transfer_id": self._pair_transport.last_transfer_id,
                 "retries": self._pair_transport.last_retry_count,
             },
+        )
+
+    def _confirm_commit(self, commit: RoundCommit) -> None:
+        assert self._training is not None
+        self._training.run_store.confirm_prepared_commit(
+            committed_round=commit.round_id,
+            state_checksum=commit.state_checksum,
         )
 
     def _ready(self, result: FormationResult) -> FormationResult:

@@ -302,7 +302,7 @@ class AXLPairTransport:
             sender=self._local_public_key,
             round_id=round_id,
         )
-        await asyncio.to_thread(
+        await _run_blocking(
             bundle.validate_materialized,
             self._transport_limits.max_update_bundle_bytes,
         )
@@ -320,7 +320,7 @@ class AXLPairTransport:
             metadata_carrier = await asyncio.shield(carrier_task)
         except asyncio.CancelledError:
             metadata_carrier = await carrier_task
-            await asyncio.to_thread(metadata_carrier.path.unlink, missing_ok=True)
+            await _run_blocking(metadata_carrier.path.unlink, True)
             raise
         try:
             retry_count = 0
@@ -339,7 +339,7 @@ class AXLPairTransport:
             )
             if metadata_receipt.artifact_name != "update-bundle-metadata":
                 raise PairCommitError("peer update metadata artifact is missing")
-            peer_metadata = await asyncio.to_thread(
+            peer_metadata = await _run_blocking(
                 parse_bundle_metadata, metadata_receipt.path
             )
             self._validate_bundle(peer_metadata, sender=peer, round_id=round_id)
@@ -395,7 +395,7 @@ class AXLPairTransport:
                     for artifact in peer_metadata.artifacts
                 ),
             )
-            await asyncio.to_thread(
+            await _run_blocking(
                 peer_bundle.validate_materialized,
                 self._transport_limits.max_update_bundle_bytes,
             )
@@ -420,7 +420,7 @@ class AXLPairTransport:
                     await self._transfer_manager.release_receipt(receipt)
             if metadata_receipt is not None:
                 await self._transfer_manager.release_receipt(metadata_receipt)
-            await asyncio.to_thread(metadata_carrier.path.unlink, missing_ok=True)
+            await _run_blocking(metadata_carrier.path.unlink, True)
 
     async def _next_peer_receipt(
         self, *, peer: PublicKey, round_id: RoundId
@@ -506,7 +506,9 @@ class AXLPairTransport:
             message_type=MessageType.ROUND_COMMITTED,
             round_id=round_id,
         )
-        PairCommitMessage.model_validate(_unpack(envelope.payload))
+        message = PairCommitMessage.model_validate(_unpack(envelope.payload))
+        if message.round_id != round_id:
+            raise PairCommitError("peer ROUND_COMMITTED round mismatch")
         self._receiver.set_current_round(round_id + 1)
         await self._receiver.advance_round(round_id + 1)
         self._committed_rounds[round_id] = state_checksum
@@ -621,6 +623,15 @@ class RoundCommit:
 CommitCallback = Callable[[RoundCommit], None | Awaitable[None]]
 
 
+async def _run_blocking[T](callback: Callable[..., T], *args: object) -> T:
+    task = asyncio.create_task(asyncio.to_thread(callback, *args))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        await task
+        raise
+
+
 class GossipEngine:
     """Run fixed-round local training without a group-wide barrier."""
 
@@ -633,6 +644,7 @@ class GossipEngine:
         algorithm: GossipAlgorithm,
         transport: PairTransport,
         commit_callback: CommitCallback,
+        confirm_callback: CommitCallback | None = None,
         timeout_seconds: float | None = None,
         transport_limits: TransportLimits | None = None,
         failure_callback: Callable[[RunFailure], None | Awaitable[None]] | None = None,
@@ -659,6 +671,7 @@ class GossipEngine:
         self._algorithm = algorithm
         self._transport = transport
         self._commit_callback = commit_callback
+        self._confirm_callback = confirm_callback
         self._timeout_seconds = (
             timeout_seconds
             if timeout_seconds is not None
@@ -711,11 +724,7 @@ class GossipEngine:
                 f"round {round_id} is not current; expected {self._current_round}"
             )
         try:
-            if self._timeout_seconds is None:
-                return await self._run_round(round_id)
-            return await asyncio.wait_for(
-                self._run_round(round_id), timeout=self._timeout_seconds
-            )
+            return await self._run_round(round_id)
         except asyncio.CancelledError:
             raise
         except TimeoutError as error:
@@ -737,8 +746,8 @@ class GossipEngine:
         peer_bundle: UpdateBundle | None = None
         try:
             local_started = time.perf_counter()
-            pre_local = await asyncio.to_thread(self._algorithm.pre_local, round_id)
-            post_local = await asyncio.to_thread(self._algorithm.local_training)
+            pre_local = await _run_blocking(self._algorithm.pre_local, round_id)
+            post_local = await _run_blocking(self._algorithm.local_training)
             bundle_task = asyncio.create_task(
                 asyncio.to_thread(self._algorithm.post_local_bundle)
             )
@@ -753,26 +762,30 @@ class GossipEngine:
             local_compute_seconds = time.perf_counter() - local_started
 
             transfer_started = time.perf_counter()
-            peer_bundle = await self._transport.exchange_update(
-                peer=peer,
-                round_id=round_id,
-                bundle=materialized,
+            peer_bundle = await self._with_pair_timeout(
+                self._transport.exchange_update(
+                    peer=peer,
+                    round_id=round_id,
+                    bundle=materialized,
+                )
             )
             transfer_seconds = time.perf_counter() - transfer_started
             if peer_bundle.metadata.round_id != round_id:
                 raise PairCommitError("peer update round does not match current round")
             try:
-                peer_update = await asyncio.to_thread(
+                peer_update = await _run_blocking(
                     self._algorithm.validate_peer, peer_bundle
                 )
             except (ValueError, TypeError) as error:
                 raise PairCommitError("peer update validation failed") from error
 
             peer_wait_started = time.perf_counter()
-            remote_digest = await self._transport.exchange_update_ready(
-                peer=peer,
-                round_id=round_id,
-                bundle_checksum=materialized.digest,
+            remote_digest = await self._with_pair_timeout(
+                self._transport.exchange_update_ready(
+                    peer=peer,
+                    round_id=round_id,
+                    bundle_checksum=materialized.digest,
+                )
             )
             if remote_digest != peer_bundle.digest:
                 raise PairCommitError("peer UPDATE_READY bundle digest mismatch")
@@ -780,16 +793,14 @@ class GossipEngine:
 
             mixing_started = time.perf_counter()
             try:
-                post_mix = await asyncio.to_thread(
+                post_mix = await _run_blocking(
                     self._algorithm.peer_apply,
                     peer_update,
                 )
             except (ValueError, TypeError) as error:
                 raise PairCommitError("peer update application failed") from error
             mixing_seconds = time.perf_counter() - mixing_started
-            state_checksum = await asyncio.to_thread(
-                checksum_tensors, post_mix.weights
-            )
+            state_checksum = await _run_blocking(checksum_tensors, post_mix.weights)
             commit = RoundCommit(
                 round_id=round_id,
                 peer_public_key=peer,
@@ -801,15 +812,21 @@ class GossipEngine:
                 state_checksum=state_checksum,
                 phase=pairing.phase,
             )
-            result = await asyncio.to_thread(self._commit_callback, commit)
+            result = await _run_blocking(self._commit_callback, commit)
             if inspect.isawaitable(result):
                 await result
             commit_wait_started = time.perf_counter()
-            await self._transport.exchange_round_committed(
-                peer=peer,
-                round_id=round_id,
-                state_checksum=state_checksum,
+            await self._with_pair_timeout(
+                self._transport.exchange_round_committed(
+                    peer=peer,
+                    round_id=round_id,
+                    state_checksum=state_checksum,
+                )
             )
+            if self._confirm_callback is not None:
+                result = await _run_blocking(self._confirm_callback, commit)
+                if inspect.isawaitable(result):
+                    await result
             peer_wait_seconds += time.perf_counter() - commit_wait_started
 
             evaluation_started = time.perf_counter()
@@ -852,14 +869,19 @@ class GossipEngine:
         finally:
             try:
                 if peer_bundle is not None:
-                    await asyncio.to_thread(
+                    await _run_blocking(
                         self._algorithm.release_bundle, peer_bundle
                     )
             finally:
                 if local_bundle is not None:
-                    await asyncio.to_thread(
+                    await _run_blocking(
                         self._algorithm.release_bundle, local_bundle
                     )
+
+    async def _with_pair_timeout[T](self, operation: Awaitable[T]) -> T:
+        if self._timeout_seconds is None:
+            return await operation
+        return await asyncio.wait_for(operation, timeout=self._timeout_seconds)
 
     async def _evaluate_if_due(self, round_id: RoundId) -> EvaluationMetrics | None:
         if self._evaluator is None:
@@ -870,7 +892,7 @@ class GossipEngine:
             and completed_round != self._round_count
         ):
             return None
-        loss, accuracy = await asyncio.to_thread(self._evaluator)
+        loss, accuracy = await _run_blocking(self._evaluator)
         metrics = EvaluationMetrics(
             round_id=round_id,
             loss=loss,
