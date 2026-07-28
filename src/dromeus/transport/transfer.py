@@ -15,6 +15,7 @@ import msgpack  # pyright: ignore[reportMissingTypeStubs]
 from pydantic import Field
 from safetensors import SafetensorError, safe_open
 
+from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
     AlgorithmId,
     DomainModel,
@@ -95,6 +96,8 @@ class ArtifactReceipt:
     sha256: Sha256
     size_bytes: int
     round_id: RoundId | None
+    codec_id: Identifier
+    tensor_schema: TensorSchema
 
 
 @dataclass(frozen=True)
@@ -182,14 +185,6 @@ class _SafeTensors(Protocol):
     def get_slice(self, name: str) -> _TensorSlice: ...
 
 
-def _file_sha256(path: Path) -> Sha256:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while block := handle.read(1024 * 1024):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def _validate_safetensors(path: Path, schema: TensorSchema) -> None:
     try:
         reader = cast(_SafeTensors, safe_open(path, framework="numpy"))
@@ -209,6 +204,35 @@ def _validate_safetensors(path: Path, schema: TensorSchema) -> None:
                     )
     except SafetensorError as error:
         raise TransferError("invalid safetensors artifact") from error
+
+
+def _prepare_artifact(
+    path: Path, schema: TensorSchema
+) -> tuple[bytes, int, Sha256]:
+    _validate_safetensors(path, schema)
+    payload = path.read_bytes()
+    return payload, len(payload), file_sha256(path)
+
+
+def _append_bytes(path: Path, data: bytes) -> None:
+    with path.open("ab") as handle:
+        handle.write(data)
+
+
+def _finalize_artifact(
+    store: ArtifactStore,
+    transfer_id: TransferId,
+    begin: TransferBegin,
+    total_sha256: Sha256,
+) -> tuple[Path, Sha256]:
+    temp = store.temp_path(transfer_id)
+    digest = file_sha256(temp)
+    if digest != total_sha256 or digest != begin.total_sha256:
+        raise TransferError("final artifact checksum mismatch")
+    if temp.stat().st_size != begin.total_size_bytes:
+        raise TransferError("final artifact size mismatch")
+    _validate_safetensors(temp, begin.tensor_schema)
+    return store.finalize(transfer_id, begin.artifact_name), digest
 
 
 class TransferManager:
@@ -242,6 +266,7 @@ class TransferManager:
         self._completed_queue: asyncio.Queue[ArtifactReceipt] = asyncio.Queue(
             maxsize=64
         )
+        self._discarded_round_transfers: set[tuple[PublicKey, RoundId]] = set()
         self._ack_waiters: dict[tuple[TransferId, int], asyncio.Future[ChunkAck]] = {}
         self._stop = asyncio.Event()
         self._transfer_task: asyncio.Task[None] | None = None
@@ -284,11 +309,10 @@ class TransferManager:
         try:
             if codec_id != "safetensors-v1":
                 raise TransferError("M1 only supports safetensors-v1 artifacts")
-            _validate_safetensors(artifact_path, tensor_schema)
-            payload_size = artifact_path.stat().st_size
-            chunk_bytes = artifact_path.read_bytes()
+            chunk_bytes, payload_size, total_sha256 = await asyncio.to_thread(
+                _prepare_artifact, artifact_path, tensor_schema
+            )
             transfer_id = str(uuid.uuid4())
-            total_sha256 = _file_sha256(artifact_path)
             begin = TransferBegin(
                 transfer_id=transfer_id,
                 artifact_name=artifact_name,
@@ -363,7 +387,9 @@ class TransferManager:
                 message_id=f"{transfer_id}-complete",
                 correlation_id=transfer_id,
                 payload=_pack(
-                    TransferComplete(transfer_id=transfer_id, total_sha256=total_sha256)
+                    TransferComplete(
+                        transfer_id=transfer_id, total_sha256=total_sha256
+                    )
                 ),
                 round_id=round_id,
                 priority=Priority.CONTROL,
@@ -395,9 +421,62 @@ class TransferManager:
         return await asyncio.wait_for(future, timeout=timeout_seconds)
 
     async def next_artifact(self, *, timeout_seconds: float) -> ArtifactReceipt:
-        return await asyncio.wait_for(
-            self._completed_queue.get(), timeout=timeout_seconds
-        )
+        while True:
+            receipt = await asyncio.wait_for(
+                self._completed_queue.get(), timeout=timeout_seconds
+            )
+            if (
+                receipt.round_id is not None
+                and (receipt.sender_public_key, receipt.round_id)
+                in self._discarded_round_transfers
+            ):
+                await self.release_receipt(receipt)
+                continue
+            return receipt
+
+    async def release_receipt(self, receipt: ArtifactReceipt) -> None:
+        """Remove one materialized receipt and its artifact."""
+        await asyncio.to_thread(receipt.path.unlink, missing_ok=True)
+        self.claim_receipt(receipt)
+        retained: list[ArtifactReceipt] = []
+        while True:
+            try:
+                queued = self._completed_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            if queued.transfer_id != receipt.transfer_id:
+                retained.append(queued)
+        for queued in retained:
+            self._completed_queue.put_nowait(queued)
+
+    def claim_receipt(self, receipt: ArtifactReceipt) -> None:
+        """Transfer ownership of one materialized artifact to its consumer."""
+        self._completed.pop(receipt.transfer_id, None)
+        self._completed_futures.pop(receipt.transfer_id, None)
+
+    async def discard_round_transfers(
+        self, *, sender: PublicKey, round_id: RoundId
+    ) -> None:
+        """Reject and remove all transfer state for one failed peer round."""
+        self._discarded_round_transfers.add((sender, round_id))
+        for transfer_id, incoming in tuple(self._incoming.items()):
+            if incoming.sender_public_key == sender and incoming.round_id == round_id:
+                self._abort_incoming(transfer_id)
+        for receipt in tuple(self._completed.values()):
+            if receipt.sender_public_key == sender and receipt.round_id == round_id:
+                await self.release_receipt(receipt)
+        retained: list[ArtifactReceipt] = []
+        while True:
+            try:
+                receipt = self._completed_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            if receipt.sender_public_key == sender and receipt.round_id == round_id:
+                await self.release_receipt(receipt)
+            else:
+                retained.append(receipt)
+        for receipt in retained:
+            self._completed_queue.put_nowait(receipt)
 
     async def _transfer_loop(self) -> None:
         while not self._stop.is_set():
@@ -452,6 +531,12 @@ class TransferManager:
     async def _handle_transfer(self, envelope: Envelope) -> None:
         if envelope.message_type is MessageType.TRANSFER_BEGIN:
             begin = TransferBegin.model_validate(_unpack(envelope.payload))
+            if (
+                envelope.round_id is not None
+                and (envelope.sender_public_key, envelope.round_id)
+                in self._discarded_round_transfers
+            ):
+                raise TransferError("round transfers were discarded")
             if begin.total_size_bytes > self._transport_limits.max_payload_bytes:
                 raise TransferError("transfer exceeds manifest payload limit")
             if begin.chunk_count != 1 or begin.codec_id != "safetensors-v1":
@@ -486,8 +571,7 @@ class TransferManager:
                 self._abort_incoming(chunk.transfer_id)
                 raise TransferError("chunk checksum mismatch")
             temp = self._artifact_store.temp_path(chunk.transfer_id)
-            with temp.open("ab") as handle:
-                handle.write(chunk.data)
+            await asyncio.to_thread(_append_bytes, temp, chunk.data)
             incoming.written_chunk_indices.add(chunk.chunk_index)
             await self._acknowledge_chunk(
                 envelope.sender_public_key, chunk, envelope.round_id
@@ -499,22 +583,17 @@ class TransferManager:
             if complete.transfer_id in self._completed:
                 return
             raise TransferError("received completion without transfer begin")
-        temp = self._artifact_store.temp_path(complete.transfer_id)
-        digest = _file_sha256(temp)
-        if digest != complete.total_sha256 or digest != incoming.begin.total_sha256:
-            self._abort_incoming(complete.transfer_id)
-            raise TransferError("final artifact checksum mismatch")
-        if temp.stat().st_size != incoming.begin.total_size_bytes:
-            self._abort_incoming(complete.transfer_id)
-            raise TransferError("final artifact size mismatch")
         try:
-            _validate_safetensors(temp, incoming.begin.tensor_schema)
+            final_path, digest = await asyncio.to_thread(
+                _finalize_artifact,
+                self._artifact_store,
+                complete.transfer_id,
+                incoming.begin,
+                complete.total_sha256,
+            )
         except TransferError:
             self._abort_incoming(complete.transfer_id)
             raise
-        final_path = self._artifact_store.finalize(
-            complete.transfer_id, incoming.begin.artifact_name
-        )
         receipt = ArtifactReceipt(
             transfer_id=complete.transfer_id,
             sender_public_key=incoming.sender_public_key,
@@ -523,6 +602,8 @@ class TransferManager:
             sha256=digest,
             size_bytes=incoming.begin.total_size_bytes,
             round_id=incoming.round_id,
+            codec_id=incoming.begin.codec_id,
+            tensor_schema=incoming.begin.tensor_schema,
         )
         self._completed[complete.transfer_id] = receipt
         self._incoming.pop(complete.transfer_id, None)
