@@ -21,7 +21,15 @@ from benchmarks.cifar10.report import (
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.persistence.run_store import RunStore
-from dromeus.telemetry.events import JsonlEventSink, event_record
+from dromeus.telemetry.events import JsonlEventSink
+from dromeus.telemetry.evidence import (
+    BenchmarkNodeReadyEvidence,
+    ConsensusDistanceEvidence,
+    RoundMetricsEvidence,
+    RunFailedEvidence,
+    TransferMessageSentEvidence,
+    append_evidence,
+)
 
 
 def _write_inputs(
@@ -89,9 +97,9 @@ def _write_inputs(
         )
         log_path = root / f"node-{index}.jsonl"
         sink = JsonlEventSink(log_path)
-        sink.append(
-            event_record(
-                "benchmark_node_ready",
+        assert append_evidence(
+            sink,
+            BenchmarkNodeReadyEvidence(
                 run_id=manifest.run_id,
                 manifest_hash=manifest_hash,
                 node_id=f"peer-{index}",
@@ -103,12 +111,13 @@ def _write_inputs(
             should_evaluate = (
                 (round_id + 1) % 5 == 0 or round_id + 1 == round_count
             )
-            sink.append(
-                event_record(
-                    "round_metrics",
+            assert append_evidence(
+                sink,
+                RoundMetricsEvidence(
                     run_id=manifest.run_id,
                     manifest_hash=manifest_hash,
                     node_id=f"peer-{index}",
+                    message_id=f"metric-peer-{index}-{round_id}",
                     peer_id=f"peer-{(index + 1) % 4}",
                     round_id=round_id,
                     local_loss=1.0 - index / 10,
@@ -122,25 +131,28 @@ def _write_inputs(
                     retries=index,
                 )
             )
-            sink.append(
-                event_record(
-                    "consensus_distance",
+            assert append_evidence(
+                sink,
+                ConsensusDistanceEvidence(
                     run_id=manifest.run_id,
                     manifest_hash=manifest_hash,
                     node_id=f"peer-{index}",
+                    message_id=f"consensus-peer-{index}-{round_id}",
                     round_id=round_id,
                     normalized_rms=0.2 + index / 100,
                     sketch_count=4,
                 )
             )
-            sink.append(
-                event_record(
-                    "transfer_message_sent",
+            assert append_evidence(
+                sink,
+                TransferMessageSentEvidence(
                     run_id=manifest.run_id,
                     manifest_hash=manifest_hash,
                     node_id=f"peer-{index}",
+                    message_id=f"transfer-peer-{index}-{round_id}",
                     peer_id=f"peer-{(index + 1) % 4}",
                     round_id=round_id,
+                    message_type="CHUNK",
                     queue_seconds=0.05,
                     send_seconds=0.1,
                     retry_count=index,
@@ -262,12 +274,13 @@ def test_benchmark_report_rejects_failed_runs(tmp_path: Path) -> None:
     manifest = SealedManifest.model_validate(
         json.loads((run_roots[0] / "manifest.json").read_text())
     )
-    JsonlEventSink(event_logs[0]).append(
-        event_record(
-            "run_failed",
+    assert append_evidence(
+        JsonlEventSink(event_logs[0]),
+        RunFailedEvidence(
             run_id=manifest.run_id,
             manifest_hash=canonical_hash(manifest),
             node_id="peer-0",
+            message_id="run-failed-peer-0-0",
             round_id=0,
             error_type="TestError",
             error="failed",
@@ -291,6 +304,30 @@ def test_benchmark_report_rejects_incomplete_run_store(tmp_path: Path) -> None:
     state_path.write_text(json.dumps(state))
 
     with pytest.raises(BenchmarkReportError, match="not complete"):
+        build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
+def test_benchmark_report_rejects_legacy_archive_without_hashes(
+    tmp_path: Path,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    state_path = run_roots[0] / "state.json"
+    state = json.loads(state_path.read_text())
+    del state["archive_version"]
+    del state["prepared_commit"]
+    state["algorithm_state"] = state["algorithm_state"]["path"]
+    for key in ("pre_mix_checkpoints", "post_mix_checkpoints"):
+        state[key] = {
+            round_id: checkpoint["path"] for round_id, checkpoint in state[key].items()
+        }
+    state_path.write_text(json.dumps(state))
+
+    with pytest.raises(BenchmarkReportError, match="checkpoint integrity"):
         build_benchmark_report(
             run_roots=run_roots,
             event_logs=event_logs,

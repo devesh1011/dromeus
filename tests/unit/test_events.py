@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from dromeus.telemetry.events import JsonlEventSink, emit_event
+
+
+class _FailingSink:
+    def append(self, record: Mapping[str, object]) -> None:
+        del record
+        raise OSError("sink unavailable")
 
 
 def test_jsonl_event_sink_appends_correlated_records(tmp_path: Path) -> None:
@@ -30,3 +37,7 @@ def test_jsonl_event_sink_appends_correlated_records(tmp_path: Path) -> None:
     assert records[0]["node_id"] == "peer-0"
     assert records[0]["peer_id"] == "peer-1"
     assert records[0]["loss"] == 0.25
+
+
+def test_flexible_diagnostic_sink_failure_is_best_effort() -> None:
+    emit_event("debug", sink=_FailingSink(), run_id="run-1")

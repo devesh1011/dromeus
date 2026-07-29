@@ -1,9 +1,9 @@
 import asyncio
-from typing import cast
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import pytest
 
+from dromeus.protocol.codec import encode_envelope
+from dromeus.protocol.models import MessageType, create_envelope
 from dromeus.transport.axl import (
     AXLBridgeConfig,
     AXLTransport,
@@ -66,12 +66,7 @@ def test_sender_resolution_uses_claimed_sender_when_topology_stays_ambiguous() -
             },
         ]
     )
-    payload = cast(
-        bytes,
-        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-            {"sender_public_key": actual_sender}
-        ),
-    )
+    payload = _envelope_from(actual_sender)
 
     assert transport.resolve_sender(bridge_sender, payload) == actual_sender
 
@@ -94,12 +89,7 @@ def test_sender_resolution_uses_header_matching_claim_absent_from_topology(
     transport = SequencedTopologyTransport(
         [{"peers": [{"public_key": "a" * 64}]}]
     )
-    payload = cast(
-        bytes,
-        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-            {"sender_public_key": actual_sender}
-        ),
-    )
+    payload = _envelope_from(actual_sender)
 
     def skip_sleep(_: float) -> None:
         return
@@ -121,3 +111,17 @@ class SequencedTopologyTransport(AXLTransport):
 
     def resolve_sender(self, bridge_sender: str, payload: bytes | None = None) -> str:
         return self._resolve_sender(bridge_sender, payload)
+
+
+def _envelope_from(sender: str) -> bytes:
+    return encode_envelope(
+        create_envelope(
+            message_type=MessageType.READY,
+            message_id="message-1",
+            run_id="run-001",
+            manifest_hash="a" * 64,
+            sender_public_key=sender,
+            algorithm_id="dpsgd",
+            payload=b"",
+        )
+    )

@@ -34,6 +34,19 @@ def _write_round_stores(
         )
 
 
+def _convert_to_legacy_v0(root: Path) -> None:
+    path = root / "state.json"
+    state = json.loads(path.read_text(encoding="utf-8"))
+    del state["archive_version"]
+    del state["prepared_commit"]
+    state["algorithm_state"] = state["algorithm_state"]["path"]
+    for key in ("pre_mix_checkpoints", "post_mix_checkpoints"):
+        state[key] = {
+            round_id: checkpoint["path"] for round_id, checkpoint in state[key].items()
+        }
+    path.write_text(json.dumps(state), encoding="utf-8")
+
+
 def test_exact_report_computes_before_after_smoothed_and_final_distance(
     tmp_path: Path,
 ) -> None:
@@ -68,6 +81,18 @@ def test_exact_report_surfaces_non_monotonic_mixing(tmp_path: Path) -> None:
 
     assert not report.mixing_non_increasing
     assert report.mixing_violations == (0,)
+
+
+def test_exact_report_can_inspect_legacy_v0_archives(tmp_path: Path) -> None:
+    _write_round_stores(tmp_path, [0, 2, 4, 6], [1, 1, 5, 5])
+    roots = [tmp_path / f"node-{index}" for index in range(4)]
+    for root in roots:
+        _convert_to_legacy_v0(root)
+
+    report = build_exact_consensus_report(roots)
+
+    assert report.node_count == 4
+    assert report.rounds[0].round_id == 0
 
 
 def test_exact_report_rejects_manifest_mismatch(tmp_path: Path) -> None:

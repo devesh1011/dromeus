@@ -12,16 +12,150 @@ from dromeus.manifests.canonical import (
     canonical_json,
     parse_draft_yaml,
     parse_sealed_json,
+    update_bundle_digest,
 )
 from dromeus.manifests.models import (
+    ArtifactMetadata,
     DraftRunSpec,
     Invitation,
+    OpaqueArtifactMetadata,
+    OpaqueUpdateBundleMetadata,
     SealedManifest,
     TrainingPolicy,
+    UpdateBundleMetadata,
 )
 
 GOLDEN = Path(__file__).parents[1] / "golden" / "sealed_manifest.json"
 GOLDEN_HASH = "dd9ef12063cd632283f8c5fad1570d106f2876d6575e6190d49aa2cce101583b"
+
+
+def _artifact(name: str, marker: str = "a") -> OpaqueArtifactMetadata:
+    return OpaqueArtifactMetadata(
+        name=name,
+        size_bytes=4,
+        sha256=marker * 64,
+        codec_id="safetensors",
+        codec_version=1,
+        logical_schema_hash="b" * 64,
+        encoded_schema_hash="b" * 64,
+    )
+
+
+def test_update_bundle_digest_binds_context_and_canonical_artifact_order() -> None:
+    first = OpaqueUpdateBundleMetadata(
+        run_id="run-001",
+        manifest_hash="1" * 64,
+        sender_public_key="peer-0",
+        algorithm_id="dpsgd",
+        round_id=3,
+        artifacts=(_artifact("zeta"), _artifact("alpha", "c")),
+    )
+    reversed_order = first.model_copy(
+        update={"artifacts": tuple(reversed(first.artifacts))}
+    )
+    assert update_bundle_digest(first) == update_bundle_digest(reversed_order)
+    changed_context = (
+        first.model_copy(update={"run_id": "run-002"}),
+        first.model_copy(update={"manifest_hash": "2" * 64}),
+        first.model_copy(update={"sender_public_key": "peer-1"}),
+        first.model_copy(update={"algorithm_id": "noloco"}),
+        first.model_copy(update={"round_id": 4}),
+    )
+    changed_artifact = first.artifacts[0].model_copy(
+        update={
+            "size_bytes": 5,
+            "sha256": "d" * 64,
+            "codec_id": "quantized",
+            "codec_version": 2,
+            "logical_schema_hash": "e" * 64,
+            "encoded_schema_hash": "f" * 64,
+        }
+    )
+    changed_metadata = first.model_copy(
+        update={"artifacts": (changed_artifact, first.artifacts[1])}
+    )
+
+    assert all(
+        update_bundle_digest(first) != update_bundle_digest(changed)
+        for changed in (*changed_context, changed_metadata)
+    )
+
+
+def test_update_bundle_metadata_bounds_artifact_count_and_version() -> None:
+    assert len(
+        OpaqueUpdateBundleMetadata(
+            run_id="run-001",
+            manifest_hash="1" * 64,
+            sender_public_key="peer-0",
+            algorithm_id="dpsgd",
+            round_id=0,
+            artifacts=(_artifact("only"),),
+        ).artifacts
+    ) == 1
+    assert len(
+        OpaqueUpdateBundleMetadata(
+            run_id="run-001",
+            manifest_hash="1" * 64,
+            sender_public_key="peer-0",
+            algorithm_id="dpsgd",
+            round_id=0,
+            artifacts=tuple(_artifact(f"artifact-{index}") for index in range(16)),
+        ).artifacts
+    ) == 16
+
+    for artifacts in (
+        (),
+        tuple(_artifact(f"artifact-{index}") for index in range(17)),
+    ):
+        with pytest.raises(ValidationError):
+            OpaqueUpdateBundleMetadata(
+                run_id="run-001",
+                manifest_hash="1" * 64,
+                sender_public_key="peer-0",
+                algorithm_id="dpsgd",
+                round_id=0,
+                artifacts=artifacts,
+            )
+    unsupported = {
+        "version": 3,
+        "run_id": "run-001",
+        "manifest_hash": "1" * 64,
+        "sender_public_key": "peer-0",
+        "algorithm_id": "dpsgd",
+        "round_id": 0,
+        "artifacts": (_artifact("only"),),
+    }
+    with pytest.raises(ValidationError):
+        OpaqueUpdateBundleMetadata.model_validate(unsupported)
+
+
+def test_historical_update_bundle_metadata_v1_remains_parseable() -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    metadata = UpdateBundleMetadata(
+        run_id="run-001",
+        manifest_hash="1" * 64,
+        sender_public_key="peer-0",
+        algorithm_id="dpsgd",
+        round_id=0,
+        artifacts=(
+            ArtifactMetadata(
+                name="model-update",
+                size_bytes=4,
+                sha256="a" * 64,
+                tensor_schema=manifest.tensor_schema,
+            ),
+        ),
+    )
+
+    assert metadata.version == 1
+    assert OpaqueUpdateBundleMetadata(
+        run_id="run-001",
+        manifest_hash="1" * 64,
+        sender_public_key="peer-0",
+        algorithm_id="dpsgd",
+        round_id=0,
+        artifacts=(_artifact("model-update"),),
+    ).version == 2
 
 
 def test_canonical_manifest_matches_golden_file_and_hash() -> None:

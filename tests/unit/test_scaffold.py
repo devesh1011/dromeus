@@ -7,8 +7,9 @@ from support.sample_manifest import manifest_data
 
 import dromeus
 from dromeus.manifests.models import SealedManifest
+from dromeus.protocol.codec import encode_envelope
+from dromeus.protocol.models import MessageType, create_envelope
 from dromeus.telemetry.events import emit_event
-from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 
 

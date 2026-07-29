@@ -1,46 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from dromeus.algorithms.base import TrainedWeightsBundle
-from dromeus.algorithms.dpsgd import DPSGDAdapter, checksum_tensors
+from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
+from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import Tensor, TensorSchema
 
 
-class FakeTrainer:
-    def __init__(self) -> None:
-        self.local_steps: list[int] = []
+class CountingTrainer:
+    def __init__(self, weights: np.ndarray) -> None:
+        self.train_calls: list[int] = []
+        self.optimizer_steps = 0
         self._weights = {
-            "weight": np.array([1.0, 3.0], dtype=np.float32),
+            "weight": weights.copy(),
         }
 
     def train_local_steps(self, step_count: int) -> None:
-        self.local_steps.append(step_count)
-        self._weights["weight"] = self._weights["weight"] + np.array(
-            [1.0, 1.0], dtype=np.float32
-        )
-
-    def weights(self) -> dict[str, np.ndarray]:
-        return {name: value.copy() for name, value in self._weights.items()}
-
-    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
-        self._weights = {name: value.copy() for name, value in weights.items()}
-
-
-class QuadraticTrainer:
-    def __init__(self, value: float) -> None:
-        self._weights = {"weight": np.array([value], dtype=np.float32)}
-
-    def train_local_steps(self, step_count: int) -> None:
+        self.train_calls.append(step_count)
         for _ in range(step_count):
-            gradient = self.stochastic_gradients()["weight"]
-            self.load_weights(
-                {"weight": self._weights["weight"] - 0.1 * gradient}
-            )
-
-    def stochastic_gradients(self) -> dict[str, np.ndarray]:
-        return self.weights()
+            self._weights["weight"] += np.float32(1.0)
+            self.optimizer_steps += 1
 
     def weights(self) -> dict[str, np.ndarray]:
         return {name: value.copy() for name, value in self._weights.items()}
@@ -49,123 +31,87 @@ class QuadraticTrainer:
         self._weights = {name: value.copy() for name, value in weights.items()}
 
 
-class OptimizerOwningTrainer(QuadraticTrainer):
-    def __init__(self) -> None:
-        super().__init__(1.0)
-        self.optimizer_calls: list[int] = []
-
-    def train_local_steps(self, step_count: int) -> None:
-        self.optimizer_calls.append(step_count)
-        self._weights["weight"] -= np.float32(0.25)
-
-    def stochastic_gradients(self) -> dict[str, np.ndarray]:
-        raise AssertionError("adapter bypassed trainer-owned optimizer")
-
-
-def test_dpsgd_step_matches_paper_weighted_average_then_gradient_update() -> None:
-    trainer = QuadraticTrainer(1.0)
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+def _bundle_codec(
+    root: Path, *, sender: str, schema: TensorSchema
+) -> SafetensorsUpdateBundleCodec:
+    return SafetensorsUpdateBundleCodec(
+        artifact_root=root,
+        run_id="test-run",
+        manifest_hash="0" * 64,
+        sender_public_key=sender,
+        algorithm_id="d-psgd",
+        tensor_schema=schema,
     )
+
+
+def test_two_nodes_run_production_local_sgd_lifecycle(tmp_path: Path) -> None:
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(2,)),)
+    )
+    first_trainer = CountingTrainer(np.array([1.0, 3.0], dtype=np.float32))
+    second_trainer = CountingTrainer(np.array([5.0, 9.0], dtype=np.float32))
+    first = DPSGDAdapter(
+        trainer=first_trainer,
+        tensor_schema=schema,
+        local_steps=3,
+        bundle_codec=_bundle_codec(
+            tmp_path / "first", sender="first", schema=schema
+        ),
+    )
+    second = DPSGDAdapter(
+        trainer=second_trainer,
+        tensor_schema=schema,
+        local_steps=3,
+        bundle_codec=_bundle_codec(
+            tmp_path / "second", sender="second", schema=schema
+        ),
+    )
+
+    first.pre_local(round_id=0)
+    second.pre_local(round_id=0)
+    first_post_local = first.local_training()
+    second_post_local = second.local_training()
+    first_bundle = first.post_local_bundle()
+    second_bundle = second.post_local_bundle()
+    try:
+        first_update = first.validate_peer(second_bundle)
+        second_update = second.validate_peer(first_bundle)
+        first_post_mix = first.peer_apply(first_update)
+        second_post_mix = second.peer_apply(second_update)
+    finally:
+        first.release_bundle(first_bundle)
+        second.release_bundle(second_bundle)
+
+    expected = (
+        first_post_local.weights["weight"]
+        + second_post_local.weights["weight"]
+    ) * np.float32(0.5)
+    assert first_trainer.train_calls == [3]
+    assert second_trainer.train_calls == [3]
+    assert first_trainer.optimizer_steps == 3
+    assert second_trainer.optimizer_steps == 3
+    assert np.array_equal(first_post_mix.weights["weight"], expected)
+    assert np.array_equal(second_post_mix.weights["weight"], expected)
+    assert not any(tmp_path.rglob("*.safetensors"))
+
+
+def test_dpsgd_rejects_invalid_peer_weights(tmp_path: Path) -> None:
+    trainer = CountingTrainer(np.array([1.0, 3.0], dtype=np.float32))
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(2,)),)
+    )
+    local_codec = _bundle_codec(tmp_path / "local", sender="local", schema=schema)
+    peer_codec = _bundle_codec(tmp_path / "peer", sender="peer", schema=schema)
     algorithm = DPSGDAdapter(
         trainer=trainer,
         tensor_schema=schema,
         local_steps=1,
-        learning_rate=0.1,
+        bundle_codec=local_codec,
     )
-    peer_weights = {"weight": np.array([3.0], dtype=np.float32)}
-    peer_bundle = TrainedWeightsBundle(
-        round_id=0,
-        tensors=peer_weights,
-        checksum=checksum_tensors(peer_weights),
-    )
-
-    algorithm.pre_local(round_id=0)
-    algorithm.step(peer_bundles=(peer_bundle,), peer_weights=(0.5,))
-
-    assert np.allclose(algorithm.snapshot().weights["weight"], np.array([1.9]))
-
-
-def test_dpsgd_local_training_runs_k_stochastic_gradient_steps() -> None:
-    trainer = QuadraticTrainer(1.0)
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
-    algorithm = DPSGDAdapter(
-        trainer=trainer,
-        tensor_schema=schema,
-        local_steps=2,
-        learning_rate=0.1,
-    )
-
-    algorithm.pre_local(round_id=0)
-    algorithm.local_training()
-
-    assert np.allclose(algorithm.snapshot().weights["weight"], np.array([0.81]))
-
-
-def test_dpsgd_local_training_never_bypasses_trainer_optimizer() -> None:
-    trainer = OptimizerOwningTrainer()
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
-    algorithm = DPSGDAdapter(
-        trainer=trainer,
-        tensor_schema=schema,
-        local_steps=7,
-        learning_rate=0.1,
-    )
-
-    algorithm.pre_local(round_id=0)
-    algorithm.local_training()
-
-    assert trainer.optimizer_calls == [7]
-    assert np.array_equal(
-        algorithm.snapshot().weights["weight"],
-        np.array([0.75], dtype=np.float32),
-    )
-
-
-def test_dpsgd_runs_local_steps_and_averages_peer_weights() -> None:
-    trainer = FakeTrainer()
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(2,)),)
-    )
-    algorithm = DPSGDAdapter(trainer=trainer, tensor_schema=schema, local_steps=5)
-
-    algorithm.pre_local(round_id=0)
-    algorithm.local_training()
-    local_bundle = algorithm.post_local_bundle()
-    peer_weights = {"weight": np.array([6.0, 10.0], dtype=np.float32)}
-    peer_bundle = TrainedWeightsBundle(
-        round_id=local_bundle.round_id,
-        tensors=peer_weights,
-        checksum=checksum_tensors(peer_weights),
-    )
-    algorithm.peer_apply(peer_bundle)
-
-    assert trainer.local_steps == [5]
-    assert np.array_equal(
-        algorithm.snapshot().weights["weight"],
-        np.array([4.0, 7.0], dtype=np.float32),
-    )
-
-
-def test_dpsgd_rejects_invalid_peer_weights() -> None:
-    trainer = FakeTrainer()
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(2,)),)
-    )
-    algorithm = DPSGDAdapter(trainer=trainer, tensor_schema=schema, local_steps=1)
     algorithm.pre_local(round_id=0)
     algorithm.local_training()
     local_bundle = algorithm.post_local_bundle()
     peer_weights = {"weight": np.array([np.nan, 1.0], dtype=np.float32)}
-    bundle = TrainedWeightsBundle(
-        round_id=local_bundle.round_id,
-        tensors=peer_weights,
-        checksum=checksum_tensors(peer_weights),
-    )
-
     with pytest.raises(ValueError, match="non-finite"):
-        algorithm.peer_apply(bundle)
+        peer_codec.encode(round_id=0, tensors=peer_weights)
+    local_codec.release(local_bundle)

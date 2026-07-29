@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from dromeus.transport.envelope import (
+from dromeus.protocol.codec import (
     EnvelopeError,
-    MessageType,
-    create_envelope,
     decode_envelope,
     encode_envelope,
 )
+from dromeus.protocol.models import MessageType, create_envelope
 
 HASH = "a" * 64
 PEERS = frozenset({"peer-0", "peer-1", "peer-2", "peer-3"})

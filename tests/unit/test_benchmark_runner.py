@@ -21,6 +21,12 @@ from benchmarks.cifar10.runner import (
 from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import SealedManifest
 from dromeus.persistence.run_store import RunStore
+from dromeus.telemetry.events import JsonlEventSink
+from dromeus.telemetry.evidence import (
+    BenchmarkNodeReadyEvidence,
+    RoundMetricsEvidence,
+    append_evidence,
+)
 from dromeus.training.cifar10 import (
     DATASET_REVISION,
     DATASET_VERSION,
@@ -125,37 +131,41 @@ def _write_pilot_inputs(
     artifacts: list[Path] = []
     for index in range(4):
         log = root / f"node-{index}.jsonl"
-        log.write_text(
-            "\n".join(
-                (
-                    json.dumps(
-                        {
-                            "event": "benchmark_node_ready",
-                            "run_id": manifest.run_id,
-                            "manifest_hash": manifest_hash,
-                            "node_id": f"peer-{index}",
-                            "benchmark_seed": 17,
-                            "transport": "axl",
-                        }
-                    ),
-                    json.dumps(
-                        {
-                            "event": "round_metrics",
-                            "run_id": manifest.run_id,
-                            "manifest_hash": manifest_hash,
-                            "node_id": f"peer-{index}",
-                            "round_id": (
-                                manifest.round_count
-                                + manifest.training.final_consensus_rounds
-                                - 1
-                            ),
-                            "evaluation_accuracy": 0.91,
-                        }
-                    ),
-                )
-            )
-            + "\n",
-            encoding="utf-8",
+        sink = JsonlEventSink(log)
+        assert append_evidence(
+            sink,
+            BenchmarkNodeReadyEvidence(
+                run_id=manifest.run_id,
+                manifest_hash=manifest_hash,
+                node_id=f"peer-{index}",
+                benchmark_seed=17,
+                transport="axl",
+            ),
+        )
+        final_round = (
+            manifest.round_count
+            + manifest.training.final_consensus_rounds
+            - 1
+        )
+        assert append_evidence(
+            sink,
+            RoundMetricsEvidence(
+                run_id=manifest.run_id,
+                manifest_hash=manifest_hash,
+                node_id=f"peer-{index}",
+                message_id=f"metric-peer-{index}-{final_round}",
+                peer_id=f"peer-{(index + 1) % 4}",
+                round_id=final_round,
+                local_loss=0.5,
+                evaluation_loss=0.5,
+                evaluation_accuracy=0.91,
+                local_compute_seconds=0.0,
+                peer_wait_seconds=0.0,
+                transfer_seconds=0.0,
+                mixing_seconds=0.0,
+                evaluation_seconds=0.0,
+                retries=0,
+            ),
         )
         artifact = root / f"data-{index}.json"
         artifact.write_text(
@@ -272,6 +282,35 @@ def test_completed_pilot_can_freeze_one_plan(tmp_path: Path) -> None:
     assert plan.benchmark_seeds == (17, 29, 41)
     assert plan.dataset.preprocessing_hash == PREPROCESSING_HASH
     assert len(set(evidence.node_ids)) == 4
+
+
+def test_pilot_rejects_legacy_archive_without_hashes(tmp_path: Path) -> None:
+    draft_path = tmp_path / "draft.yaml"
+    draft_path.write_text(
+        json.dumps(_draft().model_dump(mode="json")),
+        encoding="utf-8",
+    )
+    run_roots = _write_completed_roots(tmp_path)
+    event_logs, data_artifacts = _write_pilot_inputs(tmp_path, run_roots)
+    state_path = run_roots[0] / "run-store" / "state.json"
+    state = json.loads(state_path.read_text())
+    del state["archive_version"]
+    del state["prepared_commit"]
+    state["algorithm_state"] = state["algorithm_state"]["path"]
+    for key in ("pre_mix_checkpoints", "post_mix_checkpoints"):
+        state[key] = {
+            round_id: checkpoint["path"] for round_id, checkpoint in state[key].items()
+        }
+    state_path.write_text(json.dumps(state))
+
+    with pytest.raises(ValueError, match="checkpoint integrity"):
+        write_pilot_evidence(
+            draft_path=draft_path,
+            run_roots=run_roots,
+            event_logs=event_logs,
+            data_artifacts=data_artifacts,
+            output=tmp_path / "pilot.json",
+        )
 
 
 def test_pilot_rejects_reused_node_root(tmp_path: Path) -> None:
