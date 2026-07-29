@@ -8,18 +8,31 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 import numpy as np
 
 from benchmarks.cifar10.fedavg_reference import FedAvgResult, load_fedavg_result
 from benchmarks.cifar10.plots import write_line_plot, write_panel_plot
-from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import SealedManifest
+from dromeus.persistence.archive import RunArchive, RunArchiveError
+from dromeus.telemetry.evidence import (
+    BenchmarkNodeReadyEvidence,
+    ConsensusDistanceEvidence,
+    EvidenceError,
+    EvidenceLog,
+    RoundMetricsEvidence,
+    RunFailedEvidence,
+    TransferMessageSentEvidence,
+)
 from dromeus.telemetry.report import ExactConsensusReport, build_exact_consensus_report
 
 JsonObject = dict[str, object]
-Event = dict[str, object]
+MetricField = Literal[
+    "local_loss",
+    "evaluation_loss",
+    "evaluation_accuracy",
+]
 
 
 class BenchmarkReportError(ValueError):
@@ -456,8 +469,9 @@ def build_benchmark_report(
             "exactly four run stores and event logs are required"
         )
 
-    manifests = [_read_manifest(root) for root in run_roots]
-    manifest_hashes = [canonical_hash(manifest) for manifest in manifests]
+    archives = [_read_archive(root) for root in run_roots]
+    manifests = [archive.manifest for archive in archives]
+    manifest_hashes = [archive.manifest_hash for archive in archives]
     if len(set(manifest_hashes)) != 1:
         raise BenchmarkReportError("run stores do not share one manifest hash")
     environments = [
@@ -470,55 +484,59 @@ def build_benchmark_report(
     if any(manifest.run_id != manifests[0].run_id for manifest in manifests[1:]):
         raise BenchmarkReportError("run stores do not share one run id")
 
-    for root, manifest in zip(run_roots, manifests, strict=True):
-        _require_completed_state(root, manifest)
-    all_events = [
-        _read_events(path, run_id=manifests[0].run_id, manifest_hash=manifest_hashes[0])
+    for archive in archives:
+        try:
+            archive.require_complete(_total_dpsgd_round_count(archive.manifest))
+        except RunArchiveError as error:
+            raise BenchmarkReportError(
+                f"run is not complete: {archive.root}"
+            ) from error
+        try:
+            archive.verify_checkpoint_integrity()
+        except RunArchiveError as error:
+            raise BenchmarkReportError(
+                f"checkpoint integrity failed: {archive.root}"
+            ) from error
+    evidence_logs = [
+        _read_evidence_log(
+            path,
+            run_id=manifests[0].run_id,
+            manifest_hash=manifest_hashes[0],
+        )
         for path in event_logs
     ]
     if any(
-        event.get("event") in {"run_failed", "formation_failed"}
-        for events in all_events
-        for event in events
+        isinstance(record, RunFailedEvidence)
+        for log in evidence_logs
+        for record in log.records
     ):
         raise BenchmarkReportError("failed run cannot be included")
     benchmark_nodes: set[str] = set()
-    for events in all_events:
+    for log in evidence_logs:
         ready = [
-            event for event in events if event.get("event") == "benchmark_node_ready"
+            record
+            for record in log.records
+            if isinstance(record, BenchmarkNodeReadyEvidence)
         ]
         if len(ready) != 1:
             raise BenchmarkReportError(
                 "each event log must contain one benchmark node provenance record"
             )
         record = ready[0]
-        if record.get("benchmark_seed") != seed:
+        if record.benchmark_seed != seed:
             raise BenchmarkReportError("D-PSGD benchmark seed does not match report")
-        if record.get("transport") != "axl":
+        if record.transport != "axl":
             raise BenchmarkReportError("official D-PSGD transport is not AXL")
-        node_id = record.get("node_id")
-        if (
-            record.get("run_id") != manifests[0].run_id
-            or record.get("manifest_hash") != manifest_hashes[0]
-            or not isinstance(node_id, str)
-        ):
-            raise BenchmarkReportError("benchmark node provenance is incomplete")
-        benchmark_nodes.add(node_id)
+        benchmark_nodes.add(record.node_id)
 
     metrics = [
-        event
-        for events in all_events
-        for event in events
-        if event.get("event") == "round_metrics"
+        record
+        for log in evidence_logs
+        for record in log.records
+        if isinstance(record, RoundMetricsEvidence)
     ]
     if not metrics:
         raise BenchmarkReportError("event logs contain no round metrics")
-    for event in metrics:
-        if (
-            event.get("run_id") != manifests[0].run_id
-            or event.get("manifest_hash") != manifest_hashes[0]
-        ):
-            raise BenchmarkReportError("round metric is missing run provenance")
     node_metrics = _group_node_metrics(metrics)
     expected_nodes = {
         participant.public_key for participant in manifests[0].participants
@@ -546,11 +564,7 @@ def build_benchmark_report(
     total_round_count = _total_dpsgd_round_count(manifests[0])
     expected_rounds = set(range(total_round_count))
     if any(
-        {
-            _integer_value(event, "round_id")
-            for event in node_events
-            if isinstance(event.get("round_id"), int)
-        }
+        {event.round_id for event in node_events}
         != expected_rounds
         for node_events in node_metrics.values()
     ):
@@ -575,11 +589,11 @@ def build_benchmark_report(
     fedavg_accuracy = cast(float, fedavg_payload["final_accuracy"])
     accuracy_curve = _metric_curve(metrics, "evaluation_accuracy", "accuracy")
     loss_curve = _loss_curve(metrics)
-    consensus = _consensus_curve(all_events)
+    consensus = _consensus_curve(evidence_logs)
     round_timing = _round_timing(metrics)
-    transport = _transport_summary(all_events)
+    transport = _transport_summary(evidence_logs)
     connectivity = _connectivity(metrics)
-    failures = _failure_summary(all_events)
+    failures = _failure_summary(evidence_logs)
     exact_consensus = build_exact_consensus_report(run_roots)
     return BenchmarkReport(
         seed=seed,
@@ -737,35 +751,11 @@ def _manifest_configuration(manifest: SealedManifest) -> JsonObject:
     }
 
 
-def _read_manifest(root: Path) -> SealedManifest:
+def _read_archive(root: Path) -> RunArchive:
     try:
-        value = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-        return SealedManifest.model_validate(value)
-    except (OSError, ValueError, TypeError) as error:
-        raise BenchmarkReportError(f"invalid run manifest at {root}") from error
-
-
-def _require_completed_state(root: Path, manifest: SealedManifest) -> None:
-    try:
-        state = cast(
-            object,
-            json.loads((root / "state.json").read_text(encoding="utf-8")),
-        )
-    except (OSError, ValueError) as error:
-        raise BenchmarkReportError(f"invalid run state at {root}") from error
-    if not isinstance(state, dict):
-        raise BenchmarkReportError(f"invalid run state at {root}")
-    state_record = cast(JsonObject, state)
-    if state_record.get("manifest_hash") != canonical_hash(manifest):
-        raise BenchmarkReportError(f"manifest hash mismatch in {root}")
-    terminal = state_record.get("terminal")
-    if not isinstance(terminal, dict):
-        raise BenchmarkReportError(f"run is not complete: {root}")
-    terminal_record = cast(JsonObject, terminal)
-    if terminal_record.get("result") != "complete":
-        raise BenchmarkReportError(f"run is not complete: {root}")
-    if state_record.get("committed_round") != _total_dpsgd_round_count(manifest) - 1:
-        raise BenchmarkReportError(f"run is incomplete: {root}")
+        return RunArchive.open(root)
+    except RunArchiveError as error:
+        raise BenchmarkReportError(f"invalid run archive at {root}") from error
 
 
 def _read_topology(root: Path, *, phase: str) -> tuple[str, tuple[str, ...]]:
@@ -865,57 +855,39 @@ def _topology_summary(
     }
 
 
-def _read_events(path: Path, *, run_id: str, manifest_hash: str) -> list[Event]:
-    events: list[Event] = []
+def _read_evidence_log(
+    path: Path, *, run_id: str, manifest_hash: str
+) -> EvidenceLog:
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except OSError as error:
-        raise BenchmarkReportError(f"event log is unreadable: {path}") from error
-    for line_number, line in enumerate(lines, start=1):
-        try:
-            value = cast(object, json.loads(line))
-        except ValueError as error:
-            raise BenchmarkReportError(
-                f"invalid event JSON at {path}:{line_number}"
-            ) from error
-        if not isinstance(value, dict):
-            raise BenchmarkReportError(f"invalid event record at {path}:{line_number}")
-        event = cast(Event, value)
-        if not isinstance(event.get("event"), str):
-            raise BenchmarkReportError(f"invalid event record at {path}:{line_number}")
-        if event.get("run_id") not in (None, run_id):
-            raise BenchmarkReportError(f"event run id mismatch in {path}")
-        if event.get("manifest_hash") not in (None, manifest_hash):
-            raise BenchmarkReportError(f"event manifest hash mismatch in {path}")
-        events.append(event)
-    if not events:
-        raise BenchmarkReportError(f"event log is empty: {path}")
-    return events
+        return EvidenceLog.open(
+            path,
+            run_id=run_id,
+            manifest_hash=manifest_hash,
+        )
+    except EvidenceError as error:
+        raise BenchmarkReportError(f"invalid evidence log: {path}") from error
 
 
-def _group_node_metrics(metrics: Sequence[Event]) -> dict[str, list[Event]]:
-    grouped: dict[str, list[Event]] = defaultdict(list)
+def _group_node_metrics(
+    metrics: Sequence[RoundMetricsEvidence],
+) -> dict[str, list[RoundMetricsEvidence]]:
+    grouped: dict[str, list[RoundMetricsEvidence]] = defaultdict(list)
     for event in metrics:
-        node_id = event.get("node_id")
-        if not isinstance(node_id, str) or not node_id:
-            raise BenchmarkReportError("round metric is missing node_id")
-        grouped[node_id].append(event)
+        grouped[event.node_id].append(event)
     return dict(grouped)
 
 
-def _latest_round(metrics: Sequence[Event], node_id: str) -> int:
-    rounds = [
-        _integer_value(event, "round_id")
-        for event in metrics
-        if isinstance(event.get("round_id"), int)
-    ]
+def _latest_round(
+    metrics: Sequence[RoundMetricsEvidence], node_id: str
+) -> int:
+    rounds = [event.round_id for event in metrics]
     if not rounds:
         raise BenchmarkReportError(f"node {node_id} has no metric rounds")
     return max(rounds)
 
 
 def _validate_dpsgd_evaluation_schedule(
-    node_metrics: Mapping[str, Sequence[Event]],
+    node_metrics: Mapping[str, Sequence[RoundMetricsEvidence]],
     *,
     training_round_count: int,
     total_round_count: int,
@@ -924,7 +896,7 @@ def _validate_dpsgd_evaluation_schedule(
         if len(events) != total_round_count:
             raise BenchmarkReportError("round metrics are incomplete")
         for event in events:
-            round_id = _integer_value(event, "round_id")
+            round_id = event.round_id
             should_evaluate = (
                 (
                     round_id < training_round_count
@@ -935,22 +907,18 @@ def _validate_dpsgd_evaluation_schedule(
                 )
                 or round_id + 1 == total_round_count
             )
-            loss = event.get("evaluation_loss")
-            accuracy = event.get("evaluation_accuracy")
+            loss = event.evaluation_loss
+            accuracy = event.evaluation_accuracy
             has_loss = loss is not None
             has_accuracy = accuracy is not None
             if has_loss != has_accuracy or should_evaluate != has_loss:
                 raise BenchmarkReportError(
                     "D-PSGD evaluation schedule is incomplete or invalid"
                 )
-            if has_loss and (
-                not isinstance(loss, (int, float))
-                or isinstance(loss, bool)
-                or not math.isfinite(float(loss))
-                or not isinstance(accuracy, (int, float))
-                or isinstance(accuracy, bool)
-                or not math.isfinite(float(accuracy))
-                or not 0 <= float(accuracy) <= 1
+            if loss is not None and accuracy is not None and (
+                not math.isfinite(loss)
+                or not math.isfinite(accuracy)
+                or not 0 <= accuracy <= 1
             ):
                 raise BenchmarkReportError(
                     "D-PSGD evaluation schedule is incomplete or invalid"
@@ -967,14 +935,16 @@ def _total_dpsgd_round_count(manifest: SealedManifest) -> int:
 
 
 def _metric_value_for_round(
-    metrics: Sequence[Event], field: str, round_id: int, node_id: str
+    metrics: Sequence[RoundMetricsEvidence],
+    field: MetricField,
+    round_id: int,
+    node_id: str,
 ) -> float:
     values = [
-        _numeric_value(event, field)
+        value
         for event in metrics
-        if event.get("round_id") == round_id
-        and isinstance(event.get(field), (int, float))
-        and not isinstance(event.get(field), bool)
+        if event.round_id == round_id
+        and (value := getattr(event, field)) is not None
     ]
     if not values:
         raise BenchmarkReportError(
@@ -999,18 +969,15 @@ def _summary(values: Sequence[float]) -> SummaryStats:
 
 
 def _metric_curve(
-    metrics: Sequence[Event], field: str, prefix: str
+    metrics: Sequence[RoundMetricsEvidence],
+    field: MetricField,
+    prefix: str,
 ) -> tuple[JsonObject, ...]:
     grouped: dict[int, list[float]] = defaultdict(list)
     for event in metrics:
-        round_id = event.get("round_id")
-        value = event.get(field)
-        if (
-            isinstance(round_id, int)
-            and isinstance(value, (int, float))
-            and not isinstance(value, bool)
-        ):
-            grouped[round_id].append(float(value))
+        value = getattr(event, field)
+        if value is not None:
+            grouped[event.round_id].append(value)
     result: list[JsonObject] = []
     for round_id in sorted(grouped):
         values = _summary(grouped[round_id])
@@ -1025,7 +992,9 @@ def _metric_curve(
     return tuple(result)
 
 
-def _loss_curve(metrics: Sequence[Event]) -> tuple[JsonObject, ...]:
+def _loss_curve(
+    metrics: Sequence[RoundMetricsEvidence],
+) -> tuple[JsonObject, ...]:
     local = _metric_curve(metrics, "local_loss", "local_loss")
     evaluation = _metric_curve(metrics, "evaluation_loss", "evaluation_loss")
     grouped: dict[int, JsonObject] = {}
@@ -1035,24 +1004,17 @@ def _loss_curve(metrics: Sequence[Event]) -> tuple[JsonObject, ...]:
     return tuple(grouped[round_id] for round_id in sorted(grouped))
 
 
-def _consensus_curve(all_events: Sequence[Sequence[Event]]) -> tuple[JsonObject, ...]:
+def _consensus_curve(
+    evidence_logs: Sequence[EvidenceLog],
+) -> tuple[JsonObject, ...]:
     grouped: dict[int, list[float]] = defaultdict(list)
     sketches: dict[int, list[int]] = defaultdict(list)
-    for events in all_events:
-        for event in events:
-            if event.get("event") != "consensus_distance":
+    for log in evidence_logs:
+        for record in log.records:
+            if not isinstance(record, ConsensusDistanceEvidence):
                 continue
-            round_id = event.get("round_id")
-            distance = event.get("normalized_rms")
-            sketch_count = event.get("sketch_count")
-            if (
-                isinstance(round_id, int)
-                and isinstance(distance, (int, float))
-                and not isinstance(distance, bool)
-            ):
-                grouped[round_id].append(float(distance))
-                if isinstance(sketch_count, int):
-                    sketches[round_id].append(sketch_count)
+            grouped[record.round_id].append(record.normalized_rms)
+            sketches[record.round_id].append(record.sketch_count)
     result: list[JsonObject] = []
     for round_id in sorted(grouped):
         result.append(
@@ -1067,7 +1029,9 @@ def _consensus_curve(all_events: Sequence[Sequence[Event]]) -> tuple[JsonObject,
     return tuple(result)
 
 
-def _round_timing(metrics: Sequence[Event]) -> dict[str, object]:
+def _round_timing(
+    metrics: Sequence[RoundMetricsEvidence],
+) -> dict[str, object]:
     fields = (
         "local_compute_seconds",
         "peer_wait_seconds",
@@ -1077,23 +1041,15 @@ def _round_timing(metrics: Sequence[Event]) -> dict[str, object]:
     )
     result: dict[str, object] = {}
     for field in fields:
-        values = [
-            _numeric_value(event, field)
-            for event in metrics
-            if isinstance(event.get(field), (int, float))
-            and not isinstance(event.get(field), bool)
-        ]
+        values = [float(getattr(event, field)) for event in metrics]
         if values:
             result[field] = _summary(values).as_dict()
     by_round: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for event in metrics:
-        round_id = event.get("round_id")
-        if not isinstance(round_id, int):
-            continue
         for field in fields:
-            value = event.get(field)
-            if isinstance(value, (int, float)) and not isinstance(value, bool):
-                by_round[round_id][field].append(float(value))
+            by_round[event.round_id][field].append(
+                float(getattr(event, field))
+            )
     result["curve"] = [
         {
             "round_id": round_id,
@@ -1108,63 +1064,39 @@ def _round_timing(metrics: Sequence[Event]) -> dict[str, object]:
     return result
 
 
-def _transport_summary(all_events: Sequence[Sequence[Event]]) -> dict[str, object]:
+def _transport_summary(
+    evidence_logs: Sequence[EvidenceLog],
+) -> dict[str, object]:
     events = [
-        event
-        for records in all_events
-        for event in records
-        if event.get("event") == "transfer_message_sent"
+        record
+        for log in evidence_logs
+        for record in log.records
+        if isinstance(record, TransferMessageSentEvidence)
     ]
     fields = ("queue_seconds", "send_seconds", "completion_seconds")
     timings: dict[str, object] = {}
     for field in fields:
-        values = [
-            _numeric_value(event, field)
-            for event in events
-            if isinstance(event.get(field), (int, float))
-            and not isinstance(event.get(field), bool)
-        ]
+        values = [float(getattr(event, field)) for event in events]
         if values:
             timings[field] = _summary(values).as_dict()
-    retries = [
-        _integer_value(event, "retry_count")
-        for event in events
-        if isinstance(event.get("retry_count"), int)
-        and not isinstance(event.get("retry_count"), bool)
-    ]
-    payload_sizes = [
-        _integer_value(event, "payload_bytes")
-        for event in events
-        if isinstance(event.get("payload_bytes"), int)
-        and not isinstance(event.get("payload_bytes"), bool)
-        and _integer_value(event, "payload_bytes") >= 0
-    ]
+    retries = [event.retry_count for event in events]
+    payload_sizes = [event.payload_bytes for event in events]
     goodputs = [
-        _integer_value(event, "payload_bytes")
-        / _numeric_value(event, "completion_seconds")
+        event.payload_bytes / event.completion_seconds
         for event in events
-        if isinstance(event.get("payload_bytes"), int)
-        and isinstance(event.get("completion_seconds"), (int, float))
-        and not isinstance(event.get("completion_seconds"), bool)
-        and _numeric_value(event, "completion_seconds") > 0
+        if event.completion_seconds > 0
     ]
     by_round: dict[int, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     for event in events:
-        round_id = event.get("round_id")
-        if not isinstance(round_id, int):
+        if event.round_id is None:
             continue
         for field in fields:
-            value = event.get(field)
-            if isinstance(value, (int, float)) and not isinstance(value, bool):
-                by_round[round_id][field].append(float(value))
-        if (
-            isinstance(event.get("payload_bytes"), int)
-            and isinstance(event.get("completion_seconds"), (int, float))
-            and _numeric_value(event, "completion_seconds") > 0
-        ):
-            by_round[round_id]["goodput_bytes_per_second"].append(
-                _integer_value(event, "payload_bytes")
-                / _numeric_value(event, "completion_seconds")
+            by_round[event.round_id][field].append(
+                float(getattr(event, field))
+            )
+        if event.completion_seconds > 0:
+            by_round[event.round_id]["goodput_bytes_per_second"].append(
+                event.payload_bytes / event.completion_seconds
             )
     curve: list[JsonObject] = []
     for round_id in sorted(by_round):
@@ -1193,13 +1125,12 @@ def _transport_summary(all_events: Sequence[Sequence[Event]]) -> dict[str, objec
     }
 
 
-def _connectivity(metrics: Sequence[Event]) -> dict[str, object]:
+def _connectivity(
+    metrics: Sequence[RoundMetricsEvidence],
+) -> dict[str, object]:
     edges: dict[tuple[str, str], int] = defaultdict(int)
     for event in metrics:
-        node_id = event.get("node_id")
-        peer_id = event.get("peer_id")
-        if isinstance(node_id, str) and isinstance(peer_id, str):
-            edges[(node_id, peer_id)] += 1
+        edges[(event.node_id, event.peer_id)] += 1
     edge_records = [
         {"node_id": node_id, "peer_id": peer_id, "count": count}
         for (node_id, peer_id), count in sorted(edges.items())
@@ -1207,30 +1138,21 @@ def _connectivity(metrics: Sequence[Event]) -> dict[str, object]:
     return {"edge_count": len(edge_records), "edges": edge_records}
 
 
-def _failure_summary(all_events: Sequence[Sequence[Event]]) -> tuple[JsonObject, ...]:
-    result: list[JsonObject] = []
-    for events in all_events:
-        for event in events:
-            name = event["event"]
-            if not (
-                isinstance(name, str)
-                and (name.endswith("_rejected") or name == "formation_failed")
-            ):
-                continue
-            result.append(
-                {
-                    key: event[key]
-                    for key in (
-                        "event",
-                        "node_id",
-                        "peer_id",
-                        "round_id",
-                        "error_type",
-                        "error",
-                    )
-                    if key in event
-                }
-            )
+def _failure_summary(
+    evidence_logs: Sequence[EvidenceLog],
+) -> tuple[JsonObject, ...]:
+    result: list[JsonObject] = [
+        {
+            "event": record.event,
+            "node_id": record.node_id,
+            "round_id": record.round_id,
+            "error_type": record.error_type,
+            "error": record.error,
+        }
+        for log in evidence_logs
+        for record in log.records
+        if isinstance(record, RunFailedEvidence)
+    ]
     result.sort(key=lambda value: json.dumps(value, sort_keys=True))
     return tuple(result)
 

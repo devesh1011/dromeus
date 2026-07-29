@@ -30,6 +30,14 @@ from dromeus.manifests.models import (
     TrainingPolicy,
     TransportLimits,
 )
+from dromeus.persistence.archive import RunArchive, RunArchiveError
+from dromeus.telemetry.evidence import (
+    BenchmarkNodeReadyEvidence,
+    EvidenceError,
+    EvidenceLog,
+    RoundMetricsEvidence,
+    RunFailedEvidence,
+)
 from dromeus.training.cifar10 import (
     DATA_SOURCE,
     DATASET_REVISION,
@@ -220,27 +228,20 @@ def write_pilot_evidence(
     manifests: list[SealedManifest] = []
     for root in run_roots:
         store_root = root / "run-store"
-        manifest = SealedManifest.model_validate_json(
-            (store_root / "manifest.json").read_text(encoding="utf-8")
-        )
-        state = cast(
-            dict[str, object],
-            json.loads((store_root / "state.json").read_text(encoding="utf-8")),
-        )
-        terminal_value = state.get("terminal")
-        terminal = (
-            cast(dict[str, object], terminal_value)
-            if isinstance(terminal_value, dict)
-            else None
-        )
-        final_consensus_rounds = training.final_consensus_rounds
-        if (
-            terminal is None
-            or terminal.get("result") != "complete"
-            or state.get("committed_round")
-            != draft.round_count + final_consensus_rounds - 1
-        ):
-            raise ValueError("pilot node did not complete every round")
+        try:
+            archive = RunArchive.open(store_root)
+        except RunArchiveError as error:
+            raise ValueError("invalid pilot run archive") from error
+        expected_rounds = draft.round_count + training.final_consensus_rounds
+        try:
+            archive.require_complete(expected_rounds)
+        except RunArchiveError as error:
+            raise ValueError("pilot node did not complete every round") from error
+        try:
+            archive.verify_checkpoint_integrity()
+        except RunArchiveError as error:
+            raise ValueError("pilot node checkpoint integrity failed") from error
+        manifest = archive.manifest
         manifest_draft = DraftRunSpec.model_validate(
             {
                 name: getattr(manifest, name)
@@ -256,46 +257,46 @@ def write_pilot_evidence(
     node_ids: list[str] = []
     final_node_accuracies: list[float] = []
     for path in event_logs:
-        events = [
-            cast(dict[str, object], json.loads(line))
-            for line in path.read_text(encoding="utf-8").splitlines()
-        ]
+        try:
+            evidence_log = EvidenceLog.open(
+                path,
+                run_id=draft.run_id,
+                manifest_hash=manifest_hash,
+            )
+        except EvidenceError as error:
+            raise ValueError("pilot evidence log is invalid") from error
         if any(
-            event.get("event") in {"run_failed", "formation_failed"}
-            for event in events
+            isinstance(record, RunFailedEvidence)
+            for record in evidence_log.records
         ):
             raise ValueError("failed pilot logs cannot be frozen")
         ready = [
-            event for event in events if event.get("event") == "benchmark_node_ready"
+            record
+            for record in evidence_log.records
+            if isinstance(record, BenchmarkNodeReadyEvidence)
         ]
         if len(ready) != 1:
             raise ValueError("each pilot log requires one benchmark node record")
         record = ready[0]
-        node_id = record.get("node_id")
         if (
-            not isinstance(node_id, str)
-            or record.get("run_id") != draft.run_id
-            or record.get("manifest_hash") != manifest_hash
-            or record.get("benchmark_seed") != draft.peer_scheduler_seed
-            or record.get("transport") != "axl"
+            record.benchmark_seed != draft.peer_scheduler_seed
+            or record.transport != "axl"
         ):
             raise ValueError("pilot node provenance is incomplete")
-        node_ids.append(node_id)
+        node_ids.append(record.node_id)
         final_round = draft.round_count + training.final_consensus_rounds - 1
         final_metrics = [
-            event
-            for event in events
-            if event.get("event") == "round_metrics"
-            and event.get("round_id") == final_round
-            and event.get("run_id") == draft.run_id
-            and event.get("manifest_hash") == manifest_hash
-            and event.get("node_id") == node_id
-            and isinstance(event.get("evaluation_accuracy"), (int, float))
+            evidence
+            for evidence in evidence_log.records
+            if isinstance(evidence, RoundMetricsEvidence)
+            and evidence.round_id == final_round
+            and evidence.node_id == record.node_id
+            and evidence.evaluation_accuracy is not None
         ]
         if len(final_metrics) == 1:
-            final_node_accuracies.append(
-                float(cast(float, final_metrics[0]["evaluation_accuracy"]))
-            )
+            accuracy = final_metrics[0].evaluation_accuracy
+            assert accuracy is not None
+            final_node_accuracies.append(accuracy)
     if len(set(node_ids)) != 4:
         raise ValueError("pilot logs must identify four distinct nodes")
     artifact_hashes: list[str] = []

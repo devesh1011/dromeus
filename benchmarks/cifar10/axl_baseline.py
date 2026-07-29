@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import urlparse
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
 from safetensors.numpy import (
     load_file,  # pyright: ignore[reportUnknownVariableType]
@@ -24,13 +23,14 @@ from safetensors.numpy import (
 
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import SealedManifest, Tensor, TensorSchema
+from dromeus.protocol.codec import encode_envelope, encode_message
+from dromeus.protocol.models import Chunk, MessageType, create_envelope
 from dromeus.telemetry.events import EventSink
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import AsyncTransport, ReceivedBytes
-from dromeus.transport.envelope import MessageType, create_envelope, encode_envelope
 from dromeus.transport.receiver import Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler
-from dromeus.transport.transfer import ArtifactStore, Chunk, TransferManager
+from dromeus.transport.transfer import TransferManager
 
 MIB = 1024 * 1024
 DEFAULT_PAYLOAD_SIZES = (1 * MIB, 4 * MIB, 8 * MIB, 12 * MIB)
@@ -398,18 +398,9 @@ async def _start_transfer_services(
 ) -> tuple[_TransferServices, ...]:
     manifest_hash = canonical_hash(manifest)
     allowed = frozenset(participant_keys)
-    artifact_stores = await asyncio.gather(
-        *(
-            asyncio.to_thread(
-                ArtifactStore,
-                artifact_root / f"node-{index}",
-            )
-            for index in range(len(transports))
-        )
-    )
     services: list[_TransferServices] = []
-    for public_key, transport, artifact_store in zip(
-        participant_keys, transports, artifact_stores, strict=True
+    for index, (public_key, transport) in enumerate(
+        zip(participant_keys, transports, strict=True)
     ):
         events = _RecordingEventSink()
         receiver = Receiver(
@@ -432,7 +423,7 @@ async def _start_transfer_services(
             transport_limits=manifest.transport,
             receiver=receiver,
             sender=sender,
-            artifact_store=artifact_store,
+            artifact_root=artifact_root / f"node-{index}",
             event_sink=events,
         )
         services.append(
@@ -542,17 +533,16 @@ def _create_payload_cases(
 
 
 def _probe_payload(*, kind: str, token: str, sender: str) -> bytes:
-    return cast(
-        bytes,
-        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-            {
-                "benchmark": "dromeus-axl-baseline-v1",
-                "kind": kind,
-                "token": token,
-                "sender_public_key": sender,
-            }
-        ),
-    )
+    return json.dumps(
+        {
+            "benchmark": "dromeus-axl-baseline-v1",
+            "kind": kind,
+            "token": token,
+            "sender_public_key": sender,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
 
 
 async def _receive_probe(
@@ -570,10 +560,10 @@ async def _receive_probe(
         )
         if inbound is None:
             continue
-        value = cast(
-            object,
-            msgpack.unpackb(inbound.payload, raw=False),  # pyright: ignore[reportUnknownMemberType]
-        )
+        try:
+            value = cast(object, json.loads(inbound.payload))
+        except (UnicodeDecodeError, ValueError):
+            continue
         if not isinstance(value, dict):
             continue
         record = cast(dict[object, object], value)
@@ -655,12 +645,7 @@ def preflight_artifacts(
             chunk_sha256=digest,
             data=data,
         )
-        chunk_payload = cast(
-            bytes,
-            msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-                chunk.model_dump(mode="python")
-            ),
-        )
+        chunk_payload = encode_message(chunk)
         envelope = encode_envelope(
             create_envelope(
                 message_type=MessageType.CHUNK,
