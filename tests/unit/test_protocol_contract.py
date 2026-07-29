@@ -140,3 +140,24 @@ def test_payload_decode_returns_strict_model() -> None:
     assert isinstance(decoded, ReadyMessage)
     assert decoded.manifest_hash == "3" * 64
     assert Envelope.model_fields["protocol_version"].default == 1
+
+
+def test_transfer_begin_supports_resnet32_tensor_count() -> None:
+    schema = TensorSchema(
+        tensors=tuple(
+            Tensor(name=f"layer-{index}", dtype="float32", shape=(1,))
+            for index in range(157)
+        )
+    )
+    begin = TransferBegin(
+        transfer_id="transfer-resnet32",
+        artifact_name="initial-checkpoint",
+        total_size_bytes=1,
+        total_sha256="5" * 64,
+        chunk_count=1,
+        codec_id="safetensors-v1",
+        tensor_schema=schema,
+    )
+    encoded = encode_message(begin)
+
+    assert decode_message(encoded, TransferBegin, max_bytes=len(encoded)) == begin

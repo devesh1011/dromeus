@@ -319,7 +319,7 @@ class LiveConsensusTelemetry:
         size: int = COUNT_SKETCH_SIZE,
         max_pending_rounds: int = 64,
         max_queue_size: int = 64,
-        drain_timeout_seconds: float = 1.0,
+        drain_timeout_seconds: float = 5.0,
     ) -> None:
         if drain_timeout_seconds <= 0:
             raise ValueError("drain timeout must be positive")

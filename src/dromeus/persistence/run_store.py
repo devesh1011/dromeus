@@ -35,7 +35,7 @@ JsonRecord = Mapping[str, object]
 
 
 class RunStore:
-    """Persist audit state with immutable checkpoints and atomic JSON commits."""
+    """Persist audit state with one crash-safe committed checkpoint."""
 
     def __init__(self, root: Path) -> None:
         self._root = root
@@ -47,7 +47,7 @@ class RunStore:
         self._lock = RLock()
 
     def initialize(self, manifest: SealedManifest) -> Sha256:
-        """Write the sealed manifest once and initialize archive v1 state."""
+        """Write the sealed manifest once and initialize current archive state."""
         with self._lock:
             manifest_bytes = canonical_json(manifest)
             manifest_hash = canonical_hash(manifest)
@@ -61,6 +61,8 @@ class RunStore:
                 state = self.load_state()
                 if state.manifest_hash != manifest_hash:
                     raise RunStoreError("run store state manifest does not match")
+                if state.archive_version == ARCHIVE_VERSION:
+                    self._remove_unreferenced_checkpoints(state)
             else:
                 _atomic_write_json(self._state_path, _initial_state(manifest_hash))
             return manifest_hash
@@ -80,8 +82,6 @@ class RunStore:
         *,
         committed_round: int,
         algorithm_state: Mapping[str, np.ndarray],
-        pre_mix_state: Mapping[str, np.ndarray],
-        post_mix_state: Mapping[str, np.ndarray],
         state_checksum: str,
         schedule: JsonRecord,
         metrics: JsonRecord | None = None,
@@ -91,8 +91,6 @@ class RunStore:
         self.persist_prepared_commit(
             committed_round=committed_round,
             algorithm_state=algorithm_state,
-            pre_mix_state=pre_mix_state,
-            post_mix_state=post_mix_state,
             state_checksum=state_checksum,
             schedule=schedule,
             metrics=metrics,
@@ -108,8 +106,6 @@ class RunStore:
         *,
         committed_round: int,
         algorithm_state: Mapping[str, np.ndarray],
-        pre_mix_state: Mapping[str, np.ndarray],
-        post_mix_state: Mapping[str, np.ndarray],
         state_checksum: str,
         schedule: JsonRecord,
         metrics: JsonRecord | None = None,
@@ -136,15 +132,7 @@ class RunStore:
                     return state
                 raise RunStoreError("another prepared commit already exists")
 
-            pre_name = f"pre-mix-round-{committed_round:06d}.safetensors"
-            post_name = f"post-mix-round-{committed_round:06d}.safetensors"
             committed_name = f"committed-round-{committed_round:06d}.safetensors"
-            pre_hash = _atomic_save_tensors(
-                self._checkpoint_root / pre_name, pre_mix_state
-            )
-            post_hash = _atomic_save_tensors(
-                self._checkpoint_root / post_name, post_mix_state
-            )
             committed_hash = _atomic_save_tensors(
                 self._checkpoint_root / committed_name, algorithm_state
             )
@@ -154,8 +142,6 @@ class RunStore:
                 "round_id": committed_round,
                 "state_checksum": state_checksum,
                 "algorithm_state": _checkpoint_json(committed_name, committed_hash),
-                "pre_mix_checkpoint": _checkpoint_json(pre_name, pre_hash),
-                "post_mix_checkpoint": _checkpoint_json(post_name, post_hash),
                 "schedule": dict(schedule),
                 "metrics": dict(metrics) if metrics is not None else None,
                 "transfer_diagnostics": (
@@ -164,7 +150,11 @@ class RunStore:
                     else None
                 ),
             }
-            _atomic_write_json(self._state_path, next_state)
+            try:
+                _atomic_write_json(self._state_path, next_state)
+            except Exception:
+                _remove_file(self._checkpoint_root / committed_name)
+                raise
             return self.load_state()
 
     def confirm_prepared_commit(
@@ -193,7 +183,7 @@ class RunStore:
             ):
                 raise RunStoreError("prepared commit does not match confirmation")
 
-            round_key = str(committed_round)
+            previous_checkpoint = state.algorithm_state
             next_state = state.as_json()
             prepared_json = cast(
                 dict[str, object], next_state["prepared_commit"]
@@ -206,10 +196,6 @@ class RunStore:
                     "prepared_commit": None,
                 }
             )
-            pre_mix = cast(dict[str, object], next_state["pre_mix_checkpoints"])
-            pre_mix[round_key] = prepared.pre_mix_checkpoint.as_json()
-            post_mix = cast(dict[str, object], next_state["post_mix_checkpoints"])
-            post_mix[round_key] = prepared.post_mix_checkpoint.as_json()
             cast(list[object], next_state["schedule_history"]).append(
                 prepared_json["schedule"]
             )
@@ -222,6 +208,8 @@ class RunStore:
                     prepared_json["transfer_diagnostics"]
                 )
             _atomic_write_json(self._state_path, next_state)
+            if previous_checkpoint is not None:
+                _remove_file(self._root / previous_checkpoint.relative_path)
             return self.load_state()
 
     def record_consensus(
@@ -278,14 +266,32 @@ class RunStore:
                     return
                 raise RunStoreError("terminal result already recorded")
             next_state = state.as_json()
+            discarded = (
+                state.prepared_commit.algorithm_state
+                if result != "complete" and state.prepared_commit is not None
+                else None
+            )
+            if discarded is not None:
+                next_state["prepared_commit"] = None
             next_state["terminal"] = terminal
             _atomic_write_json(self._state_path, next_state)
+            if discarded is not None:
+                _remove_file(self._root / discarded.relative_path)
 
     def _writable_state(self) -> ArchiveState:
         state = self.load_state()
         if state.archive_version != ARCHIVE_VERSION:
             raise RunStoreError("legacy run archive is read-only")
         return state
+
+    def _remove_unreferenced_checkpoints(self, state: ArchiveState) -> None:
+        referenced = {
+            record.relative_path for record in state.checkpoint_records()
+        }
+        for path in self._checkpoint_root.glob("*.safetensors"):
+            relative_path = path.relative_to(self._root).as_posix()
+            if relative_path not in referenced:
+                _remove_file(path)
 
 
 def _initial_state(manifest_hash: Sha256) -> dict[str, object]:
@@ -296,8 +302,6 @@ def _initial_state(manifest_hash: Sha256) -> dict[str, object]:
         "state_checksum": None,
         "algorithm_state": None,
         "prepared_commit": None,
-        "pre_mix_checkpoints": {},
-        "post_mix_checkpoints": {},
         "schedule_history": [],
         "metrics": [],
         "transfer_diagnostics": [],
@@ -370,6 +374,14 @@ def _fsync_directory(path: Path) -> None:
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
+
+
+def _remove_file(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+        _fsync_directory(path.parent)
+    except OSError:
+        pass
 
 
 __all__ = ["RunStore", "RunStoreError"]

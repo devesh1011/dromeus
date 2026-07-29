@@ -101,8 +101,6 @@ def _write_completed_roots(root: Path) -> tuple[Path, Path, Path, Path]:
             store.persist_commit(
                 committed_round=round_id,
                 algorithm_state={"weight": np.array([1], dtype=np.float32)},
-                pre_mix_state={"weight": np.array([0], dtype=np.float32)},
-                post_mix_state={"weight": np.array([1], dtype=np.float32)},
                 state_checksum=f"{index * 2 + round_id + 1:064x}",
                 schedule={"round_id": round_id, "peer": f"peer-{index}"},
             )
@@ -296,11 +294,13 @@ def test_pilot_rejects_legacy_archive_without_hashes(tmp_path: Path) -> None:
     state = json.loads(state_path.read_text())
     del state["archive_version"]
     del state["prepared_commit"]
-    state["algorithm_state"] = state["algorithm_state"]["path"]
-    for key in ("pre_mix_checkpoints", "post_mix_checkpoints"):
-        state[key] = {
-            round_id: checkpoint["path"] for round_id, checkpoint in state[key].items()
-        }
+    checkpoint = state["algorithm_state"]
+    state["algorithm_state"] = checkpoint["path"]
+    state["pre_mix_checkpoints"] = {
+        str(round_id): checkpoint["path"]
+        for round_id in range(_draft().round_count + 2)
+    }
+    state["post_mix_checkpoints"] = dict(state["pre_mix_checkpoints"])
     state_path.write_text(json.dumps(state))
 
     with pytest.raises(ValueError, match="checkpoint integrity"):

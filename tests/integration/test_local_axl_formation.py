@@ -52,10 +52,12 @@ class FaultInjectingTransport:
         self,
         transport: AsyncTransport,
         *,
+        max_payload_bytes: int,
         drop_first_ack: bool = False,
         duplicate_first_chunk: bool = False,
     ) -> None:
         self._transport = transport
+        self._max_payload_bytes = max_payload_bytes
         self._drop_first_ack = drop_first_ack
         self._duplicate_first_chunk = duplicate_first_chunk
 
@@ -63,11 +65,15 @@ class FaultInjectingTransport:
         return await self._transport.local_public_key()
 
     async def send(self, destination: str, payload: bytes) -> None:
-        sender = decode_envelope_sender(payload)
+        sender = decode_envelope_sender(
+            payload,
+            max_payload_bytes=self._max_payload_bytes,
+        )
         envelope = decode_envelope(
             payload,
             authenticated_sender=sender,
             participant_keys=None,
+            max_payload_bytes=self._max_payload_bytes,
         )
         message_type = envelope.message_type
         if self._drop_first_ack and message_type == MessageType.CHUNK_ACK:
@@ -122,10 +128,14 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                 for port in (9302, 9303, 9304, 9305)
             ]
             duplicate_transport = FaultInjectingTransport(
-                axl_transports[0], duplicate_first_chunk=True
+                axl_transports[0],
+                max_payload_bytes=draft.transport.max_payload_bytes,
+                duplicate_first_chunk=True,
             )
             ack_loss_transport = FaultInjectingTransport(
-                axl_transports[1], drop_first_ack=True
+                axl_transports[1],
+                max_payload_bytes=draft.transport.max_payload_bytes,
+                drop_first_ack=True,
             )
             transports: list[AsyncTransport] = [
                 duplicate_transport,

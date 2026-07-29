@@ -32,12 +32,6 @@ from dromeus.telemetry.metrics import (
     MetricsPublisher,
     RoundTiming,
 )
-from dromeus.telemetry.report import (
-    ConsensusReportError,
-    ConsensusRoundReport,
-    ExactConsensusReport,
-    build_exact_consensus_report,
-)
 
 __all__ = [
     "COUNT_SKETCH_SIZE",
@@ -61,11 +55,7 @@ __all__ = [
     "RoundTiming",
     "RunFailedEvidence",
     "TransferMessageSentEvidence",
-    "ConsensusReportError",
-    "ConsensusRoundReport",
-    "ExactConsensusReport",
     "append_evidence",
-    "build_exact_consensus_report",
     "count_sketch",
     "decode_evidence",
     "emit_event",

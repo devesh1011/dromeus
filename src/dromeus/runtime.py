@@ -691,8 +691,6 @@ class NodeRuntime:
         self._training.run_store.persist_prepared_commit(
             committed_round=commit.round_id,
             algorithm_state=self._training.algorithm.checkpoint_tensors(),
-            pre_mix_state=commit.post_local.weights,
-            post_mix_state=commit.post_mix.weights,
             state_checksum=commit.state_checksum,
             schedule={
                 "round_id": commit.round_id,

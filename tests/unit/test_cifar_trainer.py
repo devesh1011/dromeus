@@ -8,8 +8,12 @@ import numpy as np
 import pytest
 import torch
 from PIL import Image
+from support.sample_manifest import manifest_data
 
 import dromeus.training.cifar10 as cifar10_recipe
+from dromeus.manifests.models import SealedManifest
+from dromeus.persistence.archive import RunArchive
+from dromeus.persistence.run_store import RunStore
 from dromeus.training.cifar10 import (
     DATASET_REPOSITORY,
     DATASET_REVISION,
@@ -206,6 +210,7 @@ def test_trainer_runs_sgd_and_evaluates(
 
 def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
     cifar10_data: ClassificationData,
+    tmp_path: Path,
 ) -> None:
     trainer = create_trainer(
         train_data=cifar10_data,
@@ -223,6 +228,17 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
 
     trainer.train_local_steps(2)
     checkpoint_state = trainer.checkpoint_tensors()
+    store = RunStore(tmp_path / "run")
+    store.initialize(SealedManifest.model_validate(manifest_data()))
+    store.persist_commit(
+        committed_round=0,
+        algorithm_state=checkpoint_state,
+        state_checksum="a" * 64,
+        schedule={"round_id": 0, "peer": "peer-1"},
+    )
+    archive = RunArchive.open(tmp_path / "run")
+    assert archive.algorithm_state is not None
+    persisted_state = archive.algorithm_state.load_tensors()
 
     assert trainer.learning_rate == pytest.approx(0.01)
     assert int(checkpoint_state["__dromeus_training__.completed_steps"][0]) == 2
@@ -249,7 +265,7 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
         crop_padding=4,
         normalize=True,
     )
-    restored.load_checkpoint_tensors(checkpoint_state)
+    restored.load_checkpoint_tensors(persisted_state)
 
     assert restored.learning_rate == pytest.approx(0.01)
     assert all(

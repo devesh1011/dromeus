@@ -170,3 +170,52 @@ def test_live_consensus_joins_local_and_remote_sketches() -> None:
         assert telemetry.result(0) == distances[0]
 
     asyncio.run(run())
+
+
+def test_live_consensus_waits_for_inflight_remote_sketches_on_stop() -> None:
+    async def run() -> None:
+        incoming: asyncio.Queue[ConsensusSketchMessage] = asyncio.Queue()
+        distances: list[ConsensusDistance] = []
+
+        async def receive(timeout_seconds: float) -> ConsensusSketchMessage:
+            return await asyncio.wait_for(incoming.get(), timeout_seconds)
+
+        async def publish(round_id: int, sketch: np.ndarray) -> None:
+            del round_id, sketch
+
+        telemetry = LiveConsensusTelemetry(
+            local_public_key="peer-0",
+            participant_keys=[f"peer-{index}" for index in range(4)],
+            seed=9,
+            receive=receive,
+            publish=publish,
+            on_distance=distances.append,
+        )
+        await telemetry.start()
+        assert telemetry.submit(
+            round_id=0,
+            weights={"weight": np.array([0.0], dtype=np.float32)},
+        )
+
+        async def deliver_remote_sketches() -> None:
+            await asyncio.sleep(1.1)
+            for index in range(1, 4):
+                sketch = count_sketch(
+                    {"weight": np.array([float(index)], dtype=np.float32)},
+                    seed=9,
+                )
+                await incoming.put(
+                    ConsensusSketchMessage(
+                        sender_public_key=f"peer-{index}",
+                        round_id=0,
+                        payload=encode_sketch(sketch),
+                    )
+                )
+
+        delivery = asyncio.create_task(deliver_remote_sketches())
+        await telemetry.stop()
+        await delivery
+
+        assert [distance.round_id for distance in distances] == [0]
+
+    asyncio.run(run())

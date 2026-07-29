@@ -23,8 +23,6 @@ def _write_archive(root: Path, *, complete: bool = True) -> RunStore:
     store.persist_commit(
         committed_round=0,
         algorithm_state={"weight": np.array([2.0], dtype=np.float32)},
-        pre_mix_state={"weight": np.array([1.0], dtype=np.float32)},
-        post_mix_state={"weight": np.array([2.0], dtype=np.float32)},
         state_checksum="a" * 64,
         schedule={"round_id": 0, "peer": "peer-1"},
     )
@@ -60,9 +58,9 @@ def test_open_returns_verified_immutable_archive(tmp_path: Path) -> None:
         np.array([2.0], dtype=np.float32),
     )
     archive.verify_checkpoint_integrity()
-    checkpoints = cast(dict[int, object], archive.state.pre_mix_checkpoints)
-    with pytest.raises(TypeError):
-        checkpoints[1] = checkpoints[0]
+    state = archive.state.as_json()
+    assert "pre_mix_checkpoints" not in state
+    assert "post_mix_checkpoints" not in state
 
 
 def test_open_allows_incomplete_archive_but_completion_check_rejects_it(
@@ -81,7 +79,7 @@ def test_open_allows_incomplete_archive_but_completion_check_rejects_it(
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
-        ("archive_version", 2, "unsupported archive version"),
+        ("archive_version", 3, "unsupported archive version"),
         ("unexpected", True, "fields are invalid"),
     ],
 )
@@ -152,14 +150,10 @@ def test_legacy_v0_is_read_only_and_has_no_integrity_claim(tmp_path: Path) -> No
     state = _read_state(root)
     del state["archive_version"]
     del state["prepared_commit"]
-    for key in ("algorithm_state",):
-        checkpoint = cast(dict[str, str], state[key])
-        state[key] = checkpoint["path"]
-    for key in ("pre_mix_checkpoints", "post_mix_checkpoints"):
-        checkpoints = cast(dict[str, dict[str, str]], state[key])
-        state[key] = {
-            round_id: checkpoint["path"] for round_id, checkpoint in checkpoints.items()
-        }
+    checkpoint = cast(dict[str, str], state["algorithm_state"])
+    state["algorithm_state"] = checkpoint["path"]
+    state["pre_mix_checkpoints"] = {"0": checkpoint["path"]}
+    state["post_mix_checkpoints"] = {"0": checkpoint["path"]}
     _write_state(root, state)
 
     archive = RunArchive.open(root)
@@ -170,6 +164,25 @@ def test_legacy_v0_is_read_only_and_has_no_integrity_claim(tmp_path: Path) -> No
     assert "weight" in archive.algorithm_state.load_tensors()
     with pytest.raises(RunArchiveError, match="legacy archive"):
         archive.verify_checkpoint_integrity()
+    with pytest.raises(RunStoreError, match="read-only"):
+        store.record_terminal("failed")
+
+
+def test_legacy_v1_is_readable_verified_and_read_only(tmp_path: Path) -> None:
+    root = tmp_path / "run"
+    store = _write_archive(root)
+    state = _read_state(root)
+    checkpoint = cast(dict[str, str], state["algorithm_state"])
+    state["archive_version"] = 1
+    state["pre_mix_checkpoints"] = {"0": checkpoint}
+    state["post_mix_checkpoints"] = {"0": checkpoint}
+    _write_state(root, state)
+
+    archive = RunArchive.open(root)
+
+    assert archive.archive_version == 1
+    assert archive.state.integrity_recorded
+    archive.verify_checkpoint_integrity()
     with pytest.raises(RunStoreError, match="read-only"):
         store.record_terminal("failed")
 
