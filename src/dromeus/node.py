@@ -23,9 +23,12 @@ from dromeus.manifests.models import DraftRunSpec, Invitation
 from dromeus.membership.protocol import create_invitation
 from dromeus.runtime import FailureConfig, NodeRuntime, prepare_cifar_training
 from dromeus.telemetry.events import JsonlEventSink, emit_event
+from dromeus.telemetry.evidence import (
+    BenchmarkNodeReadyEvidence,
+    append_evidence,
+)
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
-from dromeus.transport.transfer import ArtifactStore
 
 
 class NodeRole(StrEnum):
@@ -86,7 +89,7 @@ async def run_node(config: NodeConfig) -> None:
         draft=draft,
         environment=draft.environment,
         dataset=draft.dataset,
-        artifact_store=ArtifactStore(config.run_root / "formation-artifacts"),
+        artifact_root=config.run_root / "formation-artifacts",
         event_sink=event_sink,
         failure=FailureConfig.for_run_root(config.run_root),
     )
@@ -139,14 +142,15 @@ async def run_node(config: NodeConfig) -> None:
                 run_store_root / "topology-ready.json",
             )
             await asyncio.to_thread(
-                emit_event,
-                "benchmark_node_ready",
-                run_id=result.manifest.run_id,
-                manifest_hash=result.manifest_hash,
-                node_id=local_key,
-                sink=event_sink,
-                benchmark_seed=config.benchmark_seed,
-                transport="axl",
+                append_evidence,
+                event_sink,
+                BenchmarkNodeReadyEvidence(
+                    run_id=result.manifest.run_id,
+                    manifest_hash=result.manifest_hash,
+                    node_id=local_key,
+                    benchmark_seed=config.benchmark_seed,
+                    transport="axl",
+                ),
             )
         except BaseException as error:
             await runtime.fail_before_run(error)

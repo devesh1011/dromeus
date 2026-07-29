@@ -39,6 +39,11 @@ from dromeus.telemetry.consensus import (
     LiveConsensusTelemetry,
 )
 from dromeus.telemetry.events import EventSink, emit_event
+from dromeus.telemetry.evidence import (
+    ConsensusDistanceEvidence,
+    RunFailedEvidence,
+    append_evidence,
+)
 from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.training.cifar10 import (
     PreparedCIFAR10Training as TrainingOwnedCIFAR,
@@ -47,7 +52,6 @@ from dromeus.training.cifar10 import prepare_training as prepare_training_owned_
 from dromeus.training.trainer import InitialCheckpoint
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
-from dromeus.transport.transfer import ArtifactStore
 
 
 class NodeRuntimeError(RuntimeError):
@@ -131,7 +135,6 @@ class PreparedCIFARTraining:
                 trainer=trainer,
                 tensor_schema=result.manifest.tensor_schema,
                 local_steps=result.manifest.local_steps,
-                learning_rate=result.manifest.learning_rate,
                 training_round_count=result.manifest.round_count,
             ),
             load_checkpoint=trainer.load_checkpoint,
@@ -167,7 +170,7 @@ class NodeRuntime:
         draft: DraftRunSpec,
         environment: EnvironmentFingerprint,
         dataset: DatasetContract,
-        artifact_store: ArtifactStore,
+        artifact_root: Path,
         event_sink: EventSink | None = None,
         training: TrainingConfig | None = None,
         failure: FailureConfig | None = None,
@@ -179,7 +182,7 @@ class NodeRuntime:
             environment=environment,
             dataset=dataset,
             transport_limits=draft.transport,
-            artifact_store=artifact_store,
+            artifact_root=artifact_root,
             event_sink=event_sink,
         )
         self._state = NodeState.CREATED
@@ -259,18 +262,23 @@ class NodeRuntime:
             except Exception:
                 pass
             try:
-                await asyncio.to_thread(
-                    emit_event,
-                    "run_failed",
-                    run_id=self._result.manifest.run_id,
-                    manifest_hash=self._result.manifest_hash,
-                    node_id=self._local_public_key,
-                    message_id="run-failed-0",
-                    round_id=0,
-                    error_type=type(error).__name__,
-                    reason=str(error)[:1024] or "node failed before training",
-                    sink=self._event_sink,
-                )
+                if self._local_public_key is not None:
+                    await asyncio.to_thread(
+                        append_evidence,
+                        self._event_sink,
+                        RunFailedEvidence(
+                            run_id=self._result.manifest.run_id,
+                            manifest_hash=self._result.manifest_hash,
+                            node_id=self._local_public_key,
+                            message_id="run-failed-0",
+                            round_id=0,
+                            error_type=type(error).__name__,
+                            error=(
+                                str(error)[:1024]
+                                or "node failed before training"
+                            ),
+                        ),
+                    )
             except Exception:
                 pass
         finally:
@@ -660,16 +668,17 @@ class NodeRuntime:
             sketch_count=distance.sketch_count,
         )
         await asyncio.to_thread(
-            emit_event,
-            "consensus_distance",
-            run_id=self._result.manifest.run_id,
-            manifest_hash=self._result.manifest_hash,
-            node_id=self._local_public_key,
-            message_id=f"consensus-distance-{distance.round_id}",
-            round_id=distance.round_id,
-            normalized_rms=distance.normalized_rms,
-            sketch_count=distance.sketch_count,
-            sink=self._event_sink,
+            append_evidence,
+            self._event_sink,
+            ConsensusDistanceEvidence(
+                run_id=self._result.manifest.run_id,
+                manifest_hash=self._result.manifest_hash,
+                node_id=self._local_public_key,
+                message_id=f"consensus-distance-{distance.round_id}",
+                round_id=distance.round_id,
+                normalized_rms=float(distance.normalized_rms),
+                sketch_count=distance.sketch_count,
+            ),
         )
 
     def _prepare_commit(self, commit: RoundCommit) -> None:
