@@ -5,37 +5,39 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import Field, StringConstraints, model_validator
 
-PROTOCOL_VERSION = 1
+from dromeus.protocol.models import (
+    AlgorithmId,
+    DomainModel,
+    Identifier,
+    PublicKey,
+    RoundId,
+    RunId,
+    Sha256,
+    TensorSchema,
+)
+from dromeus.protocol.models import (
+    MessageId as MessageId,
+)
+from dromeus.protocol.models import (
+    Tensor as Tensor,
+)
+from dromeus.protocol.models import (
+    TransferId as TransferId,
+)
+from dromeus.protocol.version import PROTOCOL_VERSION
+
 MANIFEST_VERSION = 2
 M1_PARTICIPANT_COUNT = 4
 DPSGD_ALGORITHM_ID = "dpsgd"
 RESNET32_MODEL_ID = "resnet32"
 
-Identifier = Annotated[
-    str, StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:-]+$")
-]
 PackageVersion = Annotated[
     str,
     StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:+-]+$"),
 ]
-RunId = Identifier
-MessageId = Identifier
-TransferId = Identifier
-AlgorithmId = Identifier
-RoundId = Annotated[int, Field(ge=0)]
 NodeIndex = Annotated[int, Field(ge=0, lt=M1_PARTICIPANT_COUNT)]
-Sha256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
-PublicKey = Annotated[
-    str, StringConstraints(min_length=1, max_length=512, pattern=r"^\S+$")
-]
-
-
-class DomainModel(BaseModel):
-    """Closed, immutable value object used at protocol boundaries."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class Participant(DomainModel):
@@ -47,23 +49,6 @@ class ConsensusSketchMessage(DomainModel):
     sender_public_key: PublicKey
     round_id: RoundId
     payload: Annotated[bytes, Field(min_length=1)]
-
-
-class Tensor(DomainModel):
-    name: Identifier
-    dtype: Literal["float16", "float32", "float64", "int8", "int32", "int64"]
-    shape: tuple[Annotated[int, Field(gt=0)], ...]
-
-
-class TensorSchema(DomainModel):
-    tensors: tuple[Tensor, ...] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def unique_names(self) -> Self:
-        names = [tensor.name for tensor in self.tensors]
-        if len(names) != len(set(names)):
-            raise ValueError("tensor names must be unique")
-        return self
 
 
 class DatasetContract(DomainModel):
@@ -179,9 +164,7 @@ class DraftRunSpec(DomainModel):
             self.algorithm_id != DPSGD_ALGORITHM_ID
             or self.model_id != RESNET32_MODEL_ID
         ):
-            raise ValueError(
-                "manifest version 2 requires dpsgd and resnet32"
-            )
+            raise ValueError("manifest version 2 requires dpsgd and resnet32")
         return self
 
 
@@ -259,9 +242,7 @@ class OpaqueUpdateBundleMetadata(DomainModel):
     sender_public_key: PublicKey
     algorithm_id: AlgorithmId
     round_id: RoundId
-    artifacts: tuple[OpaqueArtifactMetadata, ...] = Field(
-        min_length=1, max_length=16
-    )
+    artifacts: tuple[OpaqueArtifactMetadata, ...] = Field(min_length=1, max_length=16)
 
     @model_validator(mode="after")
     def unique_artifacts(self) -> Self:
