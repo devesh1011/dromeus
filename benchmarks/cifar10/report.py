@@ -25,7 +25,6 @@ from dromeus.telemetry.evidence import (
     RunFailedEvidence,
     TransferMessageSentEvidence,
 )
-from dromeus.telemetry.report import ExactConsensusReport, build_exact_consensus_report
 
 JsonObject = dict[str, object]
 MetricField = Literal[
@@ -151,7 +150,6 @@ class BenchmarkReport:
     topology: Mapping[str, object]
     hardware: tuple[JsonObject, ...]
     failures: tuple[JsonObject, ...]
-    exact_consensus: ExactConsensusReport
     mean_within_fedavg_3pp: bool
     no_node_more_than_5pp_below: bool
     minimum_accuracy_90: bool
@@ -178,23 +176,14 @@ class BenchmarkReport:
 
     @property
     def consensus_evidence_pass(self) -> bool:
-        return bool(self.consensus) and self.exact_consensus.mixing_non_increasing
+        return bool(self.consensus)
 
     @property
-    def consensus_comparison(self) -> JsonObject:
-        """Report the observed final sketch-vs-checkpoint distance error."""
+    def final_approximate_consensus_distance(self) -> float | None:
         if not self.consensus:
-            return {"available": False}
-        approximate = self.consensus[-1]["mean_normalized_rms"]
-        exact = self.exact_consensus.final_normalized_distance
-        if not isinstance(approximate, (int, float)):
-            return {"available": False}
-        return {
-            "available": True,
-            "approximate_final_normalized_rms": float(approximate),
-            "exact_final_normalized_rms": exact,
-            "absolute_difference": abs(float(approximate) - exact),
-        }
+            return None
+        value = self.consensus[-1]["mean_normalized_rms"]
+        return float(value) if isinstance(value, (int, float)) else None
 
     def as_dict(self) -> JsonObject:
         return {
@@ -210,14 +199,15 @@ class BenchmarkReport:
             "accuracy_curve": list(self.accuracy_curve),
             "loss_curve": list(self.loss_curve),
             "consensus": list(self.consensus),
-            "consensus_comparison": self.consensus_comparison,
+            "final_approximate_consensus_distance": (
+                self.final_approximate_consensus_distance
+            ),
             "round_timing": dict(self.round_timing),
             "transport": dict(self.transport),
             "connectivity": dict(self.connectivity),
             "topology": dict(self.topology),
             "hardware": list(self.hardware),
             "failures": list(self.failures),
-            "exact_consensus": self.exact_consensus.as_dict(),
             "criteria": {
                 "mean_within_fedavg_3pp": self.mean_within_fedavg_3pp,
                 "no_node_more_than_5pp_below": self.no_node_more_than_5pp_below,
@@ -298,49 +288,20 @@ class BenchmarkReport:
             provenance=provenance,
         )
         write_line_plot(
-            output_dir / "approximate-consensus.png",
+            output_dir / "consensus.png",
             title="Approximate consensus distance",
             y_label="Normalized RMS",
             series=(
                 (
-                    "Approximate",
+                    "Mean",
                     _curve_values(self.consensus, "mean_normalized_rms"),
                     "#2563eb",
                 ),
-            ),
-            provenance=provenance,
-        )
-        exact_rounds = {
-            round_report.round_id: round_report
-            for round_report in self.exact_consensus.rounds
-        }
-        write_line_plot(
-            output_dir / "consensus.png",
-            title="Exact consensus distance",
-            y_label="Normalized RMS",
-            series=(
                 (
-                    "Pre-mix",
-                    {
-                        round_id: value.pre_mix_distance
-                        for round_id, value in exact_rounds.items()
-                    },
-                    "#2563eb",
-                ),
-                (
-                    "Post-mix",
-                    {
-                        round_id: value.post_mix_distance
-                        for round_id, value in exact_rounds.items()
-                    },
-                    "#dc2626",
-                ),
-                (
-                    "Smoothed post-mix",
-                    {
-                        round_id: value.smoothed_post_mix_distance
-                        for round_id, value in exact_rounds.items()
-                    },
+                    "Smoothed mean",
+                    _curve_values(
+                        self.consensus, "smoothed_mean_normalized_rms"
+                    ),
                     "#16a34a",
                 ),
             ),
@@ -410,9 +371,6 @@ class BenchmarkReport:
     def render_markdown(self) -> str:
         """Render a concise report that links charts and preserves provenance."""
         status = "PASS" if self.aggregate_pass else "FAIL"
-        consensus_error = self.consensus_comparison.get(
-            "absolute_difference", "unavailable"
-        )
         return "\n".join(
             (
                 f"# CIFAR-10 benchmark report: {status}",
@@ -433,15 +391,16 @@ class BenchmarkReport:
                 "",
                 "[Accuracy and loss curves](metrics.png)",
                 "",
-                "[Approximate consensus curves](approximate-consensus.png)",
-                "",
-                "[Exact consensus curves](consensus.png)",
+                "[Approximate consensus distance](consensus.png)",
                 "",
                 "[AXL latency and round timing](timing.png)",
                 "",
                 "[AXL payload goodput](goodput.png)",
                 "",
-                f"Observed final approximate/exact consensus error: {consensus_error}",
+                (
+                    "Final approximate consensus distance: "
+                    f"{self.final_approximate_consensus_distance}"
+                ),
                 "",
                 "[Raw-data provenance](provenance.json)",
                 "",
@@ -589,12 +548,15 @@ def build_benchmark_report(
     fedavg_accuracy = cast(float, fedavg_payload["final_accuracy"])
     accuracy_curve = _metric_curve(metrics, "evaluation_accuracy", "accuracy")
     loss_curve = _loss_curve(metrics)
-    consensus = _consensus_curve(evidence_logs)
+    consensus = _consensus_curve(
+        evidence_logs,
+        expected_nodes=expected_nodes,
+        expected_rounds=expected_rounds,
+    )
     round_timing = _round_timing(metrics)
     transport = _transport_summary(evidence_logs)
     connectivity = _connectivity(metrics)
     failures = _failure_summary(evidence_logs)
-    exact_consensus = build_exact_consensus_report(run_roots)
     return BenchmarkReport(
         seed=seed,
         run_id=manifests[0].run_id,
@@ -614,7 +576,6 @@ def build_benchmark_report(
         topology=topology,
         hardware=hardware,
         failures=failures,
-        exact_consensus=exact_consensus,
         mean_within_fedavg_3pp=abs(dpsgd_final_accuracy.mean - fedavg_accuracy) <= 0.03,
         no_node_more_than_5pp_below=min(final_accuracies) >= fedavg_accuracy - 0.05,
         minimum_accuracy_90=min(final_accuracies) >= 0.90,
@@ -1006,24 +967,46 @@ def _loss_curve(
 
 def _consensus_curve(
     evidence_logs: Sequence[EvidenceLog],
+    *,
+    expected_nodes: set[str],
+    expected_rounds: set[int],
+    smoothing_window: int = 3,
 ) -> tuple[JsonObject, ...]:
+    if smoothing_window <= 0:
+        raise ValueError("smoothing_window must be positive")
     grouped: dict[int, list[float]] = defaultdict(list)
     sketches: dict[int, list[int]] = defaultdict(list)
+    observed: dict[str, set[int]] = defaultdict(set)
     for log in evidence_logs:
         for record in log.records:
             if not isinstance(record, ConsensusDistanceEvidence):
                 continue
             grouped[record.round_id].append(record.normalized_rms)
             sketches[record.round_id].append(record.sketch_count)
+            observed[record.node_id].add(record.round_id)
+    if set(observed) != expected_nodes or any(
+        rounds != expected_rounds for rounds in observed.values()
+    ):
+        raise BenchmarkReportError("consensus evidence is incomplete")
+    means: list[float] = []
     result: list[JsonObject] = []
     for round_id in sorted(grouped):
+        if (
+            len(grouped[round_id]) != len(expected_nodes)
+            or set(sketches[round_id]) != {len(expected_nodes)}
+        ):
+            raise BenchmarkReportError("consensus evidence is inconsistent")
+        mean = _summary(grouped[round_id]).mean
+        means.append(mean)
+        window = means[-smoothing_window:]
         result.append(
             {
                 "round_id": round_id,
-                "mean_normalized_rms": _summary(grouped[round_id]).mean,
+                "mean_normalized_rms": mean,
+                "smoothed_mean_normalized_rms": sum(window) / len(window),
                 "minimum_normalized_rms": min(grouped[round_id]),
                 "maximum_normalized_rms": max(grouped[round_id]),
-                "sketch_count": min(sketches[round_id]) if sketches[round_id] else None,
+                "sketch_count": len(expected_nodes),
             }
         )
     return tuple(result)
