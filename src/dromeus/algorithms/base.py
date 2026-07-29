@@ -73,13 +73,6 @@ class ValidatedUpdate:
         object.__setattr__(self, "tensors", _immutable_tensors(self.tensors))
 
 
-@dataclass(frozen=True)
-class TrainedWeightsBundle:
-    round_id: RoundId
-    tensors: dict[str, np.ndarray]
-    checksum: str
-
-
 @dataclass(frozen=True, slots=True)
 class MaterializedArtifact:
     """Algorithm-produced bytes plus unchanged v1 transfer metadata."""
@@ -125,7 +118,6 @@ __all__ = [
     "AlgorithmSnapshot",
     "MaterializedArtifact",
     "SerializableState",
-    "TrainedWeightsBundle",
     "UpdateBundle",
     "ValidatedUpdate",
     "checksum_tensors",

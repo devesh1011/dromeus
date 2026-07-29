@@ -4,7 +4,6 @@ from dromeus.algorithms.base import (
     AlgorithmSnapshot,
     MaterializedArtifact,
     SerializableState,
-    TrainedWeightsBundle,
     UpdateBundle,
     ValidatedUpdate,
 )
@@ -23,7 +22,6 @@ __all__ = [
     "MaterializedArtifact",
     "SerializableState",
     "SafetensorsUpdateBundleCodec",
-    "TrainedWeightsBundle",
     "UpdateBundle",
     "UpdateBundleCodec",
     "UpdateCodec",

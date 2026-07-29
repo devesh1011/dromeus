@@ -1,9 +1,9 @@
-"""Decentralized parallel SGD algorithm."""
+"""Decentralized local SGD with pairwise averaging."""
 
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import cast
 
@@ -11,7 +11,6 @@ import numpy as np
 
 from dromeus.algorithms.base import (
     AlgorithmSnapshot,
-    TrainedWeightsBundle,
     UpdateBundle,
     ValidatedUpdate,
     checksum_tensors,
@@ -20,7 +19,6 @@ from dromeus.algorithms.codec import IdentityCodec, UpdateBundleCodec, UpdateCod
 from dromeus.manifests.models import RoundId, TensorSchema
 from dromeus.training.base import (
     CheckpointTrainer,
-    StochasticGradientTrainer,
     WeightTrainer,
 )
 
@@ -36,7 +34,6 @@ class DPSGDAdapter:
     trainer: WeightTrainer
     tensor_schema: TensorSchema
     local_steps: int
-    learning_rate: float | None = None
     training_round_count: int | None = None
     codec: UpdateCodec = field(default_factory=IdentityCodec)
     bundle_codec: UpdateBundleCodec | None = None
@@ -46,10 +43,6 @@ class DPSGDAdapter:
     def __post_init__(self) -> None:
         if self.local_steps <= 0:
             raise ValueError("local_steps must be positive")
-        if self.learning_rate is not None and (
-            self.learning_rate <= 0 or not math.isfinite(self.learning_rate)
-        ):
-            raise ValueError("learning_rate must be positive and finite")
         if self.training_round_count is not None and self.training_round_count <= 0:
             raise ValueError("training_round_count must be positive")
 
@@ -64,31 +57,6 @@ class DPSGDAdapter:
             or self._round_id < self.training_round_count
         ):
             self.trainer.train_local_steps(self.local_steps)
-        self._phase = "post-local"
-        return self.snapshot()
-
-    def step(
-        self,
-        peer_bundles: Sequence[TrainedWeightsBundle] = (),
-        peer_weights: Sequence[float] | None = None,
-    ) -> AlgorithmSnapshot:
-        if self.learning_rate is None:
-            raise ValueError("learning_rate is required for paper D-PSGD step")
-        if not isinstance(self.trainer, StochasticGradientTrainer):
-            raise TypeError("trainer must expose stochastic_gradients")
-        local = self.trainer.weights()
-        self._validate_tensors(local)
-        gradients = self.trainer.stochastic_gradients()
-        self._validate_tensors(gradients)
-        mixed = self._weighted_average(local, peer_bundles, peer_weights)
-        updated = {
-            name: (
-                mixed[name].astype(np.float32)
-                - self.learning_rate * gradients[name].astype(np.float32)
-            ).astype(np.float32)
-            for name in mixed
-        }
-        self.trainer.load_weights(updated)
         self._phase = "post-local"
         return self.snapshot()
 
@@ -226,9 +194,7 @@ class DPSGDAdapter:
                 raise ValueError("algorithm trainer state is invalid")
             if not all(
                 isinstance(name, str) and isinstance(value, np.ndarray)
-                for name, value in cast(
-                    Mapping[object, object], trainer_value
-                ).items()
+                for name, value in cast(Mapping[object, object], trainer_value).items()
             ):
                 raise ValueError("algorithm trainer state is invalid")
             self.trainer.load_checkpoint_tensors(
@@ -237,8 +203,7 @@ class DPSGDAdapter:
             restored = self.trainer.weights()
             self._validate_tensors(restored)
             if any(
-                not np.array_equal(restored[name], weights[name])
-                for name in weights
+                not np.array_equal(restored[name], weights[name]) for name in weights
             ):
                 raise ValueError("algorithm trainer state weights do not match")
         else:
@@ -260,38 +225,3 @@ class DPSGDAdapter:
                 raise ValueError(f"tensor {name} shape does not match schema")
             if not np.isfinite(tensor).all():
                 raise ValueError(f"tensor {name} contains non-finite values")
-
-    def _weighted_average(
-        self,
-        local: dict[str, np.ndarray],
-        peer_bundles: Sequence[TrainedWeightsBundle],
-        peer_weights: Sequence[float] | None,
-    ) -> dict[str, np.ndarray]:
-        if peer_weights is None:
-            weight = 1.0 / (len(peer_bundles) + 1)
-            peer_weights = tuple(weight for _ in peer_bundles)
-            self_weight = weight
-        else:
-            if len(peer_weights) != len(peer_bundles):
-                raise ValueError("peer weights must match peer bundles")
-            self_weight = 1.0 - sum(peer_weights)
-        if not math.isfinite(self_weight) or any(
-            not math.isfinite(weight) for weight in peer_weights
-        ):
-            raise ValueError("mixing weights must be finite")
-        if self_weight < 0 or any(weight < 0 for weight in peer_weights):
-            raise ValueError("mixing weights must be non-negative")
-        if not np.isclose(self_weight + sum(peer_weights), 1.0):
-            raise ValueError("mixing weights must sum to one")
-        mixed = {name: (local[name].astype(np.float32) * self_weight) for name in local}
-        for bundle, weight in zip(peer_bundles, peer_weights, strict=True):
-            if bundle.round_id != self._round_id:
-                raise ValueError("peer bundle round does not match current round")
-            self._validate_tensors(bundle.tensors)
-            if checksum_tensors(bundle.tensors) != bundle.checksum:
-                raise ValueError("peer bundle checksum mismatch")
-            decoded = self.codec.decode(bundle.tensors)
-            self._validate_tensors(decoded)
-            for name in mixed:
-                mixed[name] += decoded[name].astype(np.float32) * weight
-        return {name: value.astype(np.float32) for name, value in mixed.items()}
