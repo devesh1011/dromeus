@@ -64,9 +64,18 @@ def emit_event(
         **fields,
     )
     if sink is not None:
-        sink.append(record)
+        try:
+            sink.append(record)
+        except Exception:
+            pass
         return
-    print(json.dumps(record, separators=(",", ":"), sort_keys=True), file=sys.stdout)
+    try:
+        print(
+            json.dumps(record, separators=(",", ":"), sort_keys=True),
+            file=sys.stdout,
+        )
+    except Exception:
+        pass
 
 
 def event_record(

@@ -4,24 +4,18 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
 
 import numpy as np
-from safetensors.numpy import (
-    load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
-)
 
-from dromeus.manifests.canonical import canonical_hash
-from dromeus.manifests.models import SealedManifest
+from dromeus.persistence.archive import (
+    CheckpointRef,
+    RunArchive,
+    RunArchiveError,
+)
 from dromeus.telemetry.consensus import exact_normalized_rms_distance
-
-_load_safetensors = cast(
-    Callable[[str], dict[str, np.ndarray]],
-    _load_file,
-)
 
 
 class ConsensusReportError(ValueError):
@@ -78,6 +72,7 @@ class ExactConsensusReport:
             encoding="utf-8",
         )
 
+
 def build_exact_consensus_report(
     run_roots: Sequence[Path],
     *,
@@ -95,7 +90,10 @@ def build_exact_consensus_report(
     if tolerance < 0 or not math.isfinite(tolerance):
         raise ValueError("tolerance must be finite and non-negative")
 
-    archives = [_read_archive(root) for root in run_roots]
+    try:
+        archives = [RunArchive.open(root) for root in run_roots]
+    except RunArchiveError as error:
+        raise ConsensusReportError("invalid run archive") from error
     first = archives[0]
     if len(run_roots) != len(first.manifest.participants):
         raise ConsensusReportError(
@@ -104,11 +102,14 @@ def build_exact_consensus_report(
     if any(archive.manifest_hash != first.manifest_hash for archive in archives[1:]):
         raise ConsensusReportError("run stores do not share one manifest hash")
 
-    round_ids = set(first.pre_paths)
-    if not round_ids or round_ids != set(first.post_paths):
+    round_ids = set(first.pre_mix_checkpoints)
+    if not round_ids or round_ids != set(first.post_mix_checkpoints):
         raise ConsensusReportError("first run store has incomplete checkpoint archives")
     for archive in archives[1:]:
-        if set(archive.pre_paths) != round_ids or set(archive.post_paths) != round_ids:
+        if (
+            set(archive.pre_mix_checkpoints) != round_ids
+            or set(archive.post_mix_checkpoints) != round_ids
+        ):
             raise ConsensusReportError("run stores do not share checkpoint rounds")
 
     report_rounds: list[ConsensusRoundReport] = []
@@ -116,11 +117,11 @@ def build_exact_consensus_report(
     violations: list[int] = []
     for round_id in sorted(round_ids):
         pre_models = [
-            _load_checkpoint(archive.root, archive.pre_paths[round_id])
+            _load_checkpoint(archive.pre_mix_checkpoints[round_id])
             for archive in archives
         ]
         post_models = [
-            _load_checkpoint(archive.root, archive.post_paths[round_id])
+            _load_checkpoint(archive.post_mix_checkpoints[round_id])
             for archive in archives
         ]
         _validate_model_set(pre_models)
@@ -152,64 +153,11 @@ def build_exact_consensus_report(
     )
 
 
-@dataclass(frozen=True, slots=True)
-class _Archive:
-    root: Path
-    manifest: SealedManifest
-    manifest_hash: str
-    pre_paths: dict[int, str]
-    post_paths: dict[int, str]
-
-
-def _read_archive(root: Path) -> _Archive:
+def _load_checkpoint(reference: CheckpointRef) -> dict[str, np.ndarray]:
     try:
-        manifest = SealedManifest.model_validate(
-            json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-        )
-        state = cast(dict[str, Any], json.loads((root / "state.json").read_text()))
-    except (OSError, ValueError, TypeError) as error:
-        raise ConsensusReportError(f"invalid run store at {root}") from error
-    manifest_hash = canonical_hash(manifest)
-    if state.get("manifest_hash") != manifest_hash:
-        raise ConsensusReportError(f"manifest hash mismatch in {root}")
-    return _Archive(
-        root=root,
-        manifest=manifest,
-        manifest_hash=manifest_hash,
-        pre_paths=_checkpoint_map(state, "pre_mix_checkpoints", root),
-        post_paths=_checkpoint_map(state, "post_mix_checkpoints", root),
-    )
-
-
-def _checkpoint_map(
-    state: Mapping[str, object], key: str, root: Path
-) -> dict[int, str]:
-    value = state.get(key)
-    if not isinstance(value, Mapping):
-        raise ConsensusReportError(f"{key} missing from {root}")
-    result: dict[int, str] = {}
-    entries = cast(Mapping[object, object], value)
-    for round_value, path_value in entries.items():
-        if not isinstance(round_value, str) or not round_value.isdecimal():
-            raise ConsensusReportError(f"invalid {key} round in {root}")
-        if not isinstance(path_value, str):
-            raise ConsensusReportError(f"invalid {key} path in {root}")
-        result[int(round_value)] = path_value
-    return result
-
-
-def _load_checkpoint(root: Path, relative_path: str) -> dict[str, np.ndarray]:
-    root_resolved = root.resolve()
-    path = (root / relative_path).resolve()
-    if not path.is_relative_to(root_resolved) or not path.is_file():
-        raise ConsensusReportError(
-            f"checkpoint is missing or outside run store: {path}"
-        )
-    try:
-        value = _load_safetensors(str(path))
-    except (OSError, ValueError, TypeError) as error:
-        raise ConsensusReportError(f"invalid checkpoint: {path}") from error
-    return value
+        return reference.load_tensors()
+    except RunArchiveError as error:
+        raise ConsensusReportError("invalid archived checkpoint") from error
 
 
 def _validate_model_set(

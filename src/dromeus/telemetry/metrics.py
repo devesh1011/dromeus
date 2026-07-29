@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import math
-from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
-from dromeus.telemetry.events import EventSink, event_record
+from dromeus.telemetry.events import EventSink
+from dromeus.telemetry.evidence import (
+    EvidenceRecord,
+    RoundMetricsEvidence,
+    RunFailedEvidence,
+    append_evidence,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,7 +94,7 @@ class JsonlMetricsPublisher(MetricsPublisher):
         self._run_id = run_id
         self._manifest_hash = manifest_hash
         self._node_id = node_id
-        self._queue: asyncio.Queue[Mapping[str, object]] = asyncio.Queue(
+        self._queue: asyncio.Queue[EvidenceRecord] = asyncio.Queue(
             maxsize=max_queue_size
         )
         self._stop = asyncio.Event()
@@ -116,8 +121,7 @@ class JsonlMetricsPublisher(MetricsPublisher):
         self._task = None
 
     def submit(self, timing: RoundTiming) -> bool:
-        record = event_record(
-            "round_metrics",
+        record = RoundMetricsEvidence(
             run_id=self._run_id,
             manifest_hash=self._manifest_hash,
             node_id=self._node_id,
@@ -125,33 +129,44 @@ class JsonlMetricsPublisher(MetricsPublisher):
             transfer_id=timing.transfer_id,
             peer_id=timing.peer_id,
             round_id=timing.round_id,
-            local_loss=timing.local_loss,
-            evaluation_loss=timing.evaluation_loss,
-            evaluation_accuracy=timing.evaluation_accuracy,
-            local_compute_seconds=timing.local_compute_seconds,
-            peer_wait_seconds=timing.peer_wait_seconds,
-            transfer_seconds=timing.transfer_seconds,
-            mixing_seconds=timing.mixing_seconds,
-            evaluation_seconds=timing.evaluation_seconds,
+            local_loss=(
+                float(timing.local_loss)
+                if timing.local_loss is not None
+                else None
+            ),
+            evaluation_loss=(
+                float(timing.evaluation_loss)
+                if timing.evaluation_loss is not None
+                else None
+            ),
+            evaluation_accuracy=(
+                float(timing.evaluation_accuracy)
+                if timing.evaluation_accuracy is not None
+                else None
+            ),
+            local_compute_seconds=float(timing.local_compute_seconds),
+            peer_wait_seconds=float(timing.peer_wait_seconds),
+            transfer_seconds=float(timing.transfer_seconds),
+            mixing_seconds=float(timing.mixing_seconds),
+            evaluation_seconds=float(timing.evaluation_seconds),
             retries=timing.retries,
         )
         return self._enqueue(record)
 
     def submit_failure(self, *, round_id: int, error_type: str, reason: str) -> bool:
         return self._enqueue(
-            event_record(
-                "run_failed",
+            RunFailedEvidence(
                 run_id=self._run_id,
                 manifest_hash=self._manifest_hash,
                 node_id=self._node_id,
                 message_id=f"run-failure-{self._node_id[:8]}-{round_id}",
                 round_id=round_id,
                 error_type=error_type[:128],
-                error=reason[:1024],
+                error=reason[:1024] or "unknown failure",
             )
         )
 
-    def _enqueue(self, record: Mapping[str, object]) -> bool:
+    def _enqueue(self, record: EvidenceRecord) -> bool:
         if self._stop.is_set():
             self._dropped += 1
             return False
@@ -169,7 +184,11 @@ class JsonlMetricsPublisher(MetricsPublisher):
             except TimeoutError:
                 continue
             try:
-                await asyncio.to_thread(self._sink.append, record)
+                written = await asyncio.to_thread(
+                    append_evidence, self._sink, record
+                )
+                if not written:
+                    self._dropped += 1
             except Exception:
                 self._dropped += 1
             finally:
