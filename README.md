@@ -103,9 +103,6 @@ and transport does not know membership or model details.
 | `persistence` | Atomically stores manifests, algorithm state, checkpoints, metrics, schedules, and failures. |
 | `telemetry` | Emits observational events and metrics, including CountSketch consensus estimates. It never controls training. |
 
-`InMemoryTransport` exists only for deterministic unit/protocol tests. Production and
-milestone integration runs use `AXLTransport`.
-
 ## Repository layout
 
 ```text
