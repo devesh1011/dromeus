@@ -277,21 +277,6 @@ class PyTorchTrainer:
             self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
             self._completed_steps += 1
 
-    def stochastic_gradients(self) -> dict[str, np.ndarray]:
-        """Compute one minibatch gradient without mutating model weights."""
-        self._model.train()
-        images, labels = self._next_batch()
-        self._optimizer.zero_grad(set_to_none=True)
-        loss = nn.functional.cross_entropy(self._model(images), labels)
-        self._last_local_loss = float(loss.detach().cpu().item())
-        loss.backward()  # pyright: ignore[reportUnknownMemberType]
-        gradients: dict[str, np.ndarray] = {}
-        for name, parameter in self._model.named_parameters():
-            if parameter.grad is None:
-                raise RuntimeError(f"missing gradient for {name}")
-            gradients[name] = parameter.grad.detach().cpu().numpy().copy()
-        return gradients
-
     def evaluate(
         self,
         data: Dataset[tuple[Tensor, int]] | None = None,

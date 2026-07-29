@@ -22,13 +22,6 @@ class WeightTrainer(Protocol):
 
 
 @runtime_checkable
-class StochasticGradientTrainer(WeightTrainer, Protocol):
-    """Trainer that can expose one stochastic gradient at current weights."""
-
-    def stochastic_gradients(self) -> dict[str, np.ndarray]: ...
-
-
-@runtime_checkable
 class CheckpointTrainer(WeightTrainer, Protocol):
     """Trainer whose complete durable state is tensor-serializable."""
 
