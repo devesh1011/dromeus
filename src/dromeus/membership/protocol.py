@@ -40,7 +40,7 @@ from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.base import AsyncTransport
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler, Priority
-from dromeus.transport.transfer import ArtifactStore, TransferManager
+from dromeus.transport.transfer import TransferManager
 
 
 class ReadyValidationError(ValueError):
@@ -146,7 +146,7 @@ class FormationProtocol:
         environment: EnvironmentFingerprint,
         dataset: DatasetContract,
         transport_limits: TransportLimits,
-        artifact_store: ArtifactStore,
+        artifact_root: Path,
         event_sink: EventSink | None = None,
     ) -> None:
         self._transport = transport
@@ -154,7 +154,7 @@ class FormationProtocol:
         self._environment = environment
         self._dataset = dataset
         self._transport_limits = transport_limits
-        self._artifact_store = artifact_store
+        self._artifact_root = artifact_root
         self._event_sink = event_sink
         self._receiver = Receiver(
             transport,
@@ -417,6 +417,7 @@ class FormationProtocol:
             payload=encode_message(StartMessage(manifest_hash=manifest_hash)),
             manifest_hash=manifest_hash,
         )
+        transfer.claim_receipt(checkpoint)
         result = FormationResult(
             manifest=manifest,
             manifest_hash=manifest_hash,
@@ -460,7 +461,7 @@ class FormationProtocol:
             transport_limits=manifest.transport,
             receiver=self._receiver,
             sender=self._sender,
-            artifact_store=self._artifact_store,
+            artifact_root=self._artifact_root,
             event_sink=self._event_sink,
         )
         await manager.start()
