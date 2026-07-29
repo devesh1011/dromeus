@@ -17,15 +17,21 @@ ALLOWED: dict[str, frozenset[str]] = {
             "gossip",
             "manifests",
             "persistence",
+            "protocol",
             "telemetry",
             "training",
             "transport",
         }
     ),
-    "manifests": frozenset({"manifests"}),
-    "membership": frozenset({"manifests", "membership", "telemetry", "transport"}),
-    "node": frozenset({"manifests", "membership", "runtime", "telemetry", "transport"}),
+    "manifests": frozenset({"manifests", "protocol"}),
+    "membership": frozenset(
+        {"manifests", "membership", "protocol", "telemetry", "transport"}
+    ),
+    "node": frozenset(
+        {"manifests", "membership", "protocol", "runtime", "telemetry", "transport"}
+    ),
     "persistence": frozenset({"manifests", "persistence"}),
+    "protocol": frozenset({"protocol"}),
     "runtime": frozenset(
         {
             "algorithms",
@@ -33,15 +39,16 @@ ALLOWED: dict[str, frozenset[str]] = {
             "manifests",
             "membership",
             "persistence",
+            "protocol",
             "runtime",
             "telemetry",
             "training",
             "transport",
         }
     ),
-    "telemetry": frozenset({"manifests", "telemetry"}),
+    "telemetry": frozenset({"manifests", "persistence", "telemetry"}),
     "training": frozenset({"manifests", "training"}),
-    "transport": frozenset({"manifests", "telemetry", "transport"}),
+    "transport": frozenset({"manifests", "protocol", "telemetry", "transport"}),
 }
 
 
@@ -107,6 +114,18 @@ def main() -> int:
                     f"production isolation: {path.relative_to(ROOT)} imports {imported}"
                 )
             if not imported.startswith("dromeus."):
+                if imported == "msgpack" and source_owner != "protocol":
+                    errors.append(
+                        f"protocol locality: {path.relative_to(ROOT)} imports "
+                        "msgpack; only protocol may encode Dromeus wire values"
+                    )
+                if source_owner == "transport" and (
+                    imported == "safetensors" or imported.startswith("safetensors.")
+                ):
+                    errors.append(
+                        f"transfer opacity: {path.relative_to(ROOT)} imports "
+                        "safetensors; transport may only verify bytes and hashes"
+                    )
                 continue
             target = imported.split(".", 2)[1]
             graph.setdefault(source_owner, set())
@@ -140,7 +159,7 @@ def main() -> int:
 
     print(
         "Structural checks passed: dependency direction, production isolation, "
-        f"single receiver, cycle freedom ({len(files)} files)"
+        f"single receiver, transfer opacity, cycle freedom ({len(files)} files)"
     )
     return 0
 
