@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import cast
 from urllib.request import urlopen
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
 import pytest
 from support.sample_manifest import manifest_data, write_checkpoint
@@ -23,6 +22,8 @@ from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.protocol import create_invitation, seal_manifest
 from dromeus.persistence.run_store import RunStore
+from dromeus.protocol.codec import decode_envelope, decode_envelope_sender
+from dromeus.protocol.models import MessageType
 from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
 from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
@@ -35,8 +36,6 @@ from dromeus.training.models import MODEL_DEFINITION_HASH
 from dromeus.training.trainer import PyTorchTrainer
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import AsyncTransport, ReceivedBytes
-from dromeus.transport.envelope import MessageType
-from dromeus.transport.transfer import ArtifactStore
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("DROMEUS_RUN_AXL_TESTS") != "1",
@@ -64,11 +63,13 @@ class FaultInjectingTransport:
         return await self._transport.local_public_key()
 
     async def send(self, destination: str, payload: bytes) -> None:
-        unpacked = cast(
-            dict[str, object],
-            msgpack.unpackb(payload, raw=False),  # pyright: ignore[reportUnknownMemberType]
+        sender = decode_envelope_sender(payload)
+        envelope = decode_envelope(
+            payload,
+            authenticated_sender=sender,
+            participant_keys=None,
         )
-        message_type = unpacked.get("message_type")
+        message_type = envelope.message_type
         if self._drop_first_ack and message_type == MessageType.CHUNK_ACK:
             self._drop_first_ack = False
             return
@@ -138,7 +139,7 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                     draft=draft,
                     environment=manifest.environment,
                     dataset=manifest.dataset,
-                    artifact_store=ArtifactStore(root / f"artifacts-{index}"),
+                    artifact_root=root / f"artifacts-{index}",
                 )
                 for index, transport in enumerate(transports)
             ]
@@ -340,14 +341,13 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                         draft=draft,
                         environment=draft.environment,
                         dataset=draft.dataset,
-                        artifact_store=ArtifactStore(root / f"artifacts-{index}"),
+                        artifact_root=root / f"artifacts-{index}",
                         event_sink=event_sink,
                         training=TrainingConfig(
                             algorithm=DPSGDAdapter(
                                 trainer=trainer,
                                 tensor_schema=prepared.tensor_schema,
                                 local_steps=draft.local_steps,
-                                learning_rate=draft.learning_rate,
                             ),
                             load_checkpoint=trainer.load_checkpoint,
                             run_store=RunStore(root / f"run-{index}"),
@@ -400,15 +400,24 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     assert any(
                         not np.array_equal(
                             commit.pre_local.weights[name],
-                            commit.local_bundle.tensors[name],
+                            commit.post_local.weights[name],
                         )
                         for name in commit.pre_local.weights
                     )
+            records_by_key = dict(zip(local_keys, commits, strict=True))
+            for records in commits:
                 for commit in records:
-                    for name, local_weights in commit.local_bundle.tensors.items():
+                    peer_commit = records_by_key[commit.peer_public_key][
+                        commit.round_id
+                    ]
+                    for name, local_weights in commit.post_local.weights.items():
                         np.testing.assert_allclose(
                             commit.post_mix.weights[name],
-                            (local_weights + commit.peer_bundle.tensors[name]) * 0.5,
+                            (
+                                local_weights
+                                + peer_commit.post_local.weights[name]
+                            )
+                            * 0.5,
                         )
             evaluations = await asyncio.gather(
                 *(asyncio.to_thread(trainer.evaluate) for trainer in trainers)
