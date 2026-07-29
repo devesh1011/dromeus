@@ -23,13 +23,19 @@ COPY src ./src
 COPY demo ./demo
 RUN uv venv /app/.venv \
     && uv pip install --python /app/.venv/bin/python \
-       "msgpack>=1.1,<2" "numpy>=2,<3" "pydantic>=2.11,<3" \
-       "pyyaml>=6.0,<7" "safetensors>=0.5,<1"
+       --index-url https://download.pytorch.org/whl/cpu \
+       --extra-index-url https://pypi.org/simple \
+       --index-strategy unsafe-best-match \
+       "datasets>=3,<5" "msgpack>=1.1,<2" "numpy>=2,<3" \
+       "pillow>=10,<13" "pydantic>=2.11,<3" "pyyaml>=6.0,<7" \
+       "safetensors>=0.5,<1" "torch==2.7.1+cpu"
 COPY --from=axl-builder /opt/axl-node /opt/axl/node
+COPY demo/axl-entrypoint.sh /usr/local/bin/axl-entrypoint
+RUN chmod +x /usr/local/bin/axl-entrypoint
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app/src:/app" \
     PYTHONUNBUFFERED=1 \
-    DROMEUS_AXL_BINARY=/opt/axl/node
+    DROMEUS_AXL_BINARY=/usr/local/bin/axl-entrypoint
 
 CMD ["python", "-m", "demo.formation.worker"]

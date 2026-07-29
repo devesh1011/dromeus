@@ -37,9 +37,16 @@
         </div>
 
         <div class="run-actions">
+          <label class="round-control" for="round-count">
+            <span>Training rounds</span>
+            <input id="round-count" type="number" min="1" max="100" value="2" />
+          </label>
           <button class="primary-action" id="start-run" type="button">
             <span class="button-ready">Begin formation</span>
             <span class="button-busy">Formation running</span>
+          </button>
+          <button class="replay-action training-action" id="start-training" type="button" disabled>
+            Start training
           </button>
           <div class="replay-controls" id="replay-controls" hidden>
             <label class="replay-speed" for="replay-speed">
@@ -217,7 +224,7 @@
                 <i></i><span>Readiness confirmed</span><b>0/3</b>
               </li>
               <li data-phase="5">
-                <i></i><span>Round zero started</span><b>0/3</b>
+                <i></i><span>Formation acknowledged</span><b>0/3</b>
               </li>
             </ol>
           </section>
@@ -232,6 +239,14 @@
               <p>Captured protocol envelopes will appear here.</p>
             </div>
             <ol class="event-ledger" id="event-ledger" aria-live="polite"></ol>
+          </section>
+
+          <section class="training-log-section" aria-labelledby="training-log-title">
+            <div class="rail-heading">
+              <h2 id="training-log-title">Live training logs</h2>
+              <span id="training-progress">0 / 2</span>
+            </div>
+            <pre class="training-log" id="training-log">Waiting for training.</pre>
           </section>
 
           <footer class="evidence-footer">

@@ -25,6 +25,8 @@ from safetensors.numpy import save_file  # pyright: ignore[reportUnknownVariable
 from dromeus.manifests.models import DraftRunSpec, Tensor, TensorSchema
 from dromeus.membership.protocol import create_invitation
 from dromeus.runtime import NodeRuntime, NodeState
+from dromeus.training.cifar10 import DATASET_VERSION, PREPROCESSING_HASH
+from dromeus.training.models import MODEL_DEFINITION_HASH
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.base import ReceivedBytes
 from dromeus.transport.envelope import Envelope, MessageType, decode_envelope
@@ -68,17 +70,18 @@ class DashboardState:
         self._event_wire_keys: dict[int, tuple[str, str]] = {}
         self._remote_deliveries: set[tuple[str, str, str]] = set()
         self._pending_remote_deliveries: set[tuple[str, str, str]] = set()
-        self._reset_locked()
+        self._reset_locked(round_count=2)
 
-    def reset(self) -> None:
+    def reset(self, *, round_count: int = 2) -> None:
         with self._lock:
             self._generation += 1
-            self._reset_locked()
+            self._reset_locked(round_count=round_count)
 
-    def _reset_locked(self) -> None:
+    def _reset_locked(self, *, round_count: int) -> None:
         self._status = "idle"
         self._status_detail = "Ready to launch four local AXL nodes"
         self._run_id = "run-axl-demo"
+        self._round_count = round_count
         self._manifest_hash: str | None = None
         self._error: str | None = None
         self._events: list[dict[str, object]] = []
@@ -91,6 +94,8 @@ class DashboardState:
         self._event_wire_keys = {}
         self._remote_deliveries = set()
         self._pending_remote_deliveries = set()
+        self._training_log_keys: set[tuple[str, str, str]] = set()
+        self._training_logs: list[dict[str, object]] = []
         self._nodes = [
             {
                 "id": f"node-{index}",
@@ -152,6 +157,8 @@ class DashboardState:
         key = snapshot.get("key")
         if isinstance(key, str):
             self.register_node(index, key)
+        with self._lock:
+            self._ingest_training_locked(index, snapshot)
         events = snapshot.get("events")
         if not isinstance(events, list):
             return
@@ -220,6 +227,74 @@ class DashboardState:
                 )
                 self._update_remote_event_locked(dashboard_sequence, event)
             self._relabel_remote_events_locked()
+
+    def _ingest_training_locked(
+        self, index: int, snapshot: dict[str, object]
+    ) -> None:
+        if not 0 <= index < len(self._nodes):
+            return
+        training = snapshot.get("training")
+        if not isinstance(training, dict):
+            return
+        node = self._nodes[index]
+        completed_rounds = training.get("completed_rounds")
+        if isinstance(completed_rounds, int):
+            node["training_round"] = completed_rounds
+            node["progress"] = min(
+                100,
+                round(100 * completed_rounds / max(self._round_count, 1)),
+            )
+        node["training_round_count"] = self._round_count
+        for field in ("local_loss", "evaluation_loss", "evaluation_accuracy"):
+            value = training.get(field)
+            if isinstance(value, (int, float)):
+                node[field] = value
+        status = snapshot.get("status")
+        if status == "formed":
+            node["state"] = "ready"
+            if self._status in {"running", "formed"}:
+                self._status = "formed"
+                self._status_detail = (
+                    "Four nodes formed; ready to start training"
+                )
+        elif status == "training":
+            node["state"] = "training"
+            self._status = "training"
+            self._status_detail = (
+                f"Training round {completed_rounds or 0} / {self._round_count} "
+                "over real AXL"
+            )
+        elif status == "complete":
+            node["state"] = "ready"
+            node["progress"] = 100
+        logs = training.get("logs")
+        if not isinstance(logs, list):
+            return
+        for raw in logs:
+            if not isinstance(raw, dict):
+                continue
+            log = cast(dict[object, object], raw)
+            timestamp = log.get("timestamp")
+            message = log.get("message")
+            if not isinstance(timestamp, str) or not isinstance(message, str):
+                continue
+            key = (str(index), timestamp, message)
+            if key in self._training_log_keys:
+                continue
+            self._training_log_keys.add(key)
+            self._training_logs.append(
+                {
+                    "timestamp": timestamp,
+                    "node": f"N{index}",
+                    "message": message,
+                    "round_id": log.get("round_id"),
+                    "local_loss": log.get("local_loss"),
+                    "evaluation_loss": log.get("evaluation_loss"),
+                    "evaluation_accuracy": log.get("evaluation_accuracy"),
+                }
+            )
+        self._training_logs.sort(key=lambda item: str(item["timestamp"]))
+        del self._training_logs[:-300]
 
     def _update_remote_event_locked(
         self, dashboard_sequence: int, event: dict[object, object]
@@ -333,21 +408,42 @@ class DashboardState:
                 envelope.message_type, envelope.sender_public_key
             )
 
-    def complete(self, manifest_hash: str) -> None:
+    def complete(self, manifest_hash: str, *, detail: str | None = None) -> None:
         with self._lock:
             if self._started_at is not None:
                 self._completed_elapsed = time.monotonic() - self._started_at
             self._status = "complete"
-            self._status_detail = "Four nodes entered round zero with one manifest"
+            self._status_detail = detail or (
+                "Four nodes entered round zero with one manifest"
+            )
             self._manifest_hash = manifest_hash
             for node in self._nodes:
                 node["state"] = "ready"
                 node["progress"] = 100
 
+    def formation_ready(self, manifest_hash: str) -> None:
+        with self._lock:
+            self._status = "formed"
+            self._status_detail = "Four nodes formed; ready to start training"
+            self._manifest_hash = manifest_hash
+            for node in self._nodes:
+                node["state"] = "ready"
+                node["progress"] = 100
+
+    def training_started(self) -> None:
+        with self._lock:
+            self._status = "training"
+            self._status_detail = (
+                f"Training round 0 / {self._round_count} over real AXL"
+            )
+
     def fail(self, error: str) -> None:
         with self._lock:
+            was_training = self._status == "training"
             self._status = "failed"
-            self._status_detail = "Formation stopped"
+            self._status_detail = (
+                "Training stopped" if was_training else "Formation stopped"
+            )
             self._error = error
             for node in self._nodes:
                 if node["state"] != "ready":
@@ -363,6 +459,7 @@ class DashboardState:
                 "status": self._status,
                 "status_detail": self._status_detail,
                 "run_id": self._run_id,
+                "round_count": self._round_count,
                 "manifest_hash": self._manifest_hash,
                 "error": self._error,
                 "elapsed_seconds": round(elapsed or 0.0, 2),
@@ -371,6 +468,17 @@ class DashboardState:
                 "deployment": "docker" if self._containerized else "local",
                 "nodes": [dict(node) for node in self._nodes],
                 "events": [dict(event) for event in self._events],
+                "training": {
+                    "completed_rounds": max(
+                        (
+                            int(node.get("training_round", 0))
+                            for node in self._nodes
+                        ),
+                        default=0,
+                    ),
+                    "round_count": self._round_count,
+                    "logs": [dict(log) for log in self._training_logs],
+                },
                 "phases": self._phases_locked(),
             }
 
@@ -469,7 +577,7 @@ class DashboardState:
             ("Manifest agreed", count(str(MessageType.MANIFEST_SEALED)), 3),
             ("Checkpoint verified", count(str(MessageType.TRANSFER_COMPLETE)), 3),
             ("Readiness confirmed", count(str(MessageType.READY)), 3),
-            ("Round zero started", count(str(MessageType.START_ACK)), 3),
+            ("Formation acknowledged", count(str(MessageType.START_ACK)), 3),
         ]
         return [
             {
@@ -547,22 +655,56 @@ class DemoController:
         self._worker_urls = worker_urls
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
+        self._round_count = 2
+        self._formation_ready = False
+        self._training_requested = threading.Event()
+        self._stopping = threading.Event()
 
-    def start(self) -> bool:
+    def start(self, *, round_count: int = 2) -> bool:
+        return self.begin_formation(round_count=round_count)
+
+    def begin_formation(self, *, round_count: int = 2) -> bool:
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
-                return False
-            self.state.reset()
+                if self.state.snapshot()["status"] != "formed":
+                    return False
+                self._stopping.set()
+                self._training_requested.set()
+                self._thread.join(timeout=5.0)
+                if self._thread.is_alive():
+                    return False
+            self._round_count = round_count
+            self._formation_ready = False
+            self._training_requested.clear()
+            self._stopping.clear()
+            self.state.reset(round_count=round_count)
             self.state.preparing("Checking the pinned AXL runtime")
             self._thread = threading.Thread(
-                target=self._run,
+                target=self._run_formation_stage,
                 name="dromeus-formation-demo",
                 daemon=True,
             )
             self._thread.start()
             return True
 
+    def start_training(self) -> bool:
+        with self._lock:
+            if (
+                not self._worker_urls
+                or not self._formation_ready
+                or self._stopping.is_set()
+                or self.state.snapshot()["status"] != "formed"
+            ):
+                return False
+            if self._thread is None or not self._thread.is_alive():
+                return False
+            self.state.training_started()
+            self._training_requested.set()
+            return True
+
     def stop(self) -> None:
+        self._stopping.set()
+        self._training_requested.set()
         self._registry.terminate()
         for url in self._worker_urls:
             try:
@@ -570,16 +712,48 @@ class DemoController:
             except (HTTPError, URLError, TimeoutError):
                 pass
 
-    def _run(self) -> None:
+    def _run_formation_stage(self) -> None:
         try:
             if self._worker_urls:
-                asyncio.run(_run_remote_formation(self.state, self._worker_urls))
+                manifest_hash = asyncio.run(
+                    _run_remote_formation(
+                        self.state, self._worker_urls, self._round_count
+                    )
+                )
+                with self._lock:
+                    self._formation_ready = True
+                self.state.formation_ready(manifest_hash)
+                self._training_requested.wait()
+                if self._stopping.is_set():
+                    return
+                asyncio.run(
+                    _run_remote_training(
+                        self.state, self._worker_urls, self._round_count
+                    )
+                )
             else:
                 asyncio.run(_run_formation(self.state, self._registry))
         except BaseException as error:
             self.state.fail(str(error))
+            if self._worker_urls:
+                self.stop()
         finally:
             self._registry.terminate()
+
+    def snapshot(self) -> dict[str, object]:
+        with self._lock:
+            snapshot = self.state.snapshot()
+            thread_running = self._thread is not None and self._thread.is_alive()
+            snapshot["can_begin_formation"] = (
+                not thread_running or snapshot["status"] == "formed"
+            )
+            snapshot["can_start_training"] = (
+                bool(self._worker_urls)
+                and thread_running
+                and self._formation_ready
+                and snapshot["status"] == "formed"
+            )
+            return snapshot
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -588,7 +762,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
         if path == "/api/state":
-            self._json(HTTPStatus.OK, self.controller.state.snapshot())
+            self._json(HTTPStatus.OK, self.controller.snapshot())
             return
         static_files = {
             "/": ("index.html", "text/html; charset=utf-8"),
@@ -611,13 +785,38 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
-        if path != "/api/start":
+        if path not in {"/api/start", "/api/train"}:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
-        started = self.controller.start()
+        if path == "/api/train":
+            started = self.controller.start_training()
+            payload: dict[str, object] = {"started": started}
+            if not started:
+                payload["error"] = (
+                    "formation is not ready or another run is still stopping"
+                )
+            self._json(
+                HTTPStatus.ACCEPTED if started else HTTPStatus.CONFLICT,
+                payload,
+            )
+            return
+        try:
+            payload = self._read_json()
+            round_count = payload.get("round_count", 2)
+            if not isinstance(round_count, int) or isinstance(round_count, bool):
+                raise ValueError("round_count must be an integer")
+            if not 1 <= round_count <= 100:
+                raise ValueError("round_count must be between 1 and 100")
+        except (ValueError, json.JSONDecodeError) as error:
+            self._json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        started = self.controller.start(round_count=round_count)
+        response: dict[str, object] = {"started": started}
+        if not started:
+            response["error"] = "another run is still stopping; retry shortly"
         self._json(
             HTTPStatus.ACCEPTED if started else HTTPStatus.CONFLICT,
-            {"started": started},
+            response,
         )
 
     def log_message(self, format: str, *args: object) -> None:
@@ -631,6 +830,17 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _read_json(self) -> dict[str, object]:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length > 4096:
+            raise ValueError("request body is too large")
+        if length == 0:
+            return {}
+        value = json.loads(self.rfile.read(length))
+        if not isinstance(value, dict):
+            raise ValueError("request body must be a JSON object")
+        return cast(dict[str, object], value)
 
     def _security_headers(self) -> None:
         self.send_header("Cache-Control", "no-store")
@@ -713,25 +923,32 @@ async def _run_formation(
             raise RuntimeError("nodes produced different manifest hashes")
         if any(node.state is not NodeState.READY for node in nodes):
             raise RuntimeError("not every node reached READY")
-        state.complete(results[0].manifest_hash)
+        state.formation_ready(results[0].manifest_hash)
     finally:
         await asyncio.gather(*(node.stop() for node in nodes), return_exceptions=True)
 
 
 async def _run_remote_formation(
-    state: DashboardState, worker_urls: tuple[str, ...]
-) -> None:
+    state: DashboardState,
+    worker_urls: tuple[str, ...],
+    round_count: int = 2,
+) -> str:
     """Drive four independently containerized workers through their HTTP seam."""
     if len(worker_urls) != len(AXL_PORTS):
         raise RuntimeError("docker demo requires exactly four worker URLs")
     state.preparing("Starting four containerized Dromeus nodes")
-    deadline = time.monotonic() + 90.0
+    await _prepare_remote_workers(worker_urls)
+    formation_deadline = time.monotonic() + 90.0
 
     # The invitation is an out-of-band artifact on the shared control volume.
     # Start the initiator first and wait for its fresh invitation so a
     # participant cannot consume the previous run's file.
-    await asyncio.to_thread(_post_json, f"{worker_urls[0]}/start", {})
-    while time.monotonic() < deadline:
+    await asyncio.to_thread(
+        _post_json,
+        f"{worker_urls[0]}/start",
+        {"round_count": round_count},
+    )
+    while time.monotonic() < formation_deadline:
         snapshot = await asyncio.to_thread(
             _get_json, f"{worker_urls[0]}/state"
         )
@@ -749,9 +966,93 @@ async def _run_remote_formation(
         raise TimeoutError("initiator did not publish an invitation")
 
     for url in worker_urls[1:]:
-        await asyncio.to_thread(_post_json, f"{url}/start", {})
+        await asyncio.to_thread(
+            _post_json,
+            f"{url}/start",
+            {"round_count": round_count},
+        )
 
+    while time.monotonic() < formation_deadline:
+        snapshots = await asyncio.gather(
+            *(
+                asyncio.to_thread(_get_json, f"{url}/state")
+                for url in worker_urls
+            )
+        )
+        for index, snapshot in enumerate(snapshots):
+            state.ingest_remote_snapshot(index, snapshot)
+        failed = [
+            snapshot.get("error")
+            for snapshot in snapshots
+            if snapshot.get("status") == "failed"
+        ]
+        if failed:
+            error = next((item for item in failed if item), "worker failed")
+            raise RuntimeError(str(error))
+        if all(snapshot.get("status") == "formed" for snapshot in snapshots):
+            manifest_hash = next(
+                (
+                    snapshot.get("manifest_hash")
+                    for snapshot in snapshots
+                    if isinstance(snapshot.get("manifest_hash"), str)
+                ),
+                None,
+            )
+            if not isinstance(manifest_hash, str):
+                raise RuntimeError("workers completed without a manifest hash")
+            return manifest_hash
+        await asyncio.sleep(0.2)
+    raise TimeoutError("containerized formation did not complete in 90 seconds")
+
+
+async def _prepare_remote_workers(worker_urls: tuple[str, ...]) -> None:
+    """Wait for worker APIs, stop stale runs, and verify restartability."""
+    deadline = time.monotonic() + 15.0
     while time.monotonic() < deadline:
+        try:
+            await asyncio.gather(
+                *(
+                    asyncio.to_thread(_get_json, f"{url}/state")
+                    for url in worker_urls
+                )
+            )
+            break
+        except (HTTPError, URLError, TimeoutError):
+            await asyncio.sleep(0.2)
+    else:
+        raise TimeoutError("container worker APIs did not become ready")
+
+    await asyncio.gather(
+        *(
+            asyncio.to_thread(_post_json, f"{url}/stop", {})
+            for url in worker_urls
+        )
+    )
+    stop_deadline = time.monotonic() + 10.0
+    while time.monotonic() < stop_deadline:
+        snapshots = await asyncio.gather(
+            *(
+                asyncio.to_thread(_get_json, f"{url}/state")
+                for url in worker_urls
+            )
+        )
+        if all(snapshot.get("can_start") is True for snapshot in snapshots):
+            return
+        await asyncio.sleep(0.1)
+    raise TimeoutError("container workers did not stop before formation")
+
+
+async def _run_remote_training(
+    state: DashboardState,
+    worker_urls: tuple[str, ...],
+    round_count: int,
+) -> None:
+    """Start training on formed workers and stream their round state."""
+    training_timeout = max(90.0, round_count * 15.0)
+    training_deadline = time.monotonic() + training_timeout
+    for url in worker_urls:
+        await asyncio.to_thread(_post_json, f"{url}/train", {})
+    while time.monotonic() < training_deadline:
         snapshots = await asyncio.gather(
             *(
                 asyncio.to_thread(_get_json, f"{url}/state")
@@ -779,10 +1080,18 @@ async def _run_remote_formation(
             )
             if not isinstance(manifest_hash, str):
                 raise RuntimeError("workers completed without a manifest hash")
-            state.complete(manifest_hash)
+            state.complete(
+                manifest_hash,
+                detail=(
+                    f"Four nodes completed {round_count} D-PSGD rounds over real AXL"
+                ),
+            )
             return
         await asyncio.sleep(0.2)
-    raise TimeoutError("containerized formation did not complete in 90 seconds")
+    raise TimeoutError(
+        "containerized training did not complete in "
+        f"{int(training_timeout)} seconds"
+    )
 
 
 def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
@@ -808,19 +1117,18 @@ def _get_json(url: str) -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-def _draft() -> DraftRunSpec:
-    zero = "0" * 64
+def _draft(*, round_count: int = 2) -> DraftRunSpec:
     one = "1" * 64
     return DraftRunSpec.model_validate(
         {
             "run_id": "run-axl-demo",
-            "algorithm_id": "dpsgd-v1",
-            "model_id": "cifar-cnn-v1",
-            "model_definition_hash": zero,
+            "algorithm_id": "dpsgd",
+            "model_id": "resnet32",
+            "model_definition_hash": MODEL_DEFINITION_HASH,
             "dataset": {
                 "dataset_id": "cifar10",
-                "version": "1",
-                "preprocessing_hash": one,
+                "version": DATASET_VERSION,
+                "preprocessing_hash": PREPROCESSING_HASH,
                 "iid_partition_seed": 7,
                 "image_shape": [3, 32, 32],
                 "class_count": 10,
@@ -831,22 +1139,32 @@ def _draft() -> DraftRunSpec:
             "environment": {
                 "dromeus_version": "0.1.0",
                 "dromeus_commit": "abcdef0",
-                "pytorch_version": "2.7.0",
-                "axl_version": "1.0.0",
-                "model_definition_hash": zero,
+                "pytorch_version": os.environ.get("DROMEUS_PYTORCH_VERSION", "2.7.1"),
+                "axl_version": AXL_COMMIT,
+                "model_definition_hash": MODEL_DEFINITION_HASH,
                 "container_image_digest": f"sha256:{one}",
             },
-            "local_steps": 5,
-            "round_count": 100,
-            "learning_rate": 0.1,
+            "local_steps": 1,
+            "round_count": round_count,
+            "learning_rate": 0.01,
             "peer_scheduler_seed": 8,
             "codec_id": "safetensors-v1",
             "transport": {
                 "max_payload_bytes": MAX_ENVELOPE_BYTES,
                 "max_retries": 3,
-                "retry_timeout_seconds": 1.0,
+                "retry_timeout_seconds": 60.0,
             },
             "consensus_sketch": {"size": 4096, "seed": 9},
+            "training": {
+                "batch_size": 128,
+                "momentum": 0.9,
+                "weight_decay": 0.0001,
+                "learning_rate_milestones": [8000, 12000],
+                "learning_rate_gamma": 0.1,
+                "crop_padding": 4,
+                "normalize": True,
+                "final_consensus_rounds": 2,
+            },
         }
     )
 

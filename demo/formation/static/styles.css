@@ -173,6 +173,27 @@ button {
   gap: 10px;
 }
 
+.round-control {
+  display: grid;
+  gap: 3px;
+  color: var(--quiet);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.round-control input {
+  width: 72px;
+  min-height: 40px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .replay-controls {
   display: flex;
   align-items: center;
@@ -328,12 +349,18 @@ select:focus-visible {
 }
 
 [data-run-status="preparing"] .status-marker,
-[data-run-status="running"] .status-marker {
+[data-run-status="running"] .status-marker,
+[data-run-status="training"] .status-marker {
   background: var(--warning);
   box-shadow: 0 0 0 4px oklch(0.24 0.05 82);
 }
 
 [data-run-status="complete"] .status-marker {
+  background: var(--success);
+  box-shadow: 0 0 0 4px var(--success-soft);
+}
+
+[data-run-status="formed"] .status-marker {
   background: var(--success);
   box-shadow: 0 0 0 4px var(--success-soft);
 }
@@ -788,7 +815,7 @@ select:focus-visible {
 
 .evidence-rail {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 44px;
+  grid-template-rows: auto minmax(0, 1fr) 180px 44px;
   min-height: 0;
   background: var(--surface-soft);
 }
@@ -998,6 +1025,31 @@ select:focus-visible {
   color: var(--ochre);
 }
 
+.training-log-section {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.training-log-section .rail-heading {
+  padding: 0 22px 10px;
+}
+
+.training-log {
+  min-height: 0;
+  margin: 0;
+  padding: 0 22px 12px;
+  overflow-y: auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  scrollbar-color: var(--line) transparent;
+}
+
 .evidence-footer {
   display: flex;
   align-items: center;
@@ -1166,7 +1218,7 @@ dialog button {
   }
 
   .evidence-rail {
-    grid-template-rows: auto 420px 44px;
+    grid-template-rows: auto 420px 180px 44px;
     border-top: 1px solid var(--line-soft);
   }
 }

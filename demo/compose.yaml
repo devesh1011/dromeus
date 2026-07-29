@@ -2,6 +2,7 @@ name: dromeus-live-demo
 
 services:
   dashboard:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: demo/Dockerfile
@@ -28,6 +29,7 @@ services:
     init: true
 
   node-0:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: demo/Dockerfile
@@ -35,12 +37,15 @@ services:
       DROMEUS_NODE_INDEX: "0"
       DROMEUS_CONTROL_DIR: /run/dromeus
       DROMEUS_DATA_DIR: /var/lib/dromeus
+      DROMEUS_CIFAR_CACHE: /var/cache/dromeus/cifar10
     volumes:
       - dromeus-control:/run/dromeus
       - dromeus-node-0:/var/lib/dromeus
+      - dromeus-cifar-cache:/var/cache/dromeus/cifar10
     init: true
 
   node-1:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: demo/Dockerfile
@@ -48,12 +53,15 @@ services:
       DROMEUS_NODE_INDEX: "1"
       DROMEUS_CONTROL_DIR: /run/dromeus
       DROMEUS_DATA_DIR: /var/lib/dromeus
+      DROMEUS_CIFAR_CACHE: /var/cache/dromeus/cifar10
     volumes:
       - dromeus-control:/run/dromeus:ro
       - dromeus-node-1:/var/lib/dromeus
+      - dromeus-cifar-cache:/var/cache/dromeus/cifar10
     init: true
 
   node-2:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: demo/Dockerfile
@@ -61,12 +69,15 @@ services:
       DROMEUS_NODE_INDEX: "2"
       DROMEUS_CONTROL_DIR: /run/dromeus
       DROMEUS_DATA_DIR: /var/lib/dromeus
+      DROMEUS_CIFAR_CACHE: /var/cache/dromeus/cifar10
     volumes:
       - dromeus-control:/run/dromeus:ro
       - dromeus-node-2:/var/lib/dromeus
+      - dromeus-cifar-cache:/var/cache/dromeus/cifar10
     init: true
 
   node-3:
+    platform: linux/amd64
     build:
       context: ..
       dockerfile: demo/Dockerfile
@@ -74,9 +85,11 @@ services:
       DROMEUS_NODE_INDEX: "3"
       DROMEUS_CONTROL_DIR: /run/dromeus
       DROMEUS_DATA_DIR: /var/lib/dromeus
+      DROMEUS_CIFAR_CACHE: /var/cache/dromeus/cifar10
     volumes:
       - dromeus-control:/run/dromeus:ro
       - dromeus-node-3:/var/lib/dromeus
+      - dromeus-cifar-cache:/var/cache/dromeus/cifar10
     init: true
 
 volumes:
@@ -85,3 +98,4 @@ volumes:
   dromeus-node-1:
   dromeus-node-2:
   dromeus-node-3:
+  dromeus-cifar-cache:

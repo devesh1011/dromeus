@@ -1,7 +1,9 @@
 const ui = {
   body: document.body,
   start: document.querySelector("#start-run"),
+  startTraining: document.querySelector("#start-training"),
   startLabel: document.querySelector(".button-ready"),
+  startBusyLabel: document.querySelector(".button-busy"),
   replayControls: document.querySelector("#replay-controls"),
   replay: document.querySelector("#replay-run"),
   replaySpeed: document.querySelector("#replay-speed"),
@@ -23,6 +25,9 @@ const ui = {
   packetLayer: document.querySelector("#packet-layer"),
   errorDialog: document.querySelector("#error-dialog"),
   errorMessage: document.querySelector("#error-message"),
+  roundCount: document.querySelector("#round-count"),
+  trainingProgress: document.querySelector("#training-progress"),
+  trainingLog: document.querySelector("#training-log"),
 };
 
 const stateLabels = {
@@ -38,8 +43,9 @@ const stateLabels = {
   syncing: "Checkpoint sync",
   verifying: "Verifying",
   waiting: "Ready barrier",
-  starting: "Starting round 0",
-  ready: "Round 0 ready",
+  starting: "Finalizing formation",
+  training: "Training",
+  ready: "Formation ready",
   failed: "Failed",
 };
 
@@ -53,8 +59,8 @@ const eventLabels = {
   CHUNK_ACK: "PAYLOAD ACK",
   TRANSFER_COMPLETE: "VERIFY",
   READY: "READY",
-  START: "START ROUND 0",
-  START_ACK: "START ACK",
+  START: "FORMATION START",
+  START_ACK: "FORMATION ACK",
 };
 
 const phaseRules = [
@@ -74,8 +80,12 @@ let eventQueue = [];
 let processedEvents = [];
 let phaseEvidence = phaseRules.map(() => new Set());
 let playerTimer = null;
+let visualEpoch = 0;
 let replaying = false;
 let shownErrorGeneration = null;
+let requestInFlight = null;
+let pendingRequest = null;
+let clientError = null;
 
 function replayTimeScale() {
   if (!replaying) return 1;
@@ -105,13 +115,28 @@ function syncNodeIdentities(snapshot) {
     node.querySelector(".node-key").title = item.key || "Identity pending";
     node.querySelector(".node-container").textContent = item.container;
     node.querySelector(".node-meta strong").textContent = `:${item.port}`;
-    if (snapshot.status === "idle" || snapshot.status === "preparing") {
+    if (["idle", "preparing", "formed", "training", "complete", "failed"].includes(snapshot.status)) {
       setNode(item.id, item.state, item.progress);
     }
   });
 }
 
 function resetVisual(snapshot) {
+  clearTraceVisuals();
+  ui.ledgerEmpty.hidden = false;
+  ui.eventCount.textContent = "0 events";
+  ui.manifest.textContent = "Waiting for membership";
+  ui.agreement.dataset.complete = "false";
+  ui.agreementCopy.textContent = "0 / 4 identities agreed";
+  ui.trainingProgress.textContent = `0 / ${snapshot.round_count || 0}`;
+  ui.trainingLog.textContent = "Waiting for training.";
+  snapshot.nodes.forEach((item) => setNode(item.id, "offline", 0));
+  syncNodeIdentities(snapshot);
+  updatePhases();
+}
+
+function clearTraceVisuals() {
+  visualEpoch += 1;
   eventQueue = [];
   processedEvents = [];
   queuedSequences = new Set();
@@ -119,14 +144,10 @@ function resetVisual(snapshot) {
   clearTimeout(playerTimer);
   playerTimer = null;
   ui.ledger.replaceChildren();
-  ui.ledgerEmpty.hidden = false;
-  ui.eventCount.textContent = "0 events";
-  ui.manifest.textContent = "Waiting for membership";
-  ui.agreement.dataset.complete = "false";
-  ui.agreementCopy.textContent = "0 / 4 identities agreed";
-  snapshot.nodes.forEach((item) => setNode(item.id, "offline", 0));
-  syncNodeIdentities(snapshot);
-  updatePhases();
+  ui.packetLayer.replaceChildren();
+  ui.routes.querySelectorAll(".active, .invitation-active").forEach((route) => {
+    route.classList.remove("active", "invitation-active");
+  });
 }
 
 function enqueueEvents(events) {
@@ -142,7 +163,9 @@ function enqueueEvents(events) {
 function playNext() {
   if (!eventQueue.length) {
     playerTimer = null;
-    if (backend?.status === "complete") finalizeComplete();
+    if (["formed", "training", "complete"].includes(backend?.status)) {
+      finalizeFormation();
+    }
     if (replaying) replaying = false;
     renderRunChrome();
     return;
@@ -155,7 +178,12 @@ function playNext() {
   updatePhases();
   const baseDelay = event.type === "CHUNK" ? 500 : 290;
   const delay = prefersReducedMotion.matches ? 20 : baseDelay * replayTimeScale();
-  playerTimer = window.setTimeout(playNext, delay);
+  const epoch = visualEpoch;
+  playerTimer = window.setTimeout(() => {
+    if (epoch !== visualEpoch) return;
+    playerTimer = null;
+    playNext();
+  }, delay);
   renderRunChrome();
 }
 
@@ -208,10 +236,12 @@ function updatePhases() {
   ui.phaseCount.textContent = `${completed} / 6`;
 }
 
-function finalizeComplete() {
-  ["node-0", "node-1", "node-2", "node-3"].forEach((nodeId) =>
-    setNode(nodeId, "ready", 100),
-  );
+function finalizeFormation() {
+  if (backend?.status !== "training") {
+    ["node-0", "node-1", "node-2", "node-3"].forEach((nodeId) =>
+      setNode(nodeId, "ready", 100),
+    );
+  }
   if (backend?.manifest_hash) ui.manifest.textContent = backend.manifest_hash;
   ui.agreement.dataset.complete = "true";
   ui.agreementCopy.textContent = "4 / 4 identities agreed";
@@ -293,22 +323,28 @@ function drawRoutes() {
 }
 
 function animateEnvelope(event) {
+  const epoch = visualEpoch;
   const targets = event.target === "all-participants" ? ["node-1", "node-2", "node-3"] : [event.target];
   targets.forEach((target, index) => {
     window.setTimeout(
-      () => animatePacket(event.source, target, event),
+      () => {
+        if (epoch === visualEpoch) animatePacket(event.source, target, event, epoch);
+      },
       prefersReducedMotion.matches ? 0 : index * 110 * replayTimeScale(),
     );
   });
 }
 
-function animatePacket(sourceId, targetId, event) {
+function animatePacket(sourceId, targetId, event, epoch) {
+  if (epoch !== visualEpoch) return;
   const routeNode = sourceId === "node-0" ? targetId : sourceId;
   const route = document.querySelector(`#route-${routeNode}`);
   if (route) {
     const activeClass = event.transport === "OUT_OF_BAND" ? "invitation-active" : "active";
     route.classList.add(activeClass);
-    window.setTimeout(() => route.classList.remove(activeClass), 850 * replayTimeScale());
+    window.setTimeout(() => {
+      if (epoch === visualEpoch) route.classList.remove(activeClass);
+    }, 850 * replayTimeScale());
   }
   if (prefersReducedMotion.matches || window.innerWidth <= 860) return;
 
@@ -340,7 +376,10 @@ function animatePacket(sourceId, targetId, event) {
     ],
     { duration: 1050 * replayTimeScale(), easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
   );
-  animation.finished.finally(() => packet.remove());
+  animation.finished.then(
+    () => packet.remove(),
+    () => packet.remove(),
+  );
 }
 
 function center(rect, parentRect) {
@@ -366,6 +405,9 @@ function formatElapsed(seconds) {
 function renderRunChrome() {
   if (!backend) return;
   const traceBusy = eventQueue.length > 0 || Boolean(playerTimer);
+  const roundsChanged =
+    backend.status === "formed" &&
+    Number(ui.roundCount.value) !== Number(backend.round_count);
   let status = backend.status;
   let detail = backend.status_detail;
   if (traceBusy && backend.status === "complete") {
@@ -374,13 +416,19 @@ function renderRunChrome() {
       ? `Replaying captured AXL envelopes at ${ui.replaySpeed.selectedOptions[0].text}`
       : "Rendering captured AXL envelopes";
   }
+  if (clientError) {
+    status = "failed";
+    detail = clientError;
+  }
   ui.body.dataset.runStatus = status;
   ui.status.textContent = {
     idle: "Awaiting launch",
     preparing: "Preparing real AXL",
     running: "Formation live",
-    complete: "Round zero ready",
-    failed: "Formation stopped",
+    formed: "Formation ready",
+    training: "Training live",
+    complete: "Training complete",
+    failed: clientError ? "Action rejected" : "Run stopped",
   }[status];
   ui.statusDetail.textContent = detail;
   if (ui.runId) ui.runId.textContent = backend.run_id;
@@ -391,12 +439,61 @@ function renderRunChrome() {
         : "4 local bridges · zero in-memory hops";
   }
   if (ui.elapsed) ui.elapsed.textContent = formatElapsed(backend.elapsed_seconds);
-  const busy = backend.status === "preparing" || backend.status === "running" || traceBusy;
-  ui.start.disabled = busy;
-  ui.startLabel.textContent = backend.status === "complete" ? "Run again" : "Begin formation";
+  const formationBusy =
+    backend.status === "preparing" ||
+    backend.status === "running" ||
+    backend.status === "training" ||
+    traceBusy ||
+    requestInFlight !== null ||
+    pendingRequest !== null;
+  ui.start.disabled =
+    formationBusy || backend.can_begin_formation === false;
+  ui.startLabel.textContent =
+    backend.status === "formed"
+      ? roundsChanged
+        ? "Apply rounds"
+        : "Re-form group"
+      : backend.status === "complete"
+        ? "Run again"
+        : "Begin formation";
+  ui.startBusyLabel.textContent =
+    backend.status === "formed" || backend.status === "training"
+      ? "Group formed"
+      : backend.status === "complete"
+        ? "Rendering trace"
+        : "Formation running";
+  ui.startTraining.disabled =
+    backend.deployment !== "docker" ||
+    backend.status !== "formed" ||
+    traceBusy ||
+    requestInFlight !== null ||
+    pendingRequest !== null ||
+    backend.can_start_training === false ||
+    roundsChanged;
+  ui.startTraining.textContent =
+    backend.status === "training"
+      ? "Training running"
+      : backend.status === "complete"
+        ? "Training complete"
+        : "Start training";
+  ui.roundCount.disabled = ["preparing", "running", "training"].includes(
+    backend.status,
+  );
   ui.replayControls.hidden = backend.status !== "complete";
   ui.replay.disabled = traceBusy;
   ui.replaySpeed.disabled = traceBusy && !replaying;
+}
+
+function renderTraining(snapshot) {
+  const training = snapshot.training || {};
+  const completed = Number(training.completed_rounds || 0);
+  const total = Number(training.round_count || snapshot.round_count || 0);
+  ui.trainingProgress.textContent = `${completed} / ${total}`;
+  const logs = Array.isArray(training.logs) ? training.logs : [];
+  ui.trainingLog.textContent = logs.length
+    ? logs.map((log) => `${log.timestamp.slice(11, 23)} ${log.node}  ${log.message}`).join("\n")
+    : "Waiting for training.";
+  ui.trainingLog.scrollTop = ui.trainingLog.scrollHeight;
 }
 
 function showError(snapshot) {
@@ -413,16 +510,33 @@ async function poll() {
     const snapshot = await response.json();
     backend = snapshot;
     if (generation !== snapshot.generation) {
+      clientError = null;
+      pendingRequest = null;
       generation = snapshot.generation;
       replaying = false;
+      ui.roundCount.value = String(snapshot.round_count);
       resetVisual(snapshot);
+    }
+    if (
+      pendingRequest === "training" &&
+      ["training", "complete", "failed"].includes(snapshot.status)
+    ) {
+      pendingRequest = null;
     }
     syncNodeIdentities(snapshot);
     if (!replaying) enqueueEvents(snapshot.events);
     syncDelivery(snapshot.events);
-    if (snapshot.status === "complete" && !eventQueue.length && !playerTimer) finalizeComplete();
+    if (
+      ["formed", "training", "complete"].includes(snapshot.status) &&
+      !eventQueue.length &&
+      !playerTimer
+    ) {
+      finalizeFormation();
+    }
     if (snapshot.status === "failed") showError(snapshot);
+    if (snapshot.status === "failed") clientError = null;
     renderRunChrome();
+    renderTraining(snapshot);
   } catch (error) {
     ui.body.dataset.runStatus = "failed";
     ui.status.textContent = "Dashboard disconnected";
@@ -433,17 +547,82 @@ async function poll() {
 }
 
 async function startRun() {
+  if (requestInFlight !== null) return;
+  clientError = null;
   ui.start.disabled = true;
+  requestInFlight = "formation";
   try {
-    const response = await fetch("/api/start", { method: "POST" });
-    if (!response.ok && response.status !== 409) {
-      throw new Error(`Start request returned ${response.status}`);
+    const roundCount = Number(ui.roundCount.value);
+    if (!Number.isInteger(roundCount) || roundCount < 1 || roundCount > 100) {
+      throw new Error("Training rounds must be an integer from 1 to 100");
+    }
+    const response = await fetch("/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ round_count: roundCount }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.started !== true) {
+      throw new Error(
+        result.error || `Start request returned ${response.status}`,
+      );
+    }
+    clearTraceVisuals();
+    ui.ledgerEmpty.hidden = false;
+    ui.eventCount.textContent = "0 events";
+    ui.manifest.textContent = "Waiting for membership";
+    ui.agreement.dataset.complete = "false";
+    ui.agreementCopy.textContent = "0 / 4 identities agreed";
+    ui.trainingProgress.textContent = `0 / ${roundCount}`;
+    ui.trainingLog.textContent = "Waiting for training.";
+    if (backend) {
+      backend = {
+        ...backend,
+        status: "preparing",
+        status_detail: "Formation request accepted",
+        round_count: roundCount,
+      };
+    }
+    ui.body.dataset.runStatus = "preparing";
+    ui.status.textContent = "Preparing real AXL";
+    ui.statusDetail.textContent = "Formation request accepted";
+    pendingRequest = "formation";
+  } catch (error) {
+    pendingRequest = null;
+    clientError = `Could not start formation: ${error.message}`;
+  } finally {
+    requestInFlight = null;
+    if (backend) renderRunChrome();
+  }
+}
+
+async function startTraining() {
+  if (requestInFlight !== null) return;
+  clientError = null;
+  ui.startTraining.disabled = true;
+  requestInFlight = "training";
+  try {
+    const response = await fetch("/api/train", { method: "POST" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.started !== true) {
+      throw new Error(
+        result.error || `Training request returned ${response.status}`,
+      );
+    }
+    pendingRequest = "training";
+    if (backend) {
+      backend = {
+        ...backend,
+        status: "training",
+        status_detail: "Training request accepted",
+      };
     }
   } catch (error) {
-    ui.start.disabled = false;
-    ui.body.dataset.runStatus = "failed";
-    ui.status.textContent = "Could not start formation";
-    ui.statusDetail.textContent = error.message;
+    pendingRequest = null;
+    clientError = `Could not start training: ${error.message}`;
+  } finally {
+    requestInFlight = null;
+    if (backend) renderRunChrome();
   }
 }
 
@@ -459,6 +638,8 @@ function replayCapture() {
 }
 
 ui.start.addEventListener("click", startRun);
+ui.startTraining.addEventListener("click", startTraining);
+ui.roundCount.addEventListener("input", renderRunChrome);
 ui.replay.addEventListener("click", replayCapture);
 window.addEventListener("resize", drawRoutes);
 window.addEventListener("load", drawRoutes);
