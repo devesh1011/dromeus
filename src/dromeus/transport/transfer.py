@@ -8,10 +8,6 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from types import TracebackType
-from typing import Protocol, Self, cast
-
-from safetensors import SafetensorError, safe_open
 
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
@@ -42,6 +38,10 @@ from dromeus.protocol.models import (
     create_envelope,
 )
 from dromeus.telemetry.events import EventSink, emit_event
+from dromeus.telemetry.evidence import (
+    TransferMessageSentEvidence,
+    append_evidence,
+)
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.sender import OutboundScheduler, Priority, SendTiming
 
@@ -71,41 +71,109 @@ class TransferTiming:
     retry_count: int
 
 
-class ArtifactStore:
-    """Atomic temp-file based artifact finalization."""
+@dataclass
+class _Reservation:
+    size_bytes: int
+    final_path: Path | None = None
+
+
+class _ArtifactStore:
+    """Private transfer storage with exact per-transfer reservations."""
 
     def __init__(self, root: Path, *, max_bytes: int = 128 * 1024 * 1024) -> None:
+        if max_bytes <= 0:
+            raise ValueError("max_bytes must be positive")
         self._root = root
         self._tmp_root = root / ".tmp"
         self._root.mkdir(parents=True, exist_ok=True)
         self._tmp_root.mkdir(parents=True, exist_ok=True)
         self._max_bytes = max_bytes
         self._reserved_bytes = 0
+        self._reservations: dict[TransferId, _Reservation] = {}
 
-    def reserve(self, size_bytes: int) -> None:
+    def reserve(self, transfer_id: TransferId, size_bytes: int) -> None:
+        if transfer_id in self._reservations:
+            raise TransferError("transfer capacity already reserved")
         if self._reserved_bytes + size_bytes > self._max_bytes:
             raise TransferError("artifact store capacity exceeded")
+        self._reservations[transfer_id] = _Reservation(size_bytes=size_bytes)
         self._reserved_bytes += size_bytes
 
-    def release(self, size_bytes: int) -> None:
-        self._reserved_bytes = max(0, self._reserved_bytes - size_bytes)
+    def append(self, transfer_id: TransferId, data: bytes) -> None:
+        reservation = self._reservation(transfer_id)
+        if reservation.final_path is not None:
+            raise TransferError("cannot append to finalized transfer")
+        try:
+            with self._temp_path(transfer_id).open("ab") as handle:
+                handle.write(data)
+        except OSError as error:
+            raise TransferError("failed to write transfer artifact") from error
 
-    def temp_path(self, transfer_id: TransferId) -> Path:
+    def finalize(
+        self,
+        transfer_id: TransferId,
+        artifact_name: Identifier,
+        expected_size_bytes: int,
+        expected_sha256: Sha256,
+    ) -> tuple[Path, Sha256]:
+        reservation = self._reservation(transfer_id)
+        if reservation.size_bytes != expected_size_bytes:
+            raise TransferError("transfer reservation size mismatch")
+        temp = self._temp_path(transfer_id)
+        try:
+            if temp.stat().st_size != expected_size_bytes:
+                raise TransferError("final artifact size mismatch")
+            digest = file_sha256(temp)
+            if digest != expected_sha256:
+                raise TransferError("final artifact checksum mismatch")
+            final = self._final_path(transfer_id, artifact_name)
+            if final.exists():
+                raise TransferError("final artifact already exists")
+            temp.replace(final)
+        except OSError as error:
+            raise TransferError("failed to finalize transfer artifact") from error
+        reservation.final_path = final
+        return final, digest
+
+    def commit(self, transfer_id: TransferId) -> None:
+        reservation = self._reservation(transfer_id)
+        if reservation.final_path is None:
+            raise TransferError("cannot commit unfinished transfer")
+        self._release(transfer_id)
+
+    def abort(self, transfer_id: TransferId) -> None:
+        reservation = self._reservation(transfer_id)
+        try:
+            self._temp_path(transfer_id).unlink(missing_ok=True)
+            if reservation.final_path is not None:
+                reservation.final_path.unlink(missing_ok=True)
+        except OSError as error:
+            raise TransferError("failed to remove transfer artifact") from error
+        self._release(transfer_id)
+
+    def _reservation(self, transfer_id: TransferId) -> _Reservation:
+        reservation = self._reservations.get(transfer_id)
+        if reservation is None:
+            raise TransferError("transfer capacity is not reserved")
+        return reservation
+
+    def _release(self, transfer_id: TransferId) -> None:
+        reservation = self._reservations.pop(transfer_id, None)
+        if reservation is None:
+            raise TransferError("transfer capacity already released")
+        remaining = self._reserved_bytes - reservation.size_bytes
+        if remaining < 0:
+            raise TransferError("transfer capacity accounting underflow")
+        self._reserved_bytes = remaining
+
+    def _temp_path(self, transfer_id: TransferId) -> Path:
         return self._tmp_root / f"{transfer_id}.part"
 
-    def final_path(self, transfer_id: TransferId, artifact_name: Identifier) -> Path:
+    def _final_path(
+        self, transfer_id: TransferId, artifact_name: Identifier
+    ) -> Path:
         safe_name = artifact_name.replace("/", "_")
         return self._root / f"{transfer_id}-{safe_name}.bin"
-
-    def finalize(self, transfer_id: TransferId, artifact_name: Identifier) -> Path:
-        temp = self.temp_path(transfer_id)
-        final = self.final_path(transfer_id, artifact_name)
-        temp.replace(final)
-        return final
-
-    def abort(self, transfer_id: TransferId, size_bytes: int) -> None:
-        self.temp_path(transfer_id).unlink(missing_ok=True)
-        self.release(size_bytes)
 
 
 @dataclass
@@ -117,85 +185,9 @@ class _IncomingTransfer:
     started_at: float
 
 
-_SAFETENSORS_DTYPES = {
-    "float16": "F16",
-    "float32": "F32",
-    "float64": "F64",
-    "int8": "I8",
-    "int32": "I32",
-    "int64": "I64",
-}
-
-
-class _TensorSlice(Protocol):
-    def get_dtype(self) -> str: ...
-
-    def get_shape(self) -> list[int]: ...
-
-
-class _SafeTensors(Protocol):
-    def __enter__(self) -> Self: ...
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None: ...
-
-    def keys(self) -> list[str]: ...
-
-    def get_slice(self, name: str) -> _TensorSlice: ...
-
-
-def _validate_safetensors(path: Path, schema: TensorSchema) -> None:
-    try:
-        reader = cast(_SafeTensors, safe_open(path, framework="numpy"))
-        with reader as tensors:
-            expected = {tensor.name: tensor for tensor in schema.tensors}
-            if set(tensors.keys()) != set(expected):
-                raise TransferError("safetensors names do not match tensor schema")
-            for name, tensor in expected.items():
-                view = tensors.get_slice(name)
-                if view.get_dtype() != _SAFETENSORS_DTYPES[tensor.dtype]:
-                    raise TransferError(
-                        "safetensors dtype does not match tensor schema"
-                    )
-                if tuple(view.get_shape()) != tensor.shape:
-                    raise TransferError(
-                        "safetensors shape does not match tensor schema"
-                    )
-    except SafetensorError as error:
-        raise TransferError("invalid safetensors artifact") from error
-
-
-def _prepare_artifact(
-    path: Path, schema: TensorSchema
-) -> tuple[bytes, int, Sha256]:
-    _validate_safetensors(path, schema)
+def _prepare_artifact(path: Path) -> tuple[bytes, int, Sha256]:
     payload = path.read_bytes()
     return payload, len(payload), file_sha256(path)
-
-
-def _append_bytes(path: Path, data: bytes) -> None:
-    with path.open("ab") as handle:
-        handle.write(data)
-
-
-def _finalize_artifact(
-    store: ArtifactStore,
-    transfer_id: TransferId,
-    begin: TransferBegin,
-    total_sha256: Sha256,
-) -> tuple[Path, Sha256]:
-    temp = store.temp_path(transfer_id)
-    digest = file_sha256(temp)
-    if digest != total_sha256 or digest != begin.total_sha256:
-        raise TransferError("final artifact checksum mismatch")
-    if temp.stat().st_size != begin.total_size_bytes:
-        raise TransferError("final artifact size mismatch")
-    _validate_safetensors(temp, begin.tensor_schema)
-    return store.finalize(transfer_id, begin.artifact_name), digest
 
 
 class TransferManager:
@@ -211,7 +203,8 @@ class TransferManager:
         transport_limits: TransportLimits,
         receiver: Receiver,
         sender: OutboundScheduler,
-        artifact_store: ArtifactStore,
+        artifact_root: Path,
+        max_inflight_bytes: int = 128 * 1024 * 1024,
         event_sink: EventSink | None = None,
     ) -> None:
         self._local_public_key = local_public_key
@@ -221,7 +214,9 @@ class TransferManager:
         self._transport_limits = transport_limits
         self._receiver = receiver
         self._sender = sender
-        self._artifact_store = artifact_store
+        self._artifact_store = _ArtifactStore(
+            artifact_root, max_bytes=max_inflight_bytes
+        )
         self._event_sink = event_sink
         self._incoming: dict[TransferId, _IncomingTransfer] = {}
         self._completed: dict[TransferId, ArtifactReceipt] = {}
@@ -251,11 +246,33 @@ class TransferManager:
 
     async def stop(self) -> None:
         self._stop.set()
-        for task in (self._transfer_task, self._ack_task):
-            if task is not None:
-                await task
+        tasks = tuple(
+            task
+            for task in (self._transfer_task, self._ack_task)
+            if task is not None
+        )
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         for transfer_id in tuple(self._incoming):
             self._abort_incoming(transfer_id)
+        for waiter in self._ack_waiters.values():
+            if not waiter.done():
+                waiter.cancel()
+        self._ack_waiters.clear()
+        for future in self._completed_futures.values():
+            if not future.done():
+                future.cancel()
+        for receipt in tuple(self._completed.values()):
+            await asyncio.to_thread(receipt.path.unlink, missing_ok=True)
+        self._completed.clear()
+        self._completed_futures.clear()
+        while True:
+            try:
+                self._completed_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
 
     async def send_artifact(
         self,
@@ -270,10 +287,8 @@ class TransferManager:
         started = time.perf_counter()
         retry_count = 0
         try:
-            if codec_id != "safetensors-v1":
-                raise TransferError("M1 only supports safetensors-v1 artifacts")
             chunk_bytes, payload_size, total_sha256 = await asyncio.to_thread(
-                _prepare_artifact, artifact_path, tensor_schema
+                _prepare_artifact, artifact_path
             )
             transfer_id = str(uuid.uuid4())
             begin = TransferBegin(
@@ -401,6 +416,11 @@ class TransferManager:
         """Remove one materialized receipt and its artifact."""
         await asyncio.to_thread(receipt.path.unlink, missing_ok=True)
         self.claim_receipt(receipt)
+
+    def claim_receipt(self, receipt: ArtifactReceipt) -> None:
+        """Transfer ownership of one materialized artifact to its consumer."""
+        self._completed.pop(receipt.transfer_id, None)
+        self._completed_futures.pop(receipt.transfer_id, None)
         retained: list[ArtifactReceipt] = []
         while True:
             try:
@@ -411,11 +431,6 @@ class TransferManager:
                 retained.append(queued)
         for queued in retained:
             self._completed_queue.put_nowait(queued)
-
-    def claim_receipt(self, receipt: ArtifactReceipt) -> None:
-        """Transfer ownership of one materialized artifact to its consumer."""
-        self._completed.pop(receipt.transfer_id, None)
-        self._completed_futures.pop(receipt.transfer_id, None)
 
     async def discard_round_transfers(
         self, *, sender: PublicKey, round_id: RoundId
@@ -510,18 +525,29 @@ class TransferManager:
                 raise TransferError("round transfers were discarded")
             if begin.total_size_bytes > self._transport_limits.max_payload_bytes:
                 raise TransferError("transfer exceeds manifest payload limit")
-            if begin.chunk_count != 1 or begin.codec_id != "safetensors-v1":
-                raise TransferError("unsupported M1 transfer encoding")
+            if begin.chunk_count != 1:
+                raise TransferError("unsupported M1 chunk count")
             incoming = self._incoming.get(begin.transfer_id)
-            if incoming is None:
-                self._artifact_store.reserve(begin.total_size_bytes)
-                self._incoming[begin.transfer_id] = _IncomingTransfer(
-                    sender_public_key=envelope.sender_public_key,
-                    begin=begin,
-                    round_id=envelope.round_id,
-                    written_chunk_indices=set(),
-                    started_at=time.monotonic(),
-                )
+            if incoming is not None:
+                if (
+                    incoming.sender_public_key != envelope.sender_public_key
+                    or incoming.round_id != envelope.round_id
+                    or incoming.begin != begin
+                ):
+                    raise TransferError("conflicting duplicate transfer begin")
+                return
+            if begin.transfer_id in self._completed:
+                raise TransferError("transfer is already complete")
+            self._artifact_store.reserve(
+                begin.transfer_id, begin.total_size_bytes
+            )
+            self._incoming[begin.transfer_id] = _IncomingTransfer(
+                sender_public_key=envelope.sender_public_key,
+                begin=begin,
+                round_id=envelope.round_id,
+                written_chunk_indices=set(),
+                started_at=time.monotonic(),
+            )
             return
         if envelope.message_type is MessageType.CHUNK:
             chunk = decode_message(
@@ -545,8 +571,24 @@ class TransferManager:
             if hashlib.sha256(chunk.data).hexdigest() != chunk.chunk_sha256:
                 self._abort_incoming(chunk.transfer_id)
                 raise TransferError("chunk checksum mismatch")
-            temp = self._artifact_store.temp_path(chunk.transfer_id)
-            await asyncio.to_thread(_append_bytes, temp, chunk.data)
+            append_task = asyncio.create_task(
+                asyncio.to_thread(
+                    self._artifact_store.append,
+                    chunk.transfer_id,
+                    chunk.data,
+                )
+            )
+            try:
+                await asyncio.shield(append_task)
+            except asyncio.CancelledError:
+                try:
+                    await append_task
+                finally:
+                    self._abort_incoming(chunk.transfer_id)
+                raise
+            except TransferError:
+                self._abort_incoming(chunk.transfer_id)
+                raise
             incoming.written_chunk_indices.add(chunk.chunk_index)
             await self._acknowledge_chunk(
                 envelope.sender_public_key, chunk, envelope.round_id
@@ -562,14 +604,26 @@ class TransferManager:
             if complete.transfer_id in self._completed:
                 return
             raise TransferError("received completion without transfer begin")
-        try:
-            final_path, digest = await asyncio.to_thread(
-                _finalize_artifact,
-                self._artifact_store,
+        if complete.total_sha256 != incoming.begin.total_sha256:
+            self._abort_incoming(complete.transfer_id)
+            raise TransferError("completion checksum does not match transfer begin")
+        finalize_task = asyncio.create_task(
+            asyncio.to_thread(
+                self._artifact_store.finalize,
                 complete.transfer_id,
-                incoming.begin,
+                incoming.begin.artifact_name,
+                incoming.begin.total_size_bytes,
                 complete.total_sha256,
             )
+        )
+        try:
+            final_path, digest = await asyncio.shield(finalize_task)
+        except asyncio.CancelledError:
+            try:
+                await finalize_task
+            finally:
+                self._abort_incoming(complete.transfer_id)
+            raise
         except TransferError:
             self._abort_incoming(complete.transfer_id)
             raise
@@ -584,9 +638,9 @@ class TransferManager:
             codec_id=incoming.begin.codec_id,
             tensor_schema=incoming.begin.tensor_schema,
         )
-        self._completed[complete.transfer_id] = receipt
+        self._artifact_store.commit(complete.transfer_id)
         self._incoming.pop(complete.transfer_id, None)
-        self._artifact_store.release(incoming.begin.total_size_bytes)
+        self._completed[complete.transfer_id] = receipt
         future = self._completed_futures.get(complete.transfer_id)
         if future is not None and not future.done():
             future.set_result(receipt)
@@ -604,7 +658,7 @@ class TransferManager:
     def _abort_incoming(self, transfer_id: TransferId) -> None:
         incoming = self._incoming.pop(transfer_id, None)
         if incoming is not None:
-            self._artifact_store.abort(transfer_id, incoming.begin.total_size_bytes)
+            self._artifact_store.abort(transfer_id)
 
     async def _acknowledge_chunk(
         self,
@@ -657,21 +711,22 @@ class TransferManager:
             retries=self._transport_limits.max_retries,
             retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
         )
-        emit_event(
-            "transfer_message_sent",
-            run_id=self._run_id,
-            manifest_hash=self._manifest_hash,
-            node_id=self._local_public_key,
-            message_id=message_id,
-            transfer_id=correlation_id,
-            peer_id=destination,
-            round_id=round_id,
-            message_type=message_type,
-            payload_bytes=len(payload),
-            queue_seconds=timing.queue_seconds,
-            send_seconds=timing.send_seconds,
-            retry_count=timing.retry_count,
-            completion_seconds=timing.completion_seconds,
-            sink=self._event_sink,
+        append_evidence(
+            self._event_sink,
+            TransferMessageSentEvidence(
+                run_id=self._run_id,
+                manifest_hash=self._manifest_hash,
+                node_id=self._local_public_key,
+                message_id=message_id,
+                transfer_id=correlation_id,
+                peer_id=destination,
+                round_id=round_id,
+                message_type=message_type.value,
+                payload_bytes=len(payload),
+                queue_seconds=float(timing.queue_seconds),
+                send_seconds=float(timing.send_seconds),
+                retry_count=timing.retry_count,
+                completion_seconds=float(timing.completion_seconds),
+            ),
         )
         return timing
