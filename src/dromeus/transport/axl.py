@@ -10,9 +10,8 @@ from typing import cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
-
 from dromeus.manifests.models import PublicKey
+from dromeus.protocol.codec import ProtocolDecodeError, decode_envelope_sender
 from dromeus.transport.base import ReceivedBytes, TransportError
 
 
@@ -162,15 +161,6 @@ def _payload_sender(payload: bytes | None) -> str | None:
     if payload is None:
         return None
     try:
-        unpacked = cast(
-            object,
-            msgpack.unpackb(payload, raw=False),  # pyright: ignore[reportUnknownMemberType]
-        )
-    except (ValueError, msgpack.UnpackException):
+        return decode_envelope_sender(payload, max_payload_bytes=len(payload))
+    except (ValueError, ProtocolDecodeError):
         return None
-    if not isinstance(unpacked, dict):
-        return None
-    sender = cast(dict[object, object], unpacked).get("sender_public_key")
-    if not isinstance(sender, str):
-        return None
-    return sender

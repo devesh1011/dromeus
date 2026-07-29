@@ -11,14 +11,11 @@ from pathlib import Path
 from types import TracebackType
 from typing import Protocol, Self, cast
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
-from pydantic import Field
 from safetensors import SafetensorError, safe_open
 
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
     AlgorithmId,
-    DomainModel,
     Identifier,
     MessageId,
     PublicKey,
@@ -29,62 +26,28 @@ from dromeus.manifests.models import (
     TransferId,
     TransportLimits,
 )
-from dromeus.telemetry.events import EventSink, emit_event
-from dromeus.transport.envelope import (
+from dromeus.protocol.codec import (
+    ProtocolDecodeError,
+    decode_message,
+    encode_envelope,
+    encode_message,
+)
+from dromeus.protocol.models import (
+    Chunk,
+    ChunkAck,
     Envelope,
     MessageType,
+    TransferBegin,
+    TransferComplete,
     create_envelope,
-    encode_envelope,
 )
+from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.sender import OutboundScheduler, Priority, SendTiming
 
 
 class TransferError(RuntimeError):
     """Artifact transfer failed terminally."""
-
-
-class TransferBegin(DomainModel):
-    transfer_id: TransferId
-    artifact_name: Identifier
-    total_size_bytes: int = Field(gt=0)
-    total_sha256: Sha256
-    chunk_count: int = Field(gt=0)
-    codec_id: Identifier
-    tensor_schema: TensorSchema
-
-
-class Chunk(DomainModel):
-    transfer_id: TransferId
-    chunk_index: int = Field(ge=0)
-    chunk_count: int = Field(gt=0)
-    chunk_sha256: Sha256
-    data: bytes
-
-
-class ChunkAck(DomainModel):
-    transfer_id: TransferId
-    chunk_index: int = Field(ge=0)
-    chunk_sha256: Sha256
-
-
-class TransferComplete(DomainModel):
-    transfer_id: TransferId
-    total_sha256: Sha256
-
-
-def _pack(model: DomainModel) -> bytes:
-    value = model.model_dump(mode="python")
-    return cast(bytes, msgpack.packb(value))  # pyright: ignore[reportUnknownMemberType]
-
-
-def _unpack(data: bytes) -> object:
-    return cast(
-        object,
-        msgpack.unpackb(  # pyright: ignore[reportUnknownMemberType]
-            data, raw=False, strict_map_key=True
-        ),
-    )
 
 
 @dataclass(frozen=True)
@@ -334,7 +297,7 @@ class TransferManager:
                 message_type=MessageType.TRANSFER_BEGIN,
                 message_id=f"{transfer_id}-begin",
                 correlation_id=transfer_id,
-                payload=_pack(begin),
+                payload=encode_message(begin),
                 round_id=round_id,
                 priority=Priority.CONTROL,
             )
@@ -351,7 +314,7 @@ class TransferManager:
                         message_type=MessageType.TRANSFER_BEGIN,
                         message_id=f"{transfer_id}-begin",
                         correlation_id=transfer_id,
-                        payload=_pack(begin),
+                        payload=encode_message(begin),
                         round_id=round_id,
                         priority=Priority.CONTROL,
                     )
@@ -361,7 +324,7 @@ class TransferManager:
                     message_type=MessageType.CHUNK,
                     message_id=f"{transfer_id}-chunk-0",
                     correlation_id=transfer_id,
-                    payload=_pack(chunk),
+                    payload=encode_message(chunk),
                     round_id=round_id,
                     priority=Priority.DATA,
                 )
@@ -386,7 +349,7 @@ class TransferManager:
                 message_type=MessageType.TRANSFER_COMPLETE,
                 message_id=f"{transfer_id}-complete",
                 correlation_id=transfer_id,
-                payload=_pack(
+                payload=encode_message(
                     TransferComplete(
                         transfer_id=transfer_id, total_sha256=total_sha256
                     )
@@ -490,7 +453,7 @@ class TransferManager:
             self._expire_incoming()
             try:
                 await self._handle_transfer(envelope)
-            except (TransferError, ValueError, msgpack.UnpackException) as error:
+            except (TransferError, ValueError, ProtocolDecodeError) as error:
                 emit_event(
                     "transfer_message_rejected",
                     run_id=envelope.run_id,
@@ -512,11 +475,15 @@ class TransferManager:
             except TimeoutError:
                 continue
             try:
-                ack = ChunkAck.model_validate(_unpack(envelope.payload))
+                ack = decode_message(
+                    envelope.payload,
+                    ChunkAck,
+                    max_bytes=self._transport_limits.max_payload_bytes,
+                )
                 waiter = self._ack_waiters.pop((ack.transfer_id, ack.chunk_index), None)
                 if waiter is not None and not waiter.done():
                     waiter.set_result(ack)
-            except (ValueError, msgpack.UnpackException) as error:
+            except (ValueError, ProtocolDecodeError) as error:
                 emit_event(
                     "transfer_ack_rejected",
                     run_id=envelope.run_id,
@@ -530,7 +497,11 @@ class TransferManager:
 
     async def _handle_transfer(self, envelope: Envelope) -> None:
         if envelope.message_type is MessageType.TRANSFER_BEGIN:
-            begin = TransferBegin.model_validate(_unpack(envelope.payload))
+            begin = decode_message(
+                envelope.payload,
+                TransferBegin,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             if (
                 envelope.round_id is not None
                 and (envelope.sender_public_key, envelope.round_id)
@@ -553,7 +524,11 @@ class TransferManager:
                 )
             return
         if envelope.message_type is MessageType.CHUNK:
-            chunk = Chunk.model_validate(_unpack(envelope.payload))
+            chunk = decode_message(
+                envelope.payload,
+                Chunk,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             incoming = self._incoming.get(chunk.transfer_id)
             if incoming is None:
                 raise TransferError("received chunk without transfer begin")
@@ -577,7 +552,11 @@ class TransferManager:
                 envelope.sender_public_key, chunk, envelope.round_id
             )
             return
-        complete = TransferComplete.model_validate(_unpack(envelope.payload))
+        complete = decode_message(
+            envelope.payload,
+            TransferComplete,
+            max_bytes=self._transport_limits.max_payload_bytes,
+        )
         incoming = self._incoming.get(complete.transfer_id)
         if incoming is None:
             if complete.transfer_id in self._completed:
@@ -638,7 +617,7 @@ class TransferManager:
             message_type=MessageType.CHUNK_ACK,
             message_id=f"{chunk.transfer_id}-ack-{chunk.chunk_index}",
             correlation_id=chunk.transfer_id,
-            payload=_pack(
+            payload=encode_message(
                 ChunkAck(
                     transfer_id=chunk.transfer_id,
                     chunk_index=chunk.chunk_index,

@@ -15,14 +15,10 @@ from dromeus.manifests.models import (
     RunId,
     Sha256,
 )
+from dromeus.protocol.codec import EnvelopeError, decode_envelope
+from dromeus.protocol.models import Envelope, MessageType
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.base import AsyncTransport, TransportError
-from dromeus.transport.envelope import (
-    Envelope,
-    EnvelopeError,
-    MessageType,
-    decode_envelope,
-)
 
 CONTROL_TYPES = {
     MessageType.JOIN_REQUEST,
