@@ -33,6 +33,7 @@ from dromeus.manifests.models import (
 )
 from dromeus.membership.protocol import FormationProtocol, FormationResult
 from dromeus.persistence.run_store import RunStore
+from dromeus.protocol.models import MessageType
 from dromeus.telemetry.consensus import (
     ConsensusDistance,
     LiveConsensusTelemetry,
@@ -45,7 +46,6 @@ from dromeus.training.cifar10 import (
 from dromeus.training.cifar10 import prepare_training as prepare_training_owned_cifar
 from dromeus.training.trainer import InitialCheckpoint
 from dromeus.transport.base import AsyncTransport
-from dromeus.transport.envelope import MessageType
 from dromeus.transport.receiver import MessageChannel
 from dromeus.transport.transfer import ArtifactStore
 
