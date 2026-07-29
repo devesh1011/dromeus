@@ -8,8 +8,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
-
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
@@ -17,11 +15,9 @@ from dromeus.manifests.canonical import (
 )
 from dromeus.manifests.models import (
     DatasetContract,
-    DomainModel,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
-    MessageId,
     Participant,
     PublicKey,
     SealedManifest,
@@ -29,14 +25,19 @@ from dromeus.manifests.models import (
     TensorSchema,
     TransportLimits,
 )
+from dromeus.protocol.codec import decode_message, encode_envelope, encode_message
+from dromeus.protocol.models import (
+    Envelope,
+    JoinAccepted,
+    JoinRequest,
+    MessageId,
+    MessageType,
+    ReadyMessage,
+    StartMessage,
+    create_envelope,
+)
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.transport.base import AsyncTransport
-from dromeus.transport.envelope import (
-    Envelope,
-    MessageType,
-    create_envelope,
-    encode_envelope,
-)
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import ArtifactStore, TransferManager
@@ -50,46 +51,12 @@ class FormationError(RuntimeError):
     """Fixed-membership startup failed."""
 
 
-class JoinRequest(DomainModel):
-    draft_hash: Sha256
-
-
-class JoinAccepted(DomainModel):
-    draft_hash: Sha256
-
-
-class ReadyMessage(DomainModel):
-    manifest_hash: Sha256
-
-
-class StartMessage(DomainModel):
-    manifest_hash: Sha256
-
-
 def _file_sha256(path: Path) -> Sha256:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while block := handle.read(1024 * 1024):
             digest.update(block)
     return digest.hexdigest()
-
-
-def _pack(model: DomainModel) -> bytes:
-    return cast(
-        bytes,
-        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-            model.model_dump(mode="python")
-        ),
-    )
-
-
-def _unpack(data: bytes) -> object:
-    return cast(
-        object,
-        msgpack.unpackb(  # pyright: ignore[reportUnknownMemberType]
-            data, raw=False, strict_map_key=True
-        ),
-    )
 
 
 def validate_ready(
@@ -250,7 +217,11 @@ class FormationProtocol:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.JOIN_REQUEST:
                 continue
-            join = JoinRequest.model_validate(_unpack(envelope.payload))
+            join = decode_message(
+                envelope.payload,
+                JoinRequest,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             if join.draft_hash != invitation.draft_hash:
                 continue
             if envelope.sender_public_key in participant_keys:
@@ -262,7 +233,9 @@ class FormationProtocol:
                 destination=envelope.sender_public_key,
                 message_type=MessageType.JOIN_ACCEPTED,
                 message_id=f"join-accepted-{len(participant_keys)}",
-                payload=_pack(JoinAccepted(draft_hash=invitation.draft_hash)),
+                payload=encode_message(
+                    JoinAccepted(draft_hash=invitation.draft_hash)
+                ),
             )
         sealed = True
         checkpoint_hash = _file_sha256(checkpoint_path)
@@ -301,7 +274,11 @@ class FormationProtocol:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.READY:
                 continue
-            ready = ReadyMessage.model_validate(_unpack(envelope.payload))
+            ready = decode_message(
+                envelope.payload,
+                ReadyMessage,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             if ready.manifest_hash != manifest_hash:
                 continue
             ready_keys.add(envelope.sender_public_key)
@@ -310,7 +287,7 @@ class FormationProtocol:
                 destination=peer,
                 message_type=MessageType.START,
                 message_id=f"start-{peer[:8]}",
-                payload=_pack(StartMessage(manifest_hash=manifest_hash)),
+                payload=encode_message(StartMessage(manifest_hash=manifest_hash)),
                 manifest_hash=manifest_hash,
             )
         started_keys = {local_key}
@@ -318,7 +295,11 @@ class FormationProtocol:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.START_ACK:
                 continue
-            start = StartMessage.model_validate(_unpack(envelope.payload))
+            start = decode_message(
+                envelope.payload,
+                StartMessage,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             if start.manifest_hash != manifest_hash:
                 continue
             started_keys.add(envelope.sender_public_key)
@@ -359,7 +340,7 @@ class FormationProtocol:
             destination=invitation.initiator_public_key,
             message_type=MessageType.JOIN_REQUEST,
             message_id=f"join-{local_key[:8]}",
-            payload=_pack(JoinRequest(draft_hash=invitation.draft_hash)),
+            payload=encode_message(JoinRequest(draft_hash=invitation.draft_hash)),
         )
         accepted = False
         manifest: SealedManifest | None = None
@@ -367,7 +348,11 @@ class FormationProtocol:
         while manifest is None:
             envelope = await self._next_control()
             if envelope.message_type is MessageType.JOIN_ACCEPTED:
-                join = JoinAccepted.model_validate(_unpack(envelope.payload))
+                join = decode_message(
+                    envelope.payload,
+                    JoinAccepted,
+                    max_bytes=self._transport_limits.max_payload_bytes,
+                )
                 if join.draft_hash == invitation.draft_hash:
                     accepted = True
                 continue
@@ -410,14 +395,18 @@ class FormationProtocol:
             destination=invitation.initiator_public_key,
             message_type=MessageType.READY,
             message_id=f"ready-{local_key[:8]}",
-            payload=_pack(ReadyMessage(manifest_hash=manifest_hash)),
+            payload=encode_message(ReadyMessage(manifest_hash=manifest_hash)),
             manifest_hash=manifest_hash,
         )
         while True:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.START:
                 continue
-            start = StartMessage.model_validate(_unpack(envelope.payload))
+            start = decode_message(
+                envelope.payload,
+                StartMessage,
+                max_bytes=self._transport_limits.max_payload_bytes,
+            )
             if start.manifest_hash != manifest_hash:
                 continue
             break
@@ -425,7 +414,7 @@ class FormationProtocol:
             destination=invitation.initiator_public_key,
             message_type=MessageType.START_ACK,
             message_id=f"start-ack-{local_key[:8]}",
-            payload=_pack(StartMessage(manifest_hash=manifest_hash)),
+            payload=encode_message(StartMessage(manifest_hash=manifest_hash)),
             manifest_hash=manifest_hash,
         )
         result = FormationResult(
