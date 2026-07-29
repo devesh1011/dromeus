@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol, cast
 
-import msgpack  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
 
 from dromeus.algorithms.base import (
@@ -27,7 +26,6 @@ from dromeus.manifests.canonical import (
 )
 from dromeus.manifests.models import (
     AlgorithmId,
-    DomainModel,
     MessageId,
     OpaqueUpdateBundleMetadata,
     PublicKey,
@@ -36,14 +34,16 @@ from dromeus.manifests.models import (
     Sha256,
     TransportLimits,
 )
-from dromeus.telemetry.consensus import encode_sketch
-from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
-from dromeus.transport.envelope import (
+from dromeus.protocol.codec import decode_message, encode_envelope, encode_message
+from dromeus.protocol.models import (
     Envelope,
     MessageType,
+    PairCommitMessage,
+    RunFailedMessage,
     create_envelope,
-    encode_envelope,
 )
+from dromeus.telemetry.consensus import encode_sketch
+from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import ArtifactReceipt, TransferError, TransferManager
@@ -130,24 +130,13 @@ class PairTransport(Protocol):
     ) -> None: ...
 
 
-class PairCommitMessage(DomainModel):
-    """Validated metadata carried by pair-commit envelopes."""
-
-    round_id: RoundId
-    checksum: Sha256
-
-
-class RunFailedMessage(DomainModel):
-    """Validated control payload for terminal run failure."""
-
-    round_id: RoundId
-    error_type: str
-    reason: str
-
-
 def decode_run_failure(payload: bytes) -> RunFailure:
     """Decode validated terminal failure evidence from a control envelope."""
-    message = RunFailedMessage.model_validate(_unpack(payload))
+    message = decode_message(
+        payload,
+        RunFailedMessage,
+        max_bytes=4096,
+    )
     return RunFailure(
         round_id=message.round_id,
         error_type=message.error_type,
@@ -182,7 +171,7 @@ class AXLFailureBroadcaster:
         peers = self._participant_keys - {self._local_public_key}
         if not peers:
             return
-        payload = _pack(
+        payload = encode_message(
             RunFailedMessage(
                 round_id=failure.round_id,
                 error_type=failure.error_type[:128],
@@ -408,7 +397,6 @@ class AXLPairTransport:
             ValueError,
             TypeError,
             TransferError,
-            msgpack.UnpackException,
         ) as error:
             raise PairCommitError("peer update transfer failed") from error
         finally:
@@ -476,7 +464,11 @@ class AXLPairTransport:
             message_type=MessageType.UPDATE_READY,
             round_id=round_id,
         )
-        message = PairCommitMessage.model_validate(_unpack(envelope.payload))
+        message = decode_message(
+            envelope.payload,
+            PairCommitMessage,
+            max_bytes=self._transport_limits.max_payload_bytes,
+        )
         if message.round_id != round_id:
             raise PairCommitError("peer UPDATE_READY round mismatch")
         self._ready_cache[round_id] = message.checksum
@@ -506,7 +498,11 @@ class AXLPairTransport:
             message_type=MessageType.ROUND_COMMITTED,
             round_id=round_id,
         )
-        message = PairCommitMessage.model_validate(_unpack(envelope.payload))
+        message = decode_message(
+            envelope.payload,
+            PairCommitMessage,
+            max_bytes=self._transport_limits.max_payload_bytes,
+        )
         if message.round_id != round_id:
             raise PairCommitError("peer ROUND_COMMITTED round mismatch")
         self._receiver.set_current_round(round_id + 1)
@@ -537,7 +533,7 @@ class AXLPairTransport:
             algorithm_id=self._algorithm_id,
             round_id=round_id,
             correlation_id=f"pair-round-{round_id}",
-            payload=_pack(payload),
+            payload=encode_message(payload),
         )
         await self._sender.send(
             destination,
@@ -568,24 +564,6 @@ class AXLPairTransport:
         ):
             raise PairCommitError("received unexpected pair commit message")
         return envelope
-
-
-def _pack(model: DomainModel) -> bytes:
-    return cast(
-        bytes,
-        msgpack.packb(  # pyright: ignore[reportUnknownMemberType]
-            model.model_dump(mode="python")
-        ),
-    )
-
-
-def _unpack(data: bytes) -> object:
-    return cast(
-        object,
-        msgpack.unpackb(  # pyright: ignore[reportUnknownMemberType]
-            data, raw=False, strict_map_key=True
-        ),
-    )
 
 
 def _algorithm_metric(algorithm: GossipAlgorithm, name: str) -> float | None:
