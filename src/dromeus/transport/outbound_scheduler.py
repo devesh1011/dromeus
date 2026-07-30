@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 
 from dromeus.manifests.models import PublicKey
-from dromeus.transport.base import AsyncTransport
+from dromeus.transport.interface import AsyncTransport
 
 
 class Priority(IntEnum):

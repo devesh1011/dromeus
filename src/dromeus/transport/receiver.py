@@ -18,7 +18,7 @@ from dromeus.manifests.models import (
 from dromeus.protocol.codec import EnvelopeError, decode_envelope
 from dromeus.protocol.models import Envelope, MessageType
 from dromeus.telemetry.events import EventSink, emit_event
-from dromeus.transport.base import AsyncTransport, TransportError
+from dromeus.transport.interface import AsyncTransport, TransportError
 
 CONTROL_TYPES = {
     MessageType.JOIN_REQUEST,

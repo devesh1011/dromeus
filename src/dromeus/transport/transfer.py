@@ -42,8 +42,12 @@ from dromeus.telemetry.evidence import (
     TransferMessageSentEvidence,
     append_evidence,
 )
+from dromeus.transport.outbound_scheduler import (
+    OutboundScheduler,
+    Priority,
+    SendTiming,
+)
 from dromeus.transport.receiver import MessageChannel, Receiver
-from dromeus.transport.sender import OutboundScheduler, Priority, SendTiming
 
 
 class TransferError(RuntimeError):

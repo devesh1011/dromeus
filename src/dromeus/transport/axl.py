@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 from dromeus.manifests.models import PublicKey
 from dromeus.protocol.codec import ProtocolDecodeError, decode_envelope_sender
-from dromeus.transport.base import ReceivedBytes, TransportError
+from dromeus.transport.interface import ReceivedBytes, TransportError
 
 
 def matches_yggdrasil_sender(public_key: str, bridge_sender: str) -> bool:
