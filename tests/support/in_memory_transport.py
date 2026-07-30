@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from dromeus.manifests.models import PublicKey
-from dromeus.transport.base import ReceivedBytes, TransportError
+from dromeus.transport.interface import ReceivedBytes, TransportError
 
 
 @dataclass(frozen=True)
