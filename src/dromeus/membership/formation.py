@@ -37,9 +37,9 @@ from dromeus.protocol.models import (
     create_envelope,
 )
 from dromeus.telemetry.events import EventSink, emit_event
-from dromeus.transport.base import AsyncTransport
+from dromeus.transport.interface import AsyncTransport
+from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
-from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import TransferManager
 
 
@@ -233,9 +233,7 @@ class FormationProtocol:
                 destination=envelope.sender_public_key,
                 message_type=MessageType.JOIN_ACCEPTED,
                 message_id=f"join-accepted-{len(participant_keys)}",
-                payload=encode_message(
-                    JoinAccepted(draft_hash=invitation.draft_hash)
-                ),
+                payload=encode_message(JoinAccepted(draft_hash=invitation.draft_hash)),
             )
         sealed = True
         checkpoint_hash = _file_sha256(checkpoint_path)
