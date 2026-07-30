@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from dromeus.transport.sender import OutboundScheduler, Priority
+from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 
 
 class ControlledTransport:

@@ -4,7 +4,7 @@ import hashlib
 
 import torch
 
-from dromeus.training.models import (
+from dromeus.training.resnet32 import (
     MODEL_DEFINITION,
     MODEL_DEFINITION_HASH,
     MODEL_ID,

@@ -20,7 +20,7 @@ from support.sample_manifest import manifest_data, write_checkpoint
 
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
-from dromeus.membership.protocol import (
+from dromeus.membership.formation import (
     FormationError,
     FormationResult,
     create_invitation,
@@ -34,8 +34,8 @@ from dromeus.protocol.models import (
     create_envelope,
 )
 from dromeus.runtime import FailureConfig, NodeRuntime, NodeState, TrainingConfig
+from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
-from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import (
     TransferError,
     TransferManager,
@@ -185,9 +185,7 @@ async def _test_future_round_consensus_sketch_is_buffered() -> None:
 
         current_round = 1
         await receiver.advance_round(1)
-        received = await receiver.receive(
-            MessageChannel.TELEMETRY, timeout_seconds=0.1
-        )
+        received = await receiver.receive(MessageChannel.TELEMETRY, timeout_seconds=0.1)
         assert received.message_id == "future-consensus"
         assert receiver.stats.rejected_messages == 0
     finally:
@@ -226,9 +224,7 @@ async def _test_future_round_message_id_is_deduplicated_per_sender() -> None:
     await sender_transport.send("peer-1", encode_envelope(envelope))
     await second_sender_transport.send(
         "peer-1",
-        encode_envelope(
-            envelope.model_copy(update={"sender_public_key": "peer-2"})
-        ),
+        encode_envelope(envelope.model_copy(update={"sender_public_key": "peer-2"})),
     )
     await asyncio.sleep(0.05)
     with pytest.raises(TimeoutError):
@@ -473,8 +469,7 @@ async def _test_runtime_runs_training_after_in_memory_formation(
     assert sum(isinstance(outcome, FormationResult) for outcome in outcomes) == 4
     assert sum(isinstance(outcome, FormationError) for outcome in outcomes) == 1
     assert all(
-        isinstance(outcome, (FormationResult, FormationError))
-        for outcome in outcomes
+        isinstance(outcome, (FormationResult, FormationError)) for outcome in outcomes
     )
 
     commits = await asyncio.wait_for(
@@ -602,9 +597,7 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
 
         if persistence_fails:
             with pytest.raises(OSError, match="run store unavailable"):
-                await nodes[0].fail_before_run(
-                    RuntimeError("topology unavailable")
-                )
+                await nodes[0].fail_before_run(RuntimeError("topology unavailable"))
         else:
             await nodes[0].fail_before_run(RuntimeError("topology unavailable"))
         for _ in range(100):
@@ -645,8 +638,7 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
             assert peer_state.terminal.diagnostics == {
                 "error_type": "PeerRunFailureError",
                 "error": (
-                    "peer peer-0 failed at round 0: "
-                    "RuntimeError: topology unavailable"
+                    "peer peer-0 failed at round 0: RuntimeError: topology unavailable"
                 ),
             }
     finally:

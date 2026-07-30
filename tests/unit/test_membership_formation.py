@@ -4,7 +4,7 @@ import pytest
 from support.sample_manifest import manifest_data
 
 from dromeus.manifests.models import SealedManifest
-from dromeus.membership.protocol import ReadyValidationError, validate_ready
+from dromeus.membership.formation import ReadyValidationError, validate_ready
 
 
 def test_validate_ready_accepts_matching_environment() -> None:

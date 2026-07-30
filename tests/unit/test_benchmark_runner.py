@@ -32,7 +32,7 @@ from dromeus.training.cifar10 import (
     DATASET_VERSION,
     PREPROCESSING_HASH,
 )
-from dromeus.training.models import MODEL_DEFINITION_HASH, MODEL_ID
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH, MODEL_ID
 
 
 def test_worker_cli_import_does_not_require_matplotlib() -> None:

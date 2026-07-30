@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from dromeus.gossip.scheduler import Pairing, PeerScheduler
+from dromeus.gossip.peer_scheduler import Pairing, PeerScheduler
 from dromeus.manifests.models import Participant
 
 

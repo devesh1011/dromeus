@@ -22,7 +22,7 @@ from dromeus.gossip.engine import (
     RoundCommit,
     RunFailure,
 )
-from dromeus.gossip.scheduler import PeerScheduler
+from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import Tensor, TensorSchema, TransportLimits
 from dromeus.protocol.codec import encode_message
 from dromeus.protocol.models import (
@@ -32,8 +32,8 @@ from dromeus.protocol.models import (
     create_envelope,
 )
 from dromeus.telemetry.metrics import RoundTiming
+from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver
-from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import TransferManager
 
 
