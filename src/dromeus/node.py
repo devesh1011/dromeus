@@ -20,7 +20,7 @@ from dromeus.manifests.canonical import (
     parse_draft_yaml,
 )
 from dromeus.manifests.models import DraftRunSpec, Invitation
-from dromeus.membership.protocol import create_invitation
+from dromeus.membership.formation import create_invitation
 from dromeus.runtime import FailureConfig, NodeRuntime, prepare_cifar_training
 from dromeus.telemetry.events import JsonlEventSink, emit_event
 from dromeus.telemetry.evidence import (

@@ -22,7 +22,7 @@ from dromeus.gossip.engine import (
     RunFailure,
     decode_run_failure,
 )
-from dromeus.gossip.scheduler import PeerScheduler
+from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import (
     ConsensusSketchMessage,
     DatasetContract,
@@ -31,7 +31,7 @@ from dromeus.manifests.models import (
     Invitation,
     TensorSchema,
 )
-from dromeus.membership.protocol import FormationProtocol, FormationResult
+from dromeus.membership.formation import FormationProtocol, FormationResult
 from dromeus.persistence.run_store import RunStore
 from dromeus.protocol.models import MessageType
 from dromeus.telemetry.consensus import (
@@ -50,7 +50,7 @@ from dromeus.training.cifar10 import (
 )
 from dromeus.training.cifar10 import prepare_training as prepare_training_owned_cifar
 from dromeus.training.trainer import InitialCheckpoint
-from dromeus.transport.base import AsyncTransport
+from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
 
 
@@ -235,9 +235,7 @@ class NodeRuntime:
                     )
                 self._state = NodeState.FAILED
                 try:
-                    await asyncio.to_thread(
-                        run_store.initialize, self._result.manifest
-                    )
+                    await asyncio.to_thread(run_store.initialize, self._result.manifest)
                     await asyncio.to_thread(
                         run_store.record_terminal,
                         "failed",
@@ -273,10 +271,7 @@ class NodeRuntime:
                             message_id="run-failed-0",
                             round_id=0,
                             error_type=type(error).__name__,
-                            error=(
-                                str(error)[:1024]
-                                or "node failed before training"
-                            ),
+                            error=(str(error)[:1024] or "node failed before training"),
                         ),
                     )
             except Exception:
@@ -519,9 +514,7 @@ class NodeRuntime:
             participant_keys=participants,
         )
 
-    def _create_failure_broadcaster(
-        self, local_key: str
-    ) -> AXLFailureBroadcaster:
+    def _create_failure_broadcaster(self, local_key: str) -> AXLFailureBroadcaster:
         assert self._result is not None
         participants = frozenset(
             participant.public_key for participant in self._result.manifest.participants
@@ -575,9 +568,7 @@ class NodeRuntime:
                 try:
                     run_store, _ = self._failure_dependencies()
                     assert self._result is not None
-                    await asyncio.to_thread(
-                        run_store.initialize, self._result.manifest
-                    )
+                    await asyncio.to_thread(run_store.initialize, self._result.manifest)
                     await asyncio.to_thread(
                         run_store.record_terminal,
                         "failed",
