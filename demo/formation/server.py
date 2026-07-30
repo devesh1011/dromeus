@@ -23,13 +23,13 @@ import numpy as np
 from safetensors.numpy import save_file  # pyright: ignore[reportUnknownVariableType]
 
 from dromeus.manifests.models import DraftRunSpec, Tensor, TensorSchema
-from dromeus.membership.protocol import create_invitation
+from dromeus.membership.formation import create_invitation
+from dromeus.protocol import Envelope, MessageType, decode_envelope
 from dromeus.runtime import NodeRuntime, NodeState
 from dromeus.training.cifar10 import DATASET_VERSION, PREPROCESSING_HASH
-from dromeus.training.models import MODEL_DEFINITION_HASH
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
-from dromeus.transport.base import ReceivedBytes
-from dromeus.transport.envelope import Envelope, MessageType, decode_envelope
+from dromeus.transport.interface import ReceivedBytes
 from dromeus.transport.transfer import ArtifactStore
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -150,9 +150,7 @@ class DashboardState:
                     )
                     self._started_at = self._started_at or time.monotonic()
 
-    def ingest_remote_snapshot(
-        self, index: int, snapshot: dict[str, object]
-    ) -> None:
+    def ingest_remote_snapshot(self, index: int, snapshot: dict[str, object]) -> None:
         """Merge one worker's event stream into the dashboard ledger."""
         key = snapshot.get("key")
         if isinstance(key, str):
@@ -228,9 +226,7 @@ class DashboardState:
                 self._update_remote_event_locked(dashboard_sequence, event)
             self._relabel_remote_events_locked()
 
-    def _ingest_training_locked(
-        self, index: int, snapshot: dict[str, object]
-    ) -> None:
+    def _ingest_training_locked(self, index: int, snapshot: dict[str, object]) -> None:
         if not 0 <= index < len(self._nodes):
             return
         training = snapshot.get("training")
@@ -254,9 +250,7 @@ class DashboardState:
             node["state"] = "ready"
             if self._status in {"running", "formed"}:
                 self._status = "formed"
-                self._status_detail = (
-                    "Four nodes formed; ready to start training"
-                )
+                self._status_detail = "Four nodes formed; ready to start training"
         elif status == "training":
             node["state"] = "training"
             self._status = "training"
@@ -470,10 +464,7 @@ class DashboardState:
                 "events": [dict(event) for event in self._events],
                 "training": {
                     "completed_rounds": max(
-                        (
-                            int(node.get("training_round", 0))
-                            for node in self._nodes
-                        ),
+                        (int(node.get("training_round", 0)) for node in self._nodes),
                         default=0,
                     ),
                     "round_count": self._round_count,
@@ -527,9 +518,7 @@ class DashboardState:
         node_id = self._node_id_locked(public_key)
         return next((node for node in self._nodes if node["id"] == node_id), None)
 
-    def _apply_send_locked(
-        self, message_type: MessageType, destination: str
-    ) -> None:
+    def _apply_send_locked(self, message_type: MessageType, destination: str) -> None:
         destination_node = self._node_locked(destination)
         if destination_node is None:
             return
@@ -857,13 +846,9 @@ class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
 
 
-async def _run_formation(
-    state: DashboardState, registry: ProcessRegistry
-) -> None:
+async def _run_formation(state: DashboardState, registry: ProcessRegistry) -> None:
     binary = _ensure_axl_binary(state)
-    run_root = CACHE_ROOT / "runs" / datetime.now(UTC).strftime(
-        "%Y%m%d-%H%M%S-%f"
-    )
+    run_root = CACHE_ROOT / "runs" / datetime.now(UTC).strftime("%Y%m%d-%H%M%S-%f")
     run_root.mkdir(parents=True)
     state.preparing("Starting four pinned AXL nodes")
     processes = _start_axl_nodes(binary, run_root)
@@ -949,9 +934,7 @@ async def _run_remote_formation(
         {"round_count": round_count},
     )
     while time.monotonic() < formation_deadline:
-        snapshot = await asyncio.to_thread(
-            _get_json, f"{worker_urls[0]}/state"
-        )
+        snapshot = await asyncio.to_thread(_get_json, f"{worker_urls[0]}/state")
         state.ingest_remote_snapshot(0, snapshot)
         if snapshot.get("status") == "failed":
             raise RuntimeError(str(snapshot.get("error") or "worker failed"))
@@ -974,10 +957,7 @@ async def _run_remote_formation(
 
     while time.monotonic() < formation_deadline:
         snapshots = await asyncio.gather(
-            *(
-                asyncio.to_thread(_get_json, f"{url}/state")
-                for url in worker_urls
-            )
+            *(asyncio.to_thread(_get_json, f"{url}/state") for url in worker_urls)
         )
         for index, snapshot in enumerate(snapshots):
             state.ingest_remote_snapshot(index, snapshot)
@@ -1011,10 +991,7 @@ async def _prepare_remote_workers(worker_urls: tuple[str, ...]) -> None:
     while time.monotonic() < deadline:
         try:
             await asyncio.gather(
-                *(
-                    asyncio.to_thread(_get_json, f"{url}/state")
-                    for url in worker_urls
-                )
+                *(asyncio.to_thread(_get_json, f"{url}/state") for url in worker_urls)
             )
             break
         except (HTTPError, URLError, TimeoutError):
@@ -1023,18 +1000,12 @@ async def _prepare_remote_workers(worker_urls: tuple[str, ...]) -> None:
         raise TimeoutError("container worker APIs did not become ready")
 
     await asyncio.gather(
-        *(
-            asyncio.to_thread(_post_json, f"{url}/stop", {})
-            for url in worker_urls
-        )
+        *(asyncio.to_thread(_post_json, f"{url}/stop", {}) for url in worker_urls)
     )
     stop_deadline = time.monotonic() + 10.0
     while time.monotonic() < stop_deadline:
         snapshots = await asyncio.gather(
-            *(
-                asyncio.to_thread(_get_json, f"{url}/state")
-                for url in worker_urls
-            )
+            *(asyncio.to_thread(_get_json, f"{url}/state") for url in worker_urls)
         )
         if all(snapshot.get("can_start") is True for snapshot in snapshots):
             return
@@ -1054,10 +1025,7 @@ async def _run_remote_training(
         await asyncio.to_thread(_post_json, f"{url}/train", {})
     while time.monotonic() < training_deadline:
         snapshots = await asyncio.gather(
-            *(
-                asyncio.to_thread(_get_json, f"{url}/state")
-                for url in worker_urls
-            )
+            *(asyncio.to_thread(_get_json, f"{url}/state") for url in worker_urls)
         )
         for index, snapshot in enumerate(snapshots):
             state.ingest_remote_snapshot(index, snapshot)
@@ -1089,8 +1057,7 @@ async def _run_remote_training(
             return
         await asyncio.sleep(0.2)
     raise TimeoutError(
-        "containerized training did not complete in "
-        f"{int(training_timeout)} seconds"
+        f"containerized training did not complete in {int(training_timeout)} seconds"
     )
 
 
@@ -1224,12 +1191,8 @@ def _start_axl_nodes(binary: Path, run_root: Path) -> list[subprocess.Popen[str]
         configs.append(
             {
                 "PrivateKeyPath": str(run_root / f"private-{index}.pem"),
-                "Peers": []
-                if index == 0
-                else [f"tls://127.0.0.1:{AXL_LISTEN_PORT}"],
-                "Listen": [f"tls://127.0.0.1:{AXL_LISTEN_PORT}"]
-                if index == 0
-                else [],
+                "Peers": [] if index == 0 else [f"tls://127.0.0.1:{AXL_LISTEN_PORT}"],
+                "Listen": [f"tls://127.0.0.1:{AXL_LISTEN_PORT}"] if index == 0 else [],
                 "api_port": api_port,
                 "bridge_addr": "127.0.0.1",
                 "max_message_size": MAX_ENVELOPE_BYTES,

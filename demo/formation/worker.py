@@ -19,8 +19,9 @@ from typing import cast
 
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import Invitation
-from dromeus.membership.protocol import create_invitation
+from dromeus.membership.formation import create_invitation
 from dromeus.persistence.run_store import RunStore
+from dromeus.protocol import Envelope
 from dromeus.runtime import NodeRuntime, TrainingConfig
 from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.metrics import (
@@ -33,7 +34,6 @@ from dromeus.training.cifar10 import (
     load_cifar10,
 )
 from dromeus.transport.axl import AXLBridgeConfig
-from dromeus.transport.envelope import Envelope
 from dromeus.transport.transfer import ArtifactStore
 
 from .server import (
@@ -147,9 +147,7 @@ class WorkerState:
     def training_started(self) -> None:
         with self._lock:
             self.status = "training"
-            self._log_locked(
-                f"training started: {self.round_count} D-PSGD rounds"
-            )
+            self._log_locked(f"training started: {self.round_count} D-PSGD rounds")
 
     def record_round(self, timing: RoundTiming) -> None:
         with self._lock:
@@ -413,9 +411,7 @@ class Worker:
                     bootstrap_uri=f"tls://node-0:{AXL_LISTEN_PORT}",
                 )
                 _write_invitation(self.control_dir, invitation)
-                self.state.record_invitation(
-                    f"draft {invitation.draft_hash[:12]}"
-                )
+                self.state.record_invitation(f"draft {invitation.draft_hash[:12]}")
                 result = await runtime.initiate(
                     bootstrap_uri=invitation.bootstrap_uri,
                     checkpoint_path=checkpoint,
@@ -430,9 +426,7 @@ class Worker:
                 return
             self.state.log("loading CIFAR-10")
             cache_dir = Path(
-                os.environ.get(
-                    "DROMEUS_CIFAR_CACHE", "/var/cache/dromeus/cifar10"
-                )
+                os.environ.get("DROMEUS_CIFAR_CACHE", "/var/cache/dromeus/cifar10")
             )
             train_data = await asyncio.to_thread(
                 load_cifar10,
