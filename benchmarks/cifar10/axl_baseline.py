@@ -27,9 +27,9 @@ from dromeus.protocol.codec import encode_envelope, encode_message
 from dromeus.protocol.models import Chunk, MessageType, create_envelope
 from dromeus.telemetry.events import EventSink
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
-from dromeus.transport.base import AsyncTransport, ReceivedBytes
+from dromeus.transport.interface import AsyncTransport, ReceivedBytes
+from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver, ReceiverPolicy
-from dromeus.transport.sender import OutboundScheduler
 from dromeus.transport.transfer import TransferManager
 
 MIB = 1024 * 1024

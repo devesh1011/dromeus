@@ -46,7 +46,7 @@ from dromeus.training.cifar10 import (
     create_initial_checkpoint,
     load_cifar10,
 )
-from dromeus.training.models import MODEL_DEFINITION_HASH, MODEL_ID, build_model
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH, MODEL_ID, build_model
 from dromeus.training.trainer import derive_benchmark_seed
 
 PINNED_AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
