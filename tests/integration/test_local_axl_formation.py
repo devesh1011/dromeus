@@ -20,7 +20,7 @@ from support.sample_manifest import manifest_data, write_checkpoint
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
-from dromeus.membership.protocol import create_invitation, seal_manifest
+from dromeus.membership.formation import create_invitation, seal_manifest
 from dromeus.persistence.run_store import RunStore
 from dromeus.protocol.codec import decode_envelope, decode_envelope_sender
 from dromeus.protocol.models import MessageType
@@ -32,10 +32,10 @@ from dromeus.training.cifar10 import (
     create_trainer,
     load_cifar10,
 )
-from dromeus.training.models import MODEL_DEFINITION_HASH
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
 from dromeus.training.trainer import PyTorchTrainer
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
-from dromeus.transport.base import AsyncTransport, ReceivedBytes
+from dromeus.transport.interface import AsyncTransport, ReceivedBytes
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("DROMEUS_RUN_AXL_TESTS") != "1",
@@ -283,9 +283,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
             Path.home() / ".cache" / "dromeus" / "cifar10",
         )
     )
-    pilot_data_source = (
-        pilot_data_source_override or "huggingface-uoft-cs-cifar10"
-    )
+    pilot_data_source = pilot_data_source_override or "huggingface-uoft-cs-cifar10"
     train_data, test_data = await asyncio.gather(
         asyncio.to_thread(load_cifar10, cache_dir=cache_dir, train=True),
         asyncio.to_thread(load_cifar10, cache_dir=cache_dir, train=False),
@@ -423,10 +421,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     for name, local_weights in commit.post_local.weights.items():
                         np.testing.assert_allclose(
                             commit.post_mix.weights[name],
-                            (
-                                local_weights
-                                + peer_commit.post_local.weights[name]
-                            )
+                            (local_weights + peer_commit.post_local.weights[name])
                             * 0.5,
                         )
             evaluations = await asyncio.gather(
