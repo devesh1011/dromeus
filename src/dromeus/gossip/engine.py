@@ -19,7 +19,7 @@ from dromeus.algorithms.base import (
     ValidatedUpdate,
     checksum_tensors,
 )
-from dromeus.gossip.scheduler import PeerScheduler
+from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.canonical import (
     materialize_bundle_metadata,
     parse_bundle_metadata,
@@ -44,8 +44,8 @@ from dromeus.protocol.models import (
 )
 from dromeus.telemetry.consensus import encode_sketch
 from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
+from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 from dromeus.transport.receiver import MessageChannel, Receiver
-from dromeus.transport.sender import OutboundScheduler, Priority
 from dromeus.transport.transfer import ArtifactReceipt, TransferError, TransferManager
 
 

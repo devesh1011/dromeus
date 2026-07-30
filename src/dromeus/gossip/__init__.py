@@ -8,7 +8,7 @@ from dromeus.gossip.engine import (
     PairCommitError,
     RunFailure,
 )
-from dromeus.gossip.scheduler import Pairing, PeerScheduler
+from dromeus.gossip.peer_scheduler import Pairing, PeerScheduler
 
 __all__ = [
     "AXLPairTransport",
