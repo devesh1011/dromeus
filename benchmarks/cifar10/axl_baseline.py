@@ -139,6 +139,10 @@ class _RecordingEventSink(EventSink):
         )
 
 
+MeasuredTransport = _MeasuredTransport
+RecordingEventSink = _RecordingEventSink
+
+
 @dataclass(slots=True)
 class _TransferServices:
     transport: _MeasuredTransport
@@ -532,6 +536,9 @@ def _create_payload_cases(
     return tuple(cases)
 
 
+create_payload_cases = _create_payload_cases
+
+
 def _probe_payload(*, kind: str, token: str, sender: str) -> bytes:
     return json.dumps(
         {
@@ -543,6 +550,9 @@ def _probe_payload(*, kind: str, token: str, sender: str) -> bytes:
         separators=(",", ":"),
         sort_keys=True,
     ).encode()
+
+
+probe_payload = _probe_payload
 
 
 async def _receive_probe(
