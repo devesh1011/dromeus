@@ -5,33 +5,6 @@
 .venv/
 __pycache__/
 
-# Editors and AI tooling
-.agents/
-.claude
-.codex
-.graphify_detect.json
-.graphifyignore
-.mcp.json
-.vscode
-graphify-out/
-skills-lock.json
-
-# Local project files
-CLAUDE.md
-HANDOFF.md
-MISSION.md
-NOTES.md
-PROPOSAL.md
-RESOURCES.md
-assets/
-learning-records/
-lessons
-linkedin-post-drafts.md
-reference/
-
-# Local documentation
-docs/
-
 # Logs
 logs/*.log
 
