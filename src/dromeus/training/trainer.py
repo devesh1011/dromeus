@@ -20,7 +20,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 
 from dromeus.manifests.models import TensorSchema
-from dromeus.training.models import floating_model_state, tensor_schema_for_model
+from dromeus.training.resnet32 import floating_model_state, tensor_schema_for_model
 
 BatchTransform = Callable[[Tensor, bool, torch.Generator], Tensor]
 _TRAINING_STATE_PREFIX = "__dromeus_training__."

@@ -22,7 +22,7 @@ from torch.utils.data import Dataset
 
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.training.data import ClassificationData, DataProvenance
-from dromeus.training.models import MODEL_DEFINITION, build_model
+from dromeus.training.resnet32 import MODEL_DEFINITION, build_model
 from dromeus.training.trainer import (
     InitialCheckpoint,
     PyTorchTrainer,
