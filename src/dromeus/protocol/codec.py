@@ -67,9 +67,7 @@ def decode_envelope_sender(
     *,
     max_payload_bytes: int = DEFAULT_MAX_PAYLOAD_BYTES,
 ) -> str:
-    return _decode_envelope(
-        data, max_payload_bytes=max_payload_bytes
-    ).sender_public_key
+    return _decode_envelope(data, max_payload_bytes=max_payload_bytes).sender_public_key
 
 
 def _decode_envelope(data: bytes, *, max_payload_bytes: int) -> Envelope:
