@@ -1,0 +1,52 @@
+{
+  "seeds": [
+    {
+      "seed": 17,
+      "run_roots": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-0/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-1/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-2/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-3/run-store"
+      ],
+      "event_logs": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-0/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-1/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-2/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-17/artifacts/node-3/logs/dromeus.jsonl"
+      ],
+      "fedavg_result_path": "benchmarks/results/aws-m1-quality-20260730/official/fedavg/seed-17.json"
+    },
+    {
+      "seed": 29,
+      "run_roots": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-0/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-1/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-2/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-3/run-store"
+      ],
+      "event_logs": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-0/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-1/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-2/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-29/artifacts/node-3/logs/dromeus.jsonl"
+      ],
+      "fedavg_result_path": "benchmarks/results/aws-m1-quality-20260730/official/fedavg/seed-29.json"
+    },
+    {
+      "seed": 41,
+      "run_roots": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-0/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-1/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-2/run-store",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-3/run-store"
+      ],
+      "event_logs": [
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-0/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-1/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-2/logs/dromeus.jsonl",
+        "benchmarks/results/aws-m1-quality-20260730/official/seed-41/artifacts/node-3/logs/dromeus.jsonl"
+      ],
+      "fedavg_result_path": "benchmarks/results/aws-m1-quality-20260730/official/fedavg/seed-41.json"
+    }
+  ]
+}

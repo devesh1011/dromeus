@@ -1,0 +1,50 @@
+{
+  "environment": {
+    "axl_version": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+    "container_image_digest": "sha256:1015f58ea64621b98319aa0dd61598d9028d5d71cc9c1eb9df7b23c36da1f89b",
+    "dromeus_commit": "86be4ad812f071ed95409a67b7c56b95f8fbedf0",
+    "dromeus_version": "0.1.0",
+    "model_definition_hash": "83a4ed0acf0ff01fd04a6d013021d6e230601d1d33f9c07ff4adee4dc949cb14",
+    "protocol_version": 1,
+    "pytorch_version": "2.13.0+cpu"
+  },
+  "event_logs": [
+    "/data/seed-17/node-0/logs/dromeus.jsonl",
+    "/data/seed-17/node-1/logs/dromeus.jsonl",
+    "/data/seed-17/node-2/logs/dromeus.jsonl",
+    "/data/seed-17/node-3/logs/dromeus.jsonl"
+  ],
+  "fedavg_results": [
+    "/data/fedavg-seed-17.json"
+  ],
+  "hardware_files": [
+    "/data/seed-17/node-0/run-store/hardware.json",
+    "/data/seed-17/node-1/run-store/hardware.json",
+    "/data/seed-17/node-2/run-store/hardware.json",
+    "/data/seed-17/node-3/run-store/hardware.json"
+  ],
+  "manifest_files": [
+    "/data/seed-17/node-0/run-store/manifest.json",
+    "/data/seed-17/node-1/run-store/manifest.json",
+    "/data/seed-17/node-2/run-store/manifest.json",
+    "/data/seed-17/node-3/run-store/manifest.json"
+  ],
+  "manifest_hash": "c8f5f7592b4d78fdeda8507f997386b0d373f6d0e47e21c433c56316a656466d",
+  "report_directory": "/data/report/seed-17",
+  "run_stores": [
+    "/data/seed-17/node-0/run-store",
+    "/data/seed-17/node-1/run-store",
+    "/data/seed-17/node-2/run-store",
+    "/data/seed-17/node-3/run-store"
+  ],
+  "topology_files": [
+    "/data/seed-17/node-0/run-store/topology-ready.json",
+    "/data/seed-17/node-0/run-store/topology-complete.json",
+    "/data/seed-17/node-1/run-store/topology-ready.json",
+    "/data/seed-17/node-1/run-store/topology-complete.json",
+    "/data/seed-17/node-2/run-store/topology-ready.json",
+    "/data/seed-17/node-2/run-store/topology-complete.json",
+    "/data/seed-17/node-3/run-store/topology-ready.json",
+    "/data/seed-17/node-3/run-store/topology-complete.json"
+  ]
+}
