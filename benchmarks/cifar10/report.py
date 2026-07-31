@@ -513,7 +513,7 @@ def _build_benchmark_report(
             )
             try:
                 _verify_submission_final_checkpoint(archive)
-            except (OSError, SafetensorError, ValueError) as error:
+            except (KeyError, OSError, SafetensorError, ValueError) as error:
                 raise BenchmarkReportError(
                     f"final checkpoint integrity failed: {archive.root}"
                 ) from error
@@ -858,8 +858,12 @@ def _verify_submission_final_checkpoint(archive: _SubmissionArchive) -> None:
         and hashlib.sha256(path.read_bytes()).hexdigest() != checkpoint.sha256
     ):
         raise ValueError("final checkpoint hash mismatch")
+    checkpoint_tensors = _load_file(path)
     validate_tensor_map(
-        _load_file(path),
+        {
+            tensor.name: checkpoint_tensors[tensor.name]
+            for tensor in archive.manifest.tensor_schema.tensors
+        },
         archive.manifest.tensor_schema,
     )
 

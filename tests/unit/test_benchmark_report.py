@@ -400,7 +400,8 @@ def test_submission_report_accepts_legacy_final_checkpoint_only(
             {
                 tensor.name: np.ones(tensor.shape, dtype=tensor.dtype)
                 for tensor in manifest.tensor_schema.tensors
-            },
+            }
+            | {"__dromeus_training__.completed_steps": np.array([1])},
             checkpoint_path,
         )
         del state["archive_version"]
