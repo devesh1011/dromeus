@@ -67,10 +67,10 @@ def test_two_nodes_run_production_local_sgd_lifecycle(tmp_path: Path) -> None:
         ),
     )
 
-    first.pre_local(round_id=0)
-    second.pre_local(round_id=0)
-    first_post_local = first.local_training()
-    second_post_local = second.local_training()
+    assert first.pre_local(round_id=0) is None
+    assert second.pre_local(round_id=0) is None
+    assert first.local_training() is None
+    assert second.local_training() is None
     first_bundle = first.post_local_bundle()
     second_bundle = second.post_local_bundle()
     try:
@@ -82,10 +82,7 @@ def test_two_nodes_run_production_local_sgd_lifecycle(tmp_path: Path) -> None:
         first.release_bundle(first_bundle)
         second.release_bundle(second_bundle)
 
-    expected = (
-        first_post_local.weights["weight"]
-        + second_post_local.weights["weight"]
-    ) * np.float32(0.5)
+    expected = np.array([6.0, 9.0], dtype=np.float32)
     assert first_trainer.train_calls == [3]
     assert second_trainer.train_calls == [3]
     assert first_trainer.optimizer_steps == 3

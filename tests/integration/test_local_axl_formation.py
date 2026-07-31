@@ -47,6 +47,43 @@ LOG_ROOT = Path(os.environ.get("DROMEUS_AXL_LOG_ROOT", REPO_ROOT / "logs"))
 AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
 
+class RecordingTrainer:
+    def __init__(self, trainer: PyTorchTrainer) -> None:
+        self._trainer = trainer
+        self.pre_training: list[dict[str, np.ndarray]] = []
+        self.post_training: list[dict[str, np.ndarray]] = []
+        self.pre_mix: list[dict[str, np.ndarray]] = []
+        self.post_mix: list[dict[str, np.ndarray]] = []
+
+    def train_local_steps(self, step_count: int) -> None:
+        self.pre_training.append(self._trainer.weights())
+        self._trainer.train_local_steps(step_count)
+        self.post_training.append(self._trainer.weights())
+
+    def weights(self) -> dict[str, np.ndarray]:
+        return self._trainer.weights()
+
+    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
+        self.pre_mix.append(self._trainer.weights())
+        self.post_mix.append(
+            {name: value.copy() for name, value in weights.items()}
+        )
+        self._trainer.load_weights(weights)
+
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        return self._trainer.checkpoint_tensors()
+
+    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
+        self._trainer.load_checkpoint_tensors(state)
+
+    def evaluate(self) -> tuple[float, float]:
+        return self._trainer.evaluate()
+
+    @property
+    def last_local_loss(self) -> float | None:
+        return self._trainer.last_local_loss
+
+
 class FaultInjectingTransport:
     def __init__(
         self,
@@ -329,6 +366,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                 for participant in expected_manifest.participants
             }
             trainers: list[PyTorchTrainer] = []
+            recording_trainers: list[RecordingTrainer] = []
             for index, transport in enumerate(transports):
                 node_index = node_indices[local_keys[index]]
                 partition_index = draft.dataset.node_index_partitions[node_index]
@@ -340,6 +378,8 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     learning_rate=draft.learning_rate,
                 )
                 trainers.append(trainer)
+                recording_trainer = RecordingTrainer(trainer)
+                recording_trainers.append(recording_trainer)
                 event_sink = JsonlEventSink(
                     LOG_ROOT / f"dromeus-training-node-{index}.log"
                 )
@@ -353,7 +393,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                         event_sink=event_sink,
                         training=TrainingConfig(
                             algorithm=DPSGDAdapter(
-                                trainer=trainer,
+                                trainer=recording_trainer,
                                 tensor_schema=prepared.tensor_schema,
                                 local_steps=draft.local_steps,
                             ),
@@ -403,27 +443,51 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
             )
             assert all(len(records) == total_round_count for records in commits)
             assert all(node.state is NodeState.COMPLETE for node in nodes)
-            for records in commits:
-                for commit in records[: draft.round_count]:
+            recorders_by_key = dict(
+                zip(local_keys, recording_trainers, strict=True)
+            )
+            for node_id, records in zip(local_keys, commits, strict=True):
+                recorder = recorders_by_key[node_id]
+                assert len(recorder.pre_training) == draft.round_count
+                assert len(recorder.post_training) == draft.round_count
+                assert len(recorder.pre_mix) == total_round_count
+                assert len(recorder.post_mix) == total_round_count
+                for pre_training, post_training in zip(
+                    recorder.pre_training,
+                    recorder.post_training,
+                    strict=True,
+                ):
                     assert any(
                         not np.array_equal(
-                            commit.pre_local.weights[name],
-                            commit.post_local.weights[name],
+                            pre_training[name],
+                            post_training[name],
                         )
-                        for name in commit.pre_local.weights
+                        for name in pre_training
                     )
-            records_by_key = dict(zip(local_keys, commits, strict=True))
-            for records in commits:
                 for commit in records:
-                    peer_commit = records_by_key[commit.peer_public_key][
+                    assert len(commit.local_bundle_digest) == 64
+                    assert len(commit.peer_bundle_digest) == 64
+                    assert len(commit.state_checksum) == 64
+                    peer_recorder = recorders_by_key[commit.peer_public_key]
+                    for name, local_weights in recorder.pre_mix[
                         commit.round_id
-                    ]
-                    for name, local_weights in commit.post_local.weights.items():
+                    ].items():
                         np.testing.assert_allclose(
-                            commit.post_mix.weights[name],
-                            (local_weights + peer_commit.post_local.weights[name])
+                            recorder.post_mix[commit.round_id][name],
+                            (
+                                local_weights
+                                + peer_recorder.pre_mix[commit.round_id][name]
+                            )
                             * 0.5,
                         )
+                assert all(
+                    commit.phase == "training"
+                    for commit in records[: draft.round_count]
+                )
+                assert all(
+                    commit.phase == "final-consensus"
+                    for commit in records[draft.round_count :]
+                )
             evaluations = await asyncio.gather(
                 *(asyncio.to_thread(trainer.evaluate) for trainer in trainers)
             )

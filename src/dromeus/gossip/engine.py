@@ -87,9 +87,9 @@ EvaluationCallback = Callable[
 
 
 class GossipAlgorithm(Protocol):
-    def pre_local(self, round_id: RoundId) -> AlgorithmSnapshot: ...
+    def pre_local(self, round_id: RoundId) -> None: ...
 
-    def local_training(self) -> AlgorithmSnapshot: ...
+    def local_training(self) -> None: ...
 
     def post_local_bundle(self) -> UpdateBundle: ...
 
@@ -589,9 +589,6 @@ class RoundCommit:
 
     round_id: RoundId
     peer_public_key: PublicKey
-    pre_local: AlgorithmSnapshot
-    post_local: AlgorithmSnapshot
-    post_mix: AlgorithmSnapshot
     local_bundle_digest: str
     peer_bundle_digest: str
     state_checksum: str
@@ -724,8 +721,8 @@ class GossipEngine:
         peer_bundle: UpdateBundle | None = None
         try:
             local_started = time.perf_counter()
-            pre_local = await _run_blocking(self._algorithm.pre_local, round_id)
-            post_local = await _run_blocking(self._algorithm.local_training)
+            await _run_blocking(self._algorithm.pre_local, round_id)
+            await _run_blocking(self._algorithm.local_training)
             bundle_task = asyncio.create_task(
                 asyncio.to_thread(self._algorithm.post_local_bundle)
             )
@@ -782,9 +779,6 @@ class GossipEngine:
             commit = RoundCommit(
                 round_id=round_id,
                 peer_public_key=peer,
-                pre_local=pre_local,
-                post_local=post_local,
-                post_mix=post_mix,
                 local_bundle_digest=materialized.digest,
                 peer_bundle_digest=peer_bundle.digest,
                 state_checksum=state_checksum,

@@ -728,14 +728,17 @@ def test_two_nodes_complete_pair_commit_without_group_barrier(
     schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
     channel = SharedPairChannel.create()
     commits: dict[str, list[RoundCommit]] = {"peer-0": [], "peer-1": []}
+    trainers: dict[str, LinearTrainer] = {}
     publisher = RecordingPublisher([])
 
     async def run() -> None:
         engines: list[GossipEngine] = []
         for key, value in (("peer-0", 1.0), ("peer-1", 3.0)):
+            trainer = LinearTrainer(value)
+            trainers[key] = trainer
             algorithm = _algorithm(
                 key=key,
-                trainer=LinearTrainer(value),
+                trainer=trainer,
                 schema=schema,
                 artifact_root=tmp_path / key,
             )
@@ -754,15 +757,21 @@ def test_two_nodes_complete_pair_commit_without_group_barrier(
         await asyncio.gather(*(engine.run() for engine in engines))
         assert all(len(records) == 1 for records in commits.values())
         assert all(
-            np.array_equal(record.post_mix.weights["weight"], np.array([3.0]))
-            for records in commits.values()
-            for record in records
+            np.array_equal(trainer.weights()["weight"], np.array([3.0]))
+            for trainer in trainers.values()
         )
         assert all(
             len(record.local_bundle_digest) == 64
             and len(record.peer_bundle_digest) == 64
+            and len(record.state_checksum) == 64
             for records in commits.values()
             for record in records
+        )
+        assert all(
+            not hasattr(record, snapshot_field)
+            for records in commits.values()
+            for record in records
+            for snapshot_field in ("pre_local", "post_local", "post_mix")
         )
         assert publisher.rounds == [0]
 

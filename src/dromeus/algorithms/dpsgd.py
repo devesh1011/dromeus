@@ -46,19 +46,17 @@ class DPSGDAdapter:
         if self.training_round_count is not None and self.training_round_count <= 0:
             raise ValueError("training_round_count must be positive")
 
-    def pre_local(self, round_id: RoundId) -> AlgorithmSnapshot:
+    def pre_local(self, round_id: RoundId) -> None:
         self._round_id = round_id
         self._phase = "pre-local"
-        return self.snapshot()
 
-    def local_training(self) -> AlgorithmSnapshot:
+    def local_training(self) -> None:
         if (
             self.training_round_count is None
             or self._round_id < self.training_round_count
         ):
             self.trainer.train_local_steps(self.local_steps)
         self._phase = "post-local"
-        return self.snapshot()
 
     def post_local_bundle(self) -> UpdateBundle:
         if self.bundle_codec is None:
