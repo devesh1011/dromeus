@@ -7,7 +7,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import yaml
 from pydantic import BaseModel, ConfigDict
@@ -48,6 +48,9 @@ from dromeus.training.cifar10 import (
 )
 from dromeus.training.resnet32 import MODEL_DEFINITION_HASH, MODEL_ID, build_model
 from dromeus.training.trainer import derive_benchmark_seed
+
+if TYPE_CHECKING:
+    from benchmarks.cifar10.report import SeedBenchmarkInput
 
 PINNED_AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
@@ -449,13 +452,24 @@ def run_fedavg_seed(
 
 
 def write_three_seed_report(input_path: Path, output_dir: Path) -> None:
-    from benchmarks.cifar10.report import (
-        SeedBenchmarkInput,
-        build_three_seed_report,
+    from benchmarks.cifar10.report import build_three_seed_report
+
+    build_three_seed_report(_report_inputs(input_path)).write_artifacts(output_dir)
+
+
+def write_three_seed_submission_report(input_path: Path, output_dir: Path) -> None:
+    from benchmarks.cifar10.report import build_three_seed_submission_report
+
+    build_three_seed_submission_report(_report_inputs(input_path)).write_artifacts(
+        output_dir
     )
 
+
+def _report_inputs(input_path: Path) -> tuple[SeedBenchmarkInput, ...]:
+    from benchmarks.cifar10.report import SeedBenchmarkInput
+
     value = ReportInput.model_validate_json(input_path.read_text(encoding="utf-8"))
-    inputs = tuple(
+    return tuple(
         SeedBenchmarkInput(
             seed=item.seed,
             run_roots=item.run_roots,
@@ -464,7 +478,6 @@ def write_three_seed_report(input_path: Path, output_dir: Path) -> None:
         )
         for item in value.seeds
     )
-    build_three_seed_report(inputs).write_artifacts(output_dir)
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -535,6 +548,10 @@ def _parser() -> argparse.ArgumentParser:
     report = subparsers.add_parser("report")
     report.add_argument("--input", required=True, type=Path)
     report.add_argument("--output-dir", required=True, type=Path)
+
+    submission_report = subparsers.add_parser("submission-report")
+    submission_report.add_argument("--input", required=True, type=Path)
+    submission_report.add_argument("--output-dir", required=True, type=Path)
     return parser
 
 
@@ -602,8 +619,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             dataset_cache=args.dataset_cache,
             output=args.output,
         )
-    else:
+    elif args.command == "report":
         write_three_seed_report(args.input, args.output_dir)
+    else:
+        write_three_seed_submission_report(args.input, args.output_dir)
     return 0
 
 

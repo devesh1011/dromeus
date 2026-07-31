@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from collections import defaultdict
@@ -11,11 +12,22 @@ from pathlib import Path
 from typing import Literal, cast
 
 import numpy as np
+from safetensors import SafetensorError
+from safetensors.numpy import (
+    load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
+)
 
 from benchmarks.cifar10.fedavg_reference import FedAvgResult, load_fedavg_result
 from benchmarks.cifar10.plots import write_line_plot, write_panel_plot
+from dromeus.algorithms.codec import validate_tensor_map
+from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import SealedManifest
-from dromeus.persistence.archive import RunArchive, RunArchiveError
+from dromeus.persistence.archive import (
+    ArchiveState,
+    RunArchive,
+    RunArchiveError,
+    load_archive_state,
+)
 from dromeus.telemetry.evidence import (
     BenchmarkNodeReadyEvidence,
     ConsensusDistanceEvidence,
@@ -64,6 +76,14 @@ class SeedBenchmarkInput:
     run_roots: tuple[Path, ...]
     event_logs: tuple[Path, ...]
     fedavg_result_path: Path
+
+
+@dataclass(frozen=True, slots=True)
+class _SubmissionArchive:
+    root: Path
+    manifest: SealedManifest
+    manifest_hash: str
+    state: ArchiveState
 
 
 @dataclass(frozen=True, slots=True)
@@ -423,12 +443,54 @@ def build_benchmark_report(
     fedavg_result_path: Path | None = None,
 ) -> BenchmarkReport:
     """Aggregate four compatible completed runs and one FedAvg reference."""
+    return _build_benchmark_report(
+        run_roots=run_roots,
+        event_logs=event_logs,
+        fedavg=fedavg,
+        seed=seed,
+        fedavg_result_path=fedavg_result_path,
+        submission=False,
+    )
+
+
+def build_submission_benchmark_report(
+    *,
+    run_roots: Sequence[Path],
+    event_logs: Sequence[Path],
+    fedavg: FedAvgResult,
+    seed: int,
+    fedavg_result_path: Path | None = None,
+) -> BenchmarkReport:
+    """Build a submission report from logs, manifests, and final checkpoints."""
+    return _build_benchmark_report(
+        run_roots=run_roots,
+        event_logs=event_logs,
+        fedavg=fedavg,
+        seed=seed,
+        fedavg_result_path=fedavg_result_path,
+        submission=True,
+    )
+
+
+def _build_benchmark_report(
+    *,
+    run_roots: Sequence[Path],
+    event_logs: Sequence[Path],
+    fedavg: FedAvgResult,
+    seed: int,
+    fedavg_result_path: Path | None,
+    submission: bool,
+) -> BenchmarkReport:
     if len(run_roots) != 4 or len(event_logs) != 4:
         raise BenchmarkReportError(
             "exactly four run stores and event logs are required"
         )
 
-    archives = [_read_archive(root) for root in run_roots]
+    archives: list[RunArchive | _SubmissionArchive] = (
+        [_read_submission_archive(root) for root in run_roots]
+        if submission
+        else [_read_archive(root) for root in run_roots]
+    )
     manifests = [archive.manifest for archive in archives]
     manifest_hashes = [archive.manifest_hash for archive in archives]
     if len(set(manifest_hashes)) != 1:
@@ -444,18 +506,33 @@ def build_benchmark_report(
         raise BenchmarkReportError("run stores do not share one run id")
 
     for archive in archives:
-        try:
-            archive.require_complete(_total_dpsgd_round_count(archive.manifest))
-        except RunArchiveError as error:
-            raise BenchmarkReportError(
-                f"run is not complete: {archive.root}"
-            ) from error
-        try:
-            archive.verify_checkpoint_integrity()
-        except RunArchiveError as error:
-            raise BenchmarkReportError(
-                f"checkpoint integrity failed: {archive.root}"
-            ) from error
+        if submission:
+            assert isinstance(archive, _SubmissionArchive)
+            _require_submission_complete(
+                archive, _total_dpsgd_round_count(archive.manifest)
+            )
+            try:
+                _verify_submission_final_checkpoint(archive)
+            except (OSError, SafetensorError, ValueError) as error:
+                raise BenchmarkReportError(
+                    f"final checkpoint integrity failed: {archive.root}"
+                ) from error
+        else:
+            assert isinstance(archive, RunArchive)
+            try:
+                archive.require_complete(
+                    _total_dpsgd_round_count(archive.manifest)
+                )
+            except RunArchiveError as error:
+                raise BenchmarkReportError(
+                    f"run is not complete: {archive.root}"
+                ) from error
+            try:
+                archive.verify_checkpoint_integrity()
+            except RunArchiveError as error:
+                raise BenchmarkReportError(
+                    f"checkpoint integrity failed: {archive.root}"
+                ) from error
     evidence_logs = [
         _read_evidence_log(
             path,
@@ -589,11 +666,28 @@ def build_three_seed_report(
     inputs: Sequence[SeedBenchmarkInput],
 ) -> ThreeSeedReport:
     """Build one report per seed and one aggregate across exactly three seeds."""
+    return _build_three_seed_report(inputs, submission=False)
+
+
+def build_three_seed_submission_report(
+    inputs: Sequence[SeedBenchmarkInput],
+) -> ThreeSeedReport:
+    """Build a three-seed submission report without historical checkpoints."""
+    return _build_three_seed_report(inputs, submission=True)
+
+
+def _build_three_seed_report(
+    inputs: Sequence[SeedBenchmarkInput], *, submission: bool
+) -> ThreeSeedReport:
     if len(inputs) != 3 or len({item.seed for item in inputs}) != 3:
         raise BenchmarkReportError("exactly three distinct seed inputs are required")
     try:
         reports = tuple(
-            build_benchmark_report(
+            (
+                build_submission_benchmark_report
+                if submission
+                else build_benchmark_report
+            )(
                 run_roots=item.run_roots,
                 event_logs=item.event_logs,
                 fedavg=load_fedavg_result(item.fedavg_result_path),
@@ -717,6 +811,57 @@ def _read_archive(root: Path) -> RunArchive:
         return RunArchive.open(root)
     except RunArchiveError as error:
         raise BenchmarkReportError(f"invalid run archive at {root}") from error
+
+
+def _read_submission_archive(root: Path) -> _SubmissionArchive:
+    try:
+        resolved_root = root.resolve(strict=True)
+        manifest = SealedManifest.model_validate_json(
+            (resolved_root / "manifest.json").read_text(encoding="utf-8")
+        )
+        state = load_archive_state(resolved_root / "state.json")
+        manifest_hash = canonical_hash(manifest)
+        if state.manifest_hash != manifest_hash:
+            raise RunArchiveError("manifest hash mismatch")
+    except (OSError, ValueError) as error:
+        raise BenchmarkReportError(f"invalid submission archive at {root}") from error
+    return _SubmissionArchive(
+        root=resolved_root,
+        manifest=manifest,
+        manifest_hash=manifest_hash,
+        state=state,
+    )
+
+
+def _require_submission_complete(
+    archive: _SubmissionArchive, expected_rounds: int
+) -> None:
+    terminal = archive.state.terminal
+    if (
+        terminal is None
+        or terminal.result != "complete"
+        or archive.state.committed_round != expected_rounds - 1
+        or archive.state.prepared_commit is not None
+    ):
+        raise BenchmarkReportError(f"run is not complete: {archive.root}")
+
+
+def _verify_submission_final_checkpoint(archive: _SubmissionArchive) -> None:
+    checkpoint = archive.state.algorithm_state
+    if checkpoint is None:
+        raise ValueError("final checkpoint is missing")
+    path = (archive.root / checkpoint.relative_path).resolve(strict=True)
+    if not path.is_relative_to(archive.root):
+        raise ValueError("final checkpoint escapes run root")
+    if (
+        checkpoint.sha256 is not None
+        and hashlib.sha256(path.read_bytes()).hexdigest() != checkpoint.sha256
+    ):
+        raise ValueError("final checkpoint hash mismatch")
+    validate_tensor_map(
+        _load_file(path),
+        archive.manifest.tensor_schema,
+    )
 
 
 def _read_topology(root: Path, *, phase: str) -> tuple[str, tuple[str, ...]]:
@@ -1209,5 +1354,7 @@ __all__ = [
     "SummaryStats",
     "ThreeSeedReport",
     "build_benchmark_report",
+    "build_submission_benchmark_report",
     "build_three_seed_report",
+    "build_three_seed_submission_report",
 ]

@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
+import benchmarks.cifar10.runner as runner
 from benchmarks.cifar10.runner import (
     DatasetArtifact,
     ReportInput,
@@ -354,3 +355,32 @@ def test_pilot_node_configs_do_not_require_a_frozen_plan(tmp_path: Path) -> None
 def test_report_input_requires_three_seed_archives() -> None:
     with pytest.raises(ValidationError):
         ReportInput.model_validate({"seeds": []})
+
+
+def test_submission_report_cli_wires_input_and_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    received: dict[str, Path] = {}
+
+    def write_report(input_path: Path, output_dir: Path) -> None:
+        received["input"] = input_path
+        received["output"] = output_dir
+
+    monkeypatch.setattr(runner, "write_three_seed_submission_report", write_report)
+
+    assert (
+        main(
+            [
+                "submission-report",
+                "--input",
+                str(tmp_path / "input.json"),
+                "--output-dir",
+                str(tmp_path / "report"),
+            ]
+        )
+        == 0
+    )
+    assert received == {
+        "input": tmp_path / "input.json",
+        "output": tmp_path / "report",
+    }

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
+from safetensors.numpy import (
+    save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
+)
 from support.sample_manifest import manifest_data
 
 from benchmarks.cifar10.fedavg_reference import (
@@ -16,6 +20,7 @@ from benchmarks.cifar10.report import (
     BenchmarkReportError,
     SeedBenchmarkInput,
     build_benchmark_report,
+    build_submission_benchmark_report,
     build_three_seed_report,
 )
 from dromeus.manifests.canonical import canonical_hash
@@ -370,6 +375,67 @@ def test_benchmark_report_rejects_legacy_archive_without_hashes(
 
     with pytest.raises(BenchmarkReportError, match="checkpoint integrity"):
         build_benchmark_report(
+            run_roots=run_roots,
+            event_logs=event_logs,
+            fedavg=_fedavg_result(),
+            seed=17,
+        )
+
+
+def test_submission_report_accepts_legacy_final_checkpoint_only(
+    tmp_path: Path,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    for run_root in run_roots:
+        state_path = run_root / "state.json"
+        state = json.loads(state_path.read_text())
+        manifest = SealedManifest.model_validate_json(
+            (run_root / "manifest.json").read_text()
+        )
+        algorithm_state = cast(dict[str, object], state["algorithm_state"])
+        checkpoint_relative_path = algorithm_state["path"]
+        assert isinstance(checkpoint_relative_path, str)
+        checkpoint_path = run_root / checkpoint_relative_path
+        _save_file(
+            {
+                tensor.name: np.ones(tensor.shape, dtype=tensor.dtype)
+                for tensor in manifest.tensor_schema.tensors
+            },
+            checkpoint_path,
+        )
+        del state["archive_version"]
+        del state["prepared_commit"]
+        state["algorithm_state"] = checkpoint_relative_path
+        state["pre_mix_checkpoints"] = {
+            "0": "checkpoints/missing-pre-mix.safetensors"
+        }
+        state["post_mix_checkpoints"] = {
+            "0": "checkpoints/missing-post-mix.safetensors"
+        }
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    report = build_submission_benchmark_report(
+        run_roots=run_roots,
+        event_logs=event_logs,
+        fedavg=_fedavg_result(),
+        seed=17,
+    )
+
+    assert report.aggregate_pass
+
+
+def test_submission_report_rejects_final_checkpoint_hash_mismatch(
+    tmp_path: Path,
+) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    state = json.loads((run_roots[0] / "state.json").read_text())
+    algorithm_state = cast(dict[str, object], state["algorithm_state"])
+    checkpoint_relative_path = algorithm_state["path"]
+    assert isinstance(checkpoint_relative_path, str)
+    (run_roots[0] / checkpoint_relative_path).write_bytes(b"tampered")
+
+    with pytest.raises(BenchmarkReportError, match="final checkpoint integrity"):
+        build_submission_benchmark_report(
             run_roots=run_roots,
             event_logs=event_logs,
             fedavg=_fedavg_result(),
