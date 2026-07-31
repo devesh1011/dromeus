@@ -1,0 +1,59 @@
+algorithm_id: dpsgd
+codec_id: safetensors-v1
+consensus_sketch:
+  seed: 4589171939306243064
+  size: 4096
+dataset:
+  class_count: 10
+  dataset_id: cifar10
+  iid_partition_seed: 7
+  image_shape:
+  - 3
+  - 32
+  - 32
+  node_index_partitions:
+  - 0
+  - 1
+  - 2
+  - 3
+  partition_sample_counts:
+  - 12500
+  - 12500
+  - 12500
+  - 12500
+  preprocessing_hash: fab263925c870b8df3cd8f82e3258262e4f8db4943db449988058a60eaf04bf0
+  sample_count: 50000
+  version: huggingface-0b2714987fa478483af9968de7c934580d0bb9a2
+environment:
+  axl_version: 628e28ace077f26dfe8d0259009b357216a9d8d4
+  container_image_digest: sha256:1015f58ea64621b98319aa0dd61598d9028d5d71cc9c1eb9df7b23c36da1f89b
+  dromeus_commit: 86be4ad812f071ed95409a67b7c56b95f8fbedf0
+  dromeus_version: 0.1.0
+  model_definition_hash: 83a4ed0acf0ff01fd04a6d013021d6e230601d1d33f9c07ff4adee4dc949cb14
+  protocol_version: 1
+  pytorch_version: 2.13.0+cpu
+learning_rate: 0.1
+local_steps: 40
+manifest_version: 2
+model_definition_hash: 83a4ed0acf0ff01fd04a6d013021d6e230601d1d33f9c07ff4adee4dc949cb14
+model_id: resnet32
+optimizer: sgd
+peer_scheduler_seed: 17
+protocol_version: 1
+round_count: 400
+run_id: dpsgd-resnet32-400-20260730-seed17
+training:
+  batch_size: 128
+  crop_padding: 4
+  final_consensus_rounds: 2
+  learning_rate_gamma: 0.1
+  learning_rate_milestones:
+  - 8000
+  - 12000
+  momentum: 0.9
+  normalize: true
+  weight_decay: 0.0001
+transport:
+  max_payload_bytes: 16777216
+  max_retries: 3
+  retry_timeout_seconds: 10.0

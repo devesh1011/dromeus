@@ -1,0 +1,64 @@
+{
+  "status": "complete",
+  "model_definition_hash": "83a4ed0acf0ff01fd04a6d013021d6e230601d1d33f9c07ff4adee4dc949cb14",
+  "dataset": {
+    "dataset_id": "cifar10",
+    "version": "huggingface-0b2714987fa478483af9968de7c934580d0bb9a2",
+    "preprocessing_hash": "fab263925c870b8df3cd8f82e3258262e4f8db4943db449988058a60eaf04bf0",
+    "sample_count": 50000,
+    "class_count": 10,
+    "image_shape": [
+      3,
+      32,
+      32
+    ],
+    "iid_partition_seed": 7,
+    "partition_sample_counts": [
+      12500,
+      12500,
+      12500,
+      12500
+    ],
+    "node_index_partitions": [
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "data_source": "huggingface-uoft-cs-cifar10",
+  "local_steps": 40,
+  "round_count": 400,
+  "learning_rate": 0.1,
+  "training": {
+    "batch_size": 128,
+    "momentum": 0.9,
+    "weight_decay": 0.0001,
+    "learning_rate_milestones": [
+      8000,
+      12000
+    ],
+    "learning_rate_gamma": 0.1,
+    "crop_padding": 4,
+    "normalize": true,
+    "final_consensus_rounds": 2
+  },
+  "node_ids": [
+    "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+    "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6",
+    "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+    "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd"
+  ],
+  "data_artifact_sha256": [
+    "5f6edaca6e170b4d8ffb40fd50397062b113bd0d5c7e764f1af6568dbbbc5e3d",
+    "5f6edaca6e170b4d8ffb40fd50397062b113bd0d5c7e764f1af6568dbbbc5e3d",
+    "5f6edaca6e170b4d8ffb40fd50397062b113bd0d5c7e764f1af6568dbbbc5e3d",
+    "5f6edaca6e170b4d8ffb40fd50397062b113bd0d5c7e764f1af6568dbbbc5e3d"
+  ],
+  "final_node_accuracies": [
+    0.916,
+    0.916,
+    0.916,
+    0.916
+  ]
+}

@@ -1,0 +1,9 @@
+axl_bridge_url: http://127.0.0.1:9302
+benchmark_seed: 29
+bootstrap_uri: tls://18.188.220.251:9300
+dataset_cache: /var/cache/dromeus/cifar10
+draft_path: /run/dromeus/draft.yaml
+invitation_path: /run/dromeus/dpsgd-resnet32-400-20260730-seed29/invitation.json
+invitation_timeout_seconds: 600.0
+role: participant
+run_root: /var/lib/dromeus/dpsgd-resnet32-400-20260730-seed29/node-2
