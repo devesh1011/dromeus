@@ -5,6 +5,9 @@ FROM golang:1.25-bookworm AS axl-builder
 ARG AXL_GIT_COMMIT=628e28ace077f26dfe8d0259009b357216a9d8d4
 RUN git clone https://github.com/gensyn-ai/axl.git /tmp/axl \
     && git -C /tmp/axl checkout "$AXL_GIT_COMMIT" \
+    && sed -i '/flag.Parse()/i\    flag.Bool("no-opt", false, "Docker Desktop Rosetta compatibility")' /tmp/axl/cmd/node/main.go \
+    && sed -i '/flag.Parse()/i\    flag.String("r", "", "Docker Desktop Rosetta compatibility")' /tmp/axl/cmd/node/main.go \
+    && gofmt -w /tmp/axl/cmd/node/main.go \
     && cd /tmp/axl \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags='-s -w' \
        -o /opt/axl-node ./cmd/node

@@ -30,7 +30,6 @@ from dromeus.training.cifar10 import DATASET_VERSION, PREPROCESSING_HASH
 from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.interface import ReceivedBytes
-from dromeus.transport.transfer import ArtifactStore
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_ROOT = Path(__file__).with_name("static")
@@ -877,7 +876,7 @@ async def _run_formation(state: DashboardState, registry: ProcessRegistry) -> No
             draft=draft,
             environment=draft.environment,
             dataset=draft.dataset,
-            artifact_store=ArtifactStore(run_root / f"artifacts-{index}"),
+            artifact_root=run_root / f"artifacts-{index}",
         )
         for index, transport in enumerate(transports)
     ]
@@ -1019,7 +1018,7 @@ async def _run_remote_training(
     round_count: int,
 ) -> None:
     """Start training on formed workers and stream their round state."""
-    training_timeout = max(90.0, round_count * 15.0)
+    training_timeout = max(180.0, round_count * 30.0)
     training_deadline = time.monotonic() + training_timeout
     for url in worker_urls:
         await asyncio.to_thread(_post_json, f"{url}/train", {})
@@ -1123,14 +1122,14 @@ def _draft(*, round_count: int = 2) -> DraftRunSpec:
             },
             "consensus_sketch": {"size": 4096, "seed": 9},
             "training": {
-                "batch_size": 128,
+                "batch_size": 16,
                 "momentum": 0.9,
                 "weight_decay": 0.0001,
                 "learning_rate_milestones": [8000, 12000],
                 "learning_rate_gamma": 0.1,
                 "crop_padding": 4,
                 "normalize": True,
-                "final_consensus_rounds": 2,
+                "final_consensus_rounds": 0,
             },
         }
     )

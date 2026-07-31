@@ -34,7 +34,6 @@ from dromeus.training.cifar10 import (
     load_cifar10,
 )
 from dromeus.transport.axl import AXLBridgeConfig
-from dromeus.transport.transfer import ArtifactStore
 
 from .server import (
     AXL_LISTEN_PORT,
@@ -399,7 +398,7 @@ class Worker:
             draft=draft,
             environment=draft.environment,
             dataset=draft.dataset,
-            artifact_store=ArtifactStore(run_root / "formation-artifacts"),
+            artifact_root=run_root / "formation-artifacts",
             event_sink=event_sink,
         )
         self.state.running()
@@ -454,6 +453,7 @@ class Worker:
                 train_data=partitions[partition_index],
                 test_data=test_data,
                 seed=17 + node_index,
+                batch_size=result.manifest.training.batch_size,
                 learning_rate=result.manifest.learning_rate,
             )
             metrics = WorkerMetricsPublisher(
@@ -469,7 +469,6 @@ class Worker:
                         trainer=trainer,
                         tensor_schema=prepared.tensor_schema,
                         local_steps=result.manifest.local_steps,
-                        learning_rate=result.manifest.learning_rate,
                         training_round_count=result.manifest.round_count,
                     ),
                     load_checkpoint=trainer.load_checkpoint,
