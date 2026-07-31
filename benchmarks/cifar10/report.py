@@ -29,13 +29,16 @@ from dromeus.persistence.archive import (
     load_archive_state,
 )
 from dromeus.telemetry.evidence import (
+    EVIDENCE_VERSION,
     BenchmarkNodeReadyEvidence,
     ConsensusDistanceEvidence,
     EvidenceError,
     EvidenceLog,
+    EvidenceRecord,
     RoundMetricsEvidence,
     RunFailedEvidence,
     TransferMessageSentEvidence,
+    decode_evidence,
 )
 
 JsonObject = dict[str, object]
@@ -44,6 +47,15 @@ MetricField = Literal[
     "evaluation_loss",
     "evaluation_accuracy",
 ]
+_LEGACY_SUBMISSION_EVENTS = frozenset(
+    {
+        "benchmark_node_ready",
+        "round_metrics",
+        "consensus_distance",
+        "transfer_message_sent",
+        "run_failed",
+    }
+)
 
 
 class BenchmarkReportError(ValueError):
@@ -533,8 +545,11 @@ def _build_benchmark_report(
                 raise BenchmarkReportError(
                     f"checkpoint integrity failed: {archive.root}"
                 ) from error
+    read_evidence_log = (
+        _read_submission_evidence_log if submission else _read_evidence_log
+    )
     evidence_logs = [
-        _read_evidence_log(
+        read_evidence_log(
             path,
             run_id=manifests[0].run_id,
             manifest_hash=manifest_hashes[0],
@@ -629,6 +644,7 @@ def _build_benchmark_report(
         evidence_logs,
         expected_nodes=expected_nodes,
         expected_rounds=expected_rounds,
+        allow_incomplete_terminal_round=submission,
     )
     round_timing = _round_timing(metrics)
     transport = _transport_summary(evidence_logs)
@@ -978,6 +994,49 @@ def _read_evidence_log(
         raise BenchmarkReportError(f"invalid evidence log: {path}") from error
 
 
+def _read_submission_evidence_log(
+    path: Path, *, run_id: str, manifest_hash: str
+) -> EvidenceLog:
+    try:
+        records: list[EvidenceRecord] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            value = cast(object, json.loads(line))
+            if not isinstance(value, dict):
+                raise ValueError("record is not an object")
+            record_data = cast(JsonObject, value)
+            if record_data.get("event") not in _LEGACY_SUBMISSION_EVENTS:
+                continue
+            record_data.setdefault("evidence_version", EVIDENCE_VERSION)
+            record = decode_evidence(json.dumps(record_data, allow_nan=False))
+            if record.run_id != run_id:
+                raise EvidenceError("evidence run id mismatch")
+            if record.manifest_hash != manifest_hash:
+                raise EvidenceError("evidence manifest hash mismatch")
+            records.append(record)
+    except (OSError, ValueError, EvidenceError) as error:
+        raise BenchmarkReportError(f"invalid evidence log: {path}") from error
+    node_ids = {record.node_id for record in records}
+    if len(node_ids) > 1:
+        raise BenchmarkReportError(f"evidence node id mismatch in {path}")
+    for record_type in (
+        RoundMetricsEvidence,
+        ConsensusDistanceEvidence,
+        RunFailedEvidence,
+    ):
+        rounds = [
+            record.round_id for record in records if isinstance(record, record_type)
+        ]
+        if len(rounds) != len(set(rounds)):
+            raise BenchmarkReportError(f"duplicate evidence round in {path}")
+    return EvidenceLog(
+        path=path,
+        run_id=run_id,
+        manifest_hash=manifest_hash,
+        node_id=next(iter(node_ids), None),
+        records=tuple(records),
+    )
+
+
 def _group_node_metrics(
     metrics: Sequence[RoundMetricsEvidence],
 ) -> dict[str, list[RoundMetricsEvidence]]:
@@ -1119,6 +1178,7 @@ def _consensus_curve(
     *,
     expected_nodes: set[str],
     expected_rounds: set[int],
+    allow_incomplete_terminal_round: bool = False,
     smoothing_window: int = 3,
 ) -> tuple[JsonObject, ...]:
     if smoothing_window <= 0:
@@ -1133,9 +1193,20 @@ def _consensus_curve(
             grouped[record.round_id].append(record.normalized_rms)
             sketches[record.round_id].append(record.sketch_count)
             observed[record.node_id].add(record.round_id)
-    if set(observed) != expected_nodes or any(
-        rounds != expected_rounds for rounds in observed.values()
-    ):
+    complete = set(observed) == expected_nodes and all(
+        rounds == expected_rounds for rounds in observed.values()
+    )
+    if not complete and allow_incomplete_terminal_round:
+        terminal_round = max(expected_rounds)
+        completed_rounds = expected_rounds - {terminal_round}
+        if set(observed) == expected_nodes and all(
+            rounds in (completed_rounds, expected_rounds)
+            for rounds in observed.values()
+        ):
+            grouped.pop(terminal_round, None)
+            sketches.pop(terminal_round, None)
+            complete = True
+    if not complete:
         raise BenchmarkReportError("consensus evidence is incomplete")
     means: list[float] = []
     result: list[JsonObject] = []

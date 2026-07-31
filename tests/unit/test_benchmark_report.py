@@ -19,6 +19,7 @@ from benchmarks.cifar10.fedavg_reference import (
 from benchmarks.cifar10.report import (
     BenchmarkReportError,
     SeedBenchmarkInput,
+    _consensus_curve,  # pyright: ignore[reportPrivateUsage]
     build_benchmark_report,
     build_submission_benchmark_report,
     build_three_seed_report,
@@ -30,6 +31,7 @@ from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.evidence import (
     BenchmarkNodeReadyEvidence,
     ConsensusDistanceEvidence,
+    EvidenceLog,
     RoundMetricsEvidence,
     RunFailedEvidence,
     TransferMessageSentEvidence,
@@ -295,6 +297,44 @@ def test_benchmark_report_rejects_missing_consensus_evidence(tmp_path: Path) -> 
         )
 
 
+def test_submission_consensus_allows_partial_terminal_round(tmp_path: Path) -> None:
+    run_roots, event_logs = _write_inputs(tmp_path)
+    manifest = SealedManifest.model_validate_json(
+        (run_roots[0] / "manifest.json").read_text()
+    )
+    manifest_hash = canonical_hash(manifest)
+    for index in range(3):
+        assert append_evidence(
+            JsonlEventSink(event_logs[index]),
+            ConsensusDistanceEvidence(
+                run_id=manifest.run_id,
+                manifest_hash=manifest_hash,
+                node_id=f"peer-{index}",
+                message_id=f"terminal-consensus-peer-{index}",
+                round_id=1,
+                normalized_rms=0.01,
+                sketch_count=4,
+            ),
+        )
+    logs = tuple(
+        EvidenceLog.open(
+            path,
+            run_id=manifest.run_id,
+            manifest_hash=manifest_hash,
+        )
+        for path in event_logs
+    )
+
+    consensus = _consensus_curve(
+        logs,
+        expected_nodes={f"peer-{index}" for index in range(4)},
+        expected_rounds={0, 1},
+        allow_incomplete_terminal_round=True,
+    )
+
+    assert [point["round_id"] for point in consensus] == [0]
+
+
 def test_relative_parity_cannot_pass_below_90_percent(tmp_path: Path) -> None:
     run_roots, event_logs = _write_inputs(
         tmp_path,
@@ -414,6 +454,15 @@ def test_submission_report_accepts_legacy_final_checkpoint_only(
             "0": "checkpoints/missing-post-mix.safetensors"
         }
         state_path.write_text(json.dumps(state), encoding="utf-8")
+    for event_log in event_logs:
+        records = [json.loads(line) for line in event_log.read_text().splitlines()]
+        for record in records:
+            record.pop("evidence_version")
+        records.insert(0, {"event": "node_start", "run_id": "ignored"})
+        event_log.write_text(
+            "\n".join(json.dumps(record) for record in records) + "\n",
+            encoding="utf-8",
+        )
 
     report = build_submission_benchmark_report(
         run_roots=run_roots,
