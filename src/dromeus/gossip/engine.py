@@ -452,16 +452,11 @@ class AXLPairTransport:
         cached = self._ready_cache.get(round_id)
         if cached is not None:
             return cached
-        await self._send_pair_message(
+        envelope = await self._exchange_pair_message(
             destination=peer,
             message_type=MessageType.UPDATE_READY,
             message_id=f"update-ready-{round_id}",
             payload=PairCommitMessage(round_id=round_id, checksum=bundle_checksum),
-            round_id=round_id,
-        )
-        envelope = await self._receive_pair_message(
-            peer=peer,
-            message_type=MessageType.UPDATE_READY,
             round_id=round_id,
         )
         message = decode_message(
@@ -486,16 +481,11 @@ class AXLPairTransport:
             if committed_checksum != state_checksum:
                 raise PairCommitError("duplicate ROUND_COMMITTED checksum mismatch")
             return
-        await self._send_pair_message(
+        envelope = await self._exchange_pair_message(
             destination=peer,
             message_type=MessageType.ROUND_COMMITTED,
             message_id=f"round-committed-{round_id}",
             payload=PairCommitMessage(round_id=round_id, checksum=state_checksum),
-            round_id=round_id,
-        )
-        envelope = await self._receive_pair_message(
-            peer=peer,
-            message_type=MessageType.ROUND_COMMITTED,
             round_id=round_id,
         )
         message = decode_message(
@@ -543,17 +533,65 @@ class AXLPairTransport:
             retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
         )
 
+    async def _exchange_pair_message(
+        self,
+        *,
+        destination: PublicKey,
+        message_type: MessageType,
+        message_id: MessageId,
+        payload: PairCommitMessage,
+        round_id: RoundId,
+    ) -> Envelope:
+        attempts = self._transport_limits.max_retries + 1
+        for attempt in range(attempts):
+            await self._send_pair_message(
+                destination=destination,
+                message_type=message_type,
+                message_id=message_id,
+                payload=payload,
+                round_id=round_id,
+            )
+            try:
+                envelope = await self._receive_pair_message(
+                    peer=destination,
+                    message_type=message_type,
+                    round_id=round_id,
+                    timeout_seconds=self._transport_limits.retry_timeout_seconds,
+                )
+            except PairCommitError as error:
+                if (
+                    not isinstance(error.__cause__, TimeoutError)
+                    or attempt + 1 >= attempts
+                ):
+                    raise
+                continue
+            for _ in range(self._transport_limits.max_retries):
+                await self._send_pair_message(
+                    destination=destination,
+                    message_type=message_type,
+                    message_id=message_id,
+                    payload=payload,
+                    round_id=round_id,
+                )
+            return envelope
+        raise PairCommitError("pair commit deadline exceeded")
+
     async def _receive_pair_message(
         self,
         *,
         peer: PublicKey,
         message_type: MessageType,
         round_id: RoundId,
+        timeout_seconds: float | None = None,
     ) -> Envelope:
         try:
             envelope = await self._receiver.receive(
                 MessageChannel.PAIR_COMMIT,
-                timeout_seconds=self._timeout_seconds,
+                timeout_seconds=(
+                    timeout_seconds
+                    if timeout_seconds is not None
+                    else self._timeout_seconds
+                ),
             )
         except TimeoutError as error:
             raise PairCommitError("pair commit deadline exceeded") from error
