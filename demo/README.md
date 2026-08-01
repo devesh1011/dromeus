@@ -1,20 +1,27 @@
-# Containerized formation demo
+# Containerized Dromeus demo
 
 This mode runs four independent Dromeus workers in separate Docker containers.
 Each worker owns one AXL process, one Dromeus runtime, a private identity, and a
-separate artifact volume. The dashboard is a fifth container and observes worker
-state over the Docker network.
+separate artifact volume. The worker starts AXL before formation, connects Dromeus
+to its local AXL HTTP bridge, and stops AXL when the run ends. The dashboard is a
+fifth container and observes worker state over the Docker network.
 
 ```bash
 docker compose -f demo/compose.yaml up --build -d
 docker compose -f demo/compose.yaml ps
-open http://localhost:8765
 ```
+
+Open `http://localhost:8765` in a browser. The Compose file targets
+`linux/amd64`; Docker Desktop runs it through emulation on Apple Silicon, so the
+first build and training run may be slower.
 
 Choose number D-PSGD rounds in **Training rounds**, then click **Begin formation**
 to form fixed group. Click **Start training** to begin round 0. First training run
 downloads CIFAR-10 into shared Docker volume; later runs reuse it. Dashboard's
 **Live training logs** panel updates after each committed round.
+
+After training finishes, the dashboard remains in `Training complete` and does not
+replay the formation sequence.
 
 The same two explicit stages can be controlled from a terminal:
 
@@ -24,11 +31,11 @@ uv run python -m demo.formation.cli form --rounds 5 --wait
 uv run python -m demo.formation.cli train --follow
 ```
 
-Against the AWS demo, pass its dashboard URL:
+For a deployed demo, pass its current dashboard URL:
 
 ```bash
 uv run python -m demo.formation.cli \
-  --url http://3.236.134.228:8765 state
+  --url http://HOSTNAME_OR_IP:8765 state
 ```
 
 To show the live container evidence during a presentation:
