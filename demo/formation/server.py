@@ -258,7 +258,7 @@ class DashboardState:
                 "over real AXL"
             )
         elif status == "complete":
-            node["state"] = "ready"
+            node["state"] = "complete"
             node["progress"] = 100
         logs = training.get("logs")
         if not isinstance(logs, list):
@@ -411,7 +411,7 @@ class DashboardState:
             )
             self._manifest_hash = manifest_hash
             for node in self._nodes:
-                node["state"] = "ready"
+                node["state"] = "complete"
                 node["progress"] = 100
 
     def formation_ready(self, manifest_hash: str) -> None:
@@ -1018,7 +1018,7 @@ async def _run_remote_training(
     round_count: int,
 ) -> None:
     """Start training on formed workers and stream their round state."""
-    training_timeout = max(180.0, round_count * 30.0)
+    training_timeout = max(240.0, round_count * 40.0)
     training_deadline = time.monotonic() + training_timeout
     for url in worker_urls:
         await asyncio.to_thread(_post_json, f"{url}/train", {})
@@ -1050,7 +1050,7 @@ async def _run_remote_training(
             state.complete(
                 manifest_hash,
                 detail=(
-                    f"Four nodes completed {round_count} D-PSGD rounds over real AXL"
+                    f"Four nodes completed {round_count} D-PSGD rounds over AXL"
                 ),
             )
             return

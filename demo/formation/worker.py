@@ -353,13 +353,22 @@ class Worker:
     def stop(self) -> None:
         self._stopping.set()
         self._training_event.set()
+        self._stop_axl()
+
+    def _stop_axl(self) -> None:
         process = self._axl
-        if process is not None and process.poll() is None:
+        self._axl = None
+        if process is None or process.poll() is not None:
+            return
+        try:
             process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=3)
 
     def _run(self) -> None:
         try:
@@ -481,7 +490,10 @@ class Worker:
             await runtime.run()
             self.state.complete(result.manifest_hash)
         finally:
-            await runtime.stop()
+            try:
+                await runtime.stop()
+            finally:
+                self._stop_axl()
 
 
 class WorkerHandler(BaseHTTPRequestHandler):
