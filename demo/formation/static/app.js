@@ -4,9 +4,6 @@ const ui = {
   startTraining: document.querySelector("#start-training"),
   startLabel: document.querySelector(".button-ready"),
   startBusyLabel: document.querySelector(".button-busy"),
-  replayControls: document.querySelector("#replay-controls"),
-  replay: document.querySelector("#replay-run"),
-  replaySpeed: document.querySelector("#replay-speed"),
   elapsed: document.querySelector("#elapsed"),
   status: document.querySelector("#run-status"),
   statusDetail: document.querySelector("#status-detail"),
@@ -46,6 +43,7 @@ const stateLabels = {
   starting: "Finalizing formation",
   training: "Training",
   ready: "Formation ready",
+  complete: "Training complete",
   failed: "Failed",
 };
 
@@ -75,23 +73,14 @@ const phaseRules = [
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 let backend = null;
 let generation = null;
-let queuedSequences = new Set();
-let eventQueue = [];
+let seenSequences = new Set();
 let processedEvents = [];
 let phaseEvidence = phaseRules.map(() => new Set());
-let playerTimer = null;
 let visualEpoch = 0;
-let replaying = false;
 let shownErrorGeneration = null;
 let requestInFlight = null;
 let pendingRequest = null;
 let clientError = null;
-
-function replayTimeScale() {
-  if (!replaying) return 1;
-  const speed = Number(ui.replaySpeed.value);
-  return speed > 0 ? 1 / speed : 1;
-}
 
 function nodeElement(nodeId) {
   return document.getElementById(nodeId);
@@ -137,12 +126,9 @@ function resetVisual(snapshot) {
 
 function clearTraceVisuals() {
   visualEpoch += 1;
-  eventQueue = [];
   processedEvents = [];
-  queuedSequences = new Set();
+  seenSequences = new Set();
   phaseEvidence = phaseRules.map(() => new Set());
-  clearTimeout(playerTimer);
-  playerTimer = null;
   ui.ledger.replaceChildren();
   ui.packetLayer.replaceChildren();
   ui.routes.querySelectorAll(".active, .invitation-active").forEach((route) => {
@@ -150,41 +136,18 @@ function clearTraceVisuals() {
   });
 }
 
-function enqueueEvents(events) {
-  events.forEach((event) => {
-    if (queuedSequences.has(event.sequence)) return;
-    queuedSequences.add(event.sequence);
-    eventQueue.push(event);
-  });
-  eventQueue.sort((left, right) => left.sequence - right.sequence);
-  if (!playerTimer && eventQueue.length) playNext();
-}
-
-function playNext() {
-  if (!eventQueue.length) {
-    playerTimer = null;
-    if (["formed", "training", "complete"].includes(backend?.status)) {
-      finalizeFormation();
-    }
-    if (replaying) replaying = false;
-    renderRunChrome();
-    return;
-  }
-  const event = eventQueue.shift();
-  processedEvents.push(event);
-  applyEvent(event);
-  appendLedgerEvent(event);
-  animateEnvelope(event);
+function syncEvents(events, animate = true) {
+  events
+    .filter((event) => !seenSequences.has(event.sequence))
+    .sort((left, right) => left.sequence - right.sequence)
+    .forEach((event) => {
+      seenSequences.add(event.sequence);
+      processedEvents.push(event);
+      applyEvent(event);
+      appendLedgerEvent(event);
+      if (animate) animateEnvelope(event);
+    });
   updatePhases();
-  const baseDelay = event.type === "CHUNK" ? 500 : 290;
-  const delay = prefersReducedMotion.matches ? 20 : baseDelay * replayTimeScale();
-  const epoch = visualEpoch;
-  playerTimer = window.setTimeout(() => {
-    if (epoch !== visualEpoch) return;
-    playerTimer = null;
-    playNext();
-  }, delay);
-  renderRunChrome();
 }
 
 function applyEvent(event) {
@@ -237,9 +200,10 @@ function updatePhases() {
 }
 
 function finalizeFormation() {
+  const nodeState = backend?.status === "complete" ? "complete" : "ready";
   if (backend?.status !== "training") {
     ["node-0", "node-1", "node-2", "node-3"].forEach((nodeId) =>
-      setNode(nodeId, "ready", 100),
+      setNode(nodeId, nodeState, 100),
     );
   }
   if (backend?.manifest_hash) ui.manifest.textContent = backend.manifest_hash;
@@ -297,29 +261,34 @@ function shortNode(nodeId) {
 function drawRoutes() {
   if (window.innerWidth <= 860) return;
   const topologyRect = ui.topology.getBoundingClientRect();
-  const sourceRect = nodeElement("node-0").getBoundingClientRect();
-  const source = {
-    x: sourceRect.right - topologyRect.left,
-    y: sourceRect.top + sourceRect.height / 2 - topologyRect.top,
-  };
+  const nodeIds = ["node-0", "node-1", "node-2", "node-3"];
+  const centers = new Map(
+    nodeIds.map((nodeId) => {
+      const rect = nodeElement(nodeId).getBoundingClientRect();
+      return [nodeId, center(rect, topologyRect)];
+    }),
+  );
   ui.routes.setAttribute("viewBox", `0 0 ${topologyRect.width} ${topologyRect.height}`);
   ui.routes.replaceChildren();
-  ["node-1", "node-2", "node-3"].forEach((nodeId) => {
-    const targetRect = nodeElement(nodeId).getBoundingClientRect();
-    const target = {
-      x: targetRect.left - topologyRect.left,
-      y: targetRect.top + targetRect.height / 2 - topologyRect.top,
-    };
-    const control = source.x + (target.x - source.x) * 0.5;
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.id = `route-${nodeId}`;
-    path.classList.add("route-path");
-    path.setAttribute(
-      "d",
-      `M ${source.x} ${source.y} C ${control} ${source.y}, ${control} ${target.y}, ${target.x} ${target.y}`,
-    );
-    ui.routes.append(path);
+  nodeIds.forEach((sourceId, sourceIndex) => {
+    nodeIds.slice(sourceIndex + 1).forEach((targetId) => {
+      const source = centers.get(sourceId);
+      const target = centers.get(targetId);
+      if (!source || !target) return;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.id = routeId(sourceId, targetId);
+      path.classList.add("route-path");
+      if (Math.abs(nodeIds.indexOf(targetId) - sourceIndex) === 2) {
+        path.classList.add("diagonal");
+      }
+      path.setAttribute("d", `M ${source.x} ${source.y} L ${target.x} ${target.y}`);
+      ui.routes.append(path);
+    });
   });
+}
+
+function routeId(sourceId, targetId) {
+  return `route-${[sourceId, targetId].sort().join("-")}`;
 }
 
 function animateEnvelope(event) {
@@ -330,21 +299,20 @@ function animateEnvelope(event) {
       () => {
         if (epoch === visualEpoch) animatePacket(event.source, target, event, epoch);
       },
-      prefersReducedMotion.matches ? 0 : index * 110 * replayTimeScale(),
+      prefersReducedMotion.matches ? 0 : index * 110,
     );
   });
 }
 
 function animatePacket(sourceId, targetId, event, epoch) {
   if (epoch !== visualEpoch) return;
-  const routeNode = sourceId === "node-0" ? targetId : sourceId;
-  const route = document.querySelector(`#route-${routeNode}`);
+  const route = document.querySelector(`#${routeId(sourceId, targetId)}`);
   if (route) {
     const activeClass = event.transport === "OUT_OF_BAND" ? "invitation-active" : "active";
     route.classList.add(activeClass);
     window.setTimeout(() => {
       if (epoch === visualEpoch) route.classList.remove(activeClass);
-    }, 850 * replayTimeScale());
+    }, 850);
   }
   if (prefersReducedMotion.matches || window.innerWidth <= 860) return;
 
@@ -374,7 +342,7 @@ function animatePacket(sourceId, targetId, event, epoch) {
       { opacity: 1, offset: 0.88, transform: `translate(${end.x}px, ${end.y}px) scale(1)` },
       { opacity: 0, transform: `translate(${end.x}px, ${end.y}px) scale(0.82)` },
     ],
-    { duration: 1050 * replayTimeScale(), easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+    { duration: 1050, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
   );
   animation.finished.then(
     () => packet.remove(),
@@ -404,18 +372,11 @@ function formatElapsed(seconds) {
 
 function renderRunChrome() {
   if (!backend) return;
-  const traceBusy = eventQueue.length > 0 || Boolean(playerTimer);
   const roundsChanged =
     backend.status === "formed" &&
     Number(ui.roundCount.value) !== Number(backend.round_count);
   let status = backend.status;
   let detail = backend.status_detail;
-  if (traceBusy && backend.status === "complete") {
-    status = "running";
-    detail = replaying
-      ? `Replaying captured AXL envelopes at ${ui.replaySpeed.selectedOptions[0].text}`
-      : "Rendering captured AXL envelopes";
-  }
   if (clientError) {
     status = "failed";
     detail = clientError;
@@ -443,7 +404,6 @@ function renderRunChrome() {
     backend.status === "preparing" ||
     backend.status === "running" ||
     backend.status === "training" ||
-    traceBusy ||
     requestInFlight !== null ||
     pendingRequest !== null;
   ui.start.disabled =
@@ -460,12 +420,11 @@ function renderRunChrome() {
     backend.status === "formed" || backend.status === "training"
       ? "Group formed"
       : backend.status === "complete"
-        ? "Rendering trace"
+        ? "Training complete"
         : "Formation running";
   ui.startTraining.disabled =
     backend.deployment !== "docker" ||
     backend.status !== "formed" ||
-    traceBusy ||
     requestInFlight !== null ||
     pendingRequest !== null ||
     backend.can_start_training === false ||
@@ -479,9 +438,6 @@ function renderRunChrome() {
   ui.roundCount.disabled = ["preparing", "running", "training"].includes(
     backend.status,
   );
-  ui.replayControls.hidden = backend.status !== "complete";
-  ui.replay.disabled = traceBusy;
-  ui.replaySpeed.disabled = traceBusy && !replaying;
 }
 
 function renderTraining(snapshot) {
@@ -513,9 +469,9 @@ async function poll() {
       clientError = null;
       pendingRequest = null;
       generation = snapshot.generation;
-      replaying = false;
       ui.roundCount.value = String(snapshot.round_count);
       resetVisual(snapshot);
+      syncEvents(snapshot.events, false);
     }
     if (
       pendingRequest === "training" &&
@@ -524,13 +480,9 @@ async function poll() {
       pendingRequest = null;
     }
     syncNodeIdentities(snapshot);
-    if (!replaying) enqueueEvents(snapshot.events);
+    syncEvents(snapshot.events);
     syncDelivery(snapshot.events);
-    if (
-      ["formed", "training", "complete"].includes(snapshot.status) &&
-      !eventQueue.length &&
-      !playerTimer
-    ) {
+    if (["formed", "training", "complete"].includes(snapshot.status)) {
       finalizeFormation();
     }
     if (snapshot.status === "failed") showError(snapshot);
@@ -626,21 +578,9 @@ async function startTraining() {
   }
 }
 
-function replayCapture() {
-  if (!backend?.events.length) return;
-  replaying = true;
-  resetVisual(backend);
-  backend.events.forEach((event) => {
-    queuedSequences.add(event.sequence);
-    eventQueue.push(event);
-  });
-  playNext();
-}
-
 ui.start.addEventListener("click", startRun);
 ui.startTraining.addEventListener("click", startTraining);
 ui.roundCount.addEventListener("input", renderRunChrome);
-ui.replay.addEventListener("click", replayCapture);
 window.addEventListener("resize", drawRoutes);
 window.addEventListener("load", drawRoutes);
 drawRoutes();

@@ -45,22 +45,9 @@
             <span class="button-ready">Begin formation</span>
             <span class="button-busy">Formation running</span>
           </button>
-          <button class="replay-action training-action" id="start-training" type="button" disabled>
+          <button class="secondary-action training-action" id="start-training" type="button" disabled>
             Start training
           </button>
-          <div class="replay-controls" id="replay-controls" hidden>
-            <label class="replay-speed" for="replay-speed">
-              <span>Replay speed</span>
-              <select id="replay-speed">
-                <option value="1">1×</option>
-                <option value="0.5" selected>0.5×</option>
-                <option value="0.25">0.25×</option>
-              </select>
-            </label>
-            <button class="replay-action" id="replay-run" type="button">
-              Replay capture
-            </button>
-          </div>
         </div>
       </header>
 
@@ -84,16 +71,17 @@
         >
           <div class="field-heading">
             <div>
-              <h2 id="map-title">Fixed group formation</h2>
+              <h2 id="map-title">Decentralized training group</h2>
               <p>
-                Invitation is out-of-band. Every envelope after it crosses AXL.
+                Node 0 starts formation. All nodes train and average with peers over AXL.
               </p>
             </div>
             <div class="route-key" aria-label="Route legend">
               <span
                 ><i class="route-swatch invitation-swatch"></i>Invitation</span
               >
-              <span><i class="route-swatch axl-swatch"></i>AXL envelope</span>
+                <span><i class="route-swatch axl-swatch"></i>AXL envelope</span>
+              <span><i class="route-swatch peer-swatch"></i>Peer path</span>
             </div>
           </div>
 
@@ -102,7 +90,7 @@
             <div class="axl-fabric" aria-hidden="true">
               <div class="fabric-orbit"></div>
               <span>AXL</span>
-              <small>encrypted mesh</small>
+              <small>peer transport</small>
             </div>
             <div
               class="packet-layer"
@@ -113,10 +101,10 @@
             <article class="node initiator" id="node-0" data-state="offline">
               <div class="node-heading">
                 <span class="node-index">N0</span>
-                <span class="node-role">Initiator</span>
+                <span class="node-role">Group initiator</span>
                 <span class="node-state">Offline</span>
               </div>
-              <h3>Manifest authority</h3>
+              <h3>Training node 00</h3>
               <code class="node-key">identity pending</code>
               <div class="node-meta">
                 <span class="node-container">dromeus-node-0</span>
@@ -136,7 +124,7 @@
                 <span class="node-role">Participant</span>
                 <span class="node-state">Offline</span>
               </div>
-              <h3>Training peer 01</h3>
+              <h3>Training node 01</h3>
               <code class="node-key">identity pending</code>
               <div class="node-meta">
                 <span class="node-container">dromeus-node-1</span>
@@ -156,7 +144,7 @@
                 <span class="node-role">Participant</span>
                 <span class="node-state">Offline</span>
               </div>
-              <h3>Training peer 02</h3>
+              <h3>Training node 02</h3>
               <code class="node-key">identity pending</code>
               <div class="node-meta">
                 <span class="node-container">dromeus-node-2</span>
@@ -176,7 +164,7 @@
                 <span class="node-role">Participant</span>
                 <span class="node-state">Offline</span>
               </div>
-              <h3>Training peer 03</h3>
+              <h3>Training node 03</h3>
               <code class="node-key">identity pending</code>
               <div class="node-meta">
                 <span class="node-container">dromeus-node-3</span>

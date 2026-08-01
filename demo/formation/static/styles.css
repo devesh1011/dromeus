@@ -194,43 +194,6 @@ button {
   font-size: 12px;
 }
 
-.replay-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.replay-controls[hidden] {
-  display: none;
-}
-
-.replay-speed {
-  display: grid;
-  gap: 3px;
-  color: var(--quiet);
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.replay-speed select {
-  min-width: 74px;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.replay-speed select:disabled {
-  cursor: not-allowed;
-  color: var(--quiet);
-}
-
 .run-clock {
   display: grid;
   min-width: 90px;
@@ -251,7 +214,7 @@ button {
 }
 
 .primary-action,
-.replay-action,
+.secondary-action,
 dialog button {
   min-height: 40px;
   border: 0;
@@ -278,7 +241,7 @@ dialog button {
 }
 
 .primary-action:active:not(:disabled),
-.replay-action:active:not(:disabled) {
+.secondary-action:active:not(:disabled) {
   transform: translateY(0);
 }
 
@@ -297,17 +260,17 @@ dialog button {
   display: inline;
 }
 
-.replay-action {
+.secondary-action {
   padding: 0 15px;
   background: var(--surface-strong);
   color: var(--ink);
 }
 
-.replay-action:hover:not(:disabled) {
+.secondary-action:hover:not(:disabled) {
   background: oklch(0.26 0.016 60);
 }
 
-.replay-action:disabled {
+.secondary-action:disabled {
   cursor: progress;
   color: var(--quiet);
 }
@@ -464,6 +427,10 @@ select:focus-visible {
   border-color: var(--axl);
 }
 
+.peer-swatch {
+  border-color: var(--line);
+}
+
 .topology {
   position: relative;
   min-height: 500px;
@@ -471,8 +438,7 @@ select:focus-visible {
   isolation: isolate;
 }
 
-.topology::before,
-.topology::after {
+.topology::before {
   position: absolute;
   z-index: -1;
   content: "";
@@ -480,17 +446,10 @@ select:focus-visible {
 }
 
 .topology::before {
-  inset: 14% 12%;
+  inset: 10% 12%;
   border: 1px solid var(--line-soft);
-  border-radius: 50%;
+  border-radius: 28px;
   opacity: 0.55;
-}
-
-.topology::after {
-  top: 50%;
-  left: 8%;
-  width: 82%;
-  border-top: 1px solid var(--line-soft);
 }
 
 .routes,
@@ -512,6 +471,10 @@ select:focus-visible {
   stroke: var(--line);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+}
+
+.route-path.diagonal {
+  opacity: 0.62;
 }
 
 .route-path.active {
@@ -612,25 +575,23 @@ select:focus-visible {
 }
 
 .node.initiator {
-  top: 50%;
-  left: 8%;
-  transform: translateY(-50%);
+  top: 9%;
+  left: 9%;
 }
 
 .node-one {
-  top: 8%;
-  right: 7%;
+  top: 9%;
+  right: 9%;
 }
 
 .node-two {
-  top: 50%;
-  right: 3%;
-  transform: translateY(-50%);
+  right: 9%;
+  bottom: 9%;
 }
 
 .node-three {
-  right: 7%;
-  bottom: 8%;
+  bottom: 9%;
+  left: 9%;
 }
 
 .node-heading {
@@ -733,7 +694,8 @@ select:focus-visible {
   background: var(--axl-soft);
 }
 
-.node[data-state="ready"] {
+.node[data-state="ready"],
+.node[data-state="complete"] {
   border-color: var(--success);
   background: var(--success-soft);
 }
@@ -744,7 +706,9 @@ select:focus-visible {
 }
 
 .node[data-state="ready"] .node-state,
-.node[data-state="ready"] .node-key {
+.node[data-state="ready"] .node-key,
+.node[data-state="complete"] .node-state,
+.node[data-state="complete"] .node-key {
   color: var(--success);
 }
 
@@ -1189,8 +1153,7 @@ dialog button {
   .routes,
   .packet-layer,
   .axl-fabric,
-  .topology::before,
-  .topology::after {
+  .topology::before {
     display: none;
   }
 
@@ -1242,11 +1205,7 @@ dialog button {
     flex: 1;
   }
 
-  .replay-controls {
-    flex: 1 1 100%;
-  }
-
-  .replay-action {
+  .secondary-action {
     flex: 1;
   }
 
