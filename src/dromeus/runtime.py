@@ -48,7 +48,7 @@ from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.training.cifar10 import (
     PreparedCIFAR10Training as TrainingOwnedCIFAR,
 )
-from dromeus.training.cifar10 import prepare_training as prepare_training_owned_cifar
+from dromeus.training.cifar10 import prepare_training
 from dromeus.training.trainer import InitialCheckpoint
 from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
@@ -152,7 +152,7 @@ def prepare_cifar_training(
 ) -> PreparedCIFARTraining:
     """Prepare local data through training-owned interfaces."""
     return PreparedCIFARTraining(
-        _training=prepare_training_owned_cifar(
+        _training=prepare_training(
             draft=draft,
             cache_dir=dataset_cache,
             benchmark_seed=benchmark_seed,
