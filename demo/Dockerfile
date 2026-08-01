@@ -25,7 +25,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY demo ./demo
 RUN uv venv /app/.venv \
-    && uv pip install --python /app/.venv/bin/python \
+    && UV_HTTP_TIMEOUT=120 uv pip install --python /app/.venv/bin/python \
        --index-url https://download.pytorch.org/whl/cpu \
        --extra-index-url https://pypi.org/simple \
        --index-strategy unsafe-best-match \
