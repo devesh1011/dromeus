@@ -87,6 +87,7 @@ class Receiver:
             channel: asyncio.Queue[Envelope](maxsize=64) for channel in MessageChannel
         }
         self._seen_messages: set[MessageId] = set()
+        self._seen_idempotent_messages: set[tuple[PublicKey, MessageId]] = set()
         self._future_round_messages: list[Envelope] = []
         self._future_round_transfer_by_sender: dict[PublicKey, MessageId] = {}
         self._task: asyncio.Task[None] | None = None
@@ -161,7 +162,12 @@ class Receiver:
             and envelope.algorithm_id != self._policy.algorithm_id
         ):
             raise ReceiverError("unexpected algorithm id")
-        if envelope.message_type not in TRANSFER_TYPES | ACK_TYPES | IDEMPOTENT_TYPES:
+        idempotent_key: tuple[PublicKey, MessageId] | None = None
+        if envelope.message_type in IDEMPOTENT_TYPES:
+            idempotent_key = (envelope.sender_public_key, envelope.message_id)
+            if idempotent_key in self._seen_idempotent_messages:
+                return False
+        elif envelope.message_type not in TRANSFER_TYPES | ACK_TYPES:
             if envelope.message_id in self._seen_messages:
                 raise ReceiverError("replayed message id")
             self._seen_messages.add(envelope.message_id)
@@ -169,7 +175,12 @@ class Receiver:
             envelope.message_type in ROUND_TRACKED_TYPES
             and envelope.round_id is not None
         ):
-            return self._validate_round_window(envelope)
+            should_route = self._validate_round_window(envelope)
+            if idempotent_key is not None:
+                self._seen_idempotent_messages.add(idempotent_key)
+            return should_route
+        if idempotent_key is not None:
+            self._seen_idempotent_messages.add(idempotent_key)
         return True
 
     def _validate_round_window(self, envelope: Envelope) -> bool:

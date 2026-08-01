@@ -151,6 +151,8 @@ class AXLTransport:
                 if error.code == 204:
                     return None
                 raise TransportError("AXL recv failed") from error
+            except TimeoutError:
+                return None
             except URLError as error:
                 raise TransportError("AXL recv failed") from error
 
