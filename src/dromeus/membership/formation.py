@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import cast
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
+    file_sha256,
     parse_sealed_json,
 )
 from dromeus.manifests.models import (
@@ -49,14 +49,6 @@ class ReadyValidationError(ValueError):
 
 class FormationError(RuntimeError):
     """Fixed-membership startup failed."""
-
-
-def _file_sha256(path: Path) -> Sha256:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while block := handle.read(1024 * 1024):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def validate_ready(
@@ -236,7 +228,7 @@ class FormationProtocol:
                 payload=encode_message(JoinAccepted(draft_hash=invitation.draft_hash)),
             )
         sealed = True
-        checkpoint_hash = _file_sha256(checkpoint_path)
+        checkpoint_hash = file_sha256(checkpoint_path)
         manifest = seal_manifest(
             draft=self._draft,
             participant_keys=participant_keys,
