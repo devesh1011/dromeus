@@ -10,6 +10,11 @@ from typing import cast
 
 import numpy as np
 import pytest
+from support.in_memory_transport import (
+    InMemoryFaults,
+    InMemoryNetwork,
+    InMemoryTransport,
+)
 
 from dromeus.algorithms.base import UpdateBundle
 from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
@@ -427,6 +432,67 @@ def test_round_committed_rejects_payload_round_mismatch(tmp_path: Path) -> None:
                 round_id=0,
                 state_checksum="2" * 64,
             )
+
+    asyncio.run(run())
+
+
+def test_round_committed_recovers_from_silent_message_loss(tmp_path: Path) -> None:
+    async def run() -> None:
+        network = InMemoryNetwork()
+        raw_transports = (
+            InMemoryTransport(
+                network=network,
+                public_key="peer-0",
+                faults=InMemoryFaults(drop_send_calls=frozenset({1})),
+            ),
+            InMemoryTransport(network=network, public_key="peer-1"),
+        )
+        receivers = tuple(Receiver(raw) for raw in raw_transports)
+        senders = tuple(OutboundScheduler(raw) for raw in raw_transports)
+        limits = TransportLimits(
+            max_payload_bytes=1024,
+            max_retries=1,
+            retry_timeout_seconds=0.05,
+        )
+        transports = tuple(
+            AXLPairTransport(
+                local_public_key=f"peer-{index}",
+                run_id="test-run",
+                manifest_hash="0" * 64,
+                algorithm_id="d-psgd",
+                transport_limits=limits,
+                receiver=receivers[index],
+                sender=senders[index],
+                transfer_manager=cast(TransferManager, object()),
+                metadata_root=tmp_path / f"peer-{index}",
+            )
+            for index in range(2)
+        )
+        for receiver in receivers:
+            await receiver.start()
+        for sender in senders:
+            await sender.start()
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(
+                    transports[0].exchange_round_committed(
+                        peer="peer-1",
+                        round_id=0,
+                        state_checksum="1" * 64,
+                    ),
+                    transports[1].exchange_round_committed(
+                        peer="peer-0",
+                        round_id=0,
+                        state_checksum="1" * 64,
+                    ),
+                ),
+                timeout=1.0,
+            )
+            await asyncio.sleep(0.05)
+            assert all(receiver.stats.rejected_messages == 0 for receiver in receivers)
+        finally:
+            await asyncio.gather(*(receiver.stop() for receiver in receivers))
+            await asyncio.gather(*(sender.stop() for sender in senders))
 
     asyncio.run(run())
 

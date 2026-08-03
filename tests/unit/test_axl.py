@@ -81,6 +81,19 @@ def test_topology_returns_raw_axl_snapshot() -> None:
     assert asyncio.run(transport.topology()) == snapshot
 
 
+def test_recv_socket_timeout_is_an_empty_poll(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    transport = AXLTransport(AXLBridgeConfig(base_url="http://127.0.0.1:0"))
+
+    def time_out(*_args: object, **_kwargs: object) -> None:
+        raise TimeoutError("timed out")
+
+    monkeypatch.setattr("dromeus.transport.axl.urlopen", time_out)
+
+    assert asyncio.run(transport.recv(0.1)) is None
+
+
 def test_sender_resolution_uses_header_matching_claim_absent_from_topology(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
