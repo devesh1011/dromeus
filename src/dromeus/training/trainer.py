@@ -19,6 +19,7 @@ from safetensors.torch import (
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 
+from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import TensorSchema
 from dromeus.training.resnet32 import floating_model_state, tensor_schema_for_model
 
@@ -73,11 +74,7 @@ def create_initial_checkpoint(
 
 def checkpoint_hash(path: Path) -> str:
     """Return a checkpoint's SHA-256 digest."""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while block := handle.read(1024 * 1024):
-            digest.update(block)
-    return digest.hexdigest()
+    return file_sha256(path)
 
 
 class PyTorchTrainer:
