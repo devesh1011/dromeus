@@ -1,0 +1,46 @@
+{
+  "run_id": "axl-baseline-20260730T131931Z-samples5",
+  "harness_commit": "0244c11453e166333df1c732e2f975ca36af8c80",
+  "base_runtime_commit": "7612249d2a1666cc145dc8294302b820315d0a46",
+  "base_image_digest": "sha256:8f1b5c88b55ed52f2e1f78b3373ac341b2e0f5ca88f0a4f20b6c2ae0c08f2a1a",
+  "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+  "axl_binary_sha256": "8ddebe8ceecc630cb8f0cf0c560c2c343697fb82ef86ea098dd758f7e0256385",
+  "bootstrap": {
+    "region": "us-east-2",
+    "instance_type": "t3.small"
+  },
+  "workers": [
+    {
+      "node": 0,
+      "region": "us-east-1",
+      "instance_type": "c7i.xlarge",
+      "public_key": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139"
+    },
+    {
+      "node": 1,
+      "region": "us-east-1",
+      "instance_type": "c7i.xlarge",
+      "public_key": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "node": 2,
+      "region": "us-east-2",
+      "instance_type": "c7i.xlarge",
+      "public_key": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2"
+    },
+    {
+      "node": 3,
+      "region": "us-east-2",
+      "instance_type": "c7i.xlarge",
+      "public_key": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd"
+    }
+  ],
+  "execution": {
+    "samples_per_directed_path": 5,
+    "directed_paths": 12,
+    "undirected_pairs": 6,
+    "parallel": true,
+    "worker_bridges": "HTTP loopback only",
+    "bootstrap_ingress": "temporary worker /32 rules on TCP 9300"
+  }
+}

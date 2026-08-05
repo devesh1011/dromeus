@@ -1,0 +1,91 @@
+{
+  "checksum_failure_count": 0,
+  "control_rtt_samples": [
+    {
+      "destination": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+      "elapsed_seconds": 0.6194945480000342,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+      "elapsed_seconds": 0.5770275410000067,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+      "elapsed_seconds": 0.5139694519999694,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+      "elapsed_seconds": 0.5613820419999911,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+      "elapsed_seconds": 0.5461671140000135,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+      "elapsed_seconds": 0.4997519009999678,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+      "elapsed_seconds": 0.5315763379999225,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+      "elapsed_seconds": 0.48415891599995575,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+      "elapsed_seconds": 0.4686385339999788,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+      "elapsed_seconds": 0.45322668400001476,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+      "elapsed_seconds": 0.4384097560000555,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+      "elapsed_seconds": 0.4115513500000816,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+      "elapsed_seconds": 0.38486033200001657,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+      "elapsed_seconds": 0.3772312020000754,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    },
+    {
+      "destination": "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139",
+      "elapsed_seconds": 0.378618690000053,
+      "source": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6"
+    }
+  ],
+  "local_public_key": "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6",
+  "manifest_hash": "3205825f822fe6708fd97cc8a28cc9dc16208a9f81aa7724002218ee10e3a7d2",
+  "participant_keys": [
+    "3f9e91fa7defd58ea6c946626c9c8c3febfc58d80718caf159d5c63f411d14f6",
+    "92521f41ebf53397a49520f6b5742487f6fbba866aaaa35fc4e2c6572d9b2db2",
+    "9949508abc9d5e696bec32e1ad4ab6d5d88f8440d28995012268cf681bd15ccd",
+    "a0772e77eaae95d15963b0be3e28594181d45a6cea73a55d86ee0fc174175139"
+  ],
+  "phase": "rtt",
+  "received_artifacts": 0,
+  "transfer_samples": []
+}

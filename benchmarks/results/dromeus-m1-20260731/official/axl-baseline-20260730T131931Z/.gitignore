@@ -1,0 +1,6 @@
+*
+!.gitignore
+!README.md
+!SHA256SUMS
+!public/
+!public/**
