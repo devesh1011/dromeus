@@ -26,13 +26,3 @@ Across all four nodes, that gives 60 RTT samples and 300 transfer samples over a
 The original run is stored at:
 
 `s3://dromeus-m1-benchmark-150911080841/quality/axl-baseline-20260730T131931Z-samples5/`
-
-## Checking the files
-
-From this directory, run:
-
-```bash
-shasum -a 256 -c SHA256SUMS
-```
-
-Every published file should report `OK`.
