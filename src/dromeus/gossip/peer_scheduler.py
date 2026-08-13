@@ -7,7 +7,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from dromeus.manifests.models import Participant, PublicKey, RoundId
+from dromeus.manifests.models import (
+    MAX_PARTICIPANT_COUNT,
+    Participant,
+    ParticipantCountError,
+    PublicKey,
+    RoundId,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,8 +48,6 @@ class PeerScheduler:
         training_round_count: int | None = None,
         final_consensus_rounds: Literal[0, 2] = 0,
     ) -> None:
-        if len(participants) == 0 or len(participants) % 2:
-            raise ValueError("participant count must be positive and even")
         self._members = self._normalise_members(participants)
         self._seed = seed
         if final_consensus_rounds and training_round_count is None:
@@ -126,6 +130,10 @@ class PeerScheduler:
     def _normalise_members(
         participants: Sequence[Participant | PublicKey],
     ) -> tuple[PublicKey, ...]:
+        if not participants:
+            raise ParticipantCountError(
+                "participant count must be between 4 and 16 inclusive"
+            )
         first = participants[0]
         if isinstance(first, Participant):
             if not all(
@@ -153,7 +161,16 @@ class PeerScheduler:
             raise ValueError("participant public keys must not be empty")
         if len(set(members)) != len(members):
             raise ValueError("participant public keys must be unique")
+        count = len(members)
+        # The pair scheduler also serves two-peer engine seams; manifests enforce
+        # the production run-group minimum of four participants.
+        if count < 2 or count > MAX_PARTICIPANT_COUNT:
+            raise ParticipantCountError(
+                "scheduler participant count must be between 2 and 16 inclusive"
+            )
+        if count % 2:
+            raise ParticipantCountError("participant count must be even")
         return members
 
 
-__all__ = ["Pairing", "PeerScheduler"]
+__all__ = ["Pairing", "ParticipantCountError", "PeerScheduler"]
