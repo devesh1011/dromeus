@@ -107,8 +107,7 @@ def parse_bundle_metadata(path: Path) -> OpaqueUpdateBundleMetadata:
 def parse_draft_yaml(source: str | bytes | Path) -> DraftRunSpec:
     """Parse and validate a draft from YAML text or a file path."""
     text = source.read_text() if isinstance(source, Path) else source
-    value = cast(object, yaml.safe_load(text))
-    return DraftRunSpec.model_validate(value)
+    return DraftRunSpec.model_validate(yaml.safe_load(text))
 
 
 def parse_sealed_json(data: str | bytes) -> SealedManifest:

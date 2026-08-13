@@ -5,7 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal, Self
 
-from pydantic import Field, StringConstraints, model_validator
+from pydantic import (
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from dromeus.protocol.models import (
     AlgorithmId,
@@ -28,16 +32,32 @@ from dromeus.protocol.models import (
 )
 from dromeus.protocol.version import PROTOCOL_VERSION
 
-MANIFEST_VERSION = 2
-M1_PARTICIPANT_COUNT = 4
+MANIFEST_VERSION = 3
+MIN_PARTICIPANT_COUNT = 4
+MAX_PARTICIPANT_COUNT = 16
 DPSGD_ALGORITHM_ID = "dpsgd"
+NOLOCO_ALGORITHM_ID = "noloco"
 RESNET32_MODEL_ID = "resnet32"
 
 PackageVersion = Annotated[
     str,
     StringConstraints(min_length=1, max_length=128, pattern=r"^[A-Za-z0-9._:+-]+$"),
 ]
-NodeIndex = Annotated[int, Field(ge=0, lt=M1_PARTICIPANT_COUNT)]
+NodeIndex = Annotated[int, Field(ge=0, lt=MAX_PARTICIPANT_COUNT)]
+
+
+class ParticipantCountError(ValueError):
+    """A run member count is outside the supported fixed-group range."""
+
+
+def validate_participant_count(count: int) -> None:
+    """Validate the fixed even membership range shared by manifests and gossip."""
+    if count < MIN_PARTICIPANT_COUNT or count > MAX_PARTICIPANT_COUNT:
+        raise ParticipantCountError(
+            "participant count must be between 4 and 16 inclusive"
+        )
+    if count % 2:
+        raise ParticipantCountError("participant count must be even")
 
 
 class Participant(DomainModel):
@@ -59,20 +79,37 @@ class DatasetContract(DomainModel):
     image_shape: tuple[Annotated[int, Field(gt=0)], ...]
     class_count: Annotated[int, Field(gt=1)]
     sample_count: Annotated[int, Field(gt=0)]
-    partition_sample_counts: tuple[
-        Annotated[int, Field(gt=0)],
-        Annotated[int, Field(gt=0)],
-        Annotated[int, Field(gt=0)],
-        Annotated[int, Field(gt=0)],
-    ]
-    node_index_partitions: tuple[NodeIndex, NodeIndex, NodeIndex, NodeIndex]
+    partition_sample_counts: tuple[Annotated[int, Field(gt=0)], ...] = Field(
+        min_length=MIN_PARTICIPANT_COUNT,
+        max_length=MAX_PARTICIPANT_COUNT,
+    )
+    node_index_partitions: tuple[NodeIndex, ...] = Field(
+        min_length=MIN_PARTICIPANT_COUNT,
+        max_length=MAX_PARTICIPANT_COUNT,
+    )
+
+    @property
+    def participant_count(self) -> int:
+        """Return the number of local partitions declared by the contract."""
+        return len(self.node_index_partitions)
 
     @model_validator(mode="after")
     def partitions_cover_dataset(self) -> Self:
+        if len(self.partition_sample_counts) != len(self.node_index_partitions):
+            raise ValueError(
+                "partition sample counts and node index partitions must have "
+                "the same length"
+            )
+        validate_participant_count(len(self.partition_sample_counts))
         if sum(self.partition_sample_counts) != self.sample_count:
             raise ValueError("partition sample counts must equal sample count")
-        if set(self.node_index_partitions) != set(range(M1_PARTICIPANT_COUNT)):
-            raise ValueError("node index partitions must be exactly 0 through 3")
+        if set(self.node_index_partitions) != set(
+            range(len(self.partition_sample_counts))
+        ):
+            raise ValueError(
+                "node index partitions must be exactly 0 through "
+                f"{len(self.partition_sample_counts) - 1}"
+            )
         return self
 
 
@@ -94,6 +131,8 @@ class TransportLimits(DomainModel):
     max_payload_bytes: Annotated[int, Field(gt=0)]
     max_retries: Annotated[int, Field(ge=0)]
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
+    chunk_size_bytes: Annotated[int, Field(gt=0)] | None = None
+    window_size: Annotated[int, Field(gt=0)] | None = None
 
     @property
     def max_update_bundle_bytes(self) -> int:
@@ -132,8 +171,45 @@ class TrainingPolicy(DomainModel):
         return self
 
 
+class AdamSettings(DomainModel):
+    """Explicit inner Adam settings carried by a manifest-v3 NoLoCo run."""
+
+    learning_rate: Annotated[float, Field(gt=0)]
+    beta1: Annotated[float, Field(ge=0.0, lt=1.0)]
+    beta2: Annotated[float, Field(ge=0.0, lt=1.0)]
+    epsilon: Annotated[float, Field(gt=0.0)]
+    gradient_clip_norm: Annotated[float, Field(gt=0.0)]
+
+
+class NoLoCoConfig(DomainModel):
+    """Outer NoLoCo hyperparameters and the inner Adam configuration."""
+
+    alpha: Annotated[float, Field(ge=0.0, lt=1.0)]
+    beta: Annotated[float, Field(gt=0.0)]
+    gamma: Annotated[float, Field(gt=0.0)]
+    inner_steps: Annotated[int, Field(gt=0)]
+    adam: AdamSettings
+
+    @model_validator(mode="after")
+    def frozen_hyperparameters(self) -> Self:
+        if self.alpha != 0.5 or self.beta != 0.7 or self.gamma != 0.7:
+            raise ValueError("NoLoCo requires alpha=0.5, beta=0.7, and gamma=0.7")
+        if self.inner_steps != 50:
+            raise ValueError("NoLoCo requires exactly 50 inner steps")
+        if self.adam.gradient_clip_norm != 1.0:
+            raise ValueError("NoLoCo requires Adam gradient clipping at 1.0")
+        return self
+
+
+class ArtifactCodec(DomainModel):
+    """Codec identity bound to one logical update artifact."""
+
+    artifact_name: Identifier
+    codec_id: Identifier
+
+
 class DraftRunSpec(DomainModel):
-    manifest_version: Literal[1, 2] = MANIFEST_VERSION
+    manifest_version: Literal[3] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION
     run_id: RunId
     algorithm_id: AlgorithmId
@@ -143,28 +219,51 @@ class DraftRunSpec(DomainModel):
     environment: EnvironmentFingerprint
     local_steps: Annotated[int, Field(gt=0)]
     round_count: Annotated[int, Field(gt=0)]
-    optimizer: Literal["sgd"] = "sgd"
+    optimizer: Literal["sgd", "adam"] = "sgd"
     learning_rate: Annotated[float, Field(gt=0)]
     peer_scheduler_seed: int
     codec_id: Literal["safetensors-v1"]
     transport: TransportLimits
     consensus_sketch: ConsensusSketchConfig
     training: TrainingPolicy | None = None
+    algorithm_config: NoLoCoConfig | None = None
+    artifact_codecs: tuple[ArtifactCodec, ...] | None = None
 
     @model_validator(mode="after")
-    def compatible_environment(self) -> Self:
+    def valid_manifest(self) -> Self:
         if self.environment.model_definition_hash != self.model_definition_hash:
             raise ValueError("environment model hash does not match draft")
-        if (self.manifest_version == 1) != (self.training is None):
+        if self.training is None:
+            raise ValueError("manifest v3 requires training policy")
+        if self.algorithm_id == DPSGD_ALGORITHM_ID:
+            if self.optimizer != "sgd":
+                raise ValueError("dpsgd requires sgd")
+            return self
+        if self.algorithm_id != NOLOCO_ALGORITHM_ID:
+            raise ValueError("manifest v3 requires dpsgd or noloco")
+        if self.optimizer != "adam":
+            raise ValueError("noloco requires adam")
+        if self.training.final_consensus_rounds != 0:
+            raise ValueError("NoLoCo requires final_consensus_rounds to be zero")
+        if self.algorithm_config is None or self.artifact_codecs is None:
             raise ValueError(
-                "manifest version 1 excludes training policy; "
-                "manifest version 2 requires it"
+                "NoLoCo requires algorithm and artifact codec configuration"
             )
-        if self.manifest_version == 2 and (
-            self.algorithm_id != DPSGD_ALGORITHM_ID
-            or self.model_id != RESNET32_MODEL_ID
+        names = [codec.artifact_name for codec in self.artifact_codecs]
+        if len(names) != len(set(names)) or set(names) != {
+            "outer_gradient",
+            "slow_weights",
+        }:
+            raise ValueError(
+                "NoLoCo codec IDs must cover outer_gradient and slow_weights"
+            )
+        if (
+            self.transport.chunk_size_bytes is None
+            or self.transport.window_size is None
         ):
-            raise ValueError("manifest version 2 requires dpsgd and resnet32")
+            raise ValueError("NoLoCo requires chunk size and window size")
+        if self.transport.chunk_size_bytes > self.transport.max_payload_bytes:
+            raise ValueError("chunk size must not exceed max payload bytes")
         return self
 
 
@@ -174,24 +273,44 @@ class Invitation(DomainModel):
     initiator_public_key: PublicKey
     bootstrap_uri: Annotated[str, StringConstraints(min_length=1, max_length=2048)]
     draft_hash: Sha256
-    expected_participant_count: Literal[4] = M1_PARTICIPANT_COUNT
+    expected_participant_count: Annotated[
+        int,
+        Field(ge=MIN_PARTICIPANT_COUNT, le=MAX_PARTICIPANT_COUNT),
+    ] = MIN_PARTICIPANT_COUNT
     enrollment_expires_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def valid_expected_membership(self) -> Self:
+        validate_participant_count(self.expected_participant_count)
+        return self
 
 
 class SealedManifest(DraftRunSpec):
     draft_hash: Sha256
-    participants: tuple[Participant, Participant, Participant, Participant]
+    participants: tuple[Participant, ...] = Field(
+        min_length=MIN_PARTICIPANT_COUNT,
+        max_length=MAX_PARTICIPANT_COUNT,
+    )
     initial_checkpoint_hash: Sha256
     tensor_schema: TensorSchema
 
     @model_validator(mode="after")
     def valid_membership(self) -> Self:
+        participant_count = len(self.participants)
+        validate_participant_count(participant_count)
         keys = {participant.public_key for participant in self.participants}
         indices = {participant.node_index for participant in self.participants}
-        if len(keys) != M1_PARTICIPANT_COUNT:
+        if len(keys) != participant_count:
             raise ValueError("participant public keys must be unique")
-        if indices != set(range(M1_PARTICIPANT_COUNT)):
-            raise ValueError("participant node indices must be exactly 0 through 3")
+        if indices != set(range(participant_count)):
+            raise ValueError(
+                "participant node indices must be exactly 0 through "
+                f"{participant_count - 1}"
+            )
+        if self.dataset.participant_count != participant_count:
+            raise ValueError(
+                "dataset partition count must match participant count"
+            )
         return self
 
 
