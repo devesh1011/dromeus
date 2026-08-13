@@ -60,7 +60,7 @@ def test_safetensors_bundle_codec_materializes_decodes_and_releases(
     decoded = codec.decode(bundle)
 
     assert bundle.metadata.round_id == 4
-    assert bundle.metadata.artifacts[0].codec_id == "safetensors"
+    assert bundle.metadata.artifacts[0].codec_id == "safetensors-v1"
     assert bundle.metadata.artifacts[0].codec_version == 1
     assert bundle.artifacts[0].path.is_file()
     assert np.array_equal(decoded["weight"], source["weight"])
@@ -76,6 +76,43 @@ def test_safetensors_bundle_codec_materializes_decodes_and_releases(
     path = bundle.artifacts[0].path
     codec.release(bundle)
     assert not path.exists()
+
+
+def test_safetensors_bundle_codec_rejects_unknown_artifact_name(
+    tmp_path: Path,
+) -> None:
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+    )
+    codec = SafetensorsUpdateBundleCodec(
+        artifact_root=tmp_path,
+        run_id="run-001",
+        manifest_hash="1" * 64,
+        sender_public_key="peer-0",
+        algorithm_id="dpsgd",
+        tensor_schema=schema,
+    )
+    bundle = codec.encode(
+        round_id=0, tensors={"weight": np.array([3.0], dtype=np.float32)}
+    )
+    invalid = UpdateBundle(
+        metadata=bundle.metadata.model_copy(
+            update={
+                "artifacts": (
+                    bundle.metadata.artifacts[0].model_copy(
+                        update={"name": "unexpected"}
+                    ),
+                )
+            }
+        ),
+        artifacts=bundle.artifacts,
+    )
+
+    try:
+        with pytest.raises(ValueError, match="artifact"):
+            codec.decode(invalid)
+    finally:
+        codec.release(bundle)
 
 
 def test_bundle_size_limit_is_aggregate_across_artifacts(tmp_path: Path) -> None:

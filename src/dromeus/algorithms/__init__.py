@@ -14,6 +14,7 @@ from dromeus.algorithms.codec import (
     UpdateCodec,
 )
 from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.manifests.models import UpdateCodecBinding
 
 __all__ = [
     "AlgorithmSnapshot",
@@ -25,5 +26,6 @@ __all__ = [
     "UpdateBundle",
     "UpdateBundleCodec",
     "UpdateCodec",
+    "UpdateCodecBinding",
     "ValidatedUpdate",
 ]

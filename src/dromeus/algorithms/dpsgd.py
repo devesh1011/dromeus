@@ -15,8 +15,12 @@ from dromeus.algorithms.base import (
     ValidatedUpdate,
     checksum_tensors,
 )
-from dromeus.algorithms.codec import IdentityCodec, UpdateBundleCodec, UpdateCodec
-from dromeus.manifests.models import RoundId, TensorSchema
+from dromeus.algorithms.codec import (
+    IdentityCodec,
+    UpdateBundleCodec,
+    UpdateCodec,
+)
+from dromeus.manifests.models import RoundId, TensorSchema, UpdateCodecBinding
 from dromeus.training.base import (
     CheckpointTrainer,
     WeightTrainer,
@@ -37,18 +41,28 @@ class DPSGDAdapter:
     training_round_count: int | None = None
     codec: UpdateCodec = field(default_factory=IdentityCodec)
     bundle_codec: UpdateBundleCodec | None = None
+    manifest_codec_id: str | None = None
     _round_id: RoundId = 0
     _phase: str = "created"
+    _local_decoded: dict[str, np.ndarray] | None = field(
+        default=None, init=False, repr=False
+    )
 
     def __post_init__(self) -> None:
         if self.local_steps <= 0:
             raise ValueError("local_steps must be positive")
         if self.training_round_count is not None and self.training_round_count <= 0:
             raise ValueError("training_round_count must be positive")
+        if (
+            self.manifest_codec_id is not None
+            and self.manifest_codec_id != self.codec.codec_id
+        ):
+            raise ValueError("algorithm codec does not match manifest")
 
     def pre_local(self, round_id: RoundId) -> None:
         self._round_id = round_id
         self._phase = "pre-local"
+        self._local_decoded = None
 
     def local_training(self) -> None:
         if (
@@ -63,11 +77,24 @@ class DPSGDAdapter:
             raise RuntimeError("update bundle codec is not configured")
         tensors = self.trainer.weights()
         self._validate_tensors(tensors)
-        self._phase = "bundled"
-        return self.bundle_codec.encode(
+        encoded = self.codec.encode(tensors)
+        bundle = self.bundle_codec.encode(
             round_id=self._round_id,
-            tensors=tensors,
+            tensors=encoded,
+            codec_binding=self._codec_binding(),
         )
+        try:
+            decoded_local = self.codec.decode(encoded)
+            self._validate_tensors(decoded_local)
+        except BaseException:
+            self.bundle_codec.release(bundle)
+            raise
+        self._local_decoded = {
+            name: np.ascontiguousarray(value).copy()
+            for name, value in decoded_local.items()
+        }
+        self._phase = "bundled"
+        return bundle
 
     def validate_peer(self, peer_bundle: UpdateBundle) -> ValidatedUpdate:
         """Validate a peer update without mutating local model state."""
@@ -75,7 +102,11 @@ class DPSGDAdapter:
             raise RuntimeError("update bundle codec is not configured")
         if peer_bundle.metadata.round_id != self._round_id:
             raise ValueError("peer bundle round does not match current round")
-        decoded = self.bundle_codec.decode(peer_bundle)
+        encoded = self.bundle_codec.decode(
+            peer_bundle,
+            codec_binding=self._codec_binding(),
+        )
+        decoded = self.codec.decode(encoded)
         self._validate_tensors(decoded)
         return ValidatedUpdate(
             round_id=self._round_id,
@@ -86,7 +117,7 @@ class DPSGDAdapter:
     def peer_apply(self, peer_update: ValidatedUpdate) -> AlgorithmSnapshot:
         if peer_update.round_id != self._round_id:
             raise ValueError("peer update round does not match current round")
-        local = self.trainer.weights()
+        local = self._local_decoded or self.trainer.weights()
         self._validate_tensors(local)
         decoded = dict(peer_update.tensors)
         self._validate_tensors(decoded)
@@ -208,6 +239,7 @@ class DPSGDAdapter:
             self.trainer.load_weights(weights)
         self._round_id = round_id
         self._phase = phase
+        self._local_decoded = None
 
     def _validate_tensors(self, tensors: dict[str, np.ndarray]) -> None:
         expected = {tensor.name: tensor for tensor in self.tensor_schema.tensors}
@@ -223,3 +255,10 @@ class DPSGDAdapter:
                 raise ValueError(f"tensor {name} shape does not match schema")
             if not np.isfinite(tensor).all():
                 raise ValueError(f"tensor {name} contains non-finite values")
+
+    def _codec_binding(self) -> UpdateCodecBinding:
+        return UpdateCodecBinding(
+            codec_id=self.codec.codec_id,
+            codec_version=1,
+            logical_schema=self.tensor_schema,
+        )

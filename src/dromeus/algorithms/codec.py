@@ -27,6 +27,7 @@ from dromeus.manifests.models import (
     RunId,
     Sha256,
     TensorSchema,
+    UpdateCodecBinding,
 )
 
 _LoadSafetensors = Callable[[str], dict[str, np.ndarray]]
@@ -54,11 +55,21 @@ class UpdateCodec(Protocol):
 
 
 class UpdateBundleCodec(Protocol):
+    """Materialize codec-encoded tensors into an opaque update bundle."""
+
     def encode(
-        self, *, round_id: RoundId, tensors: Mapping[str, np.ndarray]
+        self,
+        *,
+        round_id: RoundId,
+        tensors: Mapping[str, np.ndarray],
+        codec_binding: UpdateCodecBinding | None = None,
     ) -> UpdateBundle: ...
 
-    def decode(self, bundle: UpdateBundle) -> TensorMap: ...
+    def decode(
+        self,
+        bundle: UpdateBundle,
+        codec_binding: UpdateCodecBinding | None = None,
+    ) -> TensorMap: ...
 
     def release(self, bundle: UpdateBundle) -> None: ...
 
@@ -99,7 +110,7 @@ def _copy_tensors(tensors: Mapping[str, np.ndarray]) -> TensorMap:
 
 @dataclass(frozen=True, slots=True)
 class SafetensorsUpdateBundleCodec:
-    """Materialize and validate M1 identity updates as safetensors artifacts."""
+    """Materialize encoded tensors and bind their logical codec metadata."""
 
     artifact_root: Path
     run_id: RunId
@@ -109,23 +120,27 @@ class SafetensorsUpdateBundleCodec:
     tensor_schema: TensorSchema
 
     def encode(
-        self, *, round_id: RoundId, tensors: Mapping[str, np.ndarray]
+        self,
+        *,
+        round_id: RoundId,
+        tensors: Mapping[str, np.ndarray],
+        codec_binding: UpdateCodecBinding | None = None,
     ) -> UpdateBundle:
         values = _copy_tensors(tensors)
         validate_tensor_map(values, self.tensor_schema)
+        binding = _resolve_codec_binding(codec_binding, self.tensor_schema)
         self.artifact_root.mkdir(parents=True, exist_ok=True)
         path = self.artifact_root / f"round-{round_id}-{uuid4().hex}.safetensors"
         try:
             save_safetensors(values, str(path))
-            schema_hash = canonical_hash(self.tensor_schema)
             artifact = OpaqueArtifactMetadata(
                 name="trained_weights",
                 size_bytes=path.stat().st_size,
                 sha256=file_sha256(path),
-                codec_id="safetensors",
-                codec_version=1,
-                logical_schema_hash=schema_hash,
-                encoded_schema_hash=schema_hash,
+                codec_id=binding.codec_id,
+                codec_version=binding.codec_version,
+                logical_schema_hash=canonical_hash(binding.logical_schema),
+                encoded_schema_hash=canonical_hash(self.tensor_schema),
             )
             return UpdateBundle(
                 metadata=OpaqueUpdateBundleMetadata(
@@ -148,8 +163,12 @@ class SafetensorsUpdateBundleCodec:
             path.unlink(missing_ok=True)
             raise
 
-    def decode(self, bundle: UpdateBundle) -> TensorMap:
-        self._validate_metadata(bundle)
+    def decode(
+        self,
+        bundle: UpdateBundle,
+        codec_binding: UpdateCodecBinding | None = None,
+    ) -> TensorMap:
+        self._validate_metadata(bundle, codec_binding)
         artifact = bundle.metadata.artifacts[0]
         path = bundle.artifacts[0].path
         if path.stat().st_size != artifact.size_bytes:
@@ -174,7 +193,11 @@ class SafetensorsUpdateBundleCodec:
         if state:
             raise ValueError("safetensors bundle codec has no state")
 
-    def _validate_metadata(self, bundle: UpdateBundle) -> None:
+    def _validate_metadata(
+        self,
+        bundle: UpdateBundle,
+        codec_binding: UpdateCodecBinding | None,
+    ) -> None:
         metadata = bundle.metadata
         if metadata.run_id != self.run_id:
             raise ValueError("bundle run does not match codec")
@@ -185,14 +208,32 @@ class SafetensorsUpdateBundleCodec:
         if len(metadata.artifacts) != 1:
             raise ValueError("M1 safetensors bundle requires one artifact")
         artifact = metadata.artifacts[0]
-        schema_hash = canonical_hash(self.tensor_schema)
-        if artifact.codec_id != "safetensors" or artifact.codec_version != 1:
+        if artifact.name != "trained_weights":
+            raise ValueError("unsupported M1 bundle artifact")
+        binding = _resolve_codec_binding(codec_binding, self.tensor_schema)
+        if (
+            artifact.codec_id != binding.codec_id
+            or artifact.codec_version != binding.codec_version
+        ):
             raise ValueError("unsupported bundle codec")
         if (
-            artifact.logical_schema_hash != schema_hash
-            or artifact.encoded_schema_hash != schema_hash
+            artifact.logical_schema_hash != canonical_hash(binding.logical_schema)
+            or artifact.encoded_schema_hash != canonical_hash(self.tensor_schema)
         ):
             raise ValueError("bundle schema does not match codec")
+
+
+def _resolve_codec_binding(
+    binding: UpdateCodecBinding | None,
+    encoded_schema: TensorSchema,
+) -> UpdateCodecBinding:
+    if binding is not None:
+        return binding
+    return UpdateCodecBinding(
+        codec_id="safetensors-v1",
+        codec_version=1,
+        logical_schema=encoded_schema,
+    )
 
 
 def validate_tensor_map(
@@ -216,6 +257,7 @@ __all__ = [
     "SafetensorsUpdateBundleCodec",
     "StateMap",
     "TensorMap",
+    "UpdateCodecBinding",
     "UpdateBundleCodec",
     "UpdateCodec",
     "validate_tensor_map",

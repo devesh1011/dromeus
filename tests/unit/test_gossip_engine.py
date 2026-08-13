@@ -28,7 +28,12 @@ from dromeus.gossip.engine import (
     RunFailure,
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
-from dromeus.manifests.models import Tensor, TensorSchema, TransportLimits
+from dromeus.manifests.models import (
+    Tensor,
+    TensorSchema,
+    TransportLimits,
+    UpdateCodecBinding,
+)
 from dromeus.protocol.codec import encode_message
 from dromeus.protocol.models import (
     Envelope,
@@ -263,14 +268,26 @@ class RecordingBundleCodec:
         self.released: list[str] = []
 
     def encode(
-        self, *, round_id: int, tensors: Mapping[str, np.ndarray]
+        self,
+        *,
+        round_id: int,
+        tensors: Mapping[str, np.ndarray],
+        codec_binding: UpdateCodecBinding | None = None,
     ) -> UpdateBundle:
-        return self.delegate.encode(round_id=round_id, tensors=tensors)
+        return self.delegate.encode(
+            round_id=round_id,
+            tensors=tensors,
+            codec_binding=codec_binding,
+        )
 
-    def decode(self, bundle: UpdateBundle) -> dict[str, np.ndarray]:
+    def decode(
+        self,
+        bundle: UpdateBundle,
+        codec_binding: UpdateCodecBinding | None = None,
+    ) -> dict[str, np.ndarray]:
         if self.validation_error:
             raise ValueError("forced validation error")
-        return self.delegate.decode(bundle)
+        return self.delegate.decode(bundle, codec_binding=codec_binding)
 
     def release(self, bundle: UpdateBundle) -> None:
         self.released.append(bundle.digest)
@@ -584,6 +601,11 @@ def test_engine_confirms_durability_only_after_peer_confirmation(
         peer_bundle = peer_codec.encode(
             round_id=0,
             tensors={"weight": np.array([3.0], dtype=np.float32)},
+            codec_binding=UpdateCodecBinding(
+                codec_id="safetensors-v1",
+                codec_version=1,
+                logical_schema=schema,
+            ),
         )
         prepared: list[RoundCommit] = []
         confirmed: list[RoundCommit] = []
@@ -640,6 +662,11 @@ def test_release_runs_after_bundle_outcomes(
         peer_bundle = peer_codec.encode(
             round_id=0,
             tensors={"weight": np.array([3.0], dtype=np.float32)},
+            codec_binding=UpdateCodecBinding(
+                codec_id="safetensors-v1",
+                codec_version=1,
+                logical_schema=schema,
+            ),
         )
         if failure == "corruption":
             with peer_bundle.artifacts[0].path.open("ab") as handle:

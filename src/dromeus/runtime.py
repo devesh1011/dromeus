@@ -136,6 +136,7 @@ class PreparedCIFARTraining:
                 tensor_schema=result.manifest.tensor_schema,
                 local_steps=result.manifest.local_steps,
                 training_round_count=result.manifest.round_count,
+                manifest_codec_id=result.manifest.codec_id,
             ),
             load_checkpoint=trainer.load_checkpoint,
             run_store=RunStore(run_root / "run-store"),

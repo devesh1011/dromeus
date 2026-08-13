@@ -208,6 +208,14 @@ class ArtifactCodec(DomainModel):
     codec_id: Identifier
 
 
+class UpdateCodecBinding(DomainModel):
+    """Logical codec identity and schema bound into one update artifact."""
+
+    codec_id: Identifier
+    codec_version: Annotated[int, Field(gt=0)]
+    logical_schema: TensorSchema
+
+
 class DraftRunSpec(DomainModel):
     manifest_version: Literal[3] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION

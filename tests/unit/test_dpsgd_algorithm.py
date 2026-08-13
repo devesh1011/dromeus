@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
+from dromeus.algorithms.codec import (
+    SafetensorsUpdateBundleCodec,
+    StateMap,
+    TensorMap,
+)
 from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import Tensor, TensorSchema
 
 
@@ -29,6 +35,45 @@ class CountingTrainer:
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
+
+
+class OffsetCodec:
+    codec_id = "offset-v1"
+
+    def __init__(self) -> None:
+        self.encode_calls = 0
+        self.decode_calls = 0
+
+    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        self.encode_calls += 1
+        return {name: value + np.float32(10.0) for name, value in tensors.items()}
+
+    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        self.decode_calls += 1
+        return {name: value - np.float32(10.0) for name, value in tensors.items()}
+
+    def state_dict(self) -> dict[str, object]:
+        return {}
+
+    def load_state_dict(self, state: StateMap) -> None:
+        if state:
+            raise ValueError("offset codec has no state")
+
+
+class Int8Codec(OffsetCodec):
+    codec_id = "int8-v1"
+
+    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        self.encode_calls += 1
+        return {
+            name: value.astype(np.int8, copy=True) for name, value in tensors.items()
+        }
+
+    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        self.decode_calls += 1
+        return {
+            name: value.astype(np.float32, copy=True) for name, value in tensors.items()
+        }
 
 
 def _bundle_codec(
@@ -90,6 +135,88 @@ def test_two_nodes_run_production_local_sgd_lifecycle(tmp_path: Path) -> None:
     assert np.array_equal(first_post_mix.weights["weight"], expected)
     assert np.array_equal(second_post_mix.weights["weight"], expected)
     assert not any(tmp_path.rglob("*.safetensors"))
+
+
+def test_dpsgd_applies_logical_codec_around_bundle_codec(tmp_path: Path) -> None:
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+    )
+    codec = OffsetCodec()
+    algorithm = DPSGDAdapter(
+        trainer=CountingTrainer(np.array([1.0], dtype=np.float32)),
+        tensor_schema=schema,
+        local_steps=1,
+        codec=codec,
+        bundle_codec=_bundle_codec(tmp_path, sender="sender", schema=schema),
+    )
+
+    algorithm.pre_local(round_id=0)
+    algorithm.local_training()
+    bundle = algorithm.post_local_bundle()
+    try:
+        validated = algorithm.validate_peer(bundle)
+        assert np.array_equal(
+            validated.tensors["weight"], np.array([2.0], dtype=np.float32)
+        )
+    finally:
+        algorithm.release_bundle(bundle)
+
+    assert codec.encode_calls == 1
+    assert codec.decode_calls == 2
+    assert bundle.metadata.artifacts[0].codec_id == "offset-v1"
+    assert (
+        bundle.metadata.artifacts[0].logical_schema_hash == canonical_hash(schema)
+    )
+
+
+def test_dpsgd_binds_logical_and_encoded_schemas(tmp_path: Path) -> None:
+    logical_schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+    )
+    encoded_schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="int8", shape=(1,)),)
+    )
+    codec = Int8Codec()
+    bundle_codec = _bundle_codec(tmp_path, sender="sender", schema=encoded_schema)
+    algorithm = DPSGDAdapter(
+        trainer=CountingTrainer(np.array([1.6], dtype=np.float32)),
+        tensor_schema=logical_schema,
+        local_steps=1,
+        codec=codec,
+        bundle_codec=bundle_codec,
+    )
+
+    algorithm.pre_local(round_id=0)
+    algorithm.local_training()
+    bundle = algorithm.post_local_bundle()
+    try:
+        validated = algorithm.validate_peer(bundle)
+        assert np.array_equal(
+            validated.tensors["weight"], np.array([2.0], dtype=np.float32)
+        )
+        mixed = algorithm.peer_apply(validated)
+        assert np.array_equal(mixed.weights["weight"], np.array([2.0]))
+        artifact = bundle.metadata.artifacts[0]
+        assert artifact.codec_id == "int8-v1"
+        assert artifact.logical_schema_hash == canonical_hash(logical_schema)
+        assert artifact.encoded_schema_hash == canonical_hash(encoded_schema)
+    finally:
+        algorithm.release_bundle(bundle)
+
+
+def test_dpsgd_rejects_codec_mismatch_with_manifest() -> None:
+    schema = TensorSchema(
+        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+    )
+
+    with pytest.raises(ValueError, match="does not match manifest"):
+        DPSGDAdapter(
+            trainer=CountingTrainer(np.array([1.0], dtype=np.float32)),
+            tensor_schema=schema,
+            local_steps=1,
+            codec=OffsetCodec(),
+            manifest_codec_id="safetensors-v1",
+        )
 
 
 def test_dpsgd_rejects_invalid_peer_weights(tmp_path: Path) -> None:
