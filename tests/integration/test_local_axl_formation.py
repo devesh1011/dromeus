@@ -259,7 +259,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
     ):
         raise ValueError("pilot runs must declare DROMEUS_PILOT_DATA_SOURCE")
     draft_data = manifest_data()
-    draft_data["manifest_version"] = 2
+    draft_data["manifest_version"] = 3
     draft_data["algorithm_id"] = "dpsgd"
     draft_data["model_id"] = "resnet32"
     draft_data["model_definition_hash"] = MODEL_DEFINITION_HASH
