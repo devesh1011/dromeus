@@ -18,7 +18,7 @@ from safetensors.numpy import (
     load as _load,  # pyright: ignore[reportUnknownVariableType]
 )
 
-from dromeus.manifests.canonical import canonical_hash
+from dromeus.manifests.canonical import canonical_hash, parse_sealed_json
 from dromeus.manifests.models import SealedManifest, Sha256
 
 ARCHIVE_VERSION = 2
@@ -217,7 +217,7 @@ class RunArchive:
         if not resolved_root.is_dir():
             raise RunArchiveError(f"run archive is not a directory: {root}")
         try:
-            manifest = SealedManifest.model_validate_json(
+            manifest = parse_sealed_json(
                 _read_safe_file(resolved_root, "manifest.json")
             )
         except (ValueError, TypeError) as error:
