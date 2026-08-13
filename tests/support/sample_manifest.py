@@ -14,11 +14,11 @@ def manifest_data() -> dict[str, Any]:
     zero = "0" * 64
     one = "1" * 64
     data: dict[str, Any] = {
-        "manifest_version": 1,
+        "manifest_version": 3,
         "protocol_version": 1,
         "run_id": "run-001",
-        "algorithm_id": "dpsgd-v1",
-        "model_id": "cifar-cnn-v1",
+        "algorithm_id": "dpsgd",
+        "model_id": "resnet32",
         "model_definition_hash": zero,
         "dataset": {
             "dataset_id": "cifar10",
@@ -46,6 +46,16 @@ def manifest_data() -> dict[str, Any]:
         "learning_rate": 0.1,
         "peer_scheduler_seed": 8,
         "codec_id": "safetensors-v1",
+        "training": {
+            "batch_size": 128,
+            "momentum": 0.9,
+            "weight_decay": 0.0001,
+            "learning_rate_milestones": [8000, 12000],
+            "learning_rate_gamma": 0.1,
+            "crop_padding": 4,
+            "normalize": True,
+            "final_consensus_rounds": 0,
+        },
         "transport": {
             "max_payload_bytes": 8388608,
             "max_retries": 3,
