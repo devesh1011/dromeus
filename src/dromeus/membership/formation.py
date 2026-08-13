@@ -83,6 +83,7 @@ def create_invitation(
         initiator_public_key=initiator_public_key,
         bootstrap_uri=bootstrap_uri,
         draft_hash=canonical_hash(draft),
+        expected_participant_count=draft.dataset.participant_count,
         enrollment_expires_at=enrollment_expires_at,
     )
 
@@ -94,6 +95,11 @@ def seal_manifest(
     initial_checkpoint_hash: Sha256,
     tensor_schema: TensorSchema,
 ) -> SealedManifest:
+    expected_count = draft.dataset.participant_count
+    if len(participant_keys) != expected_count:
+        raise FormationError(
+            "participant key count does not match the dataset contract"
+        )
     ordered_keys = tuple(sorted(participant_keys))
     participants = tuple(
         Participant(public_key=public_key, node_index=node_index)
@@ -204,8 +210,8 @@ class FormationProtocol:
             bootstrap_uri=bootstrap_uri,
         )
         participant_keys = {local_key}
-        sealed = False
-        while len(participant_keys) < 4:
+        participant_count = self._draft.dataset.participant_count
+        while len(participant_keys) < participant_count:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.JOIN_REQUEST:
                 continue
@@ -218,8 +224,6 @@ class FormationProtocol:
                 continue
             if envelope.sender_public_key in participant_keys:
                 continue
-            if sealed:
-                continue
             participant_keys.add(envelope.sender_public_key)
             await self._send_control(
                 destination=envelope.sender_public_key,
@@ -227,7 +231,6 @@ class FormationProtocol:
                 message_id=f"join-accepted-{len(participant_keys)}",
                 payload=encode_message(JoinAccepted(draft_hash=invitation.draft_hash)),
             )
-        sealed = True
         checkpoint_hash = file_sha256(checkpoint_path)
         manifest = seal_manifest(
             draft=self._draft,
@@ -260,7 +263,7 @@ class FormationProtocol:
             checkpoint_hash=checkpoint_hash,
         )
         ready_keys = {local_key}
-        while len(ready_keys) < 4:
+        while len(ready_keys) < len(manifest.participants):
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.READY:
                 continue
@@ -281,7 +284,7 @@ class FormationProtocol:
                 manifest_hash=manifest_hash,
             )
         started_keys = {local_key}
-        while len(started_keys) < 4:
+        while len(started_keys) < len(manifest.participants):
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.START_ACK:
                 continue
@@ -318,6 +321,13 @@ class FormationProtocol:
             and invitation.enrollment_expires_at <= datetime.now(UTC)
         ):
             raise FormationError("invitation has expired")
+        if (
+            invitation.expected_participant_count
+            != self._draft.dataset.participant_count
+        ):
+            raise FormationError(
+                "invitation participant count does not match draft"
+            )
         local_key = await self._transport.local_public_key()
         emit_event(
             "formation_started",
