@@ -258,7 +258,7 @@ def prepare_training(
     if len(train_data) != draft.dataset.sample_count:
         raise ValueError("local CIFAR-10 sample count does not match draft")
     partitions = train_data.split_iid(
-        participant_count=4,
+        participant_count=draft.dataset.participant_count,
         seed=draft.dataset.iid_partition_seed,
     )
     if tuple(len(partition) for partition in partitions) != (
