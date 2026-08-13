@@ -32,7 +32,7 @@ def _training_policy() -> dict[str, object]:
 
 def _active_draft_data() -> dict[str, object]:
     data = manifest_data()
-    data["manifest_version"] = 2
+    data["manifest_version"] = 3
     data["algorithm_id"] = "dpsgd"
     data["model_id"] = "resnet32"
     data["training"] = _training_policy()

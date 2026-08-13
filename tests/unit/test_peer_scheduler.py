@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from dromeus.gossip.peer_scheduler import Pairing, PeerScheduler
+from dromeus.gossip.peer_scheduler import (
+    Pairing,
+    ParticipantCountError,
+    PeerScheduler,
+)
 from dromeus.manifests.models import Participant
 
 
@@ -32,10 +36,30 @@ def test_scheduler_records_history_and_cumulative_edges() -> None:
 
 
 def test_scheduler_rejects_invalid_membership() -> None:
-    with pytest.raises(ValueError, match="even"):
-        PeerScheduler(["peer-0", "peer-1", "peer-2"], seed=1)
+    with pytest.raises(ParticipantCountError, match="even"):
+        PeerScheduler(
+            ["peer-0", "peer-1", "peer-2", "peer-3", "peer-4"],
+            seed=1,
+        )
     with pytest.raises(ValueError, match="unique"):
         PeerScheduler(["peer-0", "peer-0"], seed=1)
+
+
+@pytest.mark.parametrize("participant_count", [4, 8, 16])
+@pytest.mark.parametrize("seed", [17, 29, 41])
+def test_scheduler_builds_disjoint_perfect_matchings_at_m2_sizes(
+    participant_count: int,
+    seed: int,
+) -> None:
+    members = [f"peer-{index}" for index in range(participant_count)]
+    scheduler = PeerScheduler(members, seed=seed)
+
+    for round_id in range(32):
+        pairing = scheduler.schedule(round_id)
+        assert len(pairing.pairs) == participant_count // 2
+        assert len(pairing.peers) == participant_count
+        assert len(set(pairing.peers)) == participant_count
+        assert set(pairing.peers) == set(members)
 
 
 def test_pairing_rejects_unknown_peer() -> None:

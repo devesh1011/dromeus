@@ -124,11 +124,19 @@ def test_huggingface_loader_pins_source_revision_and_decodes_image(
     assert label == 3
 
 
+@pytest.mark.parametrize("participant_count", [4, 8, 16])
 def test_iid_partitions_are_reproducible_and_disjoint(
+    participant_count: int,
     cifar10_data: ClassificationData,
 ) -> None:
-    first = cifar10_data.split_iid(participant_count=4, seed=11)
-    second = cifar10_data.split_iid(participant_count=4, seed=11)
+    first = cifar10_data.split_iid(
+        participant_count=participant_count,
+        seed=11,
+    )
+    second = cifar10_data.split_iid(
+        participant_count=participant_count,
+        seed=11,
+    )
 
     assert [[part[index][1] for index in range(len(part))] for part in first] == [
         [part[index][1] for index in range(len(part))] for part in second
@@ -141,11 +149,14 @@ def test_iid_partitions_are_reproducible_and_disjoint(
         (value.seed, value.participant_count, value.partition_index)
         for value in provenance
         if value
-    ] == [(11, 4, index) for index in range(4)]
+    ] == [(11, participant_count, index) for index in range(participant_count)]
     assert all(
         value and value.source_sample_count == len(cifar10_data) for value in provenance
     )
-    assert len({value.indices_sha256 for value in provenance if value}) == 4
+    assert (
+        len({value.indices_sha256 for value in provenance if value})
+        == participant_count
+    )
 
 
 def test_checkpoint_is_deterministic_and_matches_trainer_schema(

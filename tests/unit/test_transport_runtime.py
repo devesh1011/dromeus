@@ -393,6 +393,120 @@ async def _test_in_memory_transport_and_formation(tmp_path: Path) -> None:
         assert node.state is NodeState.STOPPED
 
 
+def test_in_memory_transport_and_eight_member_formation(tmp_path: Path) -> None:
+    asyncio.run(_test_in_memory_transport_and_eight_member_formation(tmp_path))
+
+
+async def _test_in_memory_transport_and_eight_member_formation(
+    tmp_path: Path,
+) -> None:
+    base = SealedManifest.model_validate(manifest_data())
+    draft_data = base.model_dump(mode="python")
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    draft_data.update(
+        {
+            "manifest_version": 3,
+            "algorithm_id": "noloco",
+            "model_id": "resnet18-gn",
+            "optimizer": "adam",
+            "training": {
+                "batch_size": 128,
+                "momentum": 0.0,
+                "weight_decay": 0.0,
+                "learning_rate_milestones": [],
+                "learning_rate_gamma": 0.1,
+                "crop_padding": 0,
+                "normalize": True,
+                "final_consensus_rounds": 0,
+            },
+            "algorithm_config": {
+                "alpha": 0.5,
+                "beta": 0.7,
+                "gamma": 0.7,
+                "inner_steps": 50,
+                "adam": {
+                    "learning_rate": 0.001,
+                    "beta1": 0.9,
+                    "beta2": 0.999,
+                    "epsilon": 1e-8,
+                    "gradient_clip_norm": 1.0,
+                },
+            },
+            "artifact_codecs": [
+                {"artifact_name": "outer_gradient", "codec_id": "identity-v1"},
+                {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+            ],
+            "transport": {
+                **draft_data["transport"],
+                "max_retries": 1,
+                "retry_timeout_seconds": 0.05,
+                "chunk_size_bytes": 1_048_576,
+                "window_size": 4,
+            },
+            "dataset": {
+                **draft_data["dataset"],
+                "partition_sample_counts": [6_250] * 8,
+                "node_index_partitions": list(range(8)),
+            },
+        }
+    )
+    draft = DraftRunSpec.model_validate(draft_data)
+    network = InMemoryNetwork()
+    transports = [
+        InMemoryTransport(network=network, public_key=f"peer-{index}")
+        for index in range(8)
+    ]
+    nodes = [
+        NodeRuntime(
+            transport=transport,
+            draft=draft,
+            environment=base.environment,
+            dataset=draft.dataset,
+            artifact_root=tmp_path / f"artifacts-{index}",
+        )
+        for index, transport in enumerate(transports)
+    ]
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    write_checkpoint(checkpoint)
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key=await transports[0].local_public_key(),
+        bootstrap_uri="axl://bootstrap",
+    )
+    tasks: list[asyncio.Task[FormationResult]] = [
+        asyncio.create_task(
+            nodes[0].initiate(
+                bootstrap_uri="axl://bootstrap",
+                checkpoint_path=checkpoint,
+                tensor_schema=base.tensor_schema,
+            )
+        )
+    ]
+    tasks.extend(
+        asyncio.create_task(node.join(invitation=invitation)) for node in nodes[1:]
+    )
+    outcomes = await asyncio.wait_for(
+        asyncio.gather(*tasks, return_exceptions=True),
+        timeout=4.0,
+    )
+    results = [outcome for outcome in outcomes if isinstance(outcome, FormationResult)]
+    assert len(results) == 8
+    assert all(node.state is NodeState.READY for node in nodes)
+    assert len({result.manifest_hash for result in results}) == 1
+    assert all(
+        result.manifest.participants == results[0].manifest.participants
+        for result in results
+    )
+    for node in nodes:
+        await node.stop()
+
+
 def test_runtime_runs_training_after_in_memory_formation(tmp_path: Path) -> None:
     asyncio.run(_test_runtime_runs_training_after_in_memory_formation(tmp_path))
 

@@ -208,7 +208,7 @@ def test_draft_freezes_a_160_epoch_resnet_recipe() -> None:
     assert draft.training is not None
 
     assert draft.algorithm_id == "dpsgd"
-    assert draft.manifest_version == 2
+    assert draft.manifest_version == 3
     assert draft.model_id == MODEL_ID
     assert draft.model_definition_hash == MODEL_DEFINITION_HASH
     assert draft.dataset.preprocessing_hash == PREPROCESSING_HASH

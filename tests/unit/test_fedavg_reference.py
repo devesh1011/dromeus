@@ -19,7 +19,7 @@ from benchmarks.cifar10.fedavg_reference import (
     run_fedavg,
     run_fedavg_seeds,
 )
-from dromeus.manifests.models import SealedManifest
+from dromeus.manifests.models import DatasetContract, SealedManifest
 from dromeus.training.cifar10 import create_initial_checkpoint
 from dromeus.training.data import ClassificationData, DataProvenance
 
@@ -29,12 +29,15 @@ def _config(
     seed: int = 17,
     partition_seed: int = 7,
     round_count: int = 1,
+    participant_count: int = 4,
 ) -> FedAvgConfig:
     data = manifest_data()
-    dataset = data["dataset"]
+    dataset = dict(data["dataset"])
     dataset["iid_partition_seed"] = partition_seed
     dataset["sample_count"] = 8
-    dataset["partition_sample_counts"] = [2, 2, 2, 2]
+    dataset["partition_sample_counts"] = [8 // participant_count] * participant_count
+    dataset["node_index_partitions"] = list(range(participant_count))
+    dataset_contract = DatasetContract.model_validate(dataset)
     manifest = SealedManifest.model_validate(data)
     base = FedAvgConfig.from_manifest(
         manifest,
@@ -44,6 +47,7 @@ def _config(
     )
     return replace(
         base,
+        dataset=dataset_contract,
         local_steps=1,
         round_count=round_count,
         learning_rate=0.01,
@@ -102,6 +106,23 @@ def test_run_fedavg_reuses_four_partitions_and_common_test_set(tmp_path: Path) -
     assert result.rounds[5].accuracy is not None
     assert 0.0 <= result.rounds[5].accuracy <= 1.0
     assert result.final_accuracy == result.rounds[-1].accuracy
+
+
+def test_run_fedavg_supports_eight_partitions(tmp_path: Path) -> None:
+    data = _data(split="train")
+    test_data = _data(split="test")
+    partitions = data.split_iid(participant_count=8, seed=7)
+    checkpoint = create_initial_checkpoint(tmp_path / "initial.safetensors", seed=17)
+
+    result = run_fedavg(
+        partitions=partitions,
+        test_data=test_data,
+        initial_checkpoint=checkpoint.path,
+        config=_config(participant_count=8),
+    )
+
+    assert len(result.rounds) == 1
+    assert len(result.rounds[0].local_losses) == 8
 
 
 def test_run_fedavg_seeds_requires_three_matching_frozen_configs(

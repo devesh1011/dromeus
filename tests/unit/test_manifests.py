@@ -26,7 +26,7 @@ from dromeus.manifests.models import (
 )
 
 GOLDEN = Path(__file__).parents[1] / "golden" / "sealed_manifest.json"
-GOLDEN_HASH = "dd9ef12063cd632283f8c5fad1570d106f2876d6575e6190d49aa2cce101583b"
+GOLDEN_HASH = "0019f8a0cf68272fffd536d51ddd491d9f80036a3ee3bdcfe008a9fc585b3907"
 
 
 def _artifact(name: str, marker: str = "a") -> OpaqueArtifactMetadata:
@@ -167,6 +167,179 @@ def test_canonical_manifest_matches_golden_file_and_hash() -> None:
     assert canonical_hash(parse_sealed_json(golden)) == canonical_hash(manifest)
 
 
+def _v3_manifest_data(participant_count: int = 8) -> dict[str, object]:
+    data = manifest_data()
+    data.update(
+        {
+            "manifest_version": 3,
+            "algorithm_id": "noloco",
+            "model_id": "resnet18-gn",
+            "optimizer": "adam",
+            "training": {
+                "batch_size": 128,
+                "momentum": 0.0,
+                "weight_decay": 0.0,
+                "learning_rate_milestones": [],
+                "learning_rate_gamma": 0.1,
+                "crop_padding": 0,
+                "normalize": True,
+                "final_consensus_rounds": 0,
+            },
+            "participants": [
+                {"public_key": f"peer-{index}", "node_index": index}
+                for index in range(participant_count)
+            ],
+            "algorithm_config": {
+                "alpha": 0.5,
+                "beta": 0.7,
+                "gamma": 0.7,
+                "inner_steps": 50,
+                "adam": {
+                    "learning_rate": 0.001,
+                    "beta1": 0.9,
+                    "beta2": 0.999,
+                    "epsilon": 1e-8,
+                    "gradient_clip_norm": 1.0,
+                },
+            },
+            "artifact_codecs": [
+                {"artifact_name": "outer_gradient", "codec_id": "identity-v1"},
+                {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+            ],
+        }
+    )
+    data["dataset"] = {
+        **data["dataset"],  # type: ignore[misc]
+        "sample_count": 50_000,
+        "partition_sample_counts": [50_000 // participant_count]
+        * participant_count,
+        "node_index_partitions": list(range(participant_count)),
+    }
+    data["transport"] = {
+        **data["transport"],  # type: ignore[misc]
+        "chunk_size_bytes": 1_048_576,
+        "window_size": 4,
+    }
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del data[field]
+    draft = DraftRunSpec.model_validate(data)
+    sealed = manifest_data()
+    sealed.update(data)
+    sealed["draft_hash"] = canonical_hash(draft)
+    sealed["participants"] = [
+        {"public_key": f"peer-{index}", "node_index": index}
+        for index in range(participant_count)
+    ]
+    sealed["initial_checkpoint_hash"] = "2" * 64
+    sealed["tensor_schema"] = manifest_data()["tensor_schema"]
+    return sealed
+
+
+@pytest.mark.parametrize("participant_count", [4, 8, 16])
+def test_manifest_v3_supports_deterministic_even_membership(
+    participant_count: int,
+) -> None:
+    expected_hashes = {
+        4: "4e154474ba978c6ce1eb0484cf7f24fff62e0e497768682315bc32375f5af775",
+        8: "622057960f05a8c8e4750b85c0b8f094933f25b91d2f2a161e1c6d4527f85fa5",
+        16: "e081033b465a4597472ce1f7e87dd4e07f99d45bd7f1080389afb456537c62a6",
+    }
+    first = SealedManifest.model_validate(_v3_manifest_data(participant_count))
+    second = SealedManifest.model_validate(_v3_manifest_data(participant_count))
+
+    assert first.manifest_version == 3
+    assert len(first.participants) == participant_count
+    assert first.dataset.participant_count == participant_count
+    assert first.participants == second.participants
+    assert (
+        canonical_hash(first)
+        == canonical_hash(second)
+        == expected_hashes[participant_count]
+    )
+    assert parse_sealed_json(canonical_json(first)) == first
+
+
+def test_manifest_v3_rejects_odd_membership_with_typed_validation_error() -> None:
+    data = _v3_manifest_data(8)
+    participants = data["participants"]
+    dataset = data["dataset"]
+    assert isinstance(participants, list)
+    assert isinstance(dataset, dict)
+    data["participants"] = participants[:5]
+    dataset["sample_count"] = 50_000
+    dataset["partition_sample_counts"] = [10_000] * 5
+    dataset["node_index_partitions"] = list(range(5))
+
+    with pytest.raises(ValidationError, match="even"):
+        SealedManifest.model_validate(data)
+
+
+def test_manifest_versions_before_v3_are_rejected() -> None:
+    data = manifest_data()
+    data["manifest_version"] = 2
+
+    with pytest.raises(ValidationError, match="Input should be 3"):
+        DraftRunSpec.model_validate(data)
+    with pytest.raises(ValidationError, match="Input should be 3"):
+        parse_draft_yaml(json.dumps(data))
+    with pytest.raises(ValidationError, match="Input should be 3"):
+        parse_sealed_json(json.dumps(data))
+
+
+def test_manifest_v3_rejects_final_consensus_for_noloco() -> None:
+    data = _v3_manifest_data(4)
+    training = data["training"]
+    assert isinstance(training, dict)
+    training["final_consensus_rounds"] = 2
+    with pytest.raises(ValidationError):
+        SealedManifest.model_validate(data)
+
+
+def test_dpsgd_rejects_adam_optimizer() -> None:
+    data = manifest_data()
+    data["optimizer"] = "adam"
+
+    with pytest.raises(ValidationError, match="dpsgd requires sgd"):
+        DraftRunSpec.model_validate(
+            {
+                key: value
+                for key, value in data.items()
+                if key not in {
+                    "draft_hash",
+                    "participants",
+                    "initial_checkpoint_hash",
+                    "tensor_schema",
+                }
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("alpha", 0.6, "alpha=0.5"),
+        ("inner_steps", 49, "50 inner steps"),
+    ],
+)
+def test_noloco_rejects_unfrozen_hyperparameters(
+    field: str,
+    value: float | int,
+    message: str,
+) -> None:
+    data = _v3_manifest_data()
+    algorithm_config = data["algorithm_config"]
+    assert isinstance(algorithm_config, dict)
+    algorithm_config[field] = value
+
+    with pytest.raises(ValidationError, match=message):
+        SealedManifest.model_validate(data)
+
+
 def test_training_policy_validates_quality_recipe() -> None:
     policy = TrainingPolicy(
         batch_size=128,
@@ -204,37 +377,13 @@ def test_active_manifest_requires_training_policy() -> None:
         "tensor_schema",
     ):
         del data[field]
-    data["manifest_version"] = 2
+    data["training"] = None
 
-    with pytest.raises(ValidationError, match="requires"):
+    with pytest.raises(ValidationError, match="requires training policy"):
         DraftRunSpec.model_validate(data)
 
 
-def test_historical_manifest_rejects_training_policy() -> None:
-    data = manifest_data()
-    for field in (
-        "draft_hash",
-        "participants",
-        "initial_checkpoint_hash",
-        "tensor_schema",
-    ):
-        del data[field]
-    data["training"] = {
-        "batch_size": 128,
-        "momentum": 0.9,
-        "weight_decay": 0.0001,
-        "learning_rate_milestones": [8000, 12000],
-        "learning_rate_gamma": 0.1,
-        "crop_padding": 4,
-        "normalize": True,
-        "final_consensus_rounds": 2,
-    }
-
-    with pytest.raises(ValidationError, match="excludes"):
-        DraftRunSpec.model_validate(data)
-
-
-def test_active_manifest_enforces_executable_identifiers() -> None:
+def test_manifest_v3_enforces_executable_identifiers() -> None:
     draft = manifest_data()
     for field in (
         "draft_hash",
@@ -243,7 +392,6 @@ def test_active_manifest_enforces_executable_identifiers() -> None:
         "tensor_schema",
     ):
         del draft[field]
-    draft["manifest_version"] = 2
     draft["algorithm_id"] = "other-algorithm"
     draft["model_id"] = "other-model"
     draft["training"] = {
@@ -257,7 +405,7 @@ def test_active_manifest_enforces_executable_identifiers() -> None:
         "final_consensus_rounds": 2,
     }
 
-    with pytest.raises(ValidationError, match="requires dpsgd and resnet32"):
+    with pytest.raises(ValidationError, match="requires dpsgd or noloco"):
         DraftRunSpec.model_validate(draft)
 
 
@@ -313,7 +461,7 @@ def test_environment_accepts_cpu_wheel_version() -> None:
 
 @pytest.mark.parametrize(
     ("field", "version"),
-    [("protocol_version", 2), ("manifest_version", 3)],
+    [("protocol_version", 2), ("manifest_version", 4)],
 )
 def test_unknown_versions_are_rejected(field: str, version: int) -> None:
     data = manifest_data()
