@@ -11,8 +11,9 @@ from typing import Protocol
 
 import numpy as np
 
-from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
+from dromeus.algorithms.codec import IdentityCodec
 from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import (
     AXLFailureBroadcaster,
     AXLPairTransport,
@@ -24,11 +25,14 @@ from dromeus.gossip.engine import (
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import (
+    DPSGD_ALGORITHM_ID,
+    NOLOCO_ALGORITHM_ID,
     ConsensusSketchMessage,
     DatasetContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
+    SealedManifest,
     TensorSchema,
 )
 from dromeus.membership.formation import FormationProtocol, FormationResult
@@ -45,6 +49,7 @@ from dromeus.telemetry.evidence import (
     append_evidence,
 )
 from dromeus.telemetry.metrics import MetricsPublisher
+from dromeus.training.base import WeightTrainer
 from dromeus.training.cifar10 import (
     PreparedCIFAR10Training as TrainingOwnedCIFAR,
 )
@@ -131,12 +136,9 @@ class PreparedCIFARTraining:
             local_public_key=local_public_key,
         )
         return TrainingConfig(
-            algorithm=DPSGDAdapter(
+            algorithm=build_algorithm(
+                manifest=result.manifest,
                 trainer=trainer,
-                tensor_schema=result.manifest.tensor_schema,
-                local_steps=result.manifest.local_steps,
-                training_round_count=result.manifest.round_count,
-                manifest_codec_id=result.manifest.codec_id,
             ),
             load_checkpoint=trainer.load_checkpoint,
             run_store=RunStore(run_root / "run-store"),
@@ -158,6 +160,40 @@ def prepare_cifar_training(
             cache_dir=dataset_cache,
             benchmark_seed=benchmark_seed,
         )
+    )
+
+
+def build_algorithm(
+    *, manifest: SealedManifest, trainer: WeightTrainer
+) -> GossipAlgorithm:
+    """Construct the manifest-selected algorithm behind one runtime seam."""
+    if manifest.algorithm_id == DPSGD_ALGORITHM_ID:
+        return DPSGDAdapter(
+            trainer=trainer,
+            tensor_schema=manifest.tensor_schema,
+            local_steps=manifest.local_steps,
+            training_round_count=manifest.round_count,
+            manifest_codec_id=manifest.codec_id,
+        )
+    if manifest.algorithm_id != NOLOCO_ALGORITHM_ID:
+        raise ValueError("unsupported runtime algorithm")
+    config = manifest.algorithm_config
+    codec_settings = manifest.artifact_codecs
+    if config is None or codec_settings is None:
+        raise ValueError("NoLoCo manifest configuration is incomplete")
+    codec_ids = {
+        setting.artifact_name: setting.codec_id for setting in codec_settings
+    }
+    if set(codec_ids.values()) != {"identity-v1"}:
+        raise ValueError("Workstream 3 supports only NoLoCo identity codecs")
+    return NoLoCoAlgorithm(
+        trainer=trainer,
+        tensor_schema=manifest.tensor_schema,
+        config=config,
+        artifact_codecs={
+            name: IdentityCodec(codec_id) for name, codec_id in codec_ids.items()
+        },
+        manifest_codec_ids=codec_ids,
     )
 
 
@@ -334,18 +370,13 @@ class NodeRuntime:
             )
             local_key = await self._transport.local_public_key()
             self._local_public_key = local_key
-            if (
-                isinstance(self._training.algorithm, DPSGDAdapter)
-                and self._training.algorithm.bundle_codec is None
-            ):
-                self._training.algorithm.bundle_codec = SafetensorsUpdateBundleCodec(
-                    artifact_root=self._training.artifact_root / "bundles",
-                    run_id=self._result.manifest.run_id,
-                    manifest_hash=self._result.manifest_hash,
-                    sender_public_key=local_key,
-                    algorithm_id=self._result.manifest.algorithm_id,
-                    tensor_schema=self._result.manifest.tensor_schema,
-                )
+            self._training.algorithm.configure_bundle_codec(
+                artifact_root=self._training.artifact_root / "bundles",
+                run_id=self._result.manifest.run_id,
+                manifest_hash=self._result.manifest_hash,
+                sender_public_key=local_key,
+                algorithm_id=self._result.manifest.algorithm_id,
+            )
             participants = frozenset(
                 participant.public_key
                 for participant in self._result.manifest.participants
