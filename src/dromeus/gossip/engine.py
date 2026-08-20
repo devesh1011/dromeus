@@ -14,9 +14,9 @@ import numpy as np
 
 from dromeus.algorithms.base import (
     AlgorithmSnapshot,
+    AlgorithmUpdate,
     MaterializedArtifact,
     UpdateBundle,
-    ValidatedUpdate,
     checksum_tensors,
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
@@ -87,15 +87,25 @@ EvaluationCallback = Callable[
 
 
 class GossipAlgorithm(Protocol):
+    def configure_bundle_codec(
+        self,
+        *,
+        artifact_root: Path,
+        run_id: str,
+        manifest_hash: str,
+        sender_public_key: str,
+        algorithm_id: str,
+    ) -> None: ...
+
     def pre_local(self, round_id: RoundId) -> None: ...
 
     def local_training(self) -> None: ...
 
     def post_local_bundle(self) -> UpdateBundle: ...
 
-    def validate_peer(self, peer_bundle: UpdateBundle) -> ValidatedUpdate: ...
+    def validate_peer(self, peer_bundle: UpdateBundle) -> AlgorithmUpdate: ...
 
-    def peer_apply(self, peer_update: ValidatedUpdate) -> AlgorithmSnapshot: ...
+    def peer_apply(self, peer_update: AlgorithmUpdate) -> AlgorithmSnapshot: ...
 
     def release_bundle(self, bundle: UpdateBundle) -> None: ...
 
