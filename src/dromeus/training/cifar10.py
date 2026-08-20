@@ -20,7 +20,11 @@ from torch import Tensor
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
-from dromeus.manifests.models import DraftRunSpec, SealedManifest
+from dromeus.manifests.models import (
+    NOLOCO_ALGORITHM_ID,
+    DraftRunSpec,
+    SealedManifest,
+)
 from dromeus.training.data import ClassificationData, DataProvenance
 from dromeus.training.resnet32 import MODEL_DEFINITION, build_model
 from dromeus.training.trainer import (
@@ -117,8 +121,13 @@ def create_trainer(
     seed: int = 0,
     batch_size: int = 128,
     learning_rate: float = 0.1,
+    optimizer: Literal["sgd", "adam"] = "sgd",
     momentum: float = 0.9,
     weight_decay: float = 1e-4,
+    adam_beta1: float = 0.9,
+    adam_beta2: float = 0.999,
+    adam_epsilon: float = 1e-8,
+    gradient_clip_norm: float | None = None,
     learning_rate_milestones: tuple[int, ...] = (8_000, 12_000),
     learning_rate_gamma: float = 0.1,
     device: str = "cpu",
@@ -137,8 +146,13 @@ def create_trainer(
         seed=seed,
         batch_size=batch_size,
         learning_rate=learning_rate,
+        optimizer=optimizer,
         momentum=momentum,
         weight_decay=weight_decay,
+        adam_beta1=adam_beta1,
+        adam_beta2=adam_beta2,
+        adam_epsilon=adam_epsilon,
+        gradient_clip_norm=gradient_clip_norm,
         learning_rate_milestones=learning_rate_milestones,
         learning_rate_gamma=learning_rate_gamma,
         device=device,
@@ -229,14 +243,30 @@ class PreparedCIFAR10Training:
         policy = manifest.training
         if policy is None:
             raise ValueError("CIFAR-10 recipe requires an active training policy")
+        noloco = manifest.algorithm_id == NOLOCO_ALGORITHM_ID
+        config = manifest.algorithm_config
+        if noloco and config is None:
+            raise ValueError("NoLoCo trainer configuration is missing")
+        adam = config.adam if config is not None else None
         return create_trainer(
             train_data=self._partitions[partition_index],
             test_data=self._test_data,
             seed=self.trainer_seed + node_index,
             batch_size=policy.batch_size,
-            learning_rate=manifest.learning_rate,
-            momentum=policy.momentum,
-            weight_decay=policy.weight_decay,
+            learning_rate=(
+                adam.learning_rate
+                if adam is not None
+                else manifest.learning_rate
+            ),
+            optimizer="adam" if noloco else "sgd",
+            momentum=0.0 if noloco else policy.momentum,
+            weight_decay=0.0 if noloco else policy.weight_decay,
+            adam_beta1=adam.beta1 if adam is not None else 0.9,
+            adam_beta2=adam.beta2 if adam is not None else 0.999,
+            adam_epsilon=adam.epsilon if adam is not None else 1e-8,
+            gradient_clip_norm=(
+                adam.gradient_clip_norm if adam is not None else None
+            ),
             learning_rate_milestones=policy.learning_rate_milestones,
             learning_rate_gamma=policy.learning_rate_gamma,
             device="cpu",

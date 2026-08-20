@@ -6,7 +6,7 @@ import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import numpy as np
 import torch
@@ -30,6 +30,9 @@ _BATCHES_CONSUMED = f"{_TRAINING_STATE_PREFIX}batches_consumed"
 _AUGMENTATION_RNG = f"{_TRAINING_STATE_PREFIX}augmentation_rng"
 _LOADER_EPOCH_RNG = f"{_TRAINING_STATE_PREFIX}loader_epoch_rng"
 _MOMENTUM_PREFIX = f"{_TRAINING_STATE_PREFIX}momentum."
+_ADAM_FIRST_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.exp_avg."
+_ADAM_SECOND_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.exp_avg_sq."
+_ADAM_STEP_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.step."
 _load_checkpoint = cast(Callable[..., dict[str, Tensor]], _load_file)
 _save_checkpoint = cast(Callable[..., None], _save_file)
 
@@ -78,7 +81,7 @@ def checkpoint_hash(path: Path) -> str:
 
 
 class PyTorchTrainer:
-    """Own a classification model, SGD optimizer, loader, and checkpoint seam."""
+    """Own a classification model, optimizer, loader, and checkpoint seam."""
 
     def __init__(
         self,
@@ -90,8 +93,13 @@ class PyTorchTrainer:
         seed: int = 0,
         batch_size: int = 32,
         learning_rate: float = 0.1,
+        optimizer: Literal["sgd", "adam"] = "sgd",
         momentum: float = 0.0,
         weight_decay: float = 0.0,
+        adam_beta1: float = 0.9,
+        adam_beta2: float = 0.999,
+        adam_epsilon: float = 1e-8,
+        gradient_clip_norm: float | None = None,
         learning_rate_milestones: tuple[int, ...] = (),
         learning_rate_gamma: float = 0.1,
         device: str = "cpu",
@@ -106,6 +114,18 @@ class PyTorchTrainer:
             raise ValueError("momentum must be finite in [0, 1)")
         if weight_decay < 0 or not np.isfinite(weight_decay):
             raise ValueError("weight_decay must be finite and non-negative")
+        if optimizer not in ("sgd", "adam"):
+            raise ValueError("optimizer must be sgd or adam")
+        if not 0 <= adam_beta1 < 1 or not np.isfinite(adam_beta1):
+            raise ValueError("Adam beta1 must be finite in [0, 1)")
+        if not 0 <= adam_beta2 < 1 or not np.isfinite(adam_beta2):
+            raise ValueError("Adam beta2 must be finite in [0, 1)")
+        if adam_epsilon <= 0 or not np.isfinite(adam_epsilon):
+            raise ValueError("Adam epsilon must be positive and finite")
+        if gradient_clip_norm is not None and (
+            gradient_clip_norm <= 0 or not np.isfinite(gradient_clip_norm)
+        ):
+            raise ValueError("gradient clip norm must be positive and finite")
         if any(milestone <= 0 for milestone in learning_rate_milestones) or any(
             right <= left
             for left, right in zip(
@@ -122,12 +142,24 @@ class PyTorchTrainer:
         self._device = torch.device(device)
         self._model_definition = model_definition
         self._model = model.to(self._device)
-        self._optimizer = torch.optim.SGD(
-            self._model.parameters(),
-            lr=learning_rate,
-            momentum=momentum,
-            weight_decay=weight_decay,
+        self._optimizer_name = optimizer
+        self._optimizer = (
+            torch.optim.SGD(
+                self._model.parameters(),
+                lr=learning_rate,
+                momentum=momentum,
+                weight_decay=weight_decay,
+            )
+            if optimizer == "sgd"
+            else torch.optim.Adam(
+                self._model.parameters(),
+                lr=learning_rate,
+                betas=(adam_beta1, adam_beta2),
+                eps=adam_epsilon,
+                weight_decay=weight_decay,
+            )
         )
+        self._gradient_clip_norm = gradient_clip_norm
         self._base_learning_rate = learning_rate
         self._learning_rate_milestones = learning_rate_milestones
         self._learning_rate_gamma = learning_rate_gamma
@@ -194,12 +226,28 @@ class PyTorchTrainer:
         )
         state[_LOADER_EPOCH_RNG] = self._epoch_generator_state.cpu().numpy().copy()
         for name, parameter in self._model.named_parameters():
-            momentum = self._optimizer.state.get(parameter, {}).get(
-                "momentum_buffer"
-            )
+            optimizer_state = self._optimizer.state.get(parameter, {})
+            momentum = optimizer_state.get("momentum_buffer")
             if isinstance(momentum, Tensor):
                 state[f"{_MOMENTUM_PREFIX}{name}"] = (
                     momentum.detach().cpu().numpy().copy()
+                )
+            first_moment = optimizer_state.get("exp_avg")
+            second_moment = optimizer_state.get("exp_avg_sq")
+            step = optimizer_state.get("step")
+            if (
+                isinstance(first_moment, Tensor)
+                and isinstance(second_moment, Tensor)
+                and isinstance(step, Tensor)
+            ):
+                state[f"{_ADAM_FIRST_PREFIX}{name}"] = (
+                    first_moment.detach().cpu().numpy().copy()
+                )
+                state[f"{_ADAM_SECOND_PREFIX}{name}"] = (
+                    second_moment.detach().cpu().numpy().copy()
+                )
+                state[f"{_ADAM_STEP_PREFIX}{name}"] = (
+                    step.detach().cpu().numpy().copy()
                 )
         return state
 
@@ -224,17 +272,55 @@ class PyTorchTrainer:
 
         self._optimizer.state.clear()
         for name, parameter in self._model.named_parameters():
-            key = f"{_MOMENTUM_PREFIX}{name}"
-            if key not in state:
+            if self._optimizer_name == "sgd":
+                key = f"{_MOMENTUM_PREFIX}{name}"
+                if key not in state:
+                    continue
+                value = np.asarray(state[key])
+                expected_dtype = parameter.detach().cpu().numpy().dtype
+                if (
+                    value.dtype != expected_dtype
+                    or value.shape != tuple(parameter.shape)
+                ):
+                    raise ValueError(f"momentum state {name} does not match model")
+                self._optimizer.state[parameter]["momentum_buffer"] = (
+                    torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+                        cast(Any, np.ascontiguousarray(value))
+                    ).to(self._device)
+                )
                 continue
-            value = np.asarray(state[key])
+            first_key = f"{_ADAM_FIRST_PREFIX}{name}"
+            second_key = f"{_ADAM_SECOND_PREFIX}{name}"
+            step_key = f"{_ADAM_STEP_PREFIX}{name}"
+            present = {first_key, second_key, step_key} & set(state)
+            if not present:
+                continue
+            if present != {first_key, second_key, step_key}:
+                raise ValueError(f"Adam state {name} is incomplete")
+            first = np.asarray(state[first_key])
+            second = np.asarray(state[second_key])
+            step = np.asarray(state[step_key])
             expected_dtype = parameter.detach().cpu().numpy().dtype
-            if value.dtype != expected_dtype or value.shape != tuple(parameter.shape):
-                raise ValueError(f"momentum state {name} does not match model")
-            self._optimizer.state[parameter]["momentum_buffer"] = (
-                torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                    cast(Any, np.ascontiguousarray(value))
-                ).to(self._device)
+            if (
+                first.dtype != expected_dtype
+                or second.dtype != expected_dtype
+                or first.shape != tuple(parameter.shape)
+                or second.shape != tuple(parameter.shape)
+                or step.size != 1
+            ):
+                raise ValueError(f"Adam state {name} does not match model")
+            self._optimizer.state[parameter].update(
+                {
+                    "exp_avg": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+                        cast(Any, np.ascontiguousarray(first))
+                    ).to(self._device),
+                    "exp_avg_sq": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+                        cast(Any, np.ascontiguousarray(second))
+                    ).to(self._device),
+                    "step": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
+                        cast(Any, np.ascontiguousarray(step))
+                    ).to(self._device),
+                }
             )
 
         augmentation_state = _rng_state_tensor(
@@ -271,6 +357,10 @@ class PyTorchTrainer:
             loss = nn.functional.cross_entropy(self._model(images), labels)
             self._last_local_loss = float(loss.detach().cpu().item())
             loss.backward()  # pyright: ignore[reportUnknownMemberType]
+            if self._gradient_clip_norm is not None:
+                nn.utils.clip_grad_norm_(
+                    self._model.parameters(), self._gradient_clip_norm
+                )
             self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
             self._completed_steps += 1
 
