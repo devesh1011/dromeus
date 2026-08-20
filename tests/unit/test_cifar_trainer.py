@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -11,7 +12,8 @@ from PIL import Image
 from support.sample_manifest import manifest_data
 
 import dromeus.training.cifar10 as cifar10_recipe
-from dromeus.manifests.models import SealedManifest
+from dromeus.manifests.canonical import canonical_hash
+from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.persistence.archive import RunArchive
 from dromeus.persistence.run_store import RunStore
 from dromeus.training.cifar10 import (
@@ -21,12 +23,13 @@ from dromeus.training.cifar10 import (
     PREPROCESSING_DEFINITION,
     PREPROCESSING_HASH,
     CIFAR10DataError,
+    PreparedCIFAR10Training,
     create_initial_checkpoint,
     create_trainer,
     load_cifar10,
 )
 from dromeus.training.data import ClassificationData, IIDPartitionProvenance
-from dromeus.training.trainer import derive_benchmark_seed
+from dromeus.training.trainer import PyTorchTrainer, derive_benchmark_seed
 
 
 def test_cifar_contract_constants_are_canonical() -> None:
@@ -50,6 +53,73 @@ def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
     assert derive_benchmark_seed(17, "local-training") == derive_benchmark_seed(
         17, "local-training"
     )
+
+
+def test_prepared_training_maps_noloco_adam_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = manifest_data()
+    data.update(
+        {
+            "algorithm_id": "noloco",
+            "optimizer": "adam",
+            "algorithm_config": {
+                "alpha": 0.5,
+                "beta": 0.7,
+                "gamma": 0.7,
+                "inner_steps": 50,
+                "adam": {
+                    "learning_rate": 0.001,
+                    "beta1": 0.9,
+                    "beta2": 0.999,
+                    "epsilon": 1e-8,
+                    "gradient_clip_norm": 1.0,
+                },
+            },
+            "artifact_codecs": [
+                {"artifact_name": "outer_gradient", "codec_id": "identity-v1"},
+                {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+            ],
+            "transport": {
+                **data["transport"],
+                "chunk_size_bytes": 1024,
+                "window_size": 1,
+            },
+        }
+    )
+    draft_data = data.copy()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    data["draft_hash"] = canonical_hash(DraftRunSpec.model_validate(draft_data))
+    manifest = SealedManifest.model_validate(data)
+    placeholder = cast(ClassificationData, object())
+    prepared = PreparedCIFAR10Training(
+        _partitions=(placeholder,) * 4,
+        _test_data=placeholder,
+        initialization_seed=1,
+        trainer_seed=2,
+    )
+    captured: dict[str, Any] = {}
+
+    def fake_create_trainer(**kwargs: Any) -> PyTorchTrainer:
+        captured.update(kwargs)
+        return cast(PyTorchTrainer, object())
+
+    monkeypatch.setattr(cifar10_recipe, "create_trainer", fake_create_trainer)
+
+    prepared.create_trainer(manifest=manifest, local_public_key="peer-0")
+
+    assert captured["optimizer"] == "adam"
+    assert captured["learning_rate"] == 0.001
+    assert captured["adam_beta1"] == 0.9
+    assert captured["adam_beta2"] == 0.999
+    assert captured["adam_epsilon"] == 1e-8
+    assert captured["gradient_clip_norm"] == 1.0
 
 
 @pytest.fixture(scope="session")

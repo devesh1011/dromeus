@@ -19,6 +19,8 @@ from support.in_memory_transport import (
 from support.sample_manifest import manifest_data, write_checkpoint
 
 from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
+from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import (
     FormationError,
@@ -33,7 +35,13 @@ from dromeus.protocol.models import (
     TransferBegin,
     create_envelope,
 )
-from dromeus.runtime import FailureConfig, NodeRuntime, NodeState, TrainingConfig
+from dromeus.runtime import (
+    FailureConfig,
+    NodeRuntime,
+    NodeState,
+    TrainingConfig,
+    build_algorithm,
+)
 from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.transfer import (
@@ -65,6 +73,58 @@ class RuntimeTrainer:
 
     def evaluate(self) -> tuple[float, float]:
         return 0.0, 0.5
+
+
+def test_runtime_builds_noloco_from_sealed_manifest() -> None:
+    data = manifest_data()
+    data.update(
+        {
+            "algorithm_id": "noloco",
+            "optimizer": "adam",
+            "algorithm_config": {
+                "alpha": 0.5,
+                "beta": 0.7,
+                "gamma": 0.7,
+                "inner_steps": 50,
+                "adam": {
+                    "learning_rate": 0.001,
+                    "beta1": 0.9,
+                    "beta2": 0.999,
+                    "epsilon": 1e-8,
+                    "gradient_clip_norm": 1.0,
+                },
+            },
+            "artifact_codecs": [
+                {"artifact_name": "outer_gradient", "codec_id": "identity-v1"},
+                {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+            ],
+            "transport": {
+                **data["transport"],
+                "chunk_size_bytes": 1024,
+                "window_size": 1,
+            },
+        }
+    )
+    draft_data = data.copy()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    data["draft_hash"] = canonical_hash(DraftRunSpec.model_validate(draft_data))
+    manifest = SealedManifest.model_validate(data)
+
+    algorithm = build_algorithm(manifest=manifest, trainer=RuntimeTrainer())
+
+    assert isinstance(algorithm, NoLoCoAlgorithm)
+    assert {
+        name: codec.codec_id for name, codec in algorithm.artifact_codecs.items()
+    } == {
+        "outer_gradient": "identity-v1",
+        "slow_weights": "identity-v1",
+    }
 
 
 def test_transfer_begin_retains_exact_wire_v1_shape() -> None:

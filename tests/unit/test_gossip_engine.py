@@ -17,8 +17,12 @@ from support.in_memory_transport import (
 )
 
 from dromeus.algorithms.base import UpdateBundle
-from dromeus.algorithms.codec import SafetensorsUpdateBundleCodec
+from dromeus.algorithms.codec import (
+    NamedSafetensorsUpdateBundleCodec,
+    SafetensorsUpdateBundleCodec,
+)
 from dromeus.algorithms.dpsgd import DPSGDAdapter, checksum_tensors
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import (
     AXLPairTransport,
     EvaluationMetrics,
@@ -29,6 +33,8 @@ from dromeus.gossip.engine import (
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import (
+    AdamSettings,
+    NoLoCoConfig,
     Tensor,
     TensorSchema,
     TransportLimits,
@@ -68,6 +74,12 @@ class ConvexTrainer(LinearTrainer):
     def train_local_steps(self, step_count: int) -> None:
         for _ in range(step_count):
             self._weights["weight"] *= np.float32(0.5)
+
+
+class NoLoCoConvexTrainer(LinearTrainer):
+    def train_local_steps(self, step_count: int) -> None:
+        assert step_count == 50
+        self._weights["weight"] *= np.float32(0.5)
 
 
 class SlowEvaluationTrainer(LinearTrainer):
@@ -178,6 +190,19 @@ class InMemoryPairTransport:
             self.local, peer, round_id, state_checksum
         )
         assert remote_checksum == state_checksum
+
+
+class DivergentPairTransport(InMemoryPairTransport):
+    async def exchange_round_committed(
+        self,
+        *,
+        peer: str,
+        round_id: int,
+        state_checksum: str,
+    ) -> None:
+        await self.channel.exchange_committed(
+            self.local, peer, round_id, state_checksum
+        )
 
 
 class HangingPairTransport(InMemoryPairTransport):
@@ -971,6 +996,74 @@ def test_four_in_memory_nodes_reduce_a_shared_convex_objective(
         abs(float(trainer.weights()["weight"][0])) < 8.0
         for trainer in trainers.values()
     )
+
+
+def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
+    tmp_path: Path,
+) -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    config = NoLoCoConfig(
+        alpha=0.5,
+        beta=0.7,
+        gamma=0.7,
+        inner_steps=50,
+        adam=AdamSettings(
+            learning_rate=0.001,
+            beta1=0.9,
+            beta2=0.999,
+            epsilon=1e-8,
+            gradient_clip_norm=1.0,
+        ),
+    )
+    channel = SharedPairChannel.create()
+    trainers = {
+        f"peer-{index}": NoLoCoConvexTrainer(float(8 - index * 2))
+        for index in range(4)
+    }
+    initial_objective = sum(
+        float(trainer.weights()["weight"][0]) ** 2 / 2
+        for trainer in trainers.values()
+    )
+    commits: dict[str, list[RoundCommit]] = {key: [] for key in trainers}
+
+    async def run() -> None:
+        engines = [
+            GossipEngine(
+                local_public_key=key,
+                round_count=3,
+                scheduler=PeerScheduler(list(trainers), seed=8),
+                algorithm=NoLoCoAlgorithm(
+                    trainer=trainer,
+                    tensor_schema=schema,
+                    config=config,
+                    bundle_codec=NamedSafetensorsUpdateBundleCodec(
+                        artifact_root=tmp_path / key,
+                        run_id="test-run",
+                        manifest_hash="0" * 64,
+                        sender_public_key=key,
+                        algorithm_id="noloco",
+                        artifact_schemas={
+                            "outer_gradient": schema,
+                            "slow_weights": schema,
+                        },
+                    ),
+                ),
+                transport=DivergentPairTransport(key, channel),
+                commit_callback=commits[key].append,
+            )
+            for key, trainer in trainers.items()
+        ]
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+    final_objective = sum(
+        float(trainer.weights()["weight"][0]) ** 2 / 2
+        for trainer in trainers.values()
+    )
+
+    assert final_objective < initial_objective
+    assert all(len(records) == 3 for records in commits.values())
+    assert len({records[-1].state_checksum for records in commits.values()}) > 1
 
 
 def test_two_final_consensus_stages_exactly_average_four_nodes(
