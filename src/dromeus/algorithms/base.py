@@ -74,6 +74,43 @@ class ValidatedUpdate:
 
 
 @dataclass(frozen=True, slots=True)
+class NamedValidatedUpdate:
+    """Algorithm-owned named peer artifacts ready to apply."""
+
+    round_id: RoundId
+    artifacts: Mapping[str, Mapping[str, np.ndarray]]
+    checksum: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "artifacts",
+            MappingProxyType(
+                {
+                    name: _immutable_tensors(tensors)
+                    for name, tensors in self.artifacts.items()
+                }
+            ),
+        )
+
+
+AlgorithmUpdate = ValidatedUpdate | NamedValidatedUpdate
+
+
+def checksum_artifacts(
+    artifacts: Mapping[str, Mapping[str, np.ndarray]],
+) -> str:
+    """Hash named tensor artifacts without flattening their public shape."""
+    return checksum_tensors(
+        {
+            f"{artifact_name}.{tensor_name}": tensor
+            for artifact_name, tensors in artifacts.items()
+            for tensor_name, tensor in tensors.items()
+        }
+    )
+
+
+@dataclass(frozen=True, slots=True)
 class MaterializedArtifact:
     """Algorithm-produced bytes plus unchanged v1 transfer metadata."""
 
@@ -116,9 +153,12 @@ class UpdateBundle:
 
 __all__ = [
     "AlgorithmSnapshot",
+    "AlgorithmUpdate",
     "MaterializedArtifact",
+    "NamedValidatedUpdate",
     "SerializableState",
     "UpdateBundle",
     "ValidatedUpdate",
+    "checksum_artifacts",
     "checksum_tensors",
 ]

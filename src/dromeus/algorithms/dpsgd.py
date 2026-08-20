@@ -5,18 +5,21 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import cast
 
 import numpy as np
 
 from dromeus.algorithms.base import (
     AlgorithmSnapshot,
+    AlgorithmUpdate,
     UpdateBundle,
     ValidatedUpdate,
     checksum_tensors,
 )
 from dromeus.algorithms.codec import (
     IdentityCodec,
+    SafetensorsUpdateBundleCodec,
     UpdateBundleCodec,
     UpdateCodec,
 )
@@ -114,7 +117,9 @@ class DPSGDAdapter:
             checksum=checksum_tensors(decoded),
         )
 
-    def peer_apply(self, peer_update: ValidatedUpdate) -> AlgorithmSnapshot:
+    def peer_apply(self, peer_update: AlgorithmUpdate) -> AlgorithmSnapshot:
+        if not isinstance(peer_update, ValidatedUpdate):
+            raise TypeError("D-PSGD requires a one-artifact validated update")
         if peer_update.round_id != self._round_id:
             raise ValueError("peer update round does not match current round")
         local = self._local_decoded or self.trainer.weights()
@@ -138,6 +143,26 @@ class DPSGDAdapter:
         if self.bundle_codec is None:
             raise RuntimeError("update bundle codec is not configured")
         self.bundle_codec.release(bundle)
+
+    def configure_bundle_codec(
+        self,
+        *,
+        artifact_root: Path,
+        run_id: str,
+        manifest_hash: str,
+        sender_public_key: str,
+        algorithm_id: str,
+    ) -> None:
+        """Bind formed run context without exposing codec details to runtime."""
+        if self.bundle_codec is None:
+            self.bundle_codec = SafetensorsUpdateBundleCodec(
+                artifact_root=artifact_root,
+                run_id=run_id,
+                manifest_hash=manifest_hash,
+                sender_public_key=sender_public_key,
+                algorithm_id=algorithm_id,
+                tensor_schema=self.tensor_schema,
+            )
 
     def snapshot(self) -> AlgorithmSnapshot:
         return AlgorithmSnapshot(
