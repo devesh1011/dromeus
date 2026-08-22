@@ -20,7 +20,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 
 from dromeus.manifests.canonical import file_sha256
-from dromeus.manifests.models import TensorSchema
+from dromeus.manifests.models import TensorSchema, WarmupCosineSchedule
 from dromeus.training.resnet32 import floating_model_state, tensor_schema_for_model
 
 BatchTransform = Callable[[Tensor, bool, torch.Generator], Tensor]
@@ -102,6 +102,7 @@ class PyTorchTrainer:
         gradient_clip_norm: float | None = None,
         learning_rate_milestones: tuple[int, ...] = (),
         learning_rate_gamma: float = 0.1,
+        learning_rate_schedule: WarmupCosineSchedule | None = None,
         device: str = "cpu",
         augment: bool = True,
         batch_transform: BatchTransform | None = None,
@@ -139,6 +140,17 @@ class PyTorchTrainer:
             learning_rate_gamma
         ):
             raise ValueError("learning_rate_gamma must be finite in (0, 1)")
+        if learning_rate_schedule is not None and learning_rate_milestones:
+            raise ValueError(
+                "warmup-cosine and milestone schedules are mutually exclusive"
+            )
+        if learning_rate_schedule is not None and not np.isclose(
+            learning_rate,
+            learning_rate_schedule.peak_learning_rate,
+            rtol=0.0,
+            atol=0.0,
+        ):
+            raise ValueError("learning rate must equal warmup-cosine peak")
         self._device = torch.device(device)
         self._model_definition = model_definition
         self._model = model.to(self._device)
@@ -163,6 +175,7 @@ class PyTorchTrainer:
         self._base_learning_rate = learning_rate
         self._learning_rate_milestones = learning_rate_milestones
         self._learning_rate_gamma = learning_rate_gamma
+        self._learning_rate_schedule = learning_rate_schedule
         self._completed_steps = 0
         self._augment = augment
         self._batch_transform = batch_transform
@@ -178,6 +191,7 @@ class PyTorchTrainer:
         self._train_iterator = iter(self._train_loader)
         self._tensor_schema = tensor_schema_for_model(self._model)
         self._last_local_loss: float | None = None
+        self._apply_learning_rate()
 
     @property
     def tensor_schema(self) -> TensorSchema:
@@ -349,6 +363,12 @@ class PyTorchTrainer:
     def train_local_steps(self, step_count: int) -> None:
         if step_count < 0:
             raise ValueError("step_count must be non-negative")
+        if (
+            self._learning_rate_schedule is not None
+            and self._completed_steps + step_count
+            > self._learning_rate_schedule.total_inner_steps
+        ):
+            raise ValueError("local training exceeds learning-rate schedule")
         self._model.train()
         for _ in range(step_count):
             self._apply_learning_rate()
@@ -363,6 +383,7 @@ class PyTorchTrainer:
                 )
             self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
             self._completed_steps += 1
+        self._apply_learning_rate()
 
     def evaluate(
         self,
@@ -453,13 +474,18 @@ class PyTorchTrainer:
         )
 
     def _apply_learning_rate(self) -> None:
-        decay_count = sum(
-            self._completed_steps >= milestone
-            for milestone in self._learning_rate_milestones
-        )
-        learning_rate = self._base_learning_rate * (
-            self._learning_rate_gamma**decay_count
-        )
+        if self._learning_rate_schedule is not None:
+            learning_rate = self._learning_rate_schedule.learning_rate(
+                self._completed_steps
+            )
+        else:
+            decay_count = sum(
+                self._completed_steps >= milestone
+                for milestone in self._learning_rate_milestones
+            )
+            learning_rate = self._base_learning_rate * (
+                self._learning_rate_gamma**decay_count
+            )
         for group in self._optimizer.param_groups:
             group["lr"] = learning_rate
 

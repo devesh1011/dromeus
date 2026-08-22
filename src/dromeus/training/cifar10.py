@@ -24,6 +24,7 @@ from dromeus.manifests.models import (
     NOLOCO_ALGORITHM_ID,
     DraftRunSpec,
     SealedManifest,
+    WarmupCosineSchedule,
 )
 from dromeus.training.data import ClassificationData, DataProvenance
 from dromeus.training.resnet32 import MODEL_DEFINITION, build_model
@@ -130,6 +131,7 @@ def create_trainer(
     gradient_clip_norm: float | None = None,
     learning_rate_milestones: tuple[int, ...] = (8_000, 12_000),
     learning_rate_gamma: float = 0.1,
+    learning_rate_schedule: WarmupCosineSchedule | None = None,
     device: str = "cpu",
     augment: bool = True,
     crop_padding: int = 4,
@@ -155,6 +157,7 @@ def create_trainer(
         gradient_clip_norm=gradient_clip_norm,
         learning_rate_milestones=learning_rate_milestones,
         learning_rate_gamma=learning_rate_gamma,
+        learning_rate_schedule=learning_rate_schedule,
         device=device,
         augment=augment,
         batch_transform=partial(
@@ -269,6 +272,7 @@ class PreparedCIFAR10Training:
             ),
             learning_rate_milestones=policy.learning_rate_milestones,
             learning_rate_gamma=policy.learning_rate_gamma,
+            learning_rate_schedule=policy.learning_rate_schedule,
             device="cpu",
             augment=True,
             crop_padding=policy.crop_padding,
