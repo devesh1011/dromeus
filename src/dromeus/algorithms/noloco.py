@@ -48,7 +48,16 @@ def _identity_codecs() -> dict[str, UpdateCodec]:
 
 @dataclass
 class NoLoCoAlgorithm:
-    """Own NoLoCo slow weights, outer momentum, and opaque bundle lifecycle."""
+    """Own NoLoCo slow weights, outer momentum, and opaque bundle lifecycle.
+
+    Paper ``phi`` is ``_slow_weights``, post-local ``theta`` is the trainer's fast
+    weights, and Dromeus names the descent-oriented outer gradient ``g = phi -
+    theta``. ``alpha``, ``beta``, and ``gamma`` map directly to ``config``. The
+    identity path subtracts the averaged gradients and slow-weight correction. This
+    is algebraically equivalent to the pinned executable upstream convention, which
+    adds ``beta * mean(theta - phi)`` and effectively uses ``gamma = beta``. It does
+    not follow the divergent sign printed in paper Equation 2.
+    """
 
     trainer: WeightTrainer
     tensor_schema: TensorSchema
