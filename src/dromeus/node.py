@@ -18,8 +18,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from dromeus.manifests.canonical import (
     canonical_json,
     parse_draft_yaml,
+    validate_sealed_expectation,
 )
-from dromeus.manifests.models import DraftRunSpec, Invitation
+from dromeus.manifests.models import (
+    DraftRunSpec,
+    Invitation,
+    SealedManifestExpectation,
+)
 from dromeus.membership.formation import create_invitation
 from dromeus.runtime import FailureConfig, NodeRuntime, prepare_cifar_training
 from dromeus.telemetry.events import JsonlEventSink, emit_event
@@ -50,6 +55,7 @@ class NodeConfig(BaseModel):
     bootstrap_uri: Annotated[str, Field(min_length=1)]
     benchmark_seed: int
     invitation_timeout_seconds: Annotated[float, Field(gt=0)] = 300.0
+    manifest_expectation: SealedManifestExpectation | None = None
 
     @field_validator("axl_bridge_url")
     @classmethod
@@ -120,6 +126,12 @@ async def run_node(config: NodeConfig) -> None:
             if invitation.bootstrap_uri != config.bootstrap_uri:
                 raise ValueError("invitation bootstrap URI does not match node config")
             result = await runtime.join(invitation=invitation)
+
+        if config.manifest_expectation is not None:
+            validate_sealed_expectation(
+                config.manifest_expectation,
+                result.manifest,
+            )
 
         run_store_root = config.run_root / "run-store"
         try:
