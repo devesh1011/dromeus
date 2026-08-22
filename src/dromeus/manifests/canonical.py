@@ -24,6 +24,7 @@ from dromeus.manifests.models import (
     DraftRunSpec,
     OpaqueUpdateBundleMetadata,
     SealedManifest,
+    SealedManifestExpectation,
     Tensor,
     TensorSchema,
 )
@@ -112,3 +113,18 @@ def parse_draft_yaml(source: str | bytes | Path) -> DraftRunSpec:
 
 def parse_sealed_json(data: str | bytes) -> SealedManifest:
     return SealedManifest.model_validate_json(data)
+
+
+def validate_sealed_expectation(
+    expectation: SealedManifestExpectation,
+    manifest: SealedManifest,
+) -> None:
+    """Reject a formed manifest that differs from machine-local preflight input."""
+    if manifest.draft_hash != expectation.draft_hash:
+        raise ValueError("sealed manifest draft does not match expectation")
+    if manifest.participants != expectation.participants:
+        raise ValueError("sealed manifest membership does not match expectation")
+    if manifest.initial_checkpoint_hash != expectation.initial_checkpoint_hash:
+        raise ValueError("sealed manifest checkpoint does not match expectation")
+    if canonical_hash(manifest.tensor_schema) != expectation.tensor_schema_hash:
+        raise ValueError("sealed manifest tensor schema does not match expectation")

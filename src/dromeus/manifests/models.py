@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from typing import Annotated, Literal, Self
 
@@ -145,6 +146,53 @@ class ConsensusSketchConfig(DomainModel):
     seed: int
 
 
+class WarmupCosineSchedule(DomainModel):
+    """Versioned pre-step linear-warmup/cosine-decay schedule."""
+
+    schedule_id: Literal["linear-warmup-cosine-v1"]
+    total_inner_steps: Annotated[int, Field(gt=0)]
+    warmup_inner_steps: Annotated[int, Field(gt=0)]
+    start_learning_rate: Annotated[float, Field(gt=0.0)]
+    peak_learning_rate: Annotated[float, Field(gt=0.0)]
+    final_learning_rate: Annotated[float, Field(gt=0.0)]
+
+    @model_validator(mode="after")
+    def valid_schedule(self) -> Self:
+        if self.warmup_inner_steps >= self.total_inner_steps:
+            raise ValueError("warm-up steps must be less than total inner steps")
+        if self.start_learning_rate > self.peak_learning_rate:
+            raise ValueError("warm-up start learning rate must not exceed peak")
+        if not math.isclose(
+            self.final_learning_rate,
+            self.peak_learning_rate / 10.0,
+            rel_tol=1e-12,
+            abs_tol=0.0,
+        ):
+            raise ValueError("final learning rate must be one tenth of peak")
+        return self
+
+    def learning_rate(self, completed_inner_steps: int) -> float:
+        """Return the rate applied before a zero-based inner optimizer step."""
+        if not 0 <= completed_inner_steps <= self.total_inner_steps:
+            raise ValueError("completed inner steps are outside the schedule")
+        if completed_inner_steps == self.total_inner_steps:
+            return self.final_learning_rate
+        if completed_inner_steps < self.warmup_inner_steps:
+            if self.warmup_inner_steps == 1:
+                return self.peak_learning_rate
+            progress = completed_inner_steps / (self.warmup_inner_steps - 1)
+            return self.start_learning_rate + (
+                self.peak_learning_rate - self.start_learning_rate
+            ) * progress
+        decay_steps = self.total_inner_steps - self.warmup_inner_steps
+        progress = (completed_inner_steps - self.warmup_inner_steps + 1) / (
+            decay_steps
+        )
+        return self.final_learning_rate + 0.5 * (
+            self.peak_learning_rate - self.final_learning_rate
+        ) * (1.0 + math.cos(math.pi * progress))
+
+
 class TrainingPolicy(DomainModel):
     """Versioned local-optimizer and final-consensus settings."""
 
@@ -153,6 +201,7 @@ class TrainingPolicy(DomainModel):
     weight_decay: Annotated[float, Field(ge=0.0)]
     learning_rate_milestones: tuple[Annotated[int, Field(gt=0)], ...] = ()
     learning_rate_gamma: Annotated[float, Field(gt=0.0, lt=1.0)]
+    learning_rate_schedule: WarmupCosineSchedule | None = None
     crop_padding: Annotated[int, Field(ge=0)]
     normalize: bool
     final_consensus_rounds: Literal[0, 2] = 0
@@ -168,6 +217,10 @@ class TrainingPolicy(DomainModel):
             )
         ):
             raise ValueError("learning-rate milestones must be strictly increasing")
+        if self.learning_rate_schedule is not None and self.learning_rate_milestones:
+            raise ValueError(
+                "warmup-cosine and milestone schedules are mutually exclusive"
+            )
         return self
 
 
@@ -246,6 +299,8 @@ class DraftRunSpec(DomainModel):
         if self.algorithm_id == DPSGD_ALGORITHM_ID:
             if self.optimizer != "sgd":
                 raise ValueError("dpsgd requires sgd")
+            if self.training.learning_rate_schedule is not None:
+                raise ValueError("warmup-cosine is only supported for NoLoCo")
             return self
         if self.algorithm_id != NOLOCO_ALGORITHM_ID:
             raise ValueError("manifest v3 requires dpsgd or noloco")
@@ -257,6 +312,18 @@ class DraftRunSpec(DomainModel):
             raise ValueError(
                 "NoLoCo requires algorithm and artifact codec configuration"
             )
+        schedule = self.training.learning_rate_schedule
+        if schedule is not None:
+            expected_steps = self.round_count * self.algorithm_config.inner_steps
+            if schedule.total_inner_steps != expected_steps:
+                raise ValueError(
+                    "warmup-cosine total steps must match round count"
+                )
+            peak = self.algorithm_config.adam.learning_rate
+            if schedule.peak_learning_rate != peak or self.learning_rate != peak:
+                raise ValueError(
+                    "warmup-cosine peak must match NoLoCo Adam learning rate"
+                )
         names = [codec.artifact_name for codec in self.artifact_codecs]
         if len(names) != len(set(names)) or set(names) != {
             "outer_gradient",
@@ -320,6 +387,18 @@ class SealedManifest(DraftRunSpec):
                 "dataset partition count must match participant count"
             )
         return self
+
+
+class SealedManifestExpectation(DomainModel):
+    """Machine-local preflight constraints for one formed manifest."""
+
+    draft_hash: Sha256
+    participants: tuple[Participant, ...] = Field(
+        min_length=MIN_PARTICIPANT_COUNT,
+        max_length=MAX_PARTICIPANT_COUNT,
+    )
+    initial_checkpoint_hash: Sha256
+    tensor_schema_hash: Sha256
 
 
 class ArtifactMetadata(DomainModel):
