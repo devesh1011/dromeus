@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import math
 import time
 import uuid
 from dataclasses import dataclass
@@ -100,6 +101,12 @@ class _ArtifactStore:
             raise TransferError("transfer capacity already reserved")
         if self._reserved_bytes + size_bytes > self._max_bytes:
             raise TransferError("artifact store capacity exceeded")
+        temp = self._temp_path(transfer_id)
+        try:
+            temp.unlink(missing_ok=True)
+            temp.touch(exist_ok=False)
+        except OSError as error:
+            raise TransferError("failed to create transfer artifact") from error
         self._reservations[transfer_id] = _Reservation(size_bytes=size_bytes)
         self._reserved_bytes += size_bytes
 
@@ -112,6 +119,25 @@ class _ArtifactStore:
                 handle.write(data)
         except OSError as error:
             raise TransferError("failed to write transfer artifact") from error
+
+    def write_chunk(
+        self,
+        transfer_id: TransferId,
+        *,
+        offset: int,
+        data: bytes,
+    ) -> None:
+        reservation = self._reservation(transfer_id)
+        if reservation.final_path is not None:
+            raise TransferError("cannot write to finalized transfer")
+        if offset < 0 or offset + len(data) > reservation.size_bytes:
+            raise TransferError("chunk write exceeds transfer reservation")
+        try:
+            with self._temp_path(transfer_id).open("r+b") as handle:
+                handle.seek(offset)
+                handle.write(data)
+        except OSError as error:
+            raise TransferError("failed to write transfer chunk") from error
 
     def finalize(
         self,
@@ -143,6 +169,11 @@ class _ArtifactStore:
         reservation = self._reservation(transfer_id)
         if reservation.final_path is None:
             raise TransferError("cannot commit unfinished transfer")
+
+    def claim(self, transfer_id: TransferId) -> None:
+        reservation = self._reservation(transfer_id)
+        if reservation.final_path is None:
+            raise TransferError("cannot claim unfinished transfer")
         self._release(transfer_id)
 
     def abort(self, transfer_id: TransferId) -> None:
@@ -185,17 +216,31 @@ class _IncomingTransfer:
     sender_public_key: PublicKey
     begin: TransferBegin
     round_id: RoundId | None
-    written_chunk_indices: set[int]
+    written_chunk_hashes: dict[int, Sha256]
     started_at: float
 
 
-def _prepare_artifact(path: Path) -> tuple[bytes, int, Sha256]:
-    payload = path.read_bytes()
-    return payload, len(payload), file_sha256(path)
+def _artifact_metadata(path: Path) -> tuple[int, Sha256]:
+    try:
+        size_bytes = path.stat().st_size
+    except OSError as error:
+        raise TransferError("cannot inspect transfer artifact") from error
+    if size_bytes <= 0:
+        raise TransferError("transfer artifact must not be empty")
+    return size_bytes, file_sha256(path)
+
+
+def _read_chunk(path: Path, *, index: int, chunk_size: int) -> bytes:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(index * chunk_size)
+            return handle.read(chunk_size)
+    except OSError as error:
+        raise TransferError("cannot read transfer artifact chunk") from error
 
 
 class TransferManager:
-    """Single-chunk transfer protocol with retry and idempotent receive."""
+    """Bounded multi-chunk transfer with sliding-window selective retry."""
 
     def __init__(
         self,
@@ -219,8 +264,11 @@ class TransferManager:
         self._receiver = receiver
         self._sender = sender
         self._artifact_store = _ArtifactStore(
-            artifact_root, max_bytes=max_inflight_bytes
+            artifact_root,
+            max_bytes=transport_limits.artifact_store_capacity_limit,
         )
+        self._max_incoming_reservation_bytes = max_inflight_bytes
+        self._incoming_reserved_bytes = 0
         self._event_sink = event_sink
         self._incoming: dict[TransferId, _IncomingTransfer] = {}
         self._completed: dict[TransferId, ArtifactReceipt] = {}
@@ -268,8 +316,8 @@ class TransferManager:
         for future in self._completed_futures.values():
             if not future.done():
                 future.cancel()
-        for receipt in tuple(self._completed.values()):
-            await asyncio.to_thread(receipt.path.unlink, missing_ok=True)
+        for transfer_id in tuple(self._completed):
+            await asyncio.to_thread(self._artifact_store.abort, transfer_id)
         self._completed.clear()
         self._completed_futures.clear()
         while True:
@@ -291,25 +339,22 @@ class TransferManager:
         started = time.perf_counter()
         retry_count = 0
         try:
-            chunk_bytes, payload_size, total_sha256 = await asyncio.to_thread(
-                _prepare_artifact, artifact_path
+            payload_size, total_sha256 = await asyncio.to_thread(
+                _artifact_metadata, artifact_path
             )
+            if payload_size > self._transport_limits.artifact_size_limit:
+                raise TransferError("transfer exceeds manifest artifact limit")
+            chunk_size = self._transport_limits.effective_chunk_size
+            chunk_count = math.ceil(payload_size / chunk_size)
             transfer_id = str(uuid.uuid4())
             begin = TransferBegin(
                 transfer_id=transfer_id,
                 artifact_name=artifact_name,
                 total_size_bytes=payload_size,
                 total_sha256=total_sha256,
-                chunk_count=1,
+                chunk_count=chunk_count,
                 codec_id=codec_id,
                 tensor_schema=tensor_schema,
-            )
-            chunk = Chunk(
-                transfer_id=transfer_id,
-                chunk_index=0,
-                chunk_count=1,
-                chunk_sha256=hashlib.sha256(chunk_bytes).hexdigest(),
-                data=chunk_bytes,
             )
             begin_timing = await self._send_message(
                 destination=destination,
@@ -321,48 +366,34 @@ class TransferManager:
                 priority=Priority.CONTROL,
             )
             retry_count += begin_timing.retry_count
-            attempts = self._transport_limits.max_retries + 1
-            for attempt in range(attempts):
-                ack_key = (transfer_id, 0)
-                loop = asyncio.get_running_loop()
-                ack_future: asyncio.Future[ChunkAck] = loop.create_future()
-                self._ack_waiters[ack_key] = ack_future
-                if attempt > 0:
-                    begin_timing = await self._send_message(
+            semaphore = asyncio.Semaphore(
+                self._transport_limits.effective_window_size
+            )
+            chunk_tasks = tuple(
+                asyncio.create_task(
+                    self._send_chunk_with_ack(
+                        semaphore=semaphore,
                         destination=destination,
-                        message_type=MessageType.TRANSFER_BEGIN,
-                        message_id=f"{transfer_id}-begin",
-                        correlation_id=transfer_id,
-                        payload=encode_message(begin),
+                        artifact_path=artifact_path,
+                        transfer_id=transfer_id,
+                        begin=begin,
+                        chunk_index=chunk_index,
+                        chunk_size=chunk_size,
                         round_id=round_id,
-                        priority=Priority.CONTROL,
-                    )
-                    retry_count += begin_timing.retry_count
-                chunk_timing = await self._send_message(
-                    destination=destination,
-                    message_type=MessageType.CHUNK,
-                    message_id=f"{transfer_id}-chunk-0",
-                    correlation_id=transfer_id,
-                    payload=encode_message(chunk),
-                    round_id=round_id,
-                    priority=Priority.DATA,
+                    ),
+                    name=f"dromeus-transfer-chunk-{chunk_index}",
                 )
-                retry_count += chunk_timing.retry_count
-                try:
-                    ack = await asyncio.wait_for(
-                        ack_future,
-                        timeout=self._transport_limits.retry_timeout_seconds,
-                    )
-                except TimeoutError:
-                    self._ack_waiters.pop(ack_key, None)
-                    if attempt + 1 < attempts:
-                        retry_count += 1
-                    continue
-                if ack.chunk_sha256 != chunk.chunk_sha256:
-                    raise TransferError("chunk acknowledgement checksum mismatch")
-                break
-            else:
-                raise TransferError("chunk acknowledgement retries exhausted")
+                for chunk_index in range(chunk_count)
+            )
+            try:
+                chunk_retries = await asyncio.gather(*chunk_tasks)
+            except BaseException:
+                for task in chunk_tasks:
+                    if not task.done():
+                        task.cancel()
+                await asyncio.gather(*chunk_tasks, return_exceptions=True)
+                raise
+            retry_count += sum(chunk_retries)
             complete_timing = await self._send_message(
                 destination=destination,
                 message_type=MessageType.TRANSFER_COMPLETE,
@@ -402,6 +433,83 @@ class TransferManager:
             self._completed_futures[transfer_id] = future
         return await asyncio.wait_for(future, timeout=timeout_seconds)
 
+    async def _send_chunk_with_ack(
+        self,
+        *,
+        semaphore: asyncio.Semaphore,
+        destination: PublicKey,
+        artifact_path: Path,
+        transfer_id: TransferId,
+        begin: TransferBegin,
+        chunk_index: int,
+        chunk_size: int,
+        round_id: RoundId | None,
+    ) -> int:
+        async with semaphore:
+            chunk_bytes = await asyncio.to_thread(
+                _read_chunk,
+                artifact_path,
+                index=chunk_index,
+                chunk_size=chunk_size,
+            )
+            if not chunk_bytes:
+                raise TransferError("transfer artifact changed during chunking")
+            chunk = Chunk(
+                transfer_id=transfer_id,
+                chunk_index=chunk_index,
+                chunk_count=begin.chunk_count,
+                chunk_sha256=hashlib.sha256(chunk_bytes).hexdigest(),
+                data=chunk_bytes,
+            )
+            retry_count = 0
+            attempts = self._transport_limits.max_retries + 1
+            for attempt in range(attempts):
+                ack_key = (transfer_id, chunk_index)
+                loop = asyncio.get_running_loop()
+                ack_future: asyncio.Future[ChunkAck] = loop.create_future()
+                self._ack_waiters[ack_key] = ack_future
+                try:
+                    if attempt > 0:
+                        retry_count += 1
+                        begin_timing = await self._send_message(
+                            destination=destination,
+                            message_type=MessageType.TRANSFER_BEGIN,
+                            message_id=f"{transfer_id}-begin",
+                            correlation_id=transfer_id,
+                            payload=encode_message(begin),
+                            round_id=round_id,
+                            priority=Priority.CONTROL,
+                        )
+                        retry_count += begin_timing.retry_count
+                    chunk_timing = await self._send_message(
+                        destination=destination,
+                        message_type=MessageType.CHUNK,
+                        message_id=f"{transfer_id}-chunk-{chunk_index}",
+                        correlation_id=transfer_id,
+                        payload=encode_message(chunk),
+                        round_id=round_id,
+                        priority=Priority.DATA,
+                    )
+                    retry_count += chunk_timing.retry_count
+                    ack = await asyncio.wait_for(
+                        asyncio.shield(ack_future),
+                        timeout=self._transport_limits.retry_timeout_seconds,
+                    )
+                except TimeoutError:
+                    if self._ack_waiters.get(ack_key) is ack_future:
+                        self._ack_waiters.pop(ack_key, None)
+                    ack_future.cancel()
+                    continue
+                except BaseException:
+                    if self._ack_waiters.get(ack_key) is ack_future:
+                        self._ack_waiters.pop(ack_key, None)
+                    ack_future.cancel()
+                    raise
+                if ack.chunk_sha256 != chunk.chunk_sha256:
+                    raise TransferError("chunk acknowledgement checksum mismatch")
+                return retry_count
+            raise TransferError("chunk acknowledgement retries exhausted")
+
     async def next_artifact(self, *, timeout_seconds: float) -> ArtifactReceipt:
         while True:
             receipt = await asyncio.wait_for(
@@ -423,7 +531,9 @@ class TransferManager:
 
     def claim_receipt(self, receipt: ArtifactReceipt) -> None:
         """Transfer ownership of one materialized artifact to its consumer."""
-        self._completed.pop(receipt.transfer_id, None)
+        completed = self._completed.pop(receipt.transfer_id, None)
+        if completed is not None:
+            self._artifact_store.claim(receipt.transfer_id)
         self._completed_futures.pop(receipt.transfer_id, None)
         retained: list[ArtifactReceipt] = []
         while True:
@@ -497,7 +607,7 @@ class TransferManager:
                 ack = decode_message(
                     envelope.payload,
                     ChunkAck,
-                    max_bytes=self._transport_limits.max_payload_bytes,
+                    max_bytes=self._transport_limits.message_payload_limit,
                 )
                 waiter = self._ack_waiters.pop((ack.transfer_id, ack.chunk_index), None)
                 if waiter is not None and not waiter.done():
@@ -519,7 +629,7 @@ class TransferManager:
             begin = decode_message(
                 envelope.payload,
                 TransferBegin,
-                max_bytes=self._transport_limits.max_payload_bytes,
+                max_bytes=self._transport_limits.message_payload_limit,
             )
             if (
                 envelope.round_id is not None
@@ -527,10 +637,14 @@ class TransferManager:
                 in self._discarded_round_transfers
             ):
                 raise TransferError("round transfers were discarded")
-            if begin.total_size_bytes > self._transport_limits.max_payload_bytes:
-                raise TransferError("transfer exceeds manifest payload limit")
-            if begin.chunk_count != 1:
-                raise TransferError("unsupported M1 chunk count")
+            if begin.total_size_bytes > self._transport_limits.artifact_size_limit:
+                raise TransferError("transfer exceeds manifest artifact limit")
+            expected_chunk_count = math.ceil(
+                begin.total_size_bytes
+                / self._transport_limits.effective_chunk_size
+            )
+            if begin.chunk_count != expected_chunk_count:
+                raise TransferError("transfer chunk count does not match manifest")
             incoming = self._incoming.get(begin.transfer_id)
             if incoming is not None:
                 if (
@@ -542,14 +656,22 @@ class TransferManager:
                 return
             if begin.transfer_id in self._completed:
                 raise TransferError("transfer is already complete")
+            if len(self._incoming) >= self._transport_limits.concurrent_transfer_limit:
+                raise TransferError("concurrent transfer limit exceeded")
+            if (
+                self._incoming_reserved_bytes + begin.total_size_bytes
+                > self._max_incoming_reservation_bytes
+            ):
+                raise TransferError("local incoming reservation limit exceeded")
             self._artifact_store.reserve(
                 begin.transfer_id, begin.total_size_bytes
             )
+            self._incoming_reserved_bytes += begin.total_size_bytes
             self._incoming[begin.transfer_id] = _IncomingTransfer(
                 sender_public_key=envelope.sender_public_key,
                 begin=begin,
                 round_id=envelope.round_id,
-                written_chunk_indices=set(),
+                written_chunk_hashes={},
                 started_at=time.monotonic(),
             )
             return
@@ -557,29 +679,50 @@ class TransferManager:
             chunk = decode_message(
                 envelope.payload,
                 Chunk,
-                max_bytes=self._transport_limits.max_payload_bytes,
+                max_bytes=self._transport_limits.message_payload_limit,
             )
             incoming = self._incoming.get(chunk.transfer_id)
             if incoming is None:
                 raise TransferError("received chunk without transfer begin")
             if envelope.sender_public_key != incoming.sender_public_key:
                 raise TransferError("transfer sender changed")
-            if chunk.chunk_count != 1 or chunk.chunk_index != 0:
+            if (
+                chunk.chunk_count != incoming.begin.chunk_count
+                or chunk.chunk_index >= chunk.chunk_count
+            ):
                 self._abort_incoming(chunk.transfer_id)
-                raise TransferError("invalid M1 chunk index or count")
-            if chunk.chunk_index in incoming.written_chunk_indices:
+                raise TransferError("invalid transfer chunk index or count")
+            expected_size = min(
+                self._transport_limits.effective_chunk_size,
+                incoming.begin.total_size_bytes
+                - (
+                    chunk.chunk_index
+                    * self._transport_limits.effective_chunk_size
+                ),
+            )
+            if len(chunk.data) != expected_size:
+                self._abort_incoming(chunk.transfer_id)
+                raise TransferError("transfer chunk size does not match manifest")
+            written_hash = incoming.written_chunk_hashes.get(chunk.chunk_index)
+            if written_hash is not None:
+                if written_hash != chunk.chunk_sha256:
+                    self._abort_incoming(chunk.transfer_id)
+                    raise TransferError("conflicting duplicate transfer chunk")
                 await self._acknowledge_chunk(
                     envelope.sender_public_key, chunk, envelope.round_id
                 )
                 return
             if hashlib.sha256(chunk.data).hexdigest() != chunk.chunk_sha256:
-                self._abort_incoming(chunk.transfer_id)
                 raise TransferError("chunk checksum mismatch")
             append_task = asyncio.create_task(
                 asyncio.to_thread(
-                    self._artifact_store.append,
+                    self._artifact_store.write_chunk,
                     chunk.transfer_id,
-                    chunk.data,
+                    offset=(
+                        chunk.chunk_index
+                        * self._transport_limits.effective_chunk_size
+                    ),
+                    data=chunk.data,
                 )
             )
             try:
@@ -593,7 +736,7 @@ class TransferManager:
             except TransferError:
                 self._abort_incoming(chunk.transfer_id)
                 raise
-            incoming.written_chunk_indices.add(chunk.chunk_index)
+            incoming.written_chunk_hashes[chunk.chunk_index] = chunk.chunk_sha256
             await self._acknowledge_chunk(
                 envelope.sender_public_key, chunk, envelope.round_id
             )
@@ -601,7 +744,7 @@ class TransferManager:
         complete = decode_message(
             envelope.payload,
             TransferComplete,
-            max_bytes=self._transport_limits.max_payload_bytes,
+            max_bytes=self._transport_limits.message_payload_limit,
         )
         incoming = self._incoming.get(complete.transfer_id)
         if incoming is None:
@@ -611,6 +754,8 @@ class TransferManager:
         if complete.total_sha256 != incoming.begin.total_sha256:
             self._abort_incoming(complete.transfer_id)
             raise TransferError("completion checksum does not match transfer begin")
+        if len(incoming.written_chunk_hashes) != incoming.begin.chunk_count:
+            raise TransferError("transfer completed before all chunks arrived")
         finalize_task = asyncio.create_task(
             asyncio.to_thread(
                 self._artifact_store.finalize,
@@ -644,6 +789,7 @@ class TransferManager:
         )
         self._artifact_store.commit(complete.transfer_id)
         self._incoming.pop(complete.transfer_id, None)
+        self._incoming_reserved_bytes -= incoming.begin.total_size_bytes
         self._completed[complete.transfer_id] = receipt
         future = self._completed_futures.get(complete.transfer_id)
         if future is not None and not future.done():
@@ -651,9 +797,7 @@ class TransferManager:
         await self._completed_queue.put(receipt)
 
     def _expire_incoming(self) -> None:
-        lifetime = self._transport_limits.retry_timeout_seconds * (
-            self._transport_limits.max_retries + 2
-        )
+        lifetime = self._transport_limits.transfer_lifetime_limit
         now = time.monotonic()
         for transfer_id, incoming in tuple(self._incoming.items()):
             if now - incoming.started_at >= lifetime:
@@ -662,6 +806,9 @@ class TransferManager:
     def _abort_incoming(self, transfer_id: TransferId) -> None:
         incoming = self._incoming.pop(transfer_id, None)
         if incoming is not None:
+            self._incoming_reserved_bytes -= incoming.begin.total_size_bytes
+            if self._incoming_reserved_bytes < 0:
+                raise TransferError("incoming reservation accounting underflow")
             self._artifact_store.abort(transfer_id)
 
     async def _acknowledge_chunk(
