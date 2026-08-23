@@ -39,6 +39,7 @@ MAX_PARTICIPANT_COUNT = 16
 DPSGD_ALGORITHM_ID = "dpsgd"
 NOLOCO_ALGORITHM_ID = "noloco"
 RESNET32_MODEL_ID = "resnet32"
+RESNET18_GROUPNORM_MODEL_ID = "resnet18-groupnorm-cifar10-v1"
 
 PackageVersion = Annotated[
     str,
@@ -134,11 +135,73 @@ class TransportLimits(DomainModel):
     retry_timeout_seconds: Annotated[float, Field(gt=0)]
     chunk_size_bytes: Annotated[int, Field(gt=0)] | None = None
     window_size: Annotated[int, Field(gt=0)] | None = None
+    max_message_payload_bytes: Annotated[int, Field(gt=0)] | None = None
+    max_artifact_bytes: Annotated[int, Field(gt=0)] | None = None
+    max_concurrent_transfers: Annotated[int, Field(gt=0)] | None = None
+    max_inflight_bytes: Annotated[int, Field(gt=0)] | None = None
+    transfer_lifetime_seconds: Annotated[float, Field(gt=0)] | None = None
+    artifact_store_capacity_bytes: Annotated[int, Field(gt=0)] | None = None
+
+    @model_validator(mode="after")
+    def valid_transfer_bounds(self) -> Self:
+        if self.effective_chunk_size > self.message_payload_limit:
+            raise ValueError("chunk size must not exceed message payload limit")
+        if self.message_payload_limit > self.max_payload_bytes:
+            raise ValueError("message payload limit must not exceed bundle limit")
+        if self.artifact_size_limit > self.max_payload_bytes:
+            raise ValueError("artifact limit must not exceed bundle limit")
+        if (
+            self.effective_chunk_size * self.effective_window_size
+            > self.inflight_byte_limit
+        ):
+            raise ValueError("window bytes must not exceed in-flight byte limit")
+        if self.artifact_size_limit > self.artifact_store_capacity_limit:
+            raise ValueError("artifact limit must not exceed store capacity")
+        if self.inflight_byte_limit > self.artifact_store_capacity_limit:
+            raise ValueError("in-flight limit must not exceed store capacity")
+        minimum_lifetime = self.retry_timeout_seconds * (self.max_retries + 1)
+        if self.transfer_lifetime_limit < minimum_lifetime:
+            raise ValueError("transfer lifetime is shorter than retry budget")
+        return self
 
     @property
     def max_update_bundle_bytes(self) -> int:
         """Return the v1 wire field with its bundle-total semantics."""
         return self.max_payload_bytes
+
+    @property
+    def message_payload_limit(self) -> int:
+        return self.max_message_payload_bytes or self.max_payload_bytes
+
+    @property
+    def artifact_size_limit(self) -> int:
+        return self.max_artifact_bytes or self.max_payload_bytes
+
+    @property
+    def effective_chunk_size(self) -> int:
+        return self.chunk_size_bytes or self.artifact_size_limit
+
+    @property
+    def effective_window_size(self) -> int:
+        return self.window_size or 1
+
+    @property
+    def concurrent_transfer_limit(self) -> int:
+        return self.max_concurrent_transfers or 1
+
+    @property
+    def inflight_byte_limit(self) -> int:
+        return self.max_inflight_bytes or self.artifact_size_limit
+
+    @property
+    def transfer_lifetime_limit(self) -> float:
+        return self.transfer_lifetime_seconds or (
+            self.retry_timeout_seconds * (self.max_retries + 2)
+        )
+
+    @property
+    def artifact_store_capacity_limit(self) -> int:
+        return self.artifact_store_capacity_bytes or self.artifact_size_limit
 
 
 class ConsensusSketchConfig(DomainModel):
@@ -259,6 +322,28 @@ class ArtifactCodec(DomainModel):
 
     artifact_name: Identifier
     codec_id: Identifier
+    top_k_fraction: Annotated[float, Field(gt=0.0, le=1.0)] | None = None
+    lossy_allowed: bool | None = None
+
+    @model_validator(mode="after")
+    def valid_codec_settings(self) -> Self:
+        if self.codec_id == "identity-v1":
+            if self.top_k_fraction is not None or self.lossy_allowed is True:
+                raise ValueError("identity codec cannot declare lossy settings")
+            return self
+        if self.codec_id == "topk-int8-v1":
+            if self.artifact_name != "outer_gradient":
+                raise ValueError("top-k codec is only valid for outer gradient")
+            if self.top_k_fraction is None or not self.lossy_allowed:
+                raise ValueError("top-k codec requires fraction and lossy permission")
+            return self
+        if self.codec_id == "dense-int8-v1":
+            if self.artifact_name != "slow_weights":
+                raise ValueError("dense int8 codec is only valid for slow weights")
+            if self.top_k_fraction is not None or not self.lossy_allowed:
+                raise ValueError("dense int8 codec requires lossy permission")
+            return self
+        raise ValueError("unsupported NoLoCo artifact codec")
 
 
 class UpdateCodecBinding(DomainModel):
@@ -332,13 +417,26 @@ class DraftRunSpec(DomainModel):
             raise ValueError(
                 "NoLoCo codec IDs must cover outer_gradient and slow_weights"
             )
+        codecs = {codec.artifact_name: codec for codec in self.artifact_codecs}
+        codec_pair = (
+            codecs["outer_gradient"].codec_id,
+            codecs["slow_weights"].codec_id,
+        )
+        if codec_pair not in {
+            ("identity-v1", "identity-v1"),
+            ("topk-int8-v1", "dense-int8-v1"),
+        }:
+            raise ValueError("NoLoCo artifact codec combination is invalid")
         if (
             self.transport.chunk_size_bytes is None
             or self.transport.window_size is None
         ):
             raise ValueError("NoLoCo requires chunk size and window size")
-        if self.transport.chunk_size_bytes > self.transport.max_payload_bytes:
-            raise ValueError("chunk size must not exceed max payload bytes")
+        if (
+            self.transport.chunk_size_bytes
+            > self.transport.message_payload_limit
+        ):
+            raise ValueError("chunk size must not exceed message payload limit")
         return self
 
 
