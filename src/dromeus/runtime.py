@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+import inspect
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -11,7 +12,7 @@ from typing import Protocol
 
 import numpy as np
 
-from dromeus.algorithms.codec import IdentityCodec
+from dromeus.algorithms.codec import DenseInt8Codec, IdentityCodec, TopKInt8Codec
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import (
@@ -24,6 +25,7 @@ from dromeus.gossip.engine import (
     decode_run_failure,
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
+from dromeus.manifests.canonical import validate_sealed_expectation
 from dromeus.manifests.models import (
     DPSGD_ALGORITHM_ID,
     NOLOCO_ALGORITHM_ID,
@@ -33,6 +35,7 @@ from dromeus.manifests.models import (
     EnvironmentFingerprint,
     Invitation,
     SealedManifest,
+    SealedManifestExpectation,
     TensorSchema,
 )
 from dromeus.membership.formation import FormationProtocol, FormationResult
@@ -112,15 +115,44 @@ class FailureConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class InitiatorFormation:
+    """Immutable inputs for initiator formation."""
+
+    bootstrap_uri: str
+    checkpoint_path: Path
+    tensor_schema: TensorSchema
+
+
+@dataclass(frozen=True, slots=True)
+class ParticipantFormation:
+    """Immutable inputs for participant formation."""
+
+    invitation: Invitation
+
+
+type FormationRequest = InitiatorFormation | ParticipantFormation
+
+
+@dataclass(frozen=True, slots=True)
+class NodeRunResult:
+    """Immutable terminal result from one complete node lifecycle."""
+
+    formation: FormationResult
+    commits: tuple[RoundCommit, ...]
+
+
+type TrainingFactory = Callable[[FormationResult], TrainingConfig]
+type ReadyHook = Callable[[FormationResult], None | Awaitable[None]]
+type CompletionHook = Callable[[NodeRunResult], None | Awaitable[None]]
+
+
+@dataclass(frozen=True, slots=True)
 class PreparedCIFARTraining:
-    """Runtime composition over training-owned CIFAR data."""
+    """Runtime composition over the deep training-owned CIFAR interface."""
 
     _training: TrainingOwnedCIFAR
 
-    def create_initial_checkpoint(
-        self,
-        path: Path,
-    ) -> InitialCheckpoint:
+    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
         return self._training.create_initial_checkpoint(path)
 
     def build_config(
@@ -153,7 +185,7 @@ def prepare_cifar_training(
     dataset_cache: Path,
     benchmark_seed: int,
 ) -> PreparedCIFARTraining:
-    """Prepare local data through training-owned interfaces."""
+    """Prepare local data through the deep training-owned interface."""
     return PreparedCIFARTraining(
         _training=prepare_training(
             draft=draft,
@@ -181,18 +213,29 @@ def build_algorithm(
     codec_settings = manifest.artifact_codecs
     if config is None or codec_settings is None:
         raise ValueError("NoLoCo manifest configuration is incomplete")
-    codec_ids = {
-        setting.artifact_name: setting.codec_id for setting in codec_settings
-    }
-    if set(codec_ids.values()) != {"identity-v1"}:
-        raise ValueError("Workstream 3 supports only NoLoCo identity codecs")
+    settings = {setting.artifact_name: setting for setting in codec_settings}
+    codec_ids = {name: setting.codec_id for name, setting in settings.items()}
+    outer_setting = settings["outer_gradient"]
+    if outer_setting.codec_id == "identity-v1":
+        artifact_codecs = {
+            "outer_gradient": IdentityCodec("identity-v1"),
+            "slow_weights": IdentityCodec("identity-v1"),
+        }
+    else:
+        if outer_setting.top_k_fraction is None:
+            raise ValueError("compressed outer gradient requires top-k fraction")
+        artifact_codecs = {
+            "outer_gradient": TopKInt8Codec(
+                manifest.tensor_schema,
+                top_k_fraction=outer_setting.top_k_fraction,
+            ),
+            "slow_weights": DenseInt8Codec(manifest.tensor_schema),
+        }
     return NoLoCoAlgorithm(
         trainer=trainer,
         tensor_schema=manifest.tensor_schema,
         config=config,
-        artifact_codecs={
-            name: IdentityCodec(codec_id) for name, codec_id in codec_ids.items()
-        },
+        artifact_codecs=artifact_codecs,
         manifest_codec_ids=codec_ids,
     )
 
@@ -258,6 +301,57 @@ class NodeRuntime:
         if self._training is not None:
             raise NodeRuntimeError("training is already configured")
         self._training = training
+
+    async def run_to_completion(
+        self,
+        *,
+        formation: FormationRequest,
+        training_factory: TrainingFactory,
+        manifest_expectation: SealedManifestExpectation | None = None,
+        ready_hook: ReadyHook | None = None,
+        completion_hook: CompletionHook | None = None,
+    ) -> NodeRunResult:
+        """Own formation, validation, training, hooks, and cleanup ordering."""
+        if self._failure is None:
+            raise NodeRuntimeError(
+                "run-to-completion requires pre-run failure persistence"
+            )
+        if self._training is not None:
+            raise NodeRuntimeError(
+                "run-to-completion owns post-formation training construction"
+            )
+        try:
+            if isinstance(formation, InitiatorFormation):
+                result = await self.initiate(
+                    bootstrap_uri=formation.bootstrap_uri,
+                    checkpoint_path=formation.checkpoint_path,
+                    tensor_schema=formation.tensor_schema,
+                )
+            else:
+                result = await self.join(invitation=formation.invitation)
+
+            try:
+                if manifest_expectation is not None:
+                    validate_sealed_expectation(manifest_expectation, result.manifest)
+                training = await asyncio.to_thread(training_factory, result)
+                self.configure_training(training)
+                if ready_hook is not None:
+                    hook_result = ready_hook(result)
+                    if inspect.isawaitable(hook_result):
+                        await hook_result
+            except BaseException as error:
+                await self.fail_before_run(error)
+                raise
+
+            commits = await self.run()
+            terminal = NodeRunResult(formation=result, commits=commits)
+            if completion_hook is not None:
+                hook_result = completion_hook(terminal)
+                if inspect.isawaitable(hook_result):
+                    await hook_result
+            return terminal
+        finally:
+            await self.stop()
 
     async def fail_before_run(self, error: BaseException) -> None:
         """Persist and announce a formed node failure before training starts."""

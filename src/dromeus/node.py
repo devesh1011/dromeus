@@ -18,15 +18,22 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from dromeus.manifests.canonical import (
     canonical_json,
     parse_draft_yaml,
-    validate_sealed_expectation,
 )
 from dromeus.manifests.models import (
     DraftRunSpec,
     Invitation,
     SealedManifestExpectation,
 )
-from dromeus.membership.formation import create_invitation
-from dromeus.runtime import FailureConfig, NodeRuntime, prepare_cifar_training
+from dromeus.membership.formation import FormationResult, create_invitation
+from dromeus.runtime import (
+    FailureConfig,
+    InitiatorFormation,
+    NodeRunResult,
+    NodeRuntime,
+    ParticipantFormation,
+    TrainingConfig,
+    prepare_cifar_training,
+)
 from dromeus.telemetry.events import JsonlEventSink, emit_event
 from dromeus.telemetry.evidence import (
     BenchmarkNodeReadyEvidence,
@@ -99,75 +106,65 @@ async def run_node(config: NodeConfig) -> None:
         event_sink=event_sink,
         failure=FailureConfig.for_run_root(config.run_root),
     )
-    try:
-        if config.role is NodeRole.INITIATOR:
-            checkpoint = await asyncio.to_thread(
-                prepared_training.create_initial_checkpoint,
-                config.run_root / "initial.safetensors",
-            )
-            invitation = create_invitation(
-                draft=draft,
-                initiator_public_key=local_key,
-                bootstrap_uri=config.bootstrap_uri,
-            )
-            await asyncio.to_thread(
-                _write_invitation, config.invitation_path, invitation
-            )
-            result = await runtime.initiate(
-                bootstrap_uri=config.bootstrap_uri,
-                checkpoint_path=checkpoint.path,
-                tensor_schema=checkpoint.tensor_schema,
-            )
-        else:
-            invitation = await _read_invitation(
-                config.invitation_path,
-                timeout_seconds=config.invitation_timeout_seconds,
-            )
-            if invitation.bootstrap_uri != config.bootstrap_uri:
-                raise ValueError("invitation bootstrap URI does not match node config")
-            result = await runtime.join(invitation=invitation)
+    if config.role is NodeRole.INITIATOR:
+        checkpoint = await asyncio.to_thread(
+            prepared_training.create_initial_checkpoint,
+            config.run_root / "initial.safetensors",
+        )
+        invitation = create_invitation(
+            draft=draft,
+            initiator_public_key=local_key,
+            bootstrap_uri=config.bootstrap_uri,
+        )
+        await asyncio.to_thread(_write_invitation, config.invitation_path, invitation)
+        formation = InitiatorFormation(
+            bootstrap_uri=config.bootstrap_uri,
+            checkpoint_path=checkpoint.path,
+            tensor_schema=checkpoint.tensor_schema,
+        )
+    else:
+        invitation = await _read_invitation(
+            config.invitation_path,
+            timeout_seconds=config.invitation_timeout_seconds,
+        )
+        if invitation.bootstrap_uri != config.bootstrap_uri:
+            raise ValueError("invitation bootstrap URI does not match node config")
+        formation = ParticipantFormation(invitation=invitation)
 
-        if config.manifest_expectation is not None:
-            validate_sealed_expectation(
-                config.manifest_expectation,
-                result.manifest,
-            )
+    run_store_root = config.run_root / "run-store"
 
-        run_store_root = config.run_root / "run-store"
-        try:
-            metrics = JsonlMetricsPublisher(
-                sink=event_sink,
+    def build_training(result: FormationResult) -> TrainingConfig:
+        metrics = JsonlMetricsPublisher(
+            sink=event_sink,
+            run_id=result.manifest.run_id,
+            manifest_hash=result.manifest_hash,
+            node_id=local_key,
+        )
+        return prepared_training.build_config(
+            result=result,
+            local_public_key=local_key,
+            run_root=config.run_root,
+            metrics_publisher=metrics,
+        )
+
+    async def record_ready(result: FormationResult) -> None:
+        await _write_topology_snapshot(
+            transport,
+            run_store_root / "topology-ready.json",
+        )
+        await asyncio.to_thread(
+            append_evidence,
+            event_sink,
+            BenchmarkNodeReadyEvidence(
                 run_id=result.manifest.run_id,
                 manifest_hash=result.manifest_hash,
                 node_id=local_key,
-            )
-            training_config = await asyncio.to_thread(
-                prepared_training.build_config,
-                result=result,
-                local_public_key=local_key,
-                run_root=config.run_root,
-                metrics_publisher=metrics,
-            )
-            runtime.configure_training(training_config)
-            await _write_topology_snapshot(
-                transport,
-                run_store_root / "topology-ready.json",
-            )
-            await asyncio.to_thread(
-                append_evidence,
-                event_sink,
-                BenchmarkNodeReadyEvidence(
-                    run_id=result.manifest.run_id,
-                    manifest_hash=result.manifest_hash,
-                    node_id=local_key,
-                    benchmark_seed=config.benchmark_seed,
-                    transport="axl",
-                ),
-            )
-        except BaseException as error:
-            await runtime.fail_before_run(error)
-            raise
-        commits = await runtime.run()
+                benchmark_seed=config.benchmark_seed,
+                transport="axl",
+            ),
+        )
+
+    async def record_complete(result: NodeRunResult) -> None:
         await _write_topology_snapshot(
             transport,
             run_store_root / "topology-complete.json",
@@ -175,14 +172,20 @@ async def run_node(config: NodeConfig) -> None:
         await asyncio.to_thread(
             emit_event,
             "node_complete",
-            run_id=result.manifest.run_id,
-            manifest_hash=result.manifest_hash,
+            run_id=result.formation.manifest.run_id,
+            manifest_hash=result.formation.manifest_hash,
             node_id=local_key,
             sink=event_sink,
-            committed_rounds=len(commits),
+            committed_rounds=len(result.commits),
         )
-    finally:
-        await runtime.stop()
+
+    await runtime.run_to_completion(
+        formation=formation,
+        training_factory=build_training,
+        manifest_expectation=config.manifest_expectation,
+        ready_hook=record_ready,
+        completion_hook=record_complete,
+    )
 
 
 def _write_invitation(path: Path, invitation: Invitation) -> None:
