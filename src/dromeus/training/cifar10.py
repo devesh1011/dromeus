@@ -157,6 +157,7 @@ def create_trainer(
 ) -> PyTorchTrainer:
     """Construct the trainer configured by the CIFAR-10 recipe."""
     settings = settings or CIFAR10TrainerSettings()
+    _configure_device(settings.trainer.device)
     recipe = resolve_model(
         settings.model_id,
         definition_hash=settings.model_definition_hash,
@@ -173,6 +174,17 @@ def create_trainer(
             normalize=settings.normalize,
         ),
     )
+
+
+def _configure_device(device: str) -> None:
+    target = torch.device(device)
+    if target.type != "cuda":
+        return
+    if not torch.cuda.is_available():
+        raise ValueError("CUDA training requested but CUDA is unavailable")
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
 
 
 def _prepare_batch(
@@ -236,6 +248,7 @@ class PreparedCIFAR10Training:
     trainer_seed: int
     model_id: str = RESNET32_MODEL_ID
     model_definition_hash: str = RESNET32_DEFINITION_HASH
+    device: str = "cpu"
 
     def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
         return create_initial_checkpoint(
@@ -303,7 +316,7 @@ class PreparedCIFAR10Training:
                     learning_rate_milestones=policy.learning_rate_milestones,
                     learning_rate_gamma=policy.learning_rate_gamma,
                     learning_rate_schedule=policy.learning_rate_schedule,
-                    device="cpu",
+                    device=self.device,
                     augment=True,
                 ),
                 model_id=self.model_id,
@@ -319,6 +332,7 @@ def prepare_training(
     draft: DraftRunSpec,
     cache_dir: Path,
     benchmark_seed: int,
+    device: str = "cpu",
 ) -> PreparedCIFAR10Training:
     """Load and validate local data before membership becomes ready."""
     resolve_model(draft.model_id, definition_hash=draft.model_definition_hash)
@@ -344,6 +358,7 @@ def prepare_training(
         trainer_seed=derive_benchmark_seed(benchmark_seed, "local-training"),
         model_id=draft.model_id,
         model_definition_hash=draft.model_definition_hash,
+        device=device,
     )
 
 
