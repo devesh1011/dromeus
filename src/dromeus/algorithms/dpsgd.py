@@ -19,8 +19,8 @@ from dromeus.algorithms.base import (
 )
 from dromeus.algorithms.codec import (
     IdentityCodec,
-    SafetensorsUpdateBundleCodec,
-    UpdateBundleCodec,
+    NamedSafetensorsUpdateBundleCodec,
+    NamedUpdateBundleCodec,
     UpdateCodec,
 )
 from dromeus.manifests.models import RoundId, TensorSchema, UpdateCodecBinding
@@ -34,6 +34,7 @@ _DTYPES = {
     "float32": np.dtype(np.float32),
     "float64": np.dtype(np.float64),
 }
+_TRAINED_WEIGHTS = "trained_weights"
 
 
 @dataclass
@@ -43,7 +44,7 @@ class DPSGDAdapter:
     local_steps: int
     training_round_count: int | None = None
     codec: UpdateCodec = field(default_factory=IdentityCodec)
-    bundle_codec: UpdateBundleCodec | None = None
+    bundle_codec: NamedUpdateBundleCodec | None = None
     manifest_codec_id: str | None = None
     _round_id: RoundId = 0
     _phase: str = "created"
@@ -83,8 +84,8 @@ class DPSGDAdapter:
         encoded = self.codec.encode(tensors)
         bundle = self.bundle_codec.encode(
             round_id=self._round_id,
-            tensors=encoded,
-            codec_binding=self._codec_binding(),
+            artifacts={_TRAINED_WEIGHTS: encoded},
+            codec_bindings={_TRAINED_WEIGHTS: self._codec_binding()},
         )
         try:
             decoded_local = self.codec.decode(encoded)
@@ -105,10 +106,11 @@ class DPSGDAdapter:
             raise RuntimeError("update bundle codec is not configured")
         if peer_bundle.metadata.round_id != self._round_id:
             raise ValueError("peer bundle round does not match current round")
-        encoded = self.bundle_codec.decode(
+        artifacts = self.bundle_codec.decode(
             peer_bundle,
-            codec_binding=self._codec_binding(),
+            codec_bindings={_TRAINED_WEIGHTS: self._codec_binding()},
         )
+        encoded = artifacts[_TRAINED_WEIGHTS]
         decoded = self.codec.decode(encoded)
         self._validate_tensors(decoded)
         return ValidatedUpdate(
@@ -155,13 +157,13 @@ class DPSGDAdapter:
     ) -> None:
         """Bind formed run context without exposing codec details to runtime."""
         if self.bundle_codec is None:
-            self.bundle_codec = SafetensorsUpdateBundleCodec(
+            self.bundle_codec = NamedSafetensorsUpdateBundleCodec(
                 artifact_root=artifact_root,
                 run_id=run_id,
                 manifest_hash=manifest_hash,
                 sender_public_key=sender_public_key,
                 algorithm_id=algorithm_id,
-                tensor_schema=self.tensor_schema,
+                artifact_schemas={_TRAINED_WEIGHTS: self.tensor_schema},
             )
 
     def snapshot(self) -> AlgorithmSnapshot:

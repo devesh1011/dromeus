@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Protocol, cast
 from uuid import uuid4
 
@@ -29,6 +31,7 @@ from dromeus.manifests.models import (
     TensorSchema,
     UpdateCodecBinding,
 )
+from dromeus.manifests.models import Tensor as TensorSpec
 
 _LoadSafetensors = Callable[[str], dict[str, np.ndarray]]
 _SaveSafetensors = Callable[[dict[str, np.ndarray], str], None]
@@ -49,30 +52,6 @@ class UpdateCodec(Protocol):
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap: ...
 
     def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap: ...
-
-    def state_dict(self) -> dict[str, object]: ...
-
-    def load_state_dict(self, state: StateMap) -> None: ...
-
-
-class UpdateBundleCodec(Protocol):
-    """Materialize codec-encoded tensors into an opaque update bundle."""
-
-    def encode(
-        self,
-        *,
-        round_id: RoundId,
-        tensors: Mapping[str, np.ndarray],
-        codec_binding: UpdateCodecBinding | None = None,
-    ) -> UpdateBundle: ...
-
-    def decode(
-        self,
-        bundle: UpdateBundle,
-        codec_binding: UpdateCodecBinding | None = None,
-    ) -> TensorMap: ...
-
-    def release(self, bundle: UpdateBundle) -> None: ...
 
     def state_dict(self) -> dict[str, object]: ...
 
@@ -113,6 +92,14 @@ class IdentityCodec:
     def codec_id(self) -> str:
         return self._codec_id
 
+    @property
+    def encoded_schema(self) -> TensorSchema:
+        raise TypeError("identity codec schema is supplied by its algorithm")
+
+    @property
+    def lossy(self) -> bool:
+        return False
+
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
         return _copy_tensors(tensors)
 
@@ -127,125 +114,264 @@ class IdentityCodec:
             raise ValueError("identity codec has no state")
 
 
-def _copy_tensors(tensors: Mapping[str, np.ndarray]) -> TensorMap:
-    return {
-        name: np.ascontiguousarray(value).copy() for name, value in tensors.items()
-    }
-
-
 @dataclass(frozen=True, slots=True)
-class SafetensorsUpdateBundleCodec:
-    """Materialize encoded tensors and bind their logical codec metadata."""
+class DenseInt8Codec:
+    """Per-tensor symmetric signed-int8 quantization with explicit metadata."""
 
-    artifact_root: Path
-    run_id: RunId
-    manifest_hash: Sha256
-    sender_public_key: PublicKey
-    algorithm_id: AlgorithmId
-    tensor_schema: TensorSchema
+    logical_schema: TensorSchema
+    _encoded_schema: TensorSchema = field(init=False, repr=False)
 
-    def encode(
-        self,
-        *,
-        round_id: RoundId,
-        tensors: Mapping[str, np.ndarray],
-        codec_binding: UpdateCodecBinding | None = None,
-    ) -> UpdateBundle:
-        values = _copy_tensors(tensors)
-        validate_tensor_map(values, self.tensor_schema)
-        binding = _resolve_codec_binding(codec_binding, self.tensor_schema)
-        self.artifact_root.mkdir(parents=True, exist_ok=True)
-        path = self.artifact_root / f"round-{round_id}-{uuid4().hex}.safetensors"
-        try:
-            save_safetensors(values, str(path))
-            artifact = OpaqueArtifactMetadata(
-                name="trained_weights",
-                size_bytes=path.stat().st_size,
-                sha256=file_sha256(path),
-                codec_id=binding.codec_id,
-                codec_version=binding.codec_version,
-                logical_schema_hash=canonical_hash(binding.logical_schema),
-                encoded_schema_hash=canonical_hash(self.tensor_schema),
+    def __post_init__(self) -> None:
+        _validate_lossy_logical_schema(self.logical_schema)
+        object.__setattr__(
+            self,
+            "_encoded_schema",
+            _dense_encoded_schema(self.logical_schema),
+        )
+
+    @property
+    def codec_id(self) -> str:
+        return "dense-int8-v1"
+
+    @property
+    def encoded_schema(self) -> TensorSchema:
+        return self._encoded_schema
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.logical_schema)
+        encoded: TensorMap = {}
+        for spec in self.logical_schema.tensors:
+            quantized, scale = _quantize_symmetric(tensors[spec.name])
+            encoded[f"{spec.name}.__q"] = quantized
+            encoded[f"{spec.name}.__scale"] = np.array(
+                [scale], dtype="<f4"
             )
-            return UpdateBundle(
-                metadata=OpaqueUpdateBundleMetadata(
-                    run_id=self.run_id,
-                    manifest_hash=self.manifest_hash,
-                    sender_public_key=self.sender_public_key,
-                    algorithm_id=self.algorithm_id,
-                    round_id=round_id,
-                    artifacts=(artifact,),
-                ),
-                artifacts=(
-                    MaterializedArtifact(
-                        path=path,
-                        transfer_codec_id="safetensors-v1",
-                        transfer_schema=self.tensor_schema,
-                    ),
-                ),
+            encoded[f"{spec.name}.__zero_point"] = np.array(
+                [0], dtype="<i4"
             )
-        except BaseException:
-            path.unlink(missing_ok=True)
-            raise
+        validate_tensor_map(encoded, self.encoded_schema)
+        return encoded
 
-    def decode(
-        self,
-        bundle: UpdateBundle,
-        codec_binding: UpdateCodecBinding | None = None,
-    ) -> TensorMap:
-        self._validate_metadata(bundle, codec_binding)
-        artifact = bundle.metadata.artifacts[0]
-        path = bundle.artifacts[0].path
-        if path.stat().st_size != artifact.size_bytes:
-            raise ValueError("bundle artifact size mismatch")
-        if file_sha256(path) != artifact.sha256:
-            raise ValueError("bundle artifact checksum mismatch")
-        values = {
-            name: np.ascontiguousarray(value)
-            for name, value in load_safetensors(str(path)).items()
-        }
-        validate_tensor_map(values, self.tensor_schema)
-        return values
-
-    def release(self, bundle: UpdateBundle) -> None:
-        for artifact in bundle.artifacts:
-            artifact.path.unlink(missing_ok=True)
+    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.encoded_schema)
+        decoded: TensorMap = {}
+        for spec in self.logical_schema.tensors:
+            scale = _validated_quantization_metadata(tensors, spec.name)
+            quantized = np.asarray(tensors[f"{spec.name}.__q"], dtype=np.int8)
+            decoded[spec.name] = (
+                quantized.astype(np.float32) * np.float32(scale)
+            ).reshape(spec.shape)
+        validate_tensor_map(decoded, self.logical_schema)
+        return decoded
 
     def state_dict(self) -> dict[str, object]:
         return {}
 
     def load_state_dict(self, state: StateMap) -> None:
         if state:
-            raise ValueError("safetensors bundle codec has no state")
+            raise ValueError("dense int8 codec has no state")
 
-    def _validate_metadata(
-        self,
-        bundle: UpdateBundle,
-        codec_binding: UpdateCodecBinding | None,
-    ) -> None:
-        metadata = bundle.metadata
-        if metadata.run_id != self.run_id:
-            raise ValueError("bundle run does not match codec")
-        if metadata.manifest_hash != self.manifest_hash:
-            raise ValueError("bundle manifest does not match codec")
-        if metadata.algorithm_id != self.algorithm_id:
-            raise ValueError("bundle algorithm does not match codec")
-        if len(metadata.artifacts) != 1:
-            raise ValueError("M1 safetensors bundle requires one artifact")
-        artifact = metadata.artifacts[0]
-        if artifact.name != "trained_weights":
-            raise ValueError("unsupported M1 bundle artifact")
-        binding = _resolve_codec_binding(codec_binding, self.tensor_schema)
-        if (
-            artifact.codec_id != binding.codec_id
-            or artifact.codec_version != binding.codec_version
+
+@dataclass(frozen=True, slots=True)
+class TopKInt8Codec:
+    """Deterministic per-tensor top-k sparsification plus signed int8 values."""
+
+    logical_schema: TensorSchema
+    top_k_fraction: float
+    _encoded_schema: TensorSchema = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        _validate_lossy_logical_schema(self.logical_schema)
+        if not 0.0 < self.top_k_fraction <= 1.0 or not math.isfinite(
+            self.top_k_fraction
         ):
-            raise ValueError("unsupported bundle codec")
-        if (
-            artifact.logical_schema_hash != canonical_hash(binding.logical_schema)
-            or artifact.encoded_schema_hash != canonical_hash(self.tensor_schema)
-        ):
-            raise ValueError("bundle schema does not match codec")
+            raise ValueError("top-k fraction must be finite in (0, 1]")
+        object.__setattr__(
+            self,
+            "_encoded_schema",
+            _topk_encoded_schema(self.logical_schema, self.top_k_fraction),
+        )
+
+    @property
+    def codec_id(self) -> str:
+        return "topk-int8-v1"
+
+    @property
+    def encoded_schema(self) -> TensorSchema:
+        return self._encoded_schema
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.logical_schema)
+        encoded: TensorMap = {}
+        encoded_names = {tensor.name for tensor in self.encoded_schema.tensors}
+        for spec in self.logical_schema.tensors:
+            if f"{spec.name}.__q" in encoded_names:
+                quantized, scale = _quantize_symmetric(tensors[spec.name])
+                encoded[f"{spec.name}.__q"] = quantized
+            else:
+                flattened = np.asarray(tensors[spec.name], dtype=np.float32).reshape(-1)
+                indices = _deterministic_topk_indices(
+                    flattened,
+                    _top_k_count(flattened.size, self.top_k_fraction),
+                )
+                quantized, scale = _quantize_symmetric(flattened[indices])
+                encoded[f"{spec.name}.__indices"] = indices.astype(
+                    "<i4", copy=False
+                )
+                encoded[f"{spec.name}.__values"] = quantized
+            encoded[f"{spec.name}.__scale"] = np.array(
+                [scale], dtype="<f4"
+            )
+            encoded[f"{spec.name}.__zero_point"] = np.array(
+                [0], dtype="<i4"
+            )
+        validate_tensor_map(encoded, self.encoded_schema)
+        return encoded
+
+    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.encoded_schema)
+        decoded: TensorMap = {}
+        encoded_names = set(tensors)
+        for spec in self.logical_schema.tensors:
+            scale = _validated_quantization_metadata(tensors, spec.name)
+            if f"{spec.name}.__q" in encoded_names:
+                quantized = np.asarray(tensors[f"{spec.name}.__q"], dtype=np.int8)
+                value = quantized.astype(np.float32) * np.float32(scale)
+            else:
+                indices = np.asarray(
+                    tensors[f"{spec.name}.__indices"], dtype=np.int32
+                )
+                if indices.size > 1 and np.any(indices[1:] <= indices[:-1]):
+                    raise ValueError("top-k indices must be strictly increasing")
+                element_count = math.prod(spec.shape)
+                if np.any(indices < 0) or np.any(indices >= element_count):
+                    raise ValueError("top-k index is outside logical tensor range")
+                quantized = np.asarray(
+                    tensors[f"{spec.name}.__values"], dtype=np.int8
+                )
+                value = np.zeros(element_count, dtype=np.float32)
+                value[indices] = quantized.astype(np.float32) * np.float32(scale)
+            decoded[spec.name] = value.reshape(spec.shape)
+        validate_tensor_map(decoded, self.logical_schema)
+        return decoded
+
+    def state_dict(self) -> dict[str, object]:
+        return {}
+
+    def load_state_dict(self, state: StateMap) -> None:
+        if state:
+            raise ValueError("top-k int8 codec has no state")
+
+
+def _validate_lossy_logical_schema(schema: TensorSchema) -> None:
+    if any(tensor.dtype != "float32" for tensor in schema.tensors):
+        raise ValueError("lossy codecs require FP32 logical tensors")
+
+
+def _dense_encoded_schema(schema: TensorSchema) -> TensorSchema:
+    tensors: list[TensorSpec] = []
+    for spec in schema.tensors:
+        tensors.extend(
+            (
+                TensorSpec(name=f"{spec.name}.__q", dtype="int8", shape=spec.shape),
+                TensorSpec(
+                    name=f"{spec.name}.__scale", dtype="float32", shape=(1,)
+                ),
+                TensorSpec(
+                    name=f"{spec.name}.__zero_point", dtype="int32", shape=(1,)
+                ),
+            )
+        )
+    return TensorSchema(tensors=tuple(sorted(tensors, key=lambda item: item.name)))
+
+
+def _topk_encoded_schema(
+    schema: TensorSchema, top_k_fraction: float
+) -> TensorSchema:
+    tensors: list[TensorSpec] = []
+    for spec in schema.tensors:
+        element_count = math.prod(spec.shape)
+        k = _top_k_count(element_count, top_k_fraction)
+        if 5 * k <= element_count:
+            tensors.extend(
+                (
+                    TensorSpec(
+                        name=f"{spec.name}.__indices", dtype="int32", shape=(k,)
+                    ),
+                    TensorSpec(
+                        name=f"{spec.name}.__values", dtype="int8", shape=(k,)
+                    ),
+                )
+            )
+        else:
+            tensors.append(
+                TensorSpec(name=f"{spec.name}.__q", dtype="int8", shape=spec.shape)
+            )
+        tensors.extend(
+            (
+                TensorSpec(
+                    name=f"{spec.name}.__scale", dtype="float32", shape=(1,)
+                ),
+                TensorSpec(
+                    name=f"{spec.name}.__zero_point", dtype="int32", shape=(1,)
+                ),
+            )
+        )
+    return TensorSchema(tensors=tuple(sorted(tensors, key=lambda item: item.name)))
+
+
+def _top_k_count(element_count: int, fraction: float) -> int:
+    return min(element_count, max(1, math.ceil(element_count * fraction)))
+
+
+def _deterministic_topk_indices(values: np.ndarray, k: int) -> np.ndarray:
+    magnitudes = np.abs(values)
+    if k == values.size:
+        return np.arange(values.size, dtype=np.int64)
+    threshold = np.partition(magnitudes, values.size - k)[values.size - k]
+    greater = np.flatnonzero(magnitudes > threshold)
+    equal = np.flatnonzero(magnitudes == threshold)
+    needed = k - greater.size
+    selected = np.concatenate((greater, equal[:needed]))
+    return np.sort(selected).astype(np.int64, copy=False)
+
+
+def _quantize_symmetric(value: np.ndarray) -> tuple[np.ndarray, float]:
+    source = np.asarray(value, dtype=np.float32)
+    maximum = float(np.max(np.abs(source))) if source.size else 0.0
+    scale = maximum / 127.0 if maximum > 0.0 else 1.0
+    if np.float32(scale) == np.float32(0.0):
+        scale = float(np.nextafter(np.float32(0.0), np.float32(1.0)))
+    quantized = np.clip(np.rint(source / np.float32(scale)), -127, 127).astype(
+        np.int8
+    )
+    return np.ascontiguousarray(quantized), scale
+
+
+def _validated_quantization_metadata(
+    tensors: Mapping[str, np.ndarray], name: str
+) -> float:
+    scale = float(np.asarray(tensors[f"{name}.__scale"])[0])
+    if not math.isfinite(scale) or scale <= 0.0:
+        raise ValueError("quantization scale must be positive and finite")
+    zero_point = int(np.asarray(tensors[f"{name}.__zero_point"])[0])
+    if zero_point != 0:
+        raise ValueError("symmetric quantization zero point must equal zero")
+    return scale
+
+
+def _copy_tensors(tensors: Mapping[str, np.ndarray]) -> TensorMap:
+    return {
+        name: np.ascontiguousarray(value).copy() for name, value in tensors.items()
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -258,6 +384,12 @@ class NamedSafetensorsUpdateBundleCodec:
     sender_public_key: PublicKey
     algorithm_id: AlgorithmId
     artifact_schemas: Mapping[str, TensorSchema]
+
+    def __post_init__(self) -> None:
+        schemas = dict(self.artifact_schemas)
+        if not 1 <= len(schemas) <= 16:
+            raise ValueError("named bundle codec requires 1 through 16 artifacts")
+        object.__setattr__(self, "artifact_schemas", MappingProxyType(schemas))
 
     def encode(
         self,
@@ -434,15 +566,15 @@ def validate_tensor_map(
             raise ValueError(f"tensor {name} contains non-finite values")
 
 __all__ = [
+    "DenseInt8Codec",
     "IdentityCodec",
     "NamedSafetensorsUpdateBundleCodec",
     "NamedTensorMap",
     "NamedUpdateBundleCodec",
-    "SafetensorsUpdateBundleCodec",
     "StateMap",
     "TensorMap",
+    "TopKInt8Codec",
     "UpdateCodecBinding",
-    "UpdateBundleCodec",
     "UpdateCodec",
     "validate_tensor_map",
 ]

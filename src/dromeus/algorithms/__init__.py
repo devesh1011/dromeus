@@ -9,8 +9,8 @@ from dromeus.algorithms.base import (
 )
 from dromeus.algorithms.codec import (
     IdentityCodec,
-    SafetensorsUpdateBundleCodec,
-    UpdateBundleCodec,
+    NamedSafetensorsUpdateBundleCodec,
+    NamedUpdateBundleCodec,
     UpdateCodec,
 )
 from dromeus.algorithms.dpsgd import DPSGDAdapter
@@ -21,10 +21,10 @@ __all__ = [
     "DPSGDAdapter",
     "IdentityCodec",
     "MaterializedArtifact",
+    "NamedSafetensorsUpdateBundleCodec",
+    "NamedUpdateBundleCodec",
     "SerializableState",
-    "SafetensorsUpdateBundleCodec",
     "UpdateBundle",
-    "UpdateBundleCodec",
     "UpdateCodec",
     "UpdateCodecBinding",
     "ValidatedUpdate",

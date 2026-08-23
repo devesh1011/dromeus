@@ -128,6 +128,11 @@ class NoLoCoAlgorithm:
                 name: (
                     self._slow_weights[name].astype(np.float32)
                     - fast_weights[name].astype(np.float32)
+                    + (
+                        self._error_feedback_residual[name]
+                        if self._codec_is_lossy("outer_gradient")
+                        else np.float32(0.0)
+                    )
                 ).astype(np.float32)
                 for name in self._slow_weights
             },
@@ -153,6 +158,15 @@ class NoLoCoAlgorithm:
             raise
         self._local_artifacts = {
             name: self._copy_tensors(tensors) for name, tensors in local.items()
+        }
+        self._error_feedback_residual = {
+            name: (
+                logical["outer_gradient"][name]
+                - local["outer_gradient"][name]
+                if self._codec_is_lossy("outer_gradient")
+                else np.zeros_like(value, dtype=np.float32)
+            ).astype(np.float32)
+            for name, value in self._slow_weights.items()
         }
         self._phase = "bundled"
         return bundle
@@ -233,7 +247,14 @@ class NoLoCoAlgorithm:
                 manifest_hash=manifest_hash,
                 sender_public_key=sender_public_key,
                 algorithm_id=algorithm_id,
-                artifact_schemas={name: self.tensor_schema for name in _ARTIFACT_NAMES},
+                artifact_schemas={
+                    name: (
+                        self._codec_encoded_schema(name)
+                        if self._codec_is_lossy(name)
+                        else self.tensor_schema
+                    )
+                    for name in _ARTIFACT_NAMES
+                },
             )
 
     def snapshot(self) -> AlgorithmSnapshot:
@@ -359,6 +380,18 @@ class NoLoCoAlgorithm:
             )
             for name in _ARTIFACT_NAMES
         }
+
+    def _codec_is_lossy(self, name: str) -> bool:
+        value = getattr(self.artifact_codecs[name], "lossy", False)
+        if not isinstance(value, bool):
+            raise TypeError("codec lossy marker must be boolean")
+        return value
+
+    def _codec_encoded_schema(self, name: str) -> TensorSchema:
+        value = getattr(self.artifact_codecs[name], "encoded_schema", None)
+        if not isinstance(value, TensorSchema):
+            raise TypeError("lossy codec must declare an encoded schema")
+        return value
 
     @staticmethod
     def _counter(state: Mapping[str, np.ndarray], name: str) -> int:
