@@ -29,6 +29,9 @@ class RoundTiming:
     evaluation_seconds: float
     retries: int = 0
     local_loss: float | None = None
+    error_feedback_residual_l2_norm: float | None = None
+    error_feedback_signal_l2_norm: float | None = None
+    error_feedback_residual_to_signal_ratio: float | None = None
     evaluation_loss: float | None = None
     evaluation_accuracy: float | None = None
     transfer_id: str | None = None
@@ -53,6 +56,18 @@ class RoundTiming:
             not math.isfinite(self.local_loss) or self.local_loss < 0
         ):
             raise ValueError("local_loss must be finite and non-negative")
+        observations = (
+            self.error_feedback_residual_l2_norm,
+            self.error_feedback_signal_l2_norm,
+            self.error_feedback_residual_to_signal_ratio,
+        )
+        if any(
+            value is not None and (not math.isfinite(value) or value < 0)
+            for value in observations
+        ):
+            raise ValueError(
+                "error-feedback observations must be finite and non-negative"
+            )
         if self.evaluation_loss is not None and (
             not math.isfinite(self.evaluation_loss) or self.evaluation_loss < 0
         ):
@@ -132,6 +147,21 @@ class JsonlMetricsPublisher(MetricsPublisher):
             local_loss=(
                 float(timing.local_loss)
                 if timing.local_loss is not None
+                else None
+            ),
+            error_feedback_residual_l2_norm=(
+                float(timing.error_feedback_residual_l2_norm)
+                if timing.error_feedback_residual_l2_norm is not None
+                else None
+            ),
+            error_feedback_signal_l2_norm=(
+                float(timing.error_feedback_signal_l2_norm)
+                if timing.error_feedback_signal_l2_norm is not None
+                else None
+            ),
+            error_feedback_residual_to_signal_ratio=(
+                float(timing.error_feedback_residual_to_signal_ratio)
+                if timing.error_feedback_residual_to_signal_ratio is not None
                 else None
             ),
             evaluation_loss=(

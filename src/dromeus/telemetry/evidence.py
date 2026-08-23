@@ -70,6 +70,11 @@ class RoundMetricsEvidence(_EvidenceModel):
     peer_id: PublicKey
     round_id: RoundId
     local_loss: float | None = Field(default=None, ge=0)
+    error_feedback_residual_l2_norm: float | None = Field(default=None, ge=0)
+    error_feedback_signal_l2_norm: float | None = Field(default=None, ge=0)
+    error_feedback_residual_to_signal_ratio: float | None = Field(
+        default=None, ge=0
+    )
     evaluation_loss: float | None = Field(default=None, ge=0)
     evaluation_accuracy: float | None = Field(default=None, ge=0, le=1)
     local_compute_seconds: float = Field(ge=0)
