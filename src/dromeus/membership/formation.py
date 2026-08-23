@@ -159,11 +159,14 @@ class FormationProtocol:
             ReceiverPolicy(
                 run_id=draft.run_id,
                 algorithm_id=draft.algorithm_id,
-                max_payload_bytes=transport_limits.max_payload_bytes,
+                max_payload_bytes=transport_limits.message_payload_limit,
             ),
             event_sink=event_sink,
         )
-        self._sender = OutboundScheduler(transport)
+        self._sender = OutboundScheduler(
+            transport,
+            per_peer_in_flight=transport_limits.effective_window_size,
+        )
         self._transfer_manager: TransferManager | None = None
         self._formation_complete = False
 
@@ -485,9 +488,14 @@ class FormationProtocol:
 
     @property
     def _formation_timeout_seconds(self) -> float:
-        return self._transport_limits.retry_timeout_seconds * (
+        retry_budget = self._transport_limits.retry_timeout_seconds * (
             self._transport_limits.max_retries + 4
         )
+        transfer_budget = (
+            self._transport_limits.transfer_lifetime_limit
+            * self._draft.dataset.participant_count
+        )
+        return max(retry_budget, transfer_budget)
 
     async def _send_control(
         self,
