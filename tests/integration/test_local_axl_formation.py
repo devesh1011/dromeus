@@ -28,12 +28,13 @@ from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
 from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.training.cifar10 import (
+    CIFAR10TrainerSettings,
     create_initial_checkpoint,
     create_trainer,
     load_cifar10,
 )
 from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
-from dromeus.training.trainer import PyTorchTrainer
+from dromeus.training.trainer import PyTorchTrainer, TrainerSettings
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.interface import AsyncTransport, ReceivedBytes
 
@@ -83,6 +84,10 @@ class RecordingTrainer:
     def last_local_loss(self) -> float | None:
         return self._trainer.last_local_loss
 
+    @property
+    def local_loss(self) -> float | None:
+        return self._trainer.local_loss
+
 
 class FaultInjectingTransport:
     def __init__(
@@ -129,11 +134,11 @@ class FaultInjectingTransport:
         return not self._drop_first_ack and not self._duplicate_first_chunk
 
 
-def test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
-    asyncio.run(_test_four_local_axl_nodes_form_and_transfer_8mib())
+def test_four_local_axl_nodes_form_and_transfer_45mib_multichunk() -> None:
+    asyncio.run(_test_four_local_axl_nodes_form_and_transfer_45mib_multichunk())
 
 
-async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
+async def _test_four_local_axl_nodes_form_and_transfer_45mib_multichunk() -> None:
     manifest = SealedManifest.model_validate(manifest_data())
     draft_data = manifest.model_dump(mode="python")
     for field in (
@@ -143,7 +148,19 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
         "tensor_schema",
     ):
         del draft_data[field]
-    draft_data["transport"]["max_payload_bytes"] = 16 * 1024 * 1024
+    draft_data["transport"].update(
+        {
+            "max_payload_bytes": 64 * 1024 * 1024,
+            "chunk_size_bytes": 1024 * 1024,
+            "window_size": 4,
+            "max_message_payload_bytes": 2 * 1024 * 1024,
+            "max_artifact_bytes": 64 * 1024 * 1024,
+            "max_concurrent_transfers": 4,
+            "max_inflight_bytes": 8 * 1024 * 1024,
+            "transfer_lifetime_seconds": 30.0,
+            "artifact_store_capacity_bytes": 128 * 1024 * 1024,
+        }
+    )
     draft_data["transport"]["max_retries"] = 2
     draft_data["transport"]["retry_timeout_seconds"] = 1.0
     draft = DraftRunSpec.model_validate(draft_data)
@@ -166,12 +183,12 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
             ]
             duplicate_transport = FaultInjectingTransport(
                 axl_transports[0],
-                max_payload_bytes=draft.transport.max_payload_bytes,
+                max_payload_bytes=draft.transport.message_payload_limit,
                 duplicate_first_chunk=True,
             )
             ack_loss_transport = FaultInjectingTransport(
                 axl_transports[1],
-                max_payload_bytes=draft.transport.max_payload_bytes,
+                max_payload_bytes=draft.transport.message_payload_limit,
                 drop_first_ack=True,
             )
             transports: list[AsyncTransport] = [
@@ -191,7 +208,7 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                 for index, transport in enumerate(transports)
             ]
             checkpoint = root / "checkpoint.safetensors"
-            element_count = (8 * 1024 * 1024 - 128) // 4
+            element_count = (45 * 1024 * 1024 - 128) // 4
             write_checkpoint(checkpoint, shape=(element_count,))
             tensor_schema = manifest.tensor_schema.model_copy(
                 update={
@@ -221,14 +238,17 @@ async def _test_four_local_axl_nodes_form_and_transfer_8mib() -> None:
                 asyncio.create_task(node.join(invitation=invitation))
                 for node in nodes[1:]
             )
-            results = await asyncio.wait_for(asyncio.gather(*tasks), timeout=60.0)
+            results = await asyncio.wait_for(asyncio.gather(*tasks), timeout=120.0)
             assert duplicate_transport.faults_applied
             assert ack_loss_transport.faults_applied
             assert len({result.manifest_hash for result in results}) == 1
             assert all(node.state is NodeState.READY for node in nodes)
             for result in results[1:]:
-                assert result.checkpoint_path.stat().st_size >= 8 * 1024 * 1024 - 256
-                assert result.checkpoint_path.stat().st_size <= 8 * 1024 * 1024
+                assert (
+                    result.checkpoint_path.stat().st_size
+                    >= 45 * 1024 * 1024 - 256
+                )
+                assert result.checkpoint_path.stat().st_size <= 45 * 1024 * 1024
             for node in nodes:
                 await node.stop()
         finally:
@@ -374,8 +394,16 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                     create_trainer,
                     train_data=partitions[partition_index],
                     test_data=test_data,
-                    seed=17 + node_index,
-                    learning_rate=draft.learning_rate,
+                    settings=CIFAR10TrainerSettings(
+                        trainer=TrainerSettings(
+                            seed=17 + node_index,
+                            batch_size=128,
+                            learning_rate=draft.learning_rate,
+                            momentum=0.9,
+                            weight_decay=1e-4,
+                            learning_rate_milestones=(8_000, 12_000),
+                        ),
+                    ),
                 )
                 trainers.append(trainer)
                 recording_trainer = RecordingTrainer(trainer)
