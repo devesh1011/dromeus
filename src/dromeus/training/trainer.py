@@ -223,6 +223,10 @@ class PyTorchTrainer:
         return self._last_local_loss
 
     @property
+    def local_loss(self) -> float | None:
+        return self._last_local_loss
+
+    @property
     def learning_rate(self) -> float:
         return float(self._optimizer.param_groups[0]["lr"])
 

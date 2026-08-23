@@ -20,6 +20,15 @@ class WeightTrainer(Protocol):
         """Replace current model weights."""
         ...
 
+    @property
+    def local_loss(self) -> float | None:
+        """Return the latest local loss, or none before training."""
+        ...
+
+    def evaluate(self) -> tuple[float, float] | None:
+        """Return local evaluation loss and accuracy, or none when unavailable."""
+        ...
+
 
 @runtime_checkable
 class CheckpointTrainer(WeightTrainer, Protocol):
