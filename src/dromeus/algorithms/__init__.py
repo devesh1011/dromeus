@@ -1,6 +1,8 @@
 """Training algorithm adapters."""
 
 from dromeus.algorithms.base import (
+    AlgorithmEvaluation,
+    AlgorithmObservations,
     AlgorithmSnapshot,
     MaterializedArtifact,
     SerializableState,
@@ -17,6 +19,8 @@ from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import UpdateCodecBinding
 
 __all__ = [
+    "AlgorithmEvaluation",
+    "AlgorithmObservations",
     "AlgorithmSnapshot",
     "DPSGDAdapter",
     "IdentityCodec",

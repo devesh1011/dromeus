@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,33 @@ class SerializableState(Protocol):
     def state_dict(self) -> dict[str, object]: ...
 
     def load_state_dict(self, state: Mapping[str, object]) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class AlgorithmObservations:
+    """Immutable algorithm observations captured for one round."""
+
+    local_loss: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.local_loss is not None and (
+            not math.isfinite(self.local_loss) or self.local_loss < 0
+        ):
+            raise ValueError("local loss must be finite and non-negative")
+
+
+@dataclass(frozen=True, slots=True)
+class AlgorithmEvaluation:
+    """Immutable algorithm evaluation result."""
+
+    loss: float
+    accuracy: float
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.loss) or self.loss < 0:
+            raise ValueError("evaluation loss must be finite and non-negative")
+        if not math.isfinite(self.accuracy) or not 0 <= self.accuracy <= 1:
+            raise ValueError("evaluation accuracy must be finite in [0, 1]")
 
 
 def checksum_tensors(tensors: Mapping[str, np.ndarray]) -> str:

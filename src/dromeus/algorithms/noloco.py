@@ -10,6 +10,8 @@ from typing import Any, cast
 import numpy as np
 
 from dromeus.algorithms.base import (
+    AlgorithmEvaluation,
+    AlgorithmObservations,
     AlgorithmSnapshot,
     AlgorithmUpdate,
     NamedValidatedUpdate,
@@ -263,6 +265,16 @@ class NoLoCoAlgorithm:
             phase=self._phase,
             weights=self._slow_weights,
         )
+
+    def evaluate(self) -> AlgorithmEvaluation | None:
+        result = self.trainer.evaluate()
+        if result is None:
+            return None
+        loss, accuracy = result
+        return AlgorithmEvaluation(loss=float(loss), accuracy=float(accuracy))
+
+    def observations(self) -> AlgorithmObservations:
+        return AlgorithmObservations(local_loss=self.trainer.local_loss)
 
     def checkpoint_tensors(self) -> dict[str, np.ndarray]:
         """Return complete durable state in the versioned flat namespace."""

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,6 +10,8 @@ from typing import cast
 import numpy as np
 
 from dromeus.algorithms.base import (
+    AlgorithmEvaluation,
+    AlgorithmObservations,
     AlgorithmSnapshot,
     AlgorithmUpdate,
     UpdateBundle,
@@ -179,32 +180,16 @@ class DPSGDAdapter:
             return self.trainer.checkpoint_tensors()
         return self.trainer.weights()
 
-    def evaluate(self) -> tuple[float, float]:
+    def evaluate(self) -> AlgorithmEvaluation | None:
         """Evaluate through the trainer's local test-data seam."""
-        evaluator = getattr(self.trainer, "evaluate", None)
-        if not callable(evaluator):
-            raise TypeError("trainer does not expose evaluation")
-        result = evaluator()
-        if not isinstance(result, tuple):
-            raise ValueError("trainer evaluation must return loss and accuracy")
-        values = cast(tuple[object, object], result)
-        if len(values) != 2:
-            raise ValueError("trainer evaluation must return loss and accuracy")
-        loss = float(cast(float, values[0]))
-        accuracy = float(cast(float, values[1]))
-        if not math.isfinite(loss) or loss < 0:
-            raise ValueError("evaluation loss must be finite and non-negative")
-        if not math.isfinite(accuracy) or not 0 <= accuracy <= 1:
-            raise ValueError("evaluation accuracy must be finite in [0, 1]")
-        return loss, accuracy
+        result = self.trainer.evaluate()
+        if result is None:
+            return None
+        loss, accuracy = result
+        return AlgorithmEvaluation(loss=float(loss), accuracy=float(accuracy))
 
-    @property
-    def local_loss(self) -> float | None:
-        """Return the most recent local minibatch loss when the trainer exposes it."""
-        value = getattr(self.trainer, "last_local_loss", None)
-        if isinstance(value, (int, float)) and math.isfinite(value) and value >= 0:
-            return float(value)
-        return None
+    def observations(self) -> AlgorithmObservations:
+        return AlgorithmObservations(local_loss=self.trainer.local_loss)
 
     def state_dict(self) -> dict[str, object]:
         """Return serializable algorithm, model, and codec state."""
