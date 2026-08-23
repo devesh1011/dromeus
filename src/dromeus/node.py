@@ -9,7 +9,7 @@ import time
 from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 from urllib.parse import urlparse
 
 import yaml
@@ -61,6 +61,7 @@ class NodeConfig(BaseModel):
     invitation_path: Path
     bootstrap_uri: Annotated[str, Field(min_length=1)]
     benchmark_seed: int
+    training_device: Literal["cpu", "cuda"] = "cpu"
     invitation_timeout_seconds: Annotated[float, Field(gt=0)] = 300.0
     manifest_expectation: SealedManifestExpectation | None = None
 
@@ -94,6 +95,7 @@ async def run_node(config: NodeConfig) -> None:
         draft=draft,
         dataset_cache=config.dataset_cache,
         benchmark_seed=config.benchmark_seed,
+        device=config.training_device,
     )
     transport = AXLTransport(AXLBridgeConfig(base_url=config.axl_bridge_url))
     local_key = await transport.local_public_key()

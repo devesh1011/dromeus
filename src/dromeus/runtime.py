@@ -184,6 +184,7 @@ def prepare_cifar_training(
     draft: DraftRunSpec,
     dataset_cache: Path,
     benchmark_seed: int,
+    device: str = "cpu",
 ) -> PreparedCIFARTraining:
     """Prepare local data through the deep training-owned interface."""
     return PreparedCIFARTraining(
@@ -191,6 +192,7 @@ def prepare_cifar_training(
             draft=draft,
             cache_dir=dataset_cache,
             benchmark_seed=benchmark_seed,
+            device=device,
         )
     )
 
@@ -801,6 +803,18 @@ class NodeRuntime:
         metrics: dict[str, object] = {"round_id": commit.round_id}
         if commit.local_loss is not None:
             metrics["local_loss"] = commit.local_loss
+        if commit.error_feedback_residual_l2_norm is not None:
+            metrics["error_feedback_residual_l2_norm"] = (
+                commit.error_feedback_residual_l2_norm
+            )
+        if commit.error_feedback_signal_l2_norm is not None:
+            metrics["error_feedback_signal_l2_norm"] = (
+                commit.error_feedback_signal_l2_norm
+            )
+        if commit.error_feedback_residual_to_signal_ratio is not None:
+            metrics["error_feedback_residual_to_signal_ratio"] = (
+                commit.error_feedback_residual_to_signal_ratio
+            )
         self._training.run_store.persist_prepared_commit(
             committed_round=commit.round_id,
             algorithm_state=self._training.algorithm.checkpoint_tensors(),
