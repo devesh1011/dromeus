@@ -647,6 +647,9 @@ class RoundCommit:
     state_checksum: str
     phase: Literal["training", "final-consensus"] = "training"
     local_loss: float | None = None
+    error_feedback_residual_l2_norm: float | None = None
+    error_feedback_signal_l2_norm: float | None = None
+    error_feedback_residual_to_signal_ratio: float | None = None
     transfer_id: str | None = None
     transfer_retries: int = 0
 
@@ -834,6 +837,13 @@ class GossipEngine:
                 state_checksum=state_checksum,
                 phase=pairing.phase,
                 local_loss=observations.local_loss,
+                error_feedback_residual_l2_norm=(
+                    observations.error_feedback_residual_l2_norm
+                ),
+                error_feedback_signal_l2_norm=observations.error_feedback_signal_l2_norm,
+                error_feedback_residual_to_signal_ratio=(
+                    observations.error_feedback_residual_to_signal_ratio
+                ),
                 transfer_id=exchange.transfer_id,
                 transfer_retries=exchange.retry_count,
             )
@@ -878,6 +888,13 @@ class GossipEngine:
                     evaluation_seconds=evaluation_seconds,
                     retries=commit.transfer_retries,
                     local_loss=commit.local_loss,
+                    error_feedback_residual_l2_norm=(
+                        commit.error_feedback_residual_l2_norm
+                    ),
+                    error_feedback_signal_l2_norm=commit.error_feedback_signal_l2_norm,
+                    error_feedback_residual_to_signal_ratio=(
+                        commit.error_feedback_residual_to_signal_ratio
+                    ),
                     evaluation_loss=(
                         evaluation.loss if evaluation is not None else None
                     ),
