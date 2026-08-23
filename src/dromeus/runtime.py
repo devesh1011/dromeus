@@ -270,7 +270,6 @@ class NodeRuntime:
         self._training = training
         self._failure = failure
         self._engine: GossipEngine | None = None
-        self._pair_transport: AXLPairTransport | None = None
         self._consensus_telemetry: LiveConsensusTelemetry | None = None
         self._event_sink = event_sink
         self._local_public_key: str | None = None
@@ -480,7 +479,6 @@ class NodeRuntime:
                 local_key,
                 metadata_root=self._training.artifact_root / "bundle-metadata",
             )
-            self._pair_transport = pair_transport
 
             async def receive_consensus_sketch(
                 timeout_seconds: float,
@@ -533,11 +531,11 @@ class NodeRuntime:
                     final_consensus_rounds=final_consensus_rounds,
                 ),
                 algorithm=self._training.algorithm,
-                transport=self._pair_transport,
+                transport=pair_transport,
                 commit_callback=self._prepare_commit,
                 confirm_callback=self._confirm_commit,
                 transport_limits=self._result.manifest.transport,
-                failure_broadcaster=self._pair_transport,
+                failure_broadcaster=pair_transport,
                 consensus_publisher=self._consensus_telemetry,
                 metrics_publisher=self._training.metrics_publisher,
             )
@@ -800,11 +798,9 @@ class NodeRuntime:
 
     def _prepare_commit(self, commit: RoundCommit) -> None:
         assert self._training is not None
-        assert self._pair_transport is not None
         metrics: dict[str, object] = {"round_id": commit.round_id}
-        local_loss = getattr(self._training.algorithm, "local_loss", None)
-        if isinstance(local_loss, (int, float)):
-            metrics["local_loss"] = float(local_loss)
+        if commit.local_loss is not None:
+            metrics["local_loss"] = commit.local_loss
         self._training.run_store.persist_prepared_commit(
             committed_round=commit.round_id,
             algorithm_state=self._training.algorithm.checkpoint_tensors(),
@@ -816,8 +812,8 @@ class NodeRuntime:
             },
             metrics=metrics,
             transfer_diagnostics={
-                "transfer_id": self._pair_transport.last_transfer_id,
-                "retries": self._pair_transport.last_retry_count,
+                "transfer_id": commit.transfer_id,
+                "retries": commit.transfer_retries,
             },
         )
 
