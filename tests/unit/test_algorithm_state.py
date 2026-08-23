@@ -7,7 +7,7 @@ import pytest
 
 import dromeus.algorithms.codec as codec_module
 from dromeus.algorithms.base import UpdateBundle
-from dromeus.algorithms.codec import IdentityCodec, SafetensorsUpdateBundleCodec
+from dromeus.algorithms.codec import IdentityCodec, NamedSafetensorsUpdateBundleCodec
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import Tensor, TensorSchema
 
@@ -24,6 +24,13 @@ class Trainer:
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
+
+    @property
+    def local_loss(self) -> None:
+        return None
+
+    def evaluate(self) -> None:
+        return None
 
 
 def test_m1_identity_codec_has_no_state_and_copies_tensors() -> None:
@@ -46,18 +53,18 @@ def test_safetensors_bundle_codec_materializes_decodes_and_releases(
     schema = TensorSchema(
         tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
     )
-    codec = SafetensorsUpdateBundleCodec(
+    codec = NamedSafetensorsUpdateBundleCodec(
         artifact_root=tmp_path / "bundles",
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
         algorithm_id="dpsgd",
-        tensor_schema=schema,
+        artifact_schemas={"trained_weights": schema},
     )
     source = {"weight": np.array([3.0], dtype=np.float32)}
 
-    bundle = codec.encode(round_id=4, tensors=source)
-    decoded = codec.decode(bundle)
+    bundle = codec.encode(round_id=4, artifacts={"trained_weights": source})
+    decoded = codec.decode(bundle)["trained_weights"]
 
     assert bundle.metadata.round_id == 4
     assert bundle.metadata.artifacts[0].codec_id == "safetensors-v1"
@@ -84,16 +91,21 @@ def test_safetensors_bundle_codec_rejects_unknown_artifact_name(
     schema = TensorSchema(
         tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
     )
-    codec = SafetensorsUpdateBundleCodec(
+    codec = NamedSafetensorsUpdateBundleCodec(
         artifact_root=tmp_path,
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
         algorithm_id="dpsgd",
-        tensor_schema=schema,
+        artifact_schemas={"trained_weights": schema},
     )
     bundle = codec.encode(
-        round_id=0, tensors={"weight": np.array([3.0], dtype=np.float32)}
+        round_id=0,
+        artifacts={
+            "trained_weights": {
+                "weight": np.array([3.0], dtype=np.float32)
+            }
+        },
     )
     invalid = UpdateBundle(
         metadata=bundle.metadata.model_copy(
@@ -119,19 +131,29 @@ def test_bundle_size_limit_is_aggregate_across_artifacts(tmp_path: Path) -> None
     schema = TensorSchema(
         tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
     )
-    codec = SafetensorsUpdateBundleCodec(
+    codec = NamedSafetensorsUpdateBundleCodec(
         artifact_root=tmp_path,
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
         algorithm_id="dpsgd",
-        tensor_schema=schema,
+        artifact_schemas={"trained_weights": schema},
     )
     first = codec.encode(
-        round_id=0, tensors={"weight": np.array([1.0], dtype=np.float32)}
+        round_id=0,
+        artifacts={
+            "trained_weights": {
+                "weight": np.array([1.0], dtype=np.float32)
+            }
+        },
     )
     second = codec.encode(
-        round_id=0, tensors={"weight": np.array([2.0], dtype=np.float32)}
+        round_id=0,
+        artifacts={
+            "trained_weights": {
+                "weight": np.array([2.0], dtype=np.float32)
+            }
+        },
     )
     combined = UpdateBundle(
         metadata=first.metadata.model_copy(
@@ -164,13 +186,13 @@ def test_bundle_encode_failure_removes_partial_artifact(
     schema = TensorSchema(
         tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
     )
-    codec = SafetensorsUpdateBundleCodec(
+    codec = NamedSafetensorsUpdateBundleCodec(
         artifact_root=tmp_path,
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
         algorithm_id="dpsgd",
-        tensor_schema=schema,
+        artifact_schemas={"trained_weights": schema},
     )
 
     def fail_after_write(_values: object, path: str) -> None:
@@ -181,7 +203,11 @@ def test_bundle_encode_failure_removes_partial_artifact(
     with pytest.raises(OSError, match="forced"):
         codec.encode(
             round_id=0,
-            tensors={"weight": np.array([1.0], dtype=np.float32)},
+            artifacts={
+                "trained_weights": {
+                    "weight": np.array([1.0], dtype=np.float32)
+                }
+            },
         )
     assert not any(path.is_file() for path in tmp_path.iterdir())
 

@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
+from typing import cast
 
 import pytest
 from pydantic import ValidationError
+from support.sample_manifest import manifest_data
 
+from dromeus import node as node_module
+from dromeus.manifests.models import DraftRunSpec, SealedManifest
+from dromeus.membership.formation import create_invitation
 from dromeus.node import NodeRole, load_node_config, main
+from dromeus.runtime import ParticipantFormation
 
 
 def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> None:
@@ -21,6 +28,7 @@ def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> N
                 f"invitation_path: {tmp_path / 'invitation.json'}",
                 "bootstrap_uri: tls://bootstrap.example:9000",
                 "benchmark_seed: 17",
+                "training_device: cuda",
             )
         ),
         encoding="utf-8",
@@ -32,6 +40,7 @@ def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> N
     assert config.benchmark_seed == 17
     assert config.axl_bridge_url == "http://127.0.0.1:9002"
     assert config.run_root == tmp_path / "run"
+    assert config.training_device == "cuda"
 
     config_path.write_text(
         config_path.read_text(encoding="utf-8") + "\nextra: rejected\n",
@@ -61,6 +70,83 @@ def test_load_node_config_rejects_non_loopback_axl_bridge(tmp_path: Path) -> Non
 
     with pytest.raises(ValidationError, match="loopback"):
         load_node_config(config_path)
+
+
+def test_run_node_uses_deep_runtime_lifecycle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    draft_data = manifest.model_dump(mode="python")
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    draft = DraftRunSpec.model_validate(draft_data)
+    draft_path = tmp_path / "draft.yaml"
+    draft_path.write_text(draft.model_dump_json(), encoding="utf-8")
+    invitation_path = tmp_path / "invitation.json"
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key="peer-0",
+        bootstrap_uri="tls://bootstrap.example:9000",
+    )
+    invitation_path.write_text(invitation.model_dump_json(), encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    class FakeTransport:
+        def __init__(self, config: object) -> None:
+            captured["transport_config"] = config
+
+        async def local_public_key(self) -> str:
+            return "peer-1"
+
+    class FakeRuntime:
+        def __init__(self, **kwargs: object) -> None:
+            captured["runtime_init"] = kwargs
+
+        async def run_to_completion(self, **kwargs: object) -> None:
+            captured["lifecycle"] = kwargs
+
+    def fake_prepare_cifar_training(**kwargs: object) -> object:
+        captured["training_prepare"] = kwargs
+        return object()
+
+    monkeypatch.setattr(node_module, "AXLTransport", FakeTransport)
+    monkeypatch.setattr(node_module, "NodeRuntime", FakeRuntime)
+    monkeypatch.setattr(
+        node_module,
+        "prepare_cifar_training",
+        fake_prepare_cifar_training,
+    )
+    config = node_module.NodeConfig(
+        role=NodeRole.PARTICIPANT,
+        draft_path=draft_path,
+        axl_bridge_url="http://127.0.0.1:9002",
+        run_root=tmp_path / "run",
+        dataset_cache=tmp_path / "cifar",
+        invitation_path=invitation_path,
+        bootstrap_uri="tls://bootstrap.example:9000",
+        benchmark_seed=17,
+        training_device="cuda",
+    )
+
+    asyncio.run(node_module.run_node(config))
+
+    lifecycle = cast(dict[str, object], captured["lifecycle"])
+    training_prepare = cast(dict[str, object], captured["training_prepare"])
+    assert training_prepare["device"] == "cuda"
+    assert isinstance(lifecycle["formation"], ParticipantFormation)
+    assert set(lifecycle) == {
+        "formation",
+        "training_factory",
+        "manifest_expectation",
+        "ready_hook",
+        "completion_hook",
+    }
 
 
 def test_main_executes_config_instead_of_exiting_after_start_event(

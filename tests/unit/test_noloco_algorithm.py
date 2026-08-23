@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -21,13 +23,15 @@ from dromeus.manifests.models import (
 )
 from dromeus.persistence.archive import RunArchive
 from dromeus.persistence.run_store import RunStore
-from dromeus.training.trainer import PyTorchTrainer
+from dromeus.training.trainer import PyTorchTrainer, TrainerSettings
 
 
 class HandTraceTrainer:
-    def __init__(self, initial: float, trained: float) -> None:
-        self._weights = {"weight": np.array([initial], dtype=np.float32)}
-        self._trained = np.array([trained], dtype=np.float32)
+    def __init__(
+        self, initial: float | list[float], trained: float | list[float]
+    ) -> None:
+        self._weights = {"weight": np.atleast_1d(np.asarray(initial, dtype=np.float32))}
+        self._trained = np.atleast_1d(np.asarray(trained, dtype=np.float32))
         self.train_calls: list[int] = []
 
     def train_local_steps(self, step_count: int) -> None:
@@ -39,6 +43,13 @@ class HandTraceTrainer:
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
+
+    @property
+    def local_loss(self) -> None:
+        return None
+
+    def evaluate(self) -> None:
+        return None
 
     def checkpoint_tensors(self) -> dict[str, np.ndarray]:
         return {
@@ -98,39 +109,35 @@ def _adam_trainer(*, initial: tuple[float, float], seed: int) -> PyTorchTrainer:
         model=model,
         model_definition="test-noloco-linear",
         train_data=data,  # pyright: ignore[reportArgumentType]
-        seed=seed,
-        batch_size=2,
-        learning_rate=0.001,
-        optimizer="adam",
-        adam_beta1=0.9,
-        adam_beta2=0.999,
-        adam_epsilon=1e-8,
-        gradient_clip_norm=1.0,
-        augment=False,
+        settings=TrainerSettings(
+            seed=seed,
+            batch_size=2,
+            learning_rate=0.001,
+            optimizer="adam",
+            adam_beta1=0.9,
+            adam_beta2=0.999,
+            adam_epsilon=1e-8,
+            gradient_clip_norm=1.0,
+            augment=False,
+        ),
     )
 
 
 def test_two_instances_match_hand_computed_noloco_trace(tmp_path: Path) -> None:
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
     first_trainer = HandTraceTrainer(initial=1.0, trained=0.5)
     second_trainer = HandTraceTrainer(initial=3.0, trained=1.5)
     first = NoLoCoAlgorithm(
         trainer=first_trainer,
         tensor_schema=schema,
         config=_config(),
-        bundle_codec=_bundle_codec(
-            tmp_path / "first", sender="first", schema=schema
-        ),
+        bundle_codec=_bundle_codec(tmp_path / "first", sender="first", schema=schema),
     )
     second = NoLoCoAlgorithm(
         trainer=second_trainer,
         tensor_schema=schema,
         config=_config(),
-        bundle_codec=_bundle_codec(
-            tmp_path / "second", sender="second", schema=schema
-        ),
+        bundle_codec=_bundle_codec(tmp_path / "second", sender="second", schema=schema),
     )
 
     first.pre_local(0)
@@ -172,12 +179,96 @@ def test_two_instances_match_hand_computed_noloco_trace(tmp_path: Path) -> None:
     assert not any(tmp_path.rglob("*.safetensors"))
 
 
+def test_identity_path_matches_pinned_upstream_outer_step_fixture(
+    tmp_path: Path,
+) -> None:
+    fixture_path = (
+        Path(__file__).parents[1] / "golden" / "noloco_upstream_outer_step_v1.json"
+    )
+    fixture = cast(dict[str, Any], json.loads(fixture_path.read_text(encoding="utf-8")))
+    assert fixture["authority"]["commit"] == (
+        "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
+    )
+    assert fixture["authority"]["function"] == "outer_step"
+    assert fixture["convention"] == {
+        "alpha": 0.5,
+        "beta": 0.7,
+        "dromeus_outer_gradient": "slow_weights - fast_weights",
+        "effective_gamma": 0.7,
+    }
+    nodes = {
+        cast(int, node["rank"]): cast(dict[str, Any], node) for node in fixture["nodes"]
+    }
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(3,)),))
+    algorithms: list[NoLoCoAlgorithm] = []
+    for rank in range(2):
+        node = nodes[rank]
+        algorithm = NoLoCoAlgorithm(
+            trainer=HandTraceTrainer(
+                initial=cast(list[float], node["slow_weights"]),
+                trained=cast(list[float], node["fast_weights"]),
+            ),
+            tensor_schema=schema,
+            config=_config(),
+            bundle_codec=_bundle_codec(
+                tmp_path / f"rank-{rank}", sender=f"rank-{rank}", schema=schema
+            ),
+        )
+        state = algorithm.checkpoint_tensors()
+        state["noloco.v1.round_id"] = np.array([0], dtype=np.int64)
+        state["noloco.v1.completed_outer_steps"] = np.array([1], dtype=np.int64)
+        state["noloco.v1.phase"] = np.array([4], dtype=np.int64)
+        state["noloco.v1.outer_momentum.weight"] = np.asarray(
+            node["outer_momentum_before"], dtype=np.float32
+        )
+        algorithm.load_checkpoint_tensors(state)
+        algorithms.append(algorithm)
+
+    for algorithm in algorithms:
+        algorithm.pre_local(1)
+        algorithm.local_training()
+    bundles = [algorithm.post_local_bundle() for algorithm in algorithms]
+    tolerance = fixture["comparison_tolerance"]
+    absolute = cast(float, tolerance["absolute"])
+    relative = cast(float, tolerance["relative"])
+    try:
+        for rank, algorithm in enumerate(algorithms):
+            local = algorithm.validate_peer(bundles[rank])
+            np.testing.assert_allclose(
+                local.artifacts["outer_gradient"]["weight"],
+                np.asarray(nodes[rank]["outer_gradient"], dtype=np.float32),
+                atol=absolute,
+                rtol=relative,
+            )
+        snapshots = [
+            algorithms[0].peer_apply(algorithms[0].validate_peer(bundles[1])),
+            algorithms[1].peer_apply(algorithms[1].validate_peer(bundles[0])),
+        ]
+    finally:
+        for algorithm, bundle in zip(algorithms, bundles, strict=True):
+            algorithm.release_bundle(bundle)
+
+    for rank, (algorithm, snapshot) in enumerate(
+        zip(algorithms, snapshots, strict=True)
+    ):
+        np.testing.assert_allclose(
+            snapshot.weights["weight"],
+            np.asarray(nodes[rank]["slow_weights_after"], dtype=np.float32),
+            atol=absolute,
+            rtol=relative,
+        )
+        np.testing.assert_allclose(
+            algorithm.checkpoint_tensors()["noloco.v1.outer_momentum.weight"],
+            np.asarray(nodes[rank]["outer_momentum_after"], dtype=np.float32),
+            atol=absolute,
+            rtol=relative,
+        )
+
+
 def test_first_pre_local_adopts_checkpoint_loaded_after_construction(
     tmp_path: Path,
 ) -> None:
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
     trainer = HandTraceTrainer(initial=99.0, trained=0.5)
     algorithm = NoLoCoAlgorithm(
         trainer=trainer,
@@ -198,9 +289,7 @@ def test_first_pre_local_adopts_checkpoint_loaded_after_construction(
 def test_checkpoint_round_trip_resumes_bit_identical_next_step(
     tmp_path: Path,
 ) -> None:
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
     original_trainer = HandTraceTrainer(initial=3.0, trained=1.5)
     peer_trainer = HandTraceTrainer(initial=1.0, trained=0.5)
     original = NoLoCoAlgorithm(
@@ -215,9 +304,7 @@ def test_checkpoint_round_trip_resumes_bit_identical_next_step(
         trainer=peer_trainer,
         tensor_schema=schema,
         config=_config(),
-        bundle_codec=_bundle_codec(
-            tmp_path / "peer", sender="peer", schema=schema
-        ),
+        bundle_codec=_bundle_codec(tmp_path / "peer", sender="peer", schema=schema),
     )
     original.pre_local(0)
     peer.pre_local(0)
@@ -365,12 +452,8 @@ def test_real_adam_state_restored_from_run_store_is_bit_identical(
             for artifact in ("outer_gradient", "slow_weights")
             for name in original_local.artifacts[artifact]
         )
-        original_next = original.peer_apply(
-            original.validate_peer(next_peer_bundle)
-        )
-        restored_next = restored.peer_apply(
-            restored.validate_peer(next_peer_bundle)
-        )
+        original_next = original.peer_apply(original.validate_peer(next_peer_bundle))
+        restored_next = restored.peer_apply(restored.validate_peer(next_peer_bundle))
     finally:
         peer.release_bundle(next_peer_bundle)
         original.release_bundle(original_bundle)
@@ -387,9 +470,7 @@ def test_outer_step_rejects_invalid_named_artifacts_before_mutation(
     tmp_path: Path,
     invalid_kind: str,
 ) -> None:
-    schema = TensorSchema(
-        tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
-    )
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
     algorithm = NoLoCoAlgorithm(
         trainer=HandTraceTrainer(initial=1.0, trained=0.5),
         tensor_schema=schema,

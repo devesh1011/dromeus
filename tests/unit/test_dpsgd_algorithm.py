@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from dromeus.algorithms.codec import (
-    SafetensorsUpdateBundleCodec,
+    NamedSafetensorsUpdateBundleCodec,
     StateMap,
     TensorMap,
 )
@@ -35,6 +35,13 @@ class CountingTrainer:
 
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
+
+    @property
+    def local_loss(self) -> None:
+        return None
+
+    def evaluate(self) -> None:
+        return None
 
 
 class OffsetCodec:
@@ -78,14 +85,14 @@ class Int8Codec(OffsetCodec):
 
 def _bundle_codec(
     root: Path, *, sender: str, schema: TensorSchema
-) -> SafetensorsUpdateBundleCodec:
-    return SafetensorsUpdateBundleCodec(
+) -> NamedSafetensorsUpdateBundleCodec:
+    return NamedSafetensorsUpdateBundleCodec(
         artifact_root=root,
         run_id="test-run",
         manifest_hash="0" * 64,
         sender_public_key=sender,
         algorithm_id="d-psgd",
-        tensor_schema=schema,
+        artifact_schemas={"trained_weights": schema},
     )
 
 
@@ -237,5 +244,8 @@ def test_dpsgd_rejects_invalid_peer_weights(tmp_path: Path) -> None:
     local_bundle = algorithm.post_local_bundle()
     peer_weights = {"weight": np.array([np.nan, 1.0], dtype=np.float32)}
     with pytest.raises(ValueError, match="non-finite"):
-        peer_codec.encode(round_id=0, tensors=peer_weights)
+        peer_codec.encode(
+            round_id=0,
+            artifacts={"trained_weights": peer_weights},
+        )
     local_codec.release(local_bundle)

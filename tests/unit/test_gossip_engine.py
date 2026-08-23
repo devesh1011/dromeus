@@ -18,8 +18,9 @@ from support.in_memory_transport import (
 
 from dromeus.algorithms.base import UpdateBundle
 from dromeus.algorithms.codec import (
+    DenseInt8Codec,
     NamedSafetensorsUpdateBundleCodec,
-    SafetensorsUpdateBundleCodec,
+    TopKInt8Codec,
 )
 from dromeus.algorithms.dpsgd import DPSGDAdapter, checksum_tensors
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
@@ -28,6 +29,7 @@ from dromeus.gossip.engine import (
     EvaluationMetrics,
     GossipEngine,
     PairCommitError,
+    PairExchangeResult,
     RoundCommit,
     RunFailure,
 )
@@ -67,7 +69,11 @@ class LinearTrainer:
         self._weights = {name: value.copy() for name, value in weights.items()}
 
     def evaluate(self) -> tuple[float, float]:
-        return float(self._weights["weight"][0]), 0.5
+        return abs(float(self._weights["weight"][0])), 0.5
+
+    @property
+    def local_loss(self) -> float:
+        return 0.25
 
 
 class ConvexTrainer(LinearTrainer):
@@ -86,6 +92,15 @@ class SlowEvaluationTrainer(LinearTrainer):
     def evaluate(self) -> tuple[float, float]:
         time.sleep(0.2)
         return super().evaluate()
+
+
+class InvalidObservationTrainer(LinearTrainer):
+    @property
+    def local_loss(self) -> float:
+        return -1.0
+
+    def evaluate(self) -> tuple[float, float]:
+        raise RuntimeError("evaluation unavailable")
 
 
 class BlockingTrainer(LinearTrainer):
@@ -165,8 +180,11 @@ class InMemoryPairTransport:
         peer: str,
         round_id: int,
         bundle: UpdateBundle,
-    ) -> UpdateBundle:
-        return await self.channel.exchange_update(self.local, peer, round_id, bundle)
+    ) -> PairExchangeResult:
+        peer_bundle = await self.channel.exchange_update(
+            self.local, peer, round_id, bundle
+        )
+        return PairExchangeResult(bundle=peer_bundle)
 
     async def exchange_update_ready(
         self,
@@ -212,9 +230,9 @@ class HangingPairTransport(InMemoryPairTransport):
         peer: str,
         round_id: int,
         bundle: UpdateBundle,
-    ) -> UpdateBundle:
+    ) -> PairExchangeResult:
         await asyncio.sleep(1)
-        return cast(UpdateBundle, None)
+        return cast(PairExchangeResult, None)
 
 
 class StaticPairTransport:
@@ -227,8 +245,8 @@ class StaticPairTransport:
         peer: str,
         round_id: int,
         bundle: UpdateBundle,
-    ) -> UpdateBundle:
-        return self.peer_bundle
+    ) -> PairExchangeResult:
+        return PairExchangeResult(bundle=self.peer_bundle)
 
     async def exchange_update_ready(
         self,
@@ -284,7 +302,7 @@ class StubPairSender:
 class RecordingBundleCodec:
     def __init__(
         self,
-        delegate: SafetensorsUpdateBundleCodec,
+        delegate: NamedSafetensorsUpdateBundleCodec,
         *,
         validation_error: bool = False,
     ) -> None:
@@ -296,23 +314,23 @@ class RecordingBundleCodec:
         self,
         *,
         round_id: int,
-        tensors: Mapping[str, np.ndarray],
-        codec_binding: UpdateCodecBinding | None = None,
+        artifacts: Mapping[str, Mapping[str, np.ndarray]],
+        codec_bindings: Mapping[str, UpdateCodecBinding] | None = None,
     ) -> UpdateBundle:
         return self.delegate.encode(
             round_id=round_id,
-            tensors=tensors,
-            codec_binding=codec_binding,
+            artifacts=artifacts,
+            codec_bindings=codec_bindings,
         )
 
     def decode(
         self,
         bundle: UpdateBundle,
-        codec_binding: UpdateCodecBinding | None = None,
-    ) -> dict[str, np.ndarray]:
+        codec_bindings: Mapping[str, UpdateCodecBinding] | None = None,
+    ) -> dict[str, dict[str, np.ndarray]]:
         if self.validation_error:
             raise ValueError("forced validation error")
-        return self.delegate.decode(bundle, codec_binding=codec_binding)
+        return self.delegate.decode(bundle, codec_bindings=codec_bindings)
 
     def release(self, bundle: UpdateBundle) -> None:
         self.released.append(bundle.digest)
@@ -352,8 +370,23 @@ class RecordingMetricsPublisher:
 
 
 class TimedPairTransport(InMemoryPairTransport):
-    last_transfer_id = "transfer-0"
-    last_retry_count = 2
+    async def exchange_update(
+        self,
+        *,
+        peer: str,
+        round_id: int,
+        bundle: UpdateBundle,
+    ) -> PairExchangeResult:
+        exchange = await super().exchange_update(
+            peer=peer,
+            round_id=round_id,
+            bundle=bundle,
+        )
+        return PairExchangeResult(
+            bundle=exchange.bundle,
+            transfer_id="transfer-0",
+            retry_count=2,
+        )
 
 
 @dataclass
@@ -377,13 +410,13 @@ def _algorithm(
         tensor_schema=schema,
         local_steps=1,
         training_round_count=training_round_count,
-        bundle_codec=SafetensorsUpdateBundleCodec(
+        bundle_codec=NamedSafetensorsUpdateBundleCodec(
             artifact_root=artifact_root,
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key=key,
             algorithm_id="d-psgd",
-            tensor_schema=schema,
+            artifact_schemas={"trained_weights": schema},
         ),
     )
 
@@ -398,13 +431,13 @@ def test_pair_timeout_fails_once_and_reports_diagnostics(tmp_path: Path) -> None
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
         codec = RecordingBundleCodec(
-            SafetensorsUpdateBundleCodec(
+            NamedSafetensorsUpdateBundleCodec(
                 artifact_root=tmp_path / "peer-0",
                 run_id="test-run",
                 manifest_hash="0" * 64,
                 sender_public_key="peer-0",
                 algorithm_id="d-psgd",
-                tensor_schema=schema,
+                artifact_schemas={"trained_weights": schema},
             )
         )
         engine = GossipEngine(
@@ -549,17 +582,21 @@ def test_transport_cancellation_waits_for_active_bundle_validation(
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        codec = SafetensorsUpdateBundleCodec(
+        codec = NamedSafetensorsUpdateBundleCodec(
             artifact_root=tmp_path / "local",
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-0",
             algorithm_id="d-psgd",
-            tensor_schema=schema,
+            artifact_schemas={"trained_weights": schema},
         )
         bundle = codec.encode(
             round_id=0,
-            tensors={"weight": np.array([2.0], dtype=np.float32)},
+            artifacts={
+                "trained_weights": {
+                    "weight": np.array([2.0], dtype=np.float32)
+                }
+            },
         )
         original_validate = UpdateBundle.validate_materialized
 
@@ -615,22 +652,28 @@ def test_engine_confirms_durability_only_after_peer_confirmation(
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        peer_codec = SafetensorsUpdateBundleCodec(
+        peer_codec = NamedSafetensorsUpdateBundleCodec(
             artifact_root=tmp_path / "peer",
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-1",
             algorithm_id="d-psgd",
-            tensor_schema=schema,
+            artifact_schemas={"trained_weights": schema},
         )
         peer_bundle = peer_codec.encode(
             round_id=0,
-            tensors={"weight": np.array([3.0], dtype=np.float32)},
-            codec_binding=UpdateCodecBinding(
-                codec_id="safetensors-v1",
-                codec_version=1,
-                logical_schema=schema,
-            ),
+            artifacts={
+                "trained_weights": {
+                    "weight": np.array([3.0], dtype=np.float32)
+                }
+            },
+            codec_bindings={
+                "trained_weights": UpdateCodecBinding(
+                    codec_id="safetensors-v1",
+                    codec_version=1,
+                    logical_schema=schema,
+                )
+            },
         )
         prepared: list[RoundCommit] = []
         confirmed: list[RoundCommit] = []
@@ -665,33 +708,39 @@ def test_release_runs_after_bundle_outcomes(
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        local_delegate = SafetensorsUpdateBundleCodec(
+        local_delegate = NamedSafetensorsUpdateBundleCodec(
             artifact_root=tmp_path / "local",
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-0",
             algorithm_id="d-psgd",
-            tensor_schema=schema,
+            artifact_schemas={"trained_weights": schema},
         )
         codec = RecordingBundleCodec(
             local_delegate, validation_error=failure == "validation"
         )
-        peer_codec = SafetensorsUpdateBundleCodec(
+        peer_codec = NamedSafetensorsUpdateBundleCodec(
             artifact_root=tmp_path / "peer",
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-1",
             algorithm_id="d-psgd",
-            tensor_schema=schema,
+            artifact_schemas={"trained_weights": schema},
         )
         peer_bundle = peer_codec.encode(
             round_id=0,
-            tensors={"weight": np.array([3.0], dtype=np.float32)},
-            codec_binding=UpdateCodecBinding(
-                codec_id="safetensors-v1",
-                codec_version=1,
-                logical_schema=schema,
-            ),
+            artifacts={
+                "trained_weights": {
+                    "weight": np.array([3.0], dtype=np.float32)
+                }
+            },
+            codec_bindings={
+                "trained_weights": UpdateCodecBinding(
+                    codec_id="safetensors-v1",
+                    codec_version=1,
+                    logical_schema=schema,
+                )
+            },
         )
         if failure == "corruption":
             with peer_bundle.artifacts[0].path.open("ab") as handle:
@@ -726,13 +775,13 @@ def test_release_runs_after_cancellation(tmp_path: Path) -> None:
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
         codec = RecordingBundleCodec(
-            SafetensorsUpdateBundleCodec(
+            NamedSafetensorsUpdateBundleCodec(
                 artifact_root=tmp_path / "local",
                 run_id="test-run",
                 manifest_hash="0" * 64,
                 sender_public_key="peer-0",
                 algorithm_id="d-psgd",
-                tensor_schema=schema,
+                artifact_schemas={"trained_weights": schema},
             )
         )
         engine = GossipEngine(
@@ -833,11 +882,50 @@ def test_engine_publishes_round_timings_without_waiting_for_metric_writer(
     assert len(metrics.timings) == 2
     assert all(timing.transfer_id == "transfer-0" for timing in metrics.timings)
     assert all(timing.retries == 2 for timing in metrics.timings)
+    assert all(timing.local_loss == 0.25 for timing in metrics.timings)
     assert all(timing.transfer_seconds >= 0 for timing in metrics.timings)
     assert all(timing.peer_wait_seconds >= 0 for timing in metrics.timings)
     assert all(timing.mixing_seconds >= 0 for timing in metrics.timings)
     assert all(timing.evaluation_seconds >= 0 for timing in metrics.timings)
     assert all(timing.evaluation_accuracy == 0.5 for timing in metrics.timings)
+
+
+def test_observation_failures_never_control_round_commit(tmp_path: Path) -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    channel = SharedPairChannel.create()
+    metrics = RecordingMetricsPublisher([], [])
+    commits: dict[str, list[RoundCommit]] = {"peer-0": [], "peer-1": []}
+    evaluations: list[EvaluationMetrics] = []
+
+    async def run() -> None:
+        engines = [
+            GossipEngine(
+                local_public_key=key,
+                round_count=1,
+                scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
+                algorithm=_algorithm(
+                    key=key,
+                    trainer=InvalidObservationTrainer(value),
+                    schema=schema,
+                    artifact_root=tmp_path / key,
+                ),
+                transport=InMemoryPairTransport(key, channel),
+                commit_callback=commits[key].append,
+                evaluation_callback=evaluations.append,
+                metrics_publisher=metrics,
+            )
+            for key, value in (("peer-0", 1.0), ("peer-1", 3.0))
+        ]
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+
+    assert all(len(records) == 1 for records in commits.values())
+    assert evaluations == []
+    assert len(metrics.timings) == 2
+    assert all(timing.local_loss is None for timing in metrics.timings)
+    assert all(timing.evaluation_loss is None for timing in metrics.timings)
+    assert all(timing.evaluation_accuracy is None for timing in metrics.timings)
 
 
 def test_two_nodes_complete_pair_commit_without_group_barrier(
@@ -1025,6 +1113,7 @@ def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
         for trainer in trainers.values()
     )
     commits: dict[str, list[RoundCommit]] = {key: [] for key in trainers}
+    evaluations: dict[str, list[EvaluationMetrics]] = {key: [] for key in trainers}
 
     async def run() -> None:
         engines = [
@@ -1050,6 +1139,7 @@ def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
                 ),
                 transport=DivergentPairTransport(key, channel),
                 commit_callback=commits[key].append,
+                evaluation_callback=evaluations[key].append,
             )
             for key, trainer in trainers.items()
         ]
@@ -1064,6 +1154,95 @@ def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
     assert final_objective < initial_objective
     assert all(len(records) == 3 for records in commits.values())
     assert len({records[-1].state_checksum for records in commits.values()}) > 1
+    assert all(
+        [metric.round_id for metric in records] == [2]
+        for records in evaluations.values()
+    )
+    assert all(
+        metric.accuracy == 0.5
+        for records in evaluations.values()
+        for metric in records
+    )
+
+
+def test_four_noloco_nodes_compressed_smoke_records_error_feedback(
+    tmp_path: Path,
+) -> None:
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    config = NoLoCoConfig(
+        alpha=0.5,
+        beta=0.7,
+        gamma=0.7,
+        inner_steps=50,
+        adam=AdamSettings(
+            learning_rate=0.001,
+            beta1=0.9,
+            beta2=0.999,
+            epsilon=1e-8,
+            gradient_clip_norm=1.0,
+        ),
+    )
+    channel = SharedPairChannel.create()
+    trainers = {
+        f"peer-{index}": NoLoCoConvexTrainer(float(8 - index * 2))
+        for index in range(4)
+    }
+    commits: dict[str, list[RoundCommit]] = {key: [] for key in trainers}
+
+    async def run() -> None:
+        engines: list[GossipEngine] = []
+        for key, trainer in trainers.items():
+            outer_codec = TopKInt8Codec(schema, top_k_fraction=0.01)
+            slow_codec = DenseInt8Codec(schema)
+            engines.append(
+                GossipEngine(
+                    local_public_key=key,
+                    round_count=2,
+                    scheduler=PeerScheduler(list(trainers), seed=8),
+                    algorithm=NoLoCoAlgorithm(
+                        trainer=trainer,
+                        tensor_schema=schema,
+                        config=config,
+                        artifact_codecs={
+                            "outer_gradient": outer_codec,
+                            "slow_weights": slow_codec,
+                        },
+                        manifest_codec_ids={
+                            "outer_gradient": outer_codec.codec_id,
+                            "slow_weights": slow_codec.codec_id,
+                        },
+                        bundle_codec=NamedSafetensorsUpdateBundleCodec(
+                            artifact_root=tmp_path / key,
+                            run_id="compressed-smoke",
+                            manifest_hash="0" * 64,
+                            sender_public_key=key,
+                            algorithm_id="noloco",
+                            artifact_schemas={
+                                "outer_gradient": outer_codec.encoded_schema,
+                                "slow_weights": slow_codec.encoded_schema,
+                            },
+                        ),
+                    ),
+                    transport=DivergentPairTransport(key, channel),
+                    commit_callback=commits[key].append,
+                )
+            )
+        await asyncio.gather(*(engine.run() for engine in engines))
+
+    asyncio.run(run())
+
+    assert all(len(records) == 2 for records in commits.values())
+    assert all(
+        record.error_feedback_residual_l2_norm is not None
+        and record.error_feedback_signal_l2_norm is not None
+        and record.error_feedback_residual_to_signal_ratio is not None
+        and record.error_feedback_residual_l2_norm >= 0
+        and record.error_feedback_signal_l2_norm >= 0
+        and record.error_feedback_residual_to_signal_ratio >= 0
+        for records in commits.values()
+        for record in records
+    )
+    assert not any(tmp_path.rglob("*.safetensors"))
 
 
 def test_two_final_consensus_stages_exactly_average_four_nodes(

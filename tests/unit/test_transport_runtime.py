@@ -18,10 +18,12 @@ from support.in_memory_transport import (
 )
 from support.sample_manifest import manifest_data, write_checkpoint
 
+from dromeus.algorithms.codec import DenseInt8Codec, TopKInt8Codec
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
+from dromeus.gossip.engine import RoundCommit
 from dromeus.manifests.canonical import canonical_hash
-from dromeus.manifests.models import DraftRunSpec, SealedManifest
+from dromeus.manifests.models import DraftRunSpec, SealedManifest, TensorSchema
 from dromeus.membership.formation import (
     FormationError,
     FormationResult,
@@ -37,8 +39,11 @@ from dromeus.protocol.models import (
 )
 from dromeus.runtime import (
     FailureConfig,
+    InitiatorFormation,
+    NodeRunResult,
     NodeRuntime,
     NodeState,
+    ParticipantFormation,
     TrainingConfig,
     build_algorithm,
 )
@@ -73,6 +78,145 @@ class RuntimeTrainer:
 
     def evaluate(self) -> tuple[float, float]:
         return 0.0, 0.5
+
+    @property
+    def local_loss(self) -> float:
+        return 0.25
+
+
+class LifecycleRuntime(NodeRuntime):
+    def __init__(self, result: FormationResult) -> None:
+        self.result = result
+        self.events: list[str] = []
+        self._failure = FailureConfig.for_run_root(result.checkpoint_path.parent)
+        self._training = None
+
+    async def initiate(
+        self,
+        *,
+        bootstrap_uri: str,
+        checkpoint_path: Path,
+        tensor_schema: TensorSchema,
+    ) -> FormationResult:
+        self.events.append("initiate")
+        return self.result
+
+    def configure_training(self, training: TrainingConfig) -> None:
+        self.events.append("configure")
+
+    async def fail_before_run(self, error: BaseException) -> None:
+        self.events.append(f"fail:{error}")
+
+    async def run(self) -> tuple[RoundCommit, ...]:
+        self.events.append("run")
+        return ()
+
+    async def stop(self) -> None:
+        self.events.append("stop")
+
+
+def test_runtime_lifecycle_fails_ready_hook_before_run(tmp_path: Path) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    result = FormationResult(
+        manifest=manifest,
+        manifest_hash=canonical_hash(manifest),
+        checkpoint_path=tmp_path / "checkpoint.safetensors",
+    )
+    runtime = LifecycleRuntime(result)
+    trainer = RuntimeTrainer()
+    training = TrainingConfig(
+        algorithm=DPSGDAdapter(
+            trainer=trainer,
+            tensor_schema=manifest.tensor_schema,
+            local_steps=1,
+        ),
+        load_checkpoint=trainer.load_checkpoint,
+        run_store=RunStore(tmp_path / "run"),
+        artifact_root=tmp_path / "rounds",
+    )
+
+    def build_training(_: FormationResult) -> TrainingConfig:
+        runtime.events.append("factory")
+        return training
+
+    async def reject_ready(_: FormationResult) -> None:
+        runtime.events.append("ready")
+        raise RuntimeError("ready rejected")
+
+    with pytest.raises(RuntimeError, match="ready rejected"):
+        asyncio.run(
+            runtime.run_to_completion(
+                formation=InitiatorFormation(
+                    bootstrap_uri="axl://bootstrap",
+                    checkpoint_path=result.checkpoint_path,
+                    tensor_schema=manifest.tensor_schema,
+                ),
+                training_factory=build_training,
+                ready_hook=reject_ready,
+            )
+        )
+
+    assert runtime.events == [
+        "initiate",
+        "factory",
+        "configure",
+        "ready",
+        "fail:ready rejected",
+        "stop",
+    ]
+
+
+def test_runtime_lifecycle_does_not_fail_after_completion_hook(
+    tmp_path: Path,
+) -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    result = FormationResult(
+        manifest=manifest,
+        manifest_hash=canonical_hash(manifest),
+        checkpoint_path=tmp_path / "checkpoint.safetensors",
+    )
+    runtime = LifecycleRuntime(result)
+    trainer = RuntimeTrainer()
+    training = TrainingConfig(
+        algorithm=DPSGDAdapter(
+            trainer=trainer,
+            tensor_schema=manifest.tensor_schema,
+            local_steps=1,
+        ),
+        load_checkpoint=trainer.load_checkpoint,
+        run_store=RunStore(tmp_path / "run"),
+        artifact_root=tmp_path / "rounds",
+    )
+
+    def build_training(_: FormationResult) -> TrainingConfig:
+        runtime.events.append("factory")
+        return training
+
+    async def reject_completion(_: NodeRunResult) -> None:
+        runtime.events.append("complete")
+        raise RuntimeError("completion evidence unavailable")
+
+    with pytest.raises(RuntimeError, match="completion evidence unavailable"):
+        asyncio.run(
+            runtime.run_to_completion(
+                formation=InitiatorFormation(
+                    bootstrap_uri="axl://bootstrap",
+                    checkpoint_path=result.checkpoint_path,
+                    tensor_schema=manifest.tensor_schema,
+                ),
+                training_factory=build_training,
+                completion_hook=reject_completion,
+            )
+        )
+
+    assert runtime.events == [
+        "initiate",
+        "factory",
+        "configure",
+        "run",
+        "complete",
+        "stop",
+    ]
 
 
 def test_runtime_builds_noloco_from_sealed_manifest() -> None:
@@ -125,6 +269,66 @@ def test_runtime_builds_noloco_from_sealed_manifest() -> None:
         "outer_gradient": "identity-v1",
         "slow_weights": "identity-v1",
     }
+
+
+def test_runtime_builds_compressed_noloco_codecs_from_manifest() -> None:
+    data = manifest_data()
+    data.update(
+        {
+            "algorithm_id": "noloco",
+            "optimizer": "adam",
+            "algorithm_config": {
+                "alpha": 0.5,
+                "beta": 0.7,
+                "gamma": 0.7,
+                "inner_steps": 50,
+                "adam": {
+                    "learning_rate": 0.001,
+                    "beta1": 0.9,
+                    "beta2": 0.999,
+                    "epsilon": 1e-8,
+                    "gradient_clip_norm": 1.0,
+                },
+            },
+            "artifact_codecs": [
+                {
+                    "artifact_name": "outer_gradient",
+                    "codec_id": "topk-int8-v1",
+                    "top_k_fraction": 0.01,
+                    "lossy_allowed": True,
+                },
+                {
+                    "artifact_name": "slow_weights",
+                    "codec_id": "dense-int8-v1",
+                    "lossy_allowed": True,
+                },
+            ],
+            "transport": {
+                **data["transport"],
+                "chunk_size_bytes": 1024,
+                "window_size": 1,
+            },
+        }
+    )
+    draft_data = data.copy()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    data["draft_hash"] = canonical_hash(DraftRunSpec.model_validate(draft_data))
+    manifest = SealedManifest.model_validate(data)
+
+    algorithm = build_algorithm(manifest=manifest, trainer=RuntimeTrainer())
+
+    assert isinstance(algorithm, NoLoCoAlgorithm)
+    assert isinstance(algorithm.artifact_codecs["outer_gradient"], TopKInt8Codec)
+    assert isinstance(algorithm.artifact_codecs["slow_weights"], DenseInt8Codec)
+    outer = algorithm.artifact_codecs["outer_gradient"]
+    assert isinstance(outer, TopKInt8Codec)
+    assert outer.top_k_fraction == 0.01
 
 
 def test_transfer_begin_retains_exact_wire_v1_shape() -> None:
@@ -596,11 +800,11 @@ async def _test_runtime_runs_training_after_in_memory_formation(
     checkpoint = tmp_path / "checkpoint.safetensors"
     write_checkpoint(checkpoint)
     nodes: list[NodeRuntime] = []
+    training_configs: list[TrainingConfig] = []
     for index, transport in enumerate(transports):
-        training = None
-        if index < 4:
-            training_trainer = RuntimeTrainer()
-            training = TrainingConfig(
+        training_trainer = RuntimeTrainer()
+        training_configs.append(
+            TrainingConfig(
                 algorithm=DPSGDAdapter(
                     trainer=training_trainer,
                     tensor_schema=manifest.tensor_schema,
@@ -610,6 +814,7 @@ async def _test_runtime_runs_training_after_in_memory_formation(
                 run_store=RunStore(tmp_path / f"run-{index}"),
                 artifact_root=tmp_path / f"rounds-{index}",
             )
+        )
         nodes.append(
             NodeRuntime(
                 transport=transport,
@@ -617,7 +822,7 @@ async def _test_runtime_runs_training_after_in_memory_formation(
                 environment=manifest.environment,
                 dataset=manifest.dataset,
                 artifact_root=tmp_path / f"artifacts-{index}",
-                training=training,
+                failure=FailureConfig.for_run_root(tmp_path / f"failure-{index}"),
             )
         )
     invitation = create_invitation(
@@ -625,44 +830,77 @@ async def _test_runtime_runs_training_after_in_memory_formation(
         initiator_public_key=await transports[0].local_public_key(),
         bootstrap_uri="axl://bootstrap",
     )
-    formation_tasks: list[asyncio.Task[FormationResult]] = [
-        asyncio.create_task(
-            nodes[0].initiate(
-                bootstrap_uri="axl://bootstrap",
-                checkpoint_path=checkpoint,
-                tensor_schema=manifest.tensor_schema,
-            )
-        )
+    formations = [
+        InitiatorFormation(
+            bootstrap_uri="axl://bootstrap",
+            checkpoint_path=checkpoint,
+            tensor_schema=manifest.tensor_schema,
+        ),
+        *(ParticipantFormation(invitation=invitation) for _ in nodes[1:]),
     ]
-    formation_tasks.extend(
-        asyncio.create_task(node.join(invitation=invitation)) for node in nodes[1:]
-    )
+    lifecycle_events: list[list[str]] = [[] for _ in nodes]
+
+    async def run_lifecycle(index: int) -> NodeRunResult:
+        def build_training(_: FormationResult) -> TrainingConfig:
+            lifecycle_events[index].append("training")
+            return training_configs[index]
+
+        async def ready(_: FormationResult) -> None:
+            lifecycle_events[index].append("ready")
+
+        async def complete(_: NodeRunResult) -> None:
+            lifecycle_events[index].append("complete")
+
+        return await nodes[index].run_to_completion(
+            formation=formations[index],
+            training_factory=build_training,
+            ready_hook=ready,
+            completion_hook=complete,
+        )
+
     outcomes = await asyncio.wait_for(
-        asyncio.gather(*formation_tasks, return_exceptions=True), timeout=2.0
+        asyncio.gather(
+            *(run_lifecycle(index) for index in range(len(nodes))),
+            return_exceptions=True,
+        ),
+        timeout=5.0,
     )
-    assert sum(isinstance(outcome, FormationResult) for outcome in outcomes) == 4
+    assert sum(isinstance(outcome, NodeRunResult) for outcome in outcomes) == 4
     assert sum(isinstance(outcome, FormationError) for outcome in outcomes) == 1
     assert all(
-        isinstance(outcome, (FormationResult, FormationError)) for outcome in outcomes
+        isinstance(outcome, (NodeRunResult, FormationError)) for outcome in outcomes
     )
-
-    commits = await asyncio.wait_for(
-        asyncio.gather(*(node.run() for node in nodes[:4])), timeout=5.0
+    assert all(
+        len(outcome.commits) == 2
+        for outcome in outcomes
+        if isinstance(outcome, NodeRunResult)
     )
-    assert all(len(records) == 2 for records in commits)
-    assert all(node.state is NodeState.COMPLETE for node in nodes[:4])
-    for index in range(4):
+    assert all(node.state is NodeState.STOPPED for node in nodes)
+    successful_indices = [
+        index
+        for index, outcome in enumerate(outcomes)
+        if isinstance(outcome, NodeRunResult)
+    ]
+    for index in successful_indices:
+        assert lifecycle_events[index] == ["training", "ready", "complete"]
         state = RunStore(tmp_path / f"run-{index}").load_state()
         assert state.committed_round == 1
         assert len(state.metrics) == 2
+        assert all(record["local_loss"] == 0.25 for record in state.metrics)
+        assert len(state.transfer_diagnostics) == 2
+        assert all(
+            isinstance(record["transfer_id"], str)
+            and bool(record["transfer_id"])
+            and isinstance(record["retries"], int)
+            and int(record["retries"]) >= 0
+            for record in state.transfer_diagnostics
+        )
         assert len(state.consensus) == 2
         assert [record.round_id for record in state.consensus] == [0, 1]
         assert all(record.sketch_count == 4 for record in state.consensus)
         assert state.terminal is not None
         assert state.terminal.result == "complete"
         assert state.terminal.diagnostics == {"committed_rounds": 2}
-    await nodes[4].stop()
-    assert nodes[4].state is NodeState.STOPPED
 
 
 def test_runtime_persists_and_broadcasts_failure_before_run(tmp_path: Path) -> None:

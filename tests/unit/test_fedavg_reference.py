@@ -22,6 +22,7 @@ from benchmarks.cifar10.fedavg_reference import (
 from dromeus.manifests.models import DatasetContract, SealedManifest
 from dromeus.training.cifar10 import create_initial_checkpoint
 from dromeus.training.data import ClassificationData, DataProvenance
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
 
 
 def _config(
@@ -32,6 +33,11 @@ def _config(
     participant_count: int = 4,
 ) -> FedAvgConfig:
     data = manifest_data()
+    data["model_definition_hash"] = MODEL_DEFINITION_HASH
+    data["environment"] = {
+        **data["environment"],
+        "model_definition_hash": MODEL_DEFINITION_HASH,
+    }
     dataset = dict(data["dataset"])
     dataset["iid_partition_seed"] = partition_seed
     dataset["sample_count"] = 8

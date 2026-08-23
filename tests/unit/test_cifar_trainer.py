@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -10,10 +11,16 @@ import pytest
 import torch
 from PIL import Image
 from support.sample_manifest import manifest_data
+from torch import Tensor
+from torch.utils.data import Dataset, TensorDataset
 
 import dromeus.training.cifar10 as cifar10_recipe
 from dromeus.manifests.canonical import canonical_hash
-from dromeus.manifests.models import DraftRunSpec, SealedManifest
+from dromeus.manifests.models import (
+    DraftRunSpec,
+    SealedManifest,
+    WarmupCosineSchedule,
+)
 from dromeus.persistence.archive import RunArchive
 from dromeus.persistence.run_store import RunStore
 from dromeus.training.cifar10 import (
@@ -23,13 +30,41 @@ from dromeus.training.cifar10 import (
     PREPROCESSING_DEFINITION,
     PREPROCESSING_HASH,
     CIFAR10DataError,
+    CIFAR10TrainerSettings,
     PreparedCIFAR10Training,
     create_initial_checkpoint,
     create_trainer,
     load_cifar10,
 )
 from dromeus.training.data import ClassificationData, IIDPartitionProvenance
-from dromeus.training.trainer import PyTorchTrainer, derive_benchmark_seed
+from dromeus.training.resnet18_groupnorm import (
+    MODEL_DEFINITION_HASH as RESNET18_DEFINITION_HASH,
+)
+from dromeus.training.resnet18_groupnorm import MODEL_ID as RESNET18_MODEL_ID
+from dromeus.training.resnet18_groupnorm import (
+    tensor_schema_for_model as resnet18_tensor_schema,
+)
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH as RESNET32_DEFINITION_HASH
+from dromeus.training.resnet32 import MODEL_ID as RESNET32_MODEL_ID
+from dromeus.training.resnet32 import tensor_schema_for_model as resnet32_tensor_schema
+from dromeus.training.trainer import TrainerSettings, derive_benchmark_seed
+
+
+def _cifar_settings(**changes: Any) -> CIFAR10TrainerSettings:
+    defaults = CIFAR10TrainerSettings()
+    return replace(defaults, trainer=replace(defaults.trainer, **changes))
+
+
+def _small_classification_data() -> ClassificationData:
+    return ClassificationData(
+        cast(
+            Dataset[tuple[Tensor, int]],
+            TensorDataset(
+                torch.zeros((8, 3, 32, 32), dtype=torch.float32),
+                torch.arange(8, dtype=torch.long),
+            ),
+        )
+    )
 
 
 def test_cifar_contract_constants_are_canonical() -> None:
@@ -55,14 +90,43 @@ def test_benchmark_seed_concerns_are_stable_and_separate() -> None:
     )
 
 
-def test_prepared_training_maps_noloco_adam_settings(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_cifar_trainer_settings_preserve_recipe_defaults() -> None:
+    settings = CIFAR10TrainerSettings()
+
+    assert settings.trainer.batch_size == 128
+    assert settings.trainer.momentum == 0.9
+    assert settings.trainer.weight_decay == 1e-4
+    assert settings.trainer.learning_rate_milestones == (8_000, 12_000)
+    assert settings.crop_padding == 4
+    assert settings.normalize is True
+
+
+def test_prepared_training_maps_noloco_adam_settings() -> None:
     data = manifest_data()
     data.update(
         {
             "algorithm_id": "noloco",
+            "model_id": RESNET18_MODEL_ID,
+            "model_definition_hash": RESNET18_DEFINITION_HASH,
+            "tensor_schema": resnet18_tensor_schema().model_dump(mode="python"),
+            "environment": {
+                **data["environment"],
+                "model_definition_hash": RESNET18_DEFINITION_HASH,
+            },
             "optimizer": "adam",
+            "learning_rate": 0.001,
+            "training": {
+                **data["training"],
+                "learning_rate_milestones": [],
+                "learning_rate_schedule": {
+                    "schedule_id": "linear-warmup-cosine-v1",
+                    "total_inner_steps": 5_000,
+                    "warmup_inner_steps": 500,
+                    "start_learning_rate": 0.0001,
+                    "peak_learning_rate": 0.001,
+                    "final_learning_rate": 0.0001,
+                },
+            },
             "algorithm_config": {
                 "alpha": 0.5,
                 "beta": 0.7,
@@ -97,29 +161,120 @@ def test_prepared_training_maps_noloco_adam_settings(
         del draft_data[field]
     data["draft_hash"] = canonical_hash(DraftRunSpec.model_validate(draft_data))
     manifest = SealedManifest.model_validate(data)
+    small_data = _small_classification_data()
+    prepared = PreparedCIFAR10Training(
+        _partitions=(small_data,) * 4,
+        _test_data=small_data,
+        initialization_seed=1,
+        trainer_seed=2,
+        model_id=RESNET18_MODEL_ID,
+        model_definition_hash=RESNET18_DEFINITION_HASH,
+    )
+
+    trainer = prepared.create_trainer(
+        manifest=manifest,
+        local_public_key="peer-0",
+    )
+
+    assert trainer.tensor_schema == manifest.tensor_schema
+    assert trainer.settings.optimizer == "adam"
+    assert trainer.settings.adam_beta1 == 0.9
+    assert trainer.settings.adam_beta2 == 0.999
+    assert trainer.settings.adam_epsilon == 1e-8
+    assert trainer.settings.gradient_clip_norm == 1.0
+    assert trainer.learning_rate == pytest.approx(0.0001)
+    assert trainer.last_local_loss is None
+
+
+def test_prepared_training_maps_dpsgd_sgd_settings() -> None:
+    data = manifest_data()
+    data.update(
+        {
+            "model_id": RESNET32_MODEL_ID,
+            "model_definition_hash": RESNET32_DEFINITION_HASH,
+            "tensor_schema": resnet32_tensor_schema().model_dump(mode="python"),
+            "environment": {
+                **data["environment"],
+                "model_definition_hash": RESNET32_DEFINITION_HASH,
+            },
+        }
+    )
+    draft_data = data.copy()
+    for field in (
+        "draft_hash",
+        "participants",
+        "initial_checkpoint_hash",
+        "tensor_schema",
+    ):
+        del draft_data[field]
+    data["draft_hash"] = canonical_hash(DraftRunSpec.model_validate(draft_data))
+    manifest = SealedManifest.model_validate(data)
+    small_data = _small_classification_data()
+    prepared = PreparedCIFAR10Training(
+        _partitions=(small_data,) * 4,
+        _test_data=small_data,
+        initialization_seed=1,
+        trainer_seed=2,
+        model_id=RESNET32_MODEL_ID,
+        model_definition_hash=RESNET32_DEFINITION_HASH,
+    )
+
+    trainer = prepared.create_trainer(
+        manifest=manifest,
+        local_public_key="peer-0",
+    )
+
+    assert trainer.tensor_schema == manifest.tensor_schema
+    assert trainer.settings == TrainerSettings(
+        seed=2,
+        batch_size=128,
+        learning_rate=0.1,
+        optimizer="sgd",
+        momentum=0.9,
+        weight_decay=1e-4,
+        learning_rate_milestones=(8_000, 12_000),
+        learning_rate_gamma=0.1,
+        device="cpu",
+        augment=True,
+    )
+
+
+def test_prepared_training_rejects_formed_model_mismatch() -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
     placeholder = cast(ClassificationData, object())
     prepared = PreparedCIFAR10Training(
         _partitions=(placeholder,) * 4,
         _test_data=placeholder,
         initialization_seed=1,
         trainer_seed=2,
+        model_id=RESNET18_MODEL_ID,
+        model_definition_hash=RESNET18_DEFINITION_HASH,
     )
-    captured: dict[str, Any] = {}
 
-    def fake_create_trainer(**kwargs: Any) -> PyTorchTrainer:
-        captured.update(kwargs)
-        return cast(PyTorchTrainer, object())
+    with pytest.raises(
+        ValueError,
+        match="formed manifest model does not match prepared training",
+    ):
+        prepared.create_trainer(manifest=manifest, local_public_key="peer-0")
 
-    monkeypatch.setattr(cifar10_recipe, "create_trainer", fake_create_trainer)
 
-    prepared.create_trainer(manifest=manifest, local_public_key="peer-0")
+def test_prepared_training_rejects_unsealed_local_identity() -> None:
+    manifest = SealedManifest.model_validate(manifest_data())
+    placeholder = cast(ClassificationData, object())
+    prepared = PreparedCIFAR10Training(
+        _partitions=(placeholder,) * 4,
+        _test_data=placeholder,
+        initialization_seed=1,
+        trainer_seed=2,
+        model_id=manifest.model_id,
+        model_definition_hash=manifest.model_definition_hash,
+    )
 
-    assert captured["optimizer"] == "adam"
-    assert captured["learning_rate"] == 0.001
-    assert captured["adam_beta1"] == 0.9
-    assert captured["adam_beta2"] == 0.999
-    assert captured["adam_epsilon"] == 1e-8
-    assert captured["gradient_clip_norm"] == 1.0
+    with pytest.raises(
+        ValueError,
+        match="local public key is not a sealed participant",
+    ):
+        prepared.create_trainer(manifest=manifest, local_public_key="unknown-peer")
 
 
 @pytest.fixture(scope="session")
@@ -246,8 +401,7 @@ def test_checkpoint_is_deterministic_and_matches_trainer_schema(
 
     trainer = create_trainer(
         train_data=cifar10_data,
-        seed=17,
-        batch_size=4,
+        settings=_cifar_settings(seed=17, batch_size=4),
     )
     trainer.load_checkpoint(first_path)
     assert trainer.tensor_schema == first.tensor_schema
@@ -272,9 +426,7 @@ def test_trainer_runs_sgd_and_evaluates(
 ) -> None:
     trainer = create_trainer(
         train_data=cifar10_data,
-        seed=3,
-        batch_size=4,
-        learning_rate=0.05,
+        settings=_cifar_settings(seed=3, batch_size=4, learning_rate=0.05),
     )
     before = trainer.weights()
 
@@ -295,15 +447,15 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
 ) -> None:
     trainer = create_trainer(
         train_data=cifar10_data,
-        seed=3,
-        batch_size=4,
-        learning_rate=0.1,
-        momentum=0.9,
-        weight_decay=1e-4,
-        learning_rate_milestones=(1,),
-        learning_rate_gamma=0.1,
-        crop_padding=4,
-        normalize=True,
+        settings=_cifar_settings(
+            seed=3,
+            batch_size=4,
+            learning_rate=0.1,
+            momentum=0.9,
+            weight_decay=1e-4,
+            learning_rate_milestones=(1,),
+            learning_rate_gamma=0.1,
+        ),
     )
     before = trainer.weights()
 
@@ -336,15 +488,15 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
 
     restored = create_trainer(
         train_data=cifar10_data,
-        seed=99,
-        batch_size=4,
-        learning_rate=0.1,
-        momentum=0.9,
-        weight_decay=1e-4,
-        learning_rate_milestones=(1,),
-        learning_rate_gamma=0.1,
-        crop_padding=4,
-        normalize=True,
+        settings=_cifar_settings(
+            seed=99,
+            batch_size=4,
+            learning_rate=0.1,
+            momentum=0.9,
+            weight_decay=1e-4,
+            learning_rate_milestones=(1,),
+            learning_rate_gamma=0.1,
+        ),
     )
     restored.load_checkpoint_tensors(persisted_state)
 
@@ -361,3 +513,57 @@ def test_resnet_trainer_uses_momentum_schedule_and_full_float_state(
         np.array_equal(value, restored.weights()[name])
         for name, value in trainer.weights().items()
     )
+
+
+def test_warmup_cosine_trainer_resumes_at_the_exact_next_step(
+    cifar10_data: ClassificationData,
+) -> None:
+    schedule = WarmupCosineSchedule(
+        schedule_id="linear-warmup-cosine-v1",
+        total_inner_steps=4,
+        warmup_inner_steps=2,
+        start_learning_rate=0.001,
+        peak_learning_rate=0.01,
+        final_learning_rate=0.001,
+    )
+    trainer = create_trainer(
+        train_data=cifar10_data,
+        settings=_cifar_settings(
+            seed=3,
+            batch_size=4,
+            learning_rate=0.01,
+            optimizer="adam",
+            learning_rate_milestones=(),
+            learning_rate_schedule=schedule,
+        ),
+    )
+
+    assert trainer.learning_rate == pytest.approx(0.001)
+    trainer.train_local_steps(1)
+    assert trainer.learning_rate == pytest.approx(0.01)
+    state = trainer.checkpoint_tensors()
+
+    restored = create_trainer(
+        train_data=cifar10_data,
+        settings=_cifar_settings(
+            seed=99,
+            batch_size=4,
+            learning_rate=0.01,
+            optimizer="adam",
+            learning_rate_milestones=(),
+            learning_rate_schedule=schedule,
+        ),
+    )
+    restored.load_checkpoint_tensors(state)
+    assert restored.learning_rate == pytest.approx(0.01)
+
+    trainer.train_local_steps(3)
+    restored.train_local_steps(3)
+
+    assert trainer.learning_rate == pytest.approx(0.001)
+    assert all(
+        np.array_equal(value, restored.weights()[name])
+        for name, value in trainer.weights().items()
+    )
+    with pytest.raises(ValueError, match="exceeds learning-rate schedule"):
+        trainer.train_local_steps(1)

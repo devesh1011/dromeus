@@ -23,6 +23,7 @@ from dromeus.manifests.models import (
     SealedManifest,
     TrainingPolicy,
     UpdateBundleMetadata,
+    WarmupCosineSchedule,
 )
 
 GOLDEN = Path(__file__).parents[1] / "golden" / "sealed_manifest.json"
@@ -340,6 +341,51 @@ def test_noloco_rejects_unfrozen_hyperparameters(
         SealedManifest.model_validate(data)
 
 
+def test_noloco_manifest_accepts_only_identity_or_complete_compressed_pair() -> None:
+    data = _v3_manifest_data()
+    data["artifact_codecs"] = [
+        {
+            "artifact_name": "outer_gradient",
+            "codec_id": "topk-int8-v1",
+            "top_k_fraction": 0.01,
+            "lossy_allowed": True,
+        },
+        {
+            "artifact_name": "slow_weights",
+            "codec_id": "dense-int8-v1",
+            "lossy_allowed": True,
+        },
+    ]
+    draft_data = {
+        key: value
+        for key, value in data.items()
+        if key
+        not in {
+            "draft_hash",
+            "participants",
+            "initial_checkpoint_hash",
+            "tensor_schema",
+        }
+    }
+
+    draft = DraftRunSpec.model_validate(draft_data)
+    assert draft.artifact_codecs is not None
+    assert draft.artifact_codecs[0].lossy_allowed is True
+
+    invalid = dict(draft_data)
+    invalid["artifact_codecs"] = [
+        {
+            "artifact_name": "outer_gradient",
+            "codec_id": "topk-int8-v1",
+            "top_k_fraction": 0.01,
+            "lossy_allowed": True,
+        },
+        {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+    ]
+    with pytest.raises(ValidationError, match="combination"):
+        DraftRunSpec.model_validate(invalid)
+
+
 def test_training_policy_validates_quality_recipe() -> None:
     policy = TrainingPolicy(
         batch_size=128,
@@ -366,6 +412,77 @@ def test_training_policy_validates_quality_recipe() -> None:
             normalize=True,
             final_consensus_rounds=2,
         )
+
+
+def test_warmup_cosine_schedule_has_frozen_step_semantics() -> None:
+    schedule = WarmupCosineSchedule(
+        schedule_id="linear-warmup-cosine-v1",
+        total_inner_steps=100,
+        warmup_inner_steps=10,
+        start_learning_rate=0.0001,
+        peak_learning_rate=0.001,
+        final_learning_rate=0.0001,
+    )
+
+    assert schedule.learning_rate(0) == pytest.approx(0.0001)
+    assert schedule.learning_rate(9) == pytest.approx(0.001)
+    assert schedule.learning_rate(99) == pytest.approx(0.0001)
+    assert schedule.learning_rate(100) == pytest.approx(0.0001)
+    with pytest.raises(ValueError, match="outside"):
+        schedule.learning_rate(101)
+
+
+def test_noloco_manifest_accepts_matching_warmup_cosine_schedule() -> None:
+    data = _v3_manifest_data()
+    data["learning_rate"] = 0.001
+    training = data["training"]
+    assert isinstance(training, dict)
+    training["learning_rate_schedule"] = {
+        "schedule_id": "linear-warmup-cosine-v1",
+        "total_inner_steps": 5_000,
+        "warmup_inner_steps": 500,
+        "start_learning_rate": 0.0001,
+        "peak_learning_rate": 0.001,
+        "final_learning_rate": 0.0001,
+    }
+
+    manifest = SealedManifest.model_validate(data)
+
+    assert manifest.training is not None
+    assert manifest.training.learning_rate_schedule is not None
+    assert manifest.training.learning_rate_schedule.total_inner_steps == 5_000
+
+
+def test_manifest_rejects_inconsistent_warmup_cosine_schedule() -> None:
+    data = _v3_manifest_data()
+    data["learning_rate"] = 0.001
+    training = data["training"]
+    assert isinstance(training, dict)
+    training["learning_rate_schedule"] = {
+        "schedule_id": "linear-warmup-cosine-v1",
+        "total_inner_steps": 4_999,
+        "warmup_inner_steps": 500,
+        "start_learning_rate": 0.0001,
+        "peak_learning_rate": 0.001,
+        "final_learning_rate": 0.0001,
+    }
+    with pytest.raises(ValidationError, match="round count"):
+        SealedManifest.model_validate(data)
+
+    data = manifest_data()
+    training = data["training"]
+    assert isinstance(training, dict)
+    training["learning_rate_milestones"] = []
+    training["learning_rate_schedule"] = {
+        "schedule_id": "linear-warmup-cosine-v1",
+        "total_inner_steps": 16_000,
+        "warmup_inner_steps": 1_000,
+        "start_learning_rate": 0.01,
+        "peak_learning_rate": 0.1,
+        "final_learning_rate": 0.01,
+    }
+    with pytest.raises(ValidationError, match="only supported for NoLoCo"):
+        SealedManifest.model_validate(data)
 
 
 def test_active_manifest_requires_training_policy() -> None:

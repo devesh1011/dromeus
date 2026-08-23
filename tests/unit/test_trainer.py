@@ -1,11 +1,31 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import TensorDataset
 
-from dromeus.training.trainer import PyTorchTrainer
+from dromeus.manifests.models import WarmupCosineSchedule
+from dromeus.training.trainer import PyTorchTrainer, TrainerSettings
+
+
+def test_trainer_settings_reject_invalid_optimizer_configuration() -> None:
+    with pytest.raises(ValueError, match="batch_size must be positive"):
+        TrainerSettings(batch_size=0)
+
+    with pytest.raises(ValueError, match="warmup-cosine and milestone"):
+        TrainerSettings(
+            learning_rate_milestones=(10,),
+            learning_rate_schedule=WarmupCosineSchedule(
+                schedule_id="linear-warmup-cosine-v1",
+                total_inner_steps=10,
+                warmup_inner_steps=1,
+                start_learning_rate=0.01,
+                peak_learning_rate=0.1,
+                final_learning_rate=0.01,
+            ),
+        )
 
 
 def test_trainer_accepts_a_generic_model_and_classification_dataset() -> None:
@@ -18,9 +38,11 @@ def test_trainer_accepts_a_generic_model_and_classification_dataset() -> None:
         model_definition="test-linear-classifier",
         train_data=data,  # pyright: ignore[reportArgumentType]
         test_data=data,  # pyright: ignore[reportArgumentType]
-        batch_size=4,
-        learning_rate=0.01,
-        augment=False,
+        settings=TrainerSettings(
+            batch_size=4,
+            learning_rate=0.01,
+            augment=False,
+        ),
     )
     before = trainer.weights()
 
@@ -46,14 +68,16 @@ def test_trainer_runs_clipped_adam_and_restores_moments() -> None:
         model=model,
         model_definition="test-linear-adam",
         train_data=data,  # pyright: ignore[reportArgumentType]
-        batch_size=4,
-        learning_rate=0.001,
-        optimizer="adam",
-        adam_beta1=0.9,
-        adam_beta2=0.999,
-        adam_epsilon=1e-8,
-        gradient_clip_norm=1.0,
-        augment=False,
+        settings=TrainerSettings(
+            batch_size=4,
+            learning_rate=0.001,
+            optimizer="adam",
+            adam_beta1=0.9,
+            adam_beta2=0.999,
+            adam_epsilon=1e-8,
+            gradient_clip_norm=1.0,
+            augment=False,
+        ),
     )
 
     trainer.train_local_steps(1)
@@ -69,14 +93,16 @@ def test_trainer_runs_clipped_adam_and_restores_moments() -> None:
         model=restored_model,
         model_definition="test-linear-adam",
         train_data=data,  # pyright: ignore[reportArgumentType]
-        batch_size=4,
-        learning_rate=0.001,
-        optimizer="adam",
-        adam_beta1=0.9,
-        adam_beta2=0.999,
-        adam_epsilon=1e-8,
-        gradient_clip_norm=1.0,
-        augment=False,
+        settings=TrainerSettings(
+            batch_size=4,
+            learning_rate=0.001,
+            optimizer="adam",
+            adam_beta1=0.9,
+            adam_beta2=0.999,
+            adam_epsilon=1e-8,
+            gradient_clip_norm=1.0,
+            augment=False,
+        ),
     )
     restored.load_checkpoint_tensors(state)
 
