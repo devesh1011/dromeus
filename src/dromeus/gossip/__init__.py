@@ -6,6 +6,7 @@ from dromeus.gossip.engine import (
     FailureBroadcaster,
     GossipEngine,
     PairCommitError,
+    PairExchangeResult,
     RunFailure,
 )
 from dromeus.gossip.peer_scheduler import Pairing, PeerScheduler
@@ -16,6 +17,7 @@ __all__ = [
     "FailureBroadcaster",
     "GossipEngine",
     "PairCommitError",
+    "PairExchangeResult",
     "Pairing",
     "PeerScheduler",
     "RunFailure",
