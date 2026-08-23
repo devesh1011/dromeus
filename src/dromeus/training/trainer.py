@@ -21,7 +21,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import TensorSchema, WarmupCosineSchedule
-from dromeus.training.resnet32 import floating_model_state, tensor_schema_for_model
+from dromeus.training.model_state import floating_model_state, tensor_schema_for_model
 
 BatchTransform = Callable[[Tensor, bool, torch.Generator], Tensor]
 _TRAINING_STATE_PREFIX = "__dromeus_training__."
@@ -44,6 +44,79 @@ class InitialCheckpoint:
     path: Path
     tensor_schema: TensorSchema
     sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class TrainerSettings:
+    """Validated local optimizer, schedule, loader, and device settings."""
+
+    seed: int = 0
+    batch_size: int = 32
+    learning_rate: float = 0.1
+    optimizer: Literal["sgd", "adam"] = "sgd"
+    momentum: float = 0.0
+    weight_decay: float = 0.0
+    adam_beta1: float = 0.9
+    adam_beta2: float = 0.999
+    adam_epsilon: float = 1e-8
+    gradient_clip_norm: float | None = None
+    learning_rate_milestones: tuple[int, ...] = ()
+    learning_rate_gamma: float = 0.1
+    learning_rate_schedule: WarmupCosineSchedule | None = None
+    device: str = "cpu"
+    augment: bool = True
+
+    def __post_init__(self) -> None:
+        if self.batch_size <= 0:
+            raise ValueError("batch_size must be positive")
+        if self.learning_rate <= 0 or not np.isfinite(self.learning_rate):
+            raise ValueError("learning_rate must be positive and finite")
+        if not 0 <= self.momentum < 1 or not np.isfinite(self.momentum):
+            raise ValueError("momentum must be finite in [0, 1)")
+        if self.weight_decay < 0 or not np.isfinite(self.weight_decay):
+            raise ValueError("weight_decay must be finite and non-negative")
+        if self.optimizer not in ("sgd", "adam"):
+            raise ValueError("optimizer must be sgd or adam")
+        if not 0 <= self.adam_beta1 < 1 or not np.isfinite(self.adam_beta1):
+            raise ValueError("Adam beta1 must be finite in [0, 1)")
+        if not 0 <= self.adam_beta2 < 1 or not np.isfinite(self.adam_beta2):
+            raise ValueError("Adam beta2 must be finite in [0, 1)")
+        if self.adam_epsilon <= 0 or not np.isfinite(self.adam_epsilon):
+            raise ValueError("Adam epsilon must be positive and finite")
+        if self.gradient_clip_norm is not None and (
+            self.gradient_clip_norm <= 0
+            or not np.isfinite(self.gradient_clip_norm)
+        ):
+            raise ValueError("gradient clip norm must be positive and finite")
+        if any(
+            milestone <= 0 for milestone in self.learning_rate_milestones
+        ) or any(
+            right <= left
+            for left, right in zip(
+                self.learning_rate_milestones,
+                self.learning_rate_milestones[1:],
+                strict=False,
+            )
+        ):
+            raise ValueError("learning-rate milestones must be strictly increasing")
+        if not 0 < self.learning_rate_gamma < 1 or not np.isfinite(
+            self.learning_rate_gamma
+        ):
+            raise ValueError("learning_rate_gamma must be finite in (0, 1)")
+        if (
+            self.learning_rate_schedule is not None
+            and self.learning_rate_milestones
+        ):
+            raise ValueError(
+                "warmup-cosine and milestone schedules are mutually exclusive"
+            )
+        if self.learning_rate_schedule is not None and not np.isclose(
+            self.learning_rate,
+            self.learning_rate_schedule.peak_learning_rate,
+            rtol=0.0,
+            atol=0.0,
+        ):
+            raise ValueError("learning rate must equal warmup-cosine peak")
 
 
 def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
@@ -90,100 +163,43 @@ class PyTorchTrainer:
         model_definition: str,
         train_data: Dataset[tuple[Tensor, int]],
         test_data: Dataset[tuple[Tensor, int]] | None = None,
-        seed: int = 0,
-        batch_size: int = 32,
-        learning_rate: float = 0.1,
-        optimizer: Literal["sgd", "adam"] = "sgd",
-        momentum: float = 0.0,
-        weight_decay: float = 0.0,
-        adam_beta1: float = 0.9,
-        adam_beta2: float = 0.999,
-        adam_epsilon: float = 1e-8,
-        gradient_clip_norm: float | None = None,
-        learning_rate_milestones: tuple[int, ...] = (),
-        learning_rate_gamma: float = 0.1,
-        learning_rate_schedule: WarmupCosineSchedule | None = None,
-        device: str = "cpu",
-        augment: bool = True,
+        settings: TrainerSettings,
         batch_transform: BatchTransform | None = None,
     ) -> None:
-        if batch_size <= 0:
-            raise ValueError("batch_size must be positive")
-        if learning_rate <= 0 or not np.isfinite(learning_rate):
-            raise ValueError("learning_rate must be positive and finite")
-        if not 0 <= momentum < 1 or not np.isfinite(momentum):
-            raise ValueError("momentum must be finite in [0, 1)")
-        if weight_decay < 0 or not np.isfinite(weight_decay):
-            raise ValueError("weight_decay must be finite and non-negative")
-        if optimizer not in ("sgd", "adam"):
-            raise ValueError("optimizer must be sgd or adam")
-        if not 0 <= adam_beta1 < 1 or not np.isfinite(adam_beta1):
-            raise ValueError("Adam beta1 must be finite in [0, 1)")
-        if not 0 <= adam_beta2 < 1 or not np.isfinite(adam_beta2):
-            raise ValueError("Adam beta2 must be finite in [0, 1)")
-        if adam_epsilon <= 0 or not np.isfinite(adam_epsilon):
-            raise ValueError("Adam epsilon must be positive and finite")
-        if gradient_clip_norm is not None and (
-            gradient_clip_norm <= 0 or not np.isfinite(gradient_clip_norm)
-        ):
-            raise ValueError("gradient clip norm must be positive and finite")
-        if any(milestone <= 0 for milestone in learning_rate_milestones) or any(
-            right <= left
-            for left, right in zip(
-                learning_rate_milestones,
-                learning_rate_milestones[1:],
-                strict=False,
-            )
-        ):
-            raise ValueError("learning-rate milestones must be strictly increasing")
-        if not 0 < learning_rate_gamma < 1 or not np.isfinite(
-            learning_rate_gamma
-        ):
-            raise ValueError("learning_rate_gamma must be finite in (0, 1)")
-        if learning_rate_schedule is not None and learning_rate_milestones:
-            raise ValueError(
-                "warmup-cosine and milestone schedules are mutually exclusive"
-            )
-        if learning_rate_schedule is not None and not np.isclose(
-            learning_rate,
-            learning_rate_schedule.peak_learning_rate,
-            rtol=0.0,
-            atol=0.0,
-        ):
-            raise ValueError("learning rate must equal warmup-cosine peak")
-        self._device = torch.device(device)
+        self._settings = settings
+        self._device = torch.device(settings.device)
         self._model_definition = model_definition
         self._model = model.to(self._device)
-        self._optimizer_name = optimizer
+        self._optimizer_name = settings.optimizer
         self._optimizer = (
             torch.optim.SGD(
                 self._model.parameters(),
-                lr=learning_rate,
-                momentum=momentum,
-                weight_decay=weight_decay,
+                lr=settings.learning_rate,
+                momentum=settings.momentum,
+                weight_decay=settings.weight_decay,
             )
-            if optimizer == "sgd"
+            if settings.optimizer == "sgd"
             else torch.optim.Adam(
                 self._model.parameters(),
-                lr=learning_rate,
-                betas=(adam_beta1, adam_beta2),
-                eps=adam_epsilon,
-                weight_decay=weight_decay,
+                lr=settings.learning_rate,
+                betas=(settings.adam_beta1, settings.adam_beta2),
+                eps=settings.adam_epsilon,
+                weight_decay=settings.weight_decay,
             )
         )
-        self._gradient_clip_norm = gradient_clip_norm
-        self._base_learning_rate = learning_rate
-        self._learning_rate_milestones = learning_rate_milestones
-        self._learning_rate_gamma = learning_rate_gamma
-        self._learning_rate_schedule = learning_rate_schedule
+        self._gradient_clip_norm = settings.gradient_clip_norm
+        self._base_learning_rate = settings.learning_rate
+        self._learning_rate_milestones = settings.learning_rate_milestones
+        self._learning_rate_gamma = settings.learning_rate_gamma
+        self._learning_rate_schedule = settings.learning_rate_schedule
         self._completed_steps = 0
-        self._augment = augment
+        self._augment = settings.augment
         self._batch_transform = batch_transform
         self._augmentation_generator = torch.Generator(device="cpu")
-        self._augmentation_generator.manual_seed(seed + 1)
+        self._augmentation_generator.manual_seed(settings.seed + 1)
         self._loader_generator = torch.Generator(device="cpu")
-        self._loader_generator.manual_seed(seed + 2)
-        self._batch_size = batch_size
+        self._loader_generator.manual_seed(settings.seed + 2)
+        self._batch_size = settings.batch_size
         self._test_data = test_data or train_data
         self._train_loader = self._make_loader(train_data, shuffle=True)
         self._batches_consumed = 0
@@ -196,6 +212,11 @@ class PyTorchTrainer:
     @property
     def tensor_schema(self) -> TensorSchema:
         return self._tensor_schema
+
+    @property
+    def settings(self) -> TrainerSettings:
+        """Return immutable construction settings for audit and verification."""
+        return self._settings
 
     @property
     def last_local_loss(self) -> float | None:
@@ -510,6 +531,7 @@ __all__ = [
     "BatchTransform",
     "InitialCheckpoint",
     "PyTorchTrainer",
+    "TrainerSettings",
     "checkpoint_hash",
     "create_initial_checkpoint",
     "derive_benchmark_seed",

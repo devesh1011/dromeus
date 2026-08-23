@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Literal
 
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
 
 from dromeus.manifests.models import RESNET32_MODEL_ID, TensorSchema
-from dromeus.manifests.models import Tensor as TensorSpec
+from dromeus.training.model_state import floating_model_state
+from dromeus.training.model_state import tensor_schema_for_model as _tensor_schema
 
 MODEL_ID = RESNET32_MODEL_ID
 
@@ -26,14 +26,8 @@ def model_definition(*, input_channels: int = 3, num_classes: int = 10) -> str:
 
 MODEL_DEFINITION = model_definition()
 MODEL_DEFINITION_HASH = hashlib.sha256(MODEL_DEFINITION.encode()).hexdigest()
-_TORCH_TO_SCHEMA_DTYPE: dict[
-    torch.dtype,
-    Literal["float16", "float32", "float64"],
-] = {
-    torch.float16: "float16",
-    torch.float32: "float32",
-    torch.float64: "float64",
-}
+PARAMETER_COUNT = 464_154
+TENSOR_SCHEMA_HASH = "ce2e4bcb390e50c0c6d5d33b3bcf1d3deaf460b4173f7ac9663312cc1c76fda5"
 
 
 class _BasicBlock(nn.Module):
@@ -139,38 +133,18 @@ def build_model(
         )
 
 
-def floating_model_state(model: nn.Module) -> dict[str, Tensor]:
-    """Return exchangeable state, excluding integer BatchNorm counters."""
-    return {
-        name: value
-        for name, value in model.state_dict().items()
-        if value.is_floating_point()
-    }
-
-
 def tensor_schema_for_model(model: nn.Module | None = None) -> TensorSchema:
     """Derive the wire schema from parameters and floating-point model buffers."""
-    target = model or build_model(seed=0)
-    tensors: list[TensorSpec] = []
-    for name, value in floating_model_state(target).items():
-        dtype = _TORCH_TO_SCHEMA_DTYPE.get(value.dtype)
-        if dtype is None:
-            raise ValueError(f"unsupported model state dtype: {value.dtype}")
-        tensors.append(
-            TensorSpec(
-                name=name,
-                dtype=dtype,
-                shape=tuple(value.shape),
-            )
-        )
-    return TensorSchema(tensors=tuple(tensors))
+    return _tensor_schema(model or build_model(seed=0))
 
 
 __all__ = [
     "MODEL_DEFINITION",
     "MODEL_DEFINITION_HASH",
     "MODEL_ID",
+    "PARAMETER_COUNT",
     "ResNet32",
+    "TENSOR_SCHEMA_HASH",
     "build_model",
     "floating_model_state",
     "model_definition",

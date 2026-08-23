@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -20,17 +20,20 @@ from torch import Tensor
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
+from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import (
     NOLOCO_ALGORITHM_ID,
     DraftRunSpec,
     SealedManifest,
-    WarmupCosineSchedule,
 )
 from dromeus.training.data import ClassificationData, DataProvenance
-from dromeus.training.resnet32 import MODEL_DEFINITION, build_model
+from dromeus.training.models import resolve_model
+from dromeus.training.resnet32 import MODEL_DEFINITION_HASH as RESNET32_DEFINITION_HASH
+from dromeus.training.resnet32 import MODEL_ID as RESNET32_MODEL_ID
 from dromeus.training.trainer import (
     InitialCheckpoint,
     PyTorchTrainer,
+    TrainerSettings,
     derive_benchmark_seed,
 )
 from dromeus.training.trainer import (
@@ -106,64 +109,68 @@ def load_cifar10(
     )
 
 
-def create_initial_checkpoint(path: Path, *, seed: int) -> InitialCheckpoint:
-    """Create the recipe's deterministic ResNet-32 checkpoint."""
+def create_initial_checkpoint(
+    path: Path,
+    *,
+    seed: int,
+    model_id: str = RESNET32_MODEL_ID,
+    model_definition_hash: str | None = None,
+) -> InitialCheckpoint:
+    """Create one deterministic checkpoint from a built-in model recipe."""
+    recipe = resolve_model(model_id, definition_hash=model_definition_hash)
     return _create_initial_checkpoint(
         path,
-        model=build_model(seed=seed),
-        model_definition=MODEL_DEFINITION,
+        model=recipe.build(seed=seed),
+        model_definition=recipe.definition,
     )
+
+
+def _default_trainer_settings() -> TrainerSettings:
+    return TrainerSettings(
+        batch_size=128,
+        momentum=0.9,
+        weight_decay=1e-4,
+        learning_rate_milestones=(8_000, 12_000),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class CIFAR10TrainerSettings:
+    """Validated generic and CIFAR-specific trainer construction settings."""
+
+    trainer: TrainerSettings = field(default_factory=_default_trainer_settings)
+    model_id: str = RESNET32_MODEL_ID
+    model_definition_hash: str | None = None
+    crop_padding: int = 4
+    normalize: bool = True
+
+    def __post_init__(self) -> None:
+        if self.crop_padding < 0:
+            raise ValueError("crop_padding must be non-negative")
 
 
 def create_trainer(
     *,
     train_data: ClassificationData,
     test_data: ClassificationData | None = None,
-    seed: int = 0,
-    batch_size: int = 128,
-    learning_rate: float = 0.1,
-    optimizer: Literal["sgd", "adam"] = "sgd",
-    momentum: float = 0.9,
-    weight_decay: float = 1e-4,
-    adam_beta1: float = 0.9,
-    adam_beta2: float = 0.999,
-    adam_epsilon: float = 1e-8,
-    gradient_clip_norm: float | None = None,
-    learning_rate_milestones: tuple[int, ...] = (8_000, 12_000),
-    learning_rate_gamma: float = 0.1,
-    learning_rate_schedule: WarmupCosineSchedule | None = None,
-    device: str = "cpu",
-    augment: bool = True,
-    crop_padding: int = 4,
-    normalize: bool = True,
+    settings: CIFAR10TrainerSettings | None = None,
 ) -> PyTorchTrainer:
     """Construct the trainer configured by the CIFAR-10 recipe."""
-    if crop_padding < 0:
-        raise ValueError("crop_padding must be non-negative")
+    settings = settings or CIFAR10TrainerSettings()
+    recipe = resolve_model(
+        settings.model_id,
+        definition_hash=settings.model_definition_hash,
+    )
     return PyTorchTrainer(
-        model=build_model(seed=seed),
-        model_definition=MODEL_DEFINITION,
+        model=recipe.build(seed=settings.trainer.seed),
+        model_definition=recipe.definition,
         train_data=train_data,
         test_data=test_data,
-        seed=seed,
-        batch_size=batch_size,
-        learning_rate=learning_rate,
-        optimizer=optimizer,
-        momentum=momentum,
-        weight_decay=weight_decay,
-        adam_beta1=adam_beta1,
-        adam_beta2=adam_beta2,
-        adam_epsilon=adam_epsilon,
-        gradient_clip_norm=gradient_clip_norm,
-        learning_rate_milestones=learning_rate_milestones,
-        learning_rate_gamma=learning_rate_gamma,
-        learning_rate_schedule=learning_rate_schedule,
-        device=device,
-        augment=augment,
+        settings=settings.trainer,
         batch_transform=partial(
             _prepare_batch,
-            crop_padding=crop_padding,
-            normalize=normalize,
+            crop_padding=settings.crop_padding,
+            normalize=settings.normalize,
         ),
     )
 
@@ -227,9 +234,16 @@ class PreparedCIFAR10Training:
     _test_data: ClassificationData
     initialization_seed: int
     trainer_seed: int
+    model_id: str = RESNET32_MODEL_ID
+    model_definition_hash: str = RESNET32_DEFINITION_HASH
 
     def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return create_initial_checkpoint(path, seed=self.initialization_seed)
+        return create_initial_checkpoint(
+            path,
+            seed=self.initialization_seed,
+            model_id=self.model_id,
+            model_definition_hash=self.model_definition_hash,
+        )
 
     def create_trainer(
         self,
@@ -237,11 +251,25 @@ class PreparedCIFAR10Training:
         manifest: SealedManifest,
         local_public_key: str,
     ) -> PyTorchTrainer:
+        if manifest.model_id != self.model_id:
+            raise ValueError("formed manifest model does not match prepared training")
         node_indices = {
             participant.public_key: participant.node_index
             for participant in manifest.participants
         }
-        node_index = node_indices[local_public_key]
+        node_index = node_indices.get(local_public_key)
+        if node_index is None:
+            raise ValueError("local public key is not a sealed participant")
+        recipe = resolve_model(
+            self.model_id,
+            definition_hash=self.model_definition_hash,
+        )
+        if manifest.model_definition_hash != recipe.definition_hash:
+            raise ValueError("formed manifest model does not match prepared training")
+        if canonical_hash(manifest.tensor_schema) != recipe.tensor_schema_hash:
+            raise ValueError(
+                "formed manifest tensor schema does not match prepared training"
+            )
         partition_index = manifest.dataset.node_index_partitions[node_index]
         policy = manifest.training
         if policy is None:
@@ -254,29 +282,35 @@ class PreparedCIFAR10Training:
         return create_trainer(
             train_data=self._partitions[partition_index],
             test_data=self._test_data,
-            seed=self.trainer_seed + node_index,
-            batch_size=policy.batch_size,
-            learning_rate=(
-                adam.learning_rate
-                if adam is not None
-                else manifest.learning_rate
+            settings=CIFAR10TrainerSettings(
+                trainer=TrainerSettings(
+                    seed=self.trainer_seed + node_index,
+                    batch_size=policy.batch_size,
+                    learning_rate=(
+                        adam.learning_rate
+                        if adam is not None
+                        else manifest.learning_rate
+                    ),
+                    optimizer="adam" if noloco else "sgd",
+                    momentum=0.0 if noloco else policy.momentum,
+                    weight_decay=0.0 if noloco else policy.weight_decay,
+                    adam_beta1=adam.beta1 if adam is not None else 0.9,
+                    adam_beta2=adam.beta2 if adam is not None else 0.999,
+                    adam_epsilon=adam.epsilon if adam is not None else 1e-8,
+                    gradient_clip_norm=(
+                        adam.gradient_clip_norm if adam is not None else None
+                    ),
+                    learning_rate_milestones=policy.learning_rate_milestones,
+                    learning_rate_gamma=policy.learning_rate_gamma,
+                    learning_rate_schedule=policy.learning_rate_schedule,
+                    device="cpu",
+                    augment=True,
+                ),
+                model_id=self.model_id,
+                model_definition_hash=self.model_definition_hash,
+                crop_padding=policy.crop_padding,
+                normalize=policy.normalize,
             ),
-            optimizer="adam" if noloco else "sgd",
-            momentum=0.0 if noloco else policy.momentum,
-            weight_decay=0.0 if noloco else policy.weight_decay,
-            adam_beta1=adam.beta1 if adam is not None else 0.9,
-            adam_beta2=adam.beta2 if adam is not None else 0.999,
-            adam_epsilon=adam.epsilon if adam is not None else 1e-8,
-            gradient_clip_norm=(
-                adam.gradient_clip_norm if adam is not None else None
-            ),
-            learning_rate_milestones=policy.learning_rate_milestones,
-            learning_rate_gamma=policy.learning_rate_gamma,
-            learning_rate_schedule=policy.learning_rate_schedule,
-            device="cpu",
-            augment=True,
-            crop_padding=policy.crop_padding,
-            normalize=policy.normalize,
         )
 
 
@@ -287,6 +321,7 @@ def prepare_training(
     benchmark_seed: int,
 ) -> PreparedCIFAR10Training:
     """Load and validate local data before membership becomes ready."""
+    resolve_model(draft.model_id, definition_hash=draft.model_definition_hash)
     train_data = load_cifar10(cache_dir=cache_dir, train=True)
     test_data = load_cifar10(cache_dir=cache_dir, train=False)
     if len(train_data) != draft.dataset.sample_count:
@@ -307,12 +342,15 @@ def prepare_training(
             "model-initialization",
         ),
         trainer_seed=derive_benchmark_seed(benchmark_seed, "local-training"),
+        model_id=draft.model_id,
+        model_definition_hash=draft.model_definition_hash,
     )
 
 
 __all__ = [
     "CLASS_COUNT",
     "CIFAR10DataError",
+    "CIFAR10TrainerSettings",
     "DATASET_REPOSITORY",
     "DATASET_REVISION",
     "DATASET_VERSION",
