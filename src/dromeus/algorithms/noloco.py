@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -274,7 +275,25 @@ class NoLoCoAlgorithm:
         return AlgorithmEvaluation(loss=float(loss), accuracy=float(accuracy))
 
     def observations(self) -> AlgorithmObservations:
-        return AlgorithmObservations(local_loss=self.trainer.local_loss)
+        observations = AlgorithmObservations(local_loss=self.trainer.local_loss)
+        if self._local_artifacts is None:
+            return observations
+        residual_norm = _tensor_l2_norm(self._error_feedback_residual)
+        signal = {
+            name: (
+                self._local_artifacts["outer_gradient"][name]
+                + self._error_feedback_residual[name]
+            ).astype(np.float32)
+            for name in self._error_feedback_residual
+        }
+        signal_norm = _tensor_l2_norm(signal)
+        ratio = residual_norm / signal_norm if signal_norm > 0.0 else 0.0
+        return AlgorithmObservations(
+            local_loss=observations.local_loss,
+            error_feedback_residual_l2_norm=residual_norm,
+            error_feedback_signal_l2_norm=signal_norm,
+            error_feedback_residual_to_signal_ratio=ratio,
+        )
 
     def checkpoint_tensors(self) -> dict[str, np.ndarray]:
         """Return complete durable state in the versioned flat namespace."""
@@ -435,6 +454,18 @@ class NoLoCoAlgorithm:
         return {
             name: np.ascontiguousarray(value).copy() for name, value in tensors.items()
         }
+
+
+def _tensor_l2_norm(tensors: Mapping[str, np.ndarray]) -> float:
+    total = 0.0
+    for value in tensors.values():
+        flattened = np.asarray(value, dtype=np.float32).reshape(-1)
+        for start in range(0, flattened.size, 1_048_576):
+            chunk = flattened[start : start + 1_048_576].astype(
+                np.float64, copy=False
+            )
+            total += float(np.sum(np.square(chunk), dtype=np.float64))
+    return math.sqrt(total)
 
 
 __all__ = ["NoLoCoAlgorithm"]

@@ -34,12 +34,23 @@ class AlgorithmObservations:
     """Immutable algorithm observations captured for one round."""
 
     local_loss: float | None = None
+    error_feedback_residual_l2_norm: float | None = None
+    error_feedback_signal_l2_norm: float | None = None
+    error_feedback_residual_to_signal_ratio: float | None = None
 
     def __post_init__(self) -> None:
-        if self.local_loss is not None and (
-            not math.isfinite(self.local_loss) or self.local_loss < 0
-        ):
-            raise ValueError("local loss must be finite and non-negative")
+        values = (
+            ("local loss", self.local_loss),
+            ("error-feedback residual norm", self.error_feedback_residual_l2_norm),
+            ("error-feedback signal norm", self.error_feedback_signal_l2_norm),
+            (
+                "error-feedback residual-to-signal ratio",
+                self.error_feedback_residual_to_signal_ratio,
+            ),
+        )
+        for label, value in values:
+            if value is not None and (not math.isfinite(value) or value < 0):
+                raise ValueError(f"{label} must be finite and non-negative")
 
 
 @dataclass(frozen=True, slots=True)
