@@ -271,6 +271,100 @@ class TopKInt8Codec:
             raise ValueError("top-k int8 codec has no state")
 
 
+@dataclass(frozen=True, slots=True)
+class BitmapTopKInt8Codec:
+    """Deterministic top-k int8 values with one-bit membership indices."""
+
+    logical_schema: TensorSchema
+    top_k_fraction: float
+    _encoded_schema: TensorSchema = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        _validate_lossy_logical_schema(self.logical_schema)
+        if not 0.0 < self.top_k_fraction <= 0.5 or not math.isfinite(
+            self.top_k_fraction
+        ):
+            raise ValueError("bitmap top-k fraction must be finite in (0, 0.5]")
+        object.__setattr__(
+            self,
+            "_encoded_schema",
+            _bitmap_topk_encoded_schema(
+                self.logical_schema,
+                self.top_k_fraction,
+            ),
+        )
+
+    @property
+    def codec_id(self) -> str:
+        return "topk-bitmap-int8-v2"
+
+    @property
+    def codec_version(self) -> int:
+        return 2
+
+    @property
+    def encoded_schema(self) -> TensorSchema:
+        return self._encoded_schema
+
+    @property
+    def lossy(self) -> bool:
+        return True
+
+    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.logical_schema)
+        encoded: TensorMap = {}
+        for spec in self.logical_schema.tensors:
+            flattened = np.asarray(tensors[spec.name], dtype=np.float32).reshape(-1)
+            indices = _deterministic_topk_indices(
+                flattened,
+                _top_k_count(flattened.size, self.top_k_fraction),
+            )
+            quantized, scale = _quantize_symmetric(flattened[indices])
+            membership = np.zeros(flattened.size, dtype=np.uint8)
+            membership[indices] = np.uint8(1)
+            bitmap = np.packbits(membership, bitorder="little").view(np.int8)
+            encoded[f"{spec.name}.__bitmap"] = np.ascontiguousarray(bitmap)
+            encoded[f"{spec.name}.__values"] = quantized
+            encoded[f"{spec.name}.__scale"] = np.array([scale], dtype="<f4")
+            encoded[f"{spec.name}.__zero_point"] = np.array([0], dtype="<i4")
+        validate_tensor_map(encoded, self.encoded_schema)
+        return encoded
+
+    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
+        validate_tensor_map(tensors, self.encoded_schema)
+        decoded: TensorMap = {}
+        for spec in self.logical_schema.tensors:
+            element_count = math.prod(spec.shape)
+            bitmap = np.asarray(
+                tensors[f"{spec.name}.__bitmap"],
+                dtype=np.int8,
+            ).view(np.uint8)
+            bits = np.unpackbits(bitmap, bitorder="little")
+            if np.any(bits[element_count:]):
+                raise ValueError("bitmap top-k padding bits must be zero")
+            indices = np.flatnonzero(bits[:element_count])
+            expected_count = _top_k_count(element_count, self.top_k_fraction)
+            if indices.size != expected_count:
+                raise ValueError("bitmap top-k selected count does not match schema")
+            scale = _validated_quantization_metadata(tensors, spec.name)
+            quantized = np.asarray(
+                tensors[f"{spec.name}.__values"],
+                dtype=np.int8,
+            )
+            value = np.zeros(element_count, dtype=np.float32)
+            value[indices] = quantized.astype(np.float32) * np.float32(scale)
+            decoded[spec.name] = value.reshape(spec.shape)
+        validate_tensor_map(decoded, self.logical_schema)
+        return decoded
+
+    def state_dict(self) -> dict[str, object]:
+        return {}
+
+    def load_state_dict(self, state: StateMap) -> None:
+        if state:
+            raise ValueError("bitmap top-k int8 codec has no state")
+
+
 def _validate_lossy_logical_schema(schema: TensorSchema) -> None:
     if any(tensor.dtype != "float32" for tensor in schema.tensors):
         raise ValueError("lossy codecs require FP32 logical tensors")
@@ -322,6 +416,40 @@ def _topk_encoded_schema(
                 ),
                 TensorSpec(
                     name=f"{spec.name}.__zero_point", dtype="int32", shape=(1,)
+                ),
+            )
+        )
+    return TensorSchema(tensors=tuple(sorted(tensors, key=lambda item: item.name)))
+
+
+def _bitmap_topk_encoded_schema(
+    schema: TensorSchema,
+    top_k_fraction: float,
+) -> TensorSchema:
+    tensors: list[TensorSpec] = []
+    for spec in schema.tensors:
+        element_count = math.prod(spec.shape)
+        tensors.extend(
+            (
+                TensorSpec(
+                    name=f"{spec.name}.__bitmap",
+                    dtype="int8",
+                    shape=(math.ceil(element_count / 8),),
+                ),
+                TensorSpec(
+                    name=f"{spec.name}.__values",
+                    dtype="int8",
+                    shape=(_top_k_count(element_count, top_k_fraction),),
+                ),
+                TensorSpec(
+                    name=f"{spec.name}.__scale",
+                    dtype="float32",
+                    shape=(1,),
+                ),
+                TensorSpec(
+                    name=f"{spec.name}.__zero_point",
+                    dtype="int32",
+                    shape=(1,),
                 ),
             )
         )
@@ -566,6 +694,7 @@ def validate_tensor_map(
             raise ValueError(f"tensor {name} contains non-finite values")
 
 __all__ = [
+    "BitmapTopKInt8Codec",
     "DenseInt8Codec",
     "IdentityCodec",
     "NamedSafetensorsUpdateBundleCodec",

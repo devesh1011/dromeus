@@ -406,7 +406,7 @@ class NoLoCoAlgorithm:
         return {
             name: UpdateCodecBinding(
                 codec_id=self.artifact_codecs[name].codec_id,
-                codec_version=1,
+                codec_version=self._codec_version(name),
                 logical_schema=self.tensor_schema,
             )
             for name in _ARTIFACT_NAMES
@@ -416,6 +416,12 @@ class NoLoCoAlgorithm:
         value = getattr(self.artifact_codecs[name], "lossy", False)
         if not isinstance(value, bool):
             raise TypeError("codec lossy marker must be boolean")
+        return value
+
+    def _codec_version(self, name: str) -> int:
+        value = getattr(self.artifact_codecs[name], "codec_version", 1)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise TypeError("codec version must be a positive integer")
         return value
 
     def _codec_encoded_schema(self, name: str) -> TensorSchema:
