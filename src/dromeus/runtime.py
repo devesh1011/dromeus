@@ -12,7 +12,12 @@ from typing import Protocol
 
 import numpy as np
 
-from dromeus.algorithms.codec import DenseInt8Codec, IdentityCodec, TopKInt8Codec
+from dromeus.algorithms.codec import (
+    BitmapTopKInt8Codec,
+    DenseInt8Codec,
+    IdentityCodec,
+    TopKInt8Codec,
+)
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import (
@@ -223,11 +228,21 @@ def build_algorithm(
             "outer_gradient": IdentityCodec("identity-v1"),
             "slow_weights": IdentityCodec("identity-v1"),
         }
-    else:
+    elif outer_setting.codec_id == "topk-int8-v1":
         if outer_setting.top_k_fraction is None:
             raise ValueError("compressed outer gradient requires top-k fraction")
         artifact_codecs = {
             "outer_gradient": TopKInt8Codec(
+                manifest.tensor_schema,
+                top_k_fraction=outer_setting.top_k_fraction,
+            ),
+            "slow_weights": DenseInt8Codec(manifest.tensor_schema),
+        }
+    else:
+        if outer_setting.top_k_fraction is None:
+            raise ValueError("compressed outer gradient requires top-k fraction")
+        artifact_codecs = {
+            "outer_gradient": BitmapTopKInt8Codec(
                 manifest.tensor_schema,
                 top_k_fraction=outer_setting.top_k_fraction,
             ),
