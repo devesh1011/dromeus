@@ -331,7 +331,7 @@ class ArtifactCodec(DomainModel):
             if self.top_k_fraction is not None or self.lossy_allowed is True:
                 raise ValueError("identity codec cannot declare lossy settings")
             return self
-        if self.codec_id == "topk-int8-v1":
+        if self.codec_id in {"topk-int8-v1", "topk-bitmap-int8-v2"}:
             if self.artifact_name != "outer_gradient":
                 raise ValueError("top-k codec is only valid for outer gradient")
             if self.top_k_fraction is None or not self.lossy_allowed:
@@ -425,6 +425,7 @@ class DraftRunSpec(DomainModel):
         if codec_pair not in {
             ("identity-v1", "identity-v1"),
             ("topk-int8-v1", "dense-int8-v1"),
+            ("topk-bitmap-int8-v2", "dense-int8-v1"),
         }:
             raise ValueError("NoLoCo artifact codec combination is invalid")
         if (
