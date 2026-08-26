@@ -2,6 +2,7 @@
 
 from dromeus.gossip.engine import (
     AXLPairTransport,
+    ConsensusBroadcastResult,
     ConsensusPublisher,
     FailureBroadcaster,
     GossipEngine,
@@ -13,6 +14,7 @@ from dromeus.gossip.peer_scheduler import Pairing, PeerScheduler
 
 __all__ = [
     "AXLPairTransport",
+    "ConsensusBroadcastResult",
     "ConsensusPublisher",
     "FailureBroadcaster",
     "GossipEngine",

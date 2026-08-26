@@ -46,7 +46,11 @@ from dromeus.protocol.models import (
 )
 from dromeus.telemetry.consensus import encode_sketch
 from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
-from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
+from dromeus.transport.outbound_scheduler import (
+    OutboundScheduler,
+    Priority,
+    SendTiming,
+)
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.transfer import ArtifactReceipt, TransferError, TransferManager
 
@@ -86,6 +90,16 @@ class PairExchangeResult:
             raise ValueError("transfer_id must be non-empty when present")
         if self.retry_count < 0:
             raise ValueError("retry_count must be non-negative")
+
+
+@dataclass(frozen=True, slots=True)
+class ConsensusBroadcastResult:
+    """Best-effort consensus telemetry broadcast accounting."""
+
+    payload_bytes: int
+    recipient_count: int
+    successful_recipient_count: int
+    retry_count: int
 
 
 class FailureBroadcaster(Protocol):
@@ -277,14 +291,19 @@ class AXLPairTransport:
 
     async def broadcast_consensus_sketch(
         self, *, round_id: RoundId, sketch: np.ndarray
-    ) -> None:
+    ) -> ConsensusBroadcastResult:
         """Best-effort low-priority broadcast of one FP32 consensus sketch."""
         peers = self._participant_keys - {self._local_public_key}
-        if not peers:
-            return
         payload = encode_sketch(sketch)
+        if not peers:
+            return ConsensusBroadcastResult(
+                payload_bytes=len(payload),
+                recipient_count=0,
+                successful_recipient_count=0,
+                retry_count=0,
+            )
 
-        async def send(peer: PublicKey) -> None:
+        async def send(peer: PublicKey) -> SendTiming:
             envelope = create_envelope(
                 message_type=MessageType.CONSENSUS_SKETCH,
                 message_id=(
@@ -298,7 +317,7 @@ class AXLPairTransport:
                 correlation_id=f"consensus-round-{round_id}",
                 payload=payload,
             )
-            await self._sender.send(
+            return await self._sender.send(
                 peer,
                 encode_envelope(envelope),
                 priority=Priority.TELEMETRY,
@@ -306,7 +325,17 @@ class AXLPairTransport:
                 retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
             )
 
-        await asyncio.gather(*(send(peer) for peer in peers), return_exceptions=True)
+        results = await asyncio.gather(
+            *(send(peer) for peer in peers),
+            return_exceptions=True,
+        )
+        timings = [result for result in results if isinstance(result, SendTiming)]
+        return ConsensusBroadcastResult(
+            payload_bytes=len(payload),
+            recipient_count=len(peers),
+            successful_recipient_count=len(timings),
+            retry_count=sum(timing.retry_count for timing in timings),
+        )
 
     async def exchange_update(
         self,
@@ -652,6 +681,7 @@ class RoundCommit:
     error_feedback_residual_to_signal_ratio: float | None = None
     transfer_id: str | None = None
     transfer_retries: int = 0
+    encoded_artifact_bytes: int | None = None
 
 
 CommitCallback = Callable[[RoundCommit], None | Awaitable[None]]
@@ -846,6 +876,9 @@ class GossipEngine:
                 ),
                 transfer_id=exchange.transfer_id,
                 transfer_retries=exchange.retry_count,
+                encoded_artifact_bytes=sum(
+                    artifact.size_bytes for artifact in materialized.metadata.artifacts
+                ),
             )
             result = await _run_blocking(self._commit_callback, commit)
             if inspect.isawaitable(result):
@@ -902,6 +935,7 @@ class GossipEngine:
                         evaluation.accuracy if evaluation is not None else None
                     ),
                     transfer_id=commit.transfer_id,
+                    encoded_artifact_bytes=commit.encoded_artifact_bytes,
                 )
                 try:
                     self._metrics_publisher.submit(timing)
@@ -997,6 +1031,7 @@ __all__ = [
     "GossipEngine",
     "FailureBroadcaster",
     "ConsensusPublisher",
+    "ConsensusBroadcastResult",
     "decode_run_failure",
     "EvaluationCallback",
     "EvaluationMetrics",
