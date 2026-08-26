@@ -53,6 +53,7 @@ from dromeus.telemetry.consensus import (
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.telemetry.evidence import (
     ConsensusDistanceEvidence,
+    ConsensusSketchSentEvidence,
     RunFailedEvidence,
     append_evidence,
 )
@@ -102,6 +103,11 @@ class TrainingConfig:
     run_store: RunStore
     artifact_root: Path
     metrics_publisher: MetricsService | None = None
+    evaluation_interval: int = 5
+
+    def __post_init__(self) -> None:
+        if self.evaluation_interval <= 0:
+            raise ValueError("evaluation interval must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -496,6 +502,8 @@ class NodeRuntime:
                 local_key,
                 metadata_root=self._training.artifact_root / "bundle-metadata",
             )
+            formed_result = self._result
+            assert formed_result is not None
 
             async def receive_consensus_sketch(
                 timeout_seconds: float,
@@ -518,9 +526,27 @@ class NodeRuntime:
             async def publish_consensus_sketch(
                 round_id: int, sketch: np.ndarray
             ) -> None:
-                await pair_transport.broadcast_consensus_sketch(
+                broadcast = await pair_transport.broadcast_consensus_sketch(
                     round_id=round_id,
                     sketch=sketch,
+                )
+                append_evidence(
+                    self._event_sink,
+                    ConsensusSketchSentEvidence(
+                        run_id=formed_result.manifest.run_id,
+                        manifest_hash=formed_result.manifest_hash,
+                        node_id=local_key,
+                        message_id=(
+                            f"consensus-sketch-metric-{local_key[:8]}-{round_id}"
+                        ),
+                        round_id=round_id,
+                        payload_bytes=broadcast.payload_bytes,
+                        recipient_count=broadcast.recipient_count,
+                        successful_recipient_count=(
+                            broadcast.successful_recipient_count
+                        ),
+                        retry_count=broadcast.retry_count,
+                    ),
                 )
 
             self._consensus_telemetry = LiveConsensusTelemetry(
@@ -554,6 +580,7 @@ class NodeRuntime:
                 transport_limits=self._result.manifest.transport,
                 failure_broadcaster=pair_transport,
                 consensus_publisher=self._consensus_telemetry,
+                evaluation_interval=self._training.evaluation_interval,
                 metrics_publisher=self._training.metrics_publisher,
             )
             await self._start_metrics()
