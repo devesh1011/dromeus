@@ -35,6 +35,7 @@ class RoundTiming:
     evaluation_loss: float | None = None
     evaluation_accuracy: float | None = None
     transfer_id: str | None = None
+    encoded_artifact_bytes: int | None = None
 
     def __post_init__(self) -> None:
         if self.round_id < 0:
@@ -52,6 +53,8 @@ class RoundTiming:
             raise ValueError("metric durations must be finite and non-negative")
         if self.retries < 0:
             raise ValueError("retries must be non-negative")
+        if self.encoded_artifact_bytes is not None and self.encoded_artifact_bytes <= 0:
+            raise ValueError("encoded artifact bytes must be positive")
         if self.local_loss is not None and (
             not math.isfinite(self.local_loss) or self.local_loss < 0
         ):
@@ -180,6 +183,7 @@ class JsonlMetricsPublisher(MetricsPublisher):
             mixing_seconds=float(timing.mixing_seconds),
             evaluation_seconds=float(timing.evaluation_seconds),
             retries=timing.retries,
+            encoded_artifact_bytes=timing.encoded_artifact_bytes,
         )
         return self._enqueue(record)
 

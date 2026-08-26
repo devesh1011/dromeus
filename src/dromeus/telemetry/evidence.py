@@ -83,6 +83,7 @@ class RoundMetricsEvidence(_EvidenceModel):
     mixing_seconds: float = Field(ge=0)
     evaluation_seconds: float = Field(ge=0)
     retries: int = Field(ge=0)
+    encoded_artifact_bytes: int | None = Field(default=None, gt=0)
 
 
 class ConsensusDistanceEvidence(_EvidenceModel):
@@ -91,6 +92,16 @@ class ConsensusDistanceEvidence(_EvidenceModel):
     round_id: RoundId
     normalized_rms: float = Field(ge=0)
     sketch_count: int = Field(ge=1)
+
+
+class ConsensusSketchSentEvidence(_EvidenceModel):
+    event: Literal["consensus_sketch_sent"] = "consensus_sketch_sent"
+    message_id: MessageId
+    round_id: RoundId
+    payload_bytes: int = Field(ge=0)
+    recipient_count: int = Field(ge=1)
+    successful_recipient_count: int = Field(ge=0)
+    retry_count: int = Field(ge=0)
 
 
 class TransferMessageSentEvidence(_EvidenceModel):
@@ -119,6 +130,7 @@ type EvidenceRecord = (
     BenchmarkNodeReadyEvidence
     | RoundMetricsEvidence
     | ConsensusDistanceEvidence
+    | ConsensusSketchSentEvidence
     | TransferMessageSentEvidence
     | RunFailedEvidence
 )
@@ -128,6 +140,7 @@ _EVIDENCE_EVENTS = frozenset(
         "benchmark_node_ready",
         "round_metrics",
         "consensus_distance",
+        "consensus_sketch_sent",
         "transfer_message_sent",
         "run_failed",
     }
@@ -187,6 +200,7 @@ class EvidenceLog:
         for record_type in (
             RoundMetricsEvidence,
             ConsensusDistanceEvidence,
+            ConsensusSketchSentEvidence,
             RunFailedEvidence,
         ):
             rounds = [
@@ -274,6 +288,7 @@ __all__ = [
     "EVIDENCE_VERSION",
     "BenchmarkNodeReadyEvidence",
     "ConsensusDistanceEvidence",
+    "ConsensusSketchSentEvidence",
     "EvidenceError",
     "EvidenceLog",
     "EvidenceRecord",
