@@ -6,7 +6,7 @@ import argparse
 import asyncio
 import json
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal, cast
@@ -78,13 +78,23 @@ class NodeConfig(BaseModel):
         return value.rstrip("/")
 
 
+TrainingDecorator = Callable[
+    [FormationResult, str, TrainingConfig],
+    TrainingConfig,
+]
+
+
 def load_node_config(path: Path) -> NodeConfig:
     """Load one closed node configuration from YAML."""
     value = cast(object, yaml.safe_load(path.read_text(encoding="utf-8")))
     return NodeConfig.model_validate(value)
 
 
-async def run_node(config: NodeConfig) -> None:
+async def run_node(
+    config: NodeConfig,
+    *,
+    training_decorator: TrainingDecorator | None = None,
+) -> None:
     """Form, train, persist, and stop one production AXL-backed CIFAR node."""
     draft, event_sink = await asyncio.to_thread(
         _prepare_node_start,
@@ -142,12 +152,15 @@ async def run_node(config: NodeConfig) -> None:
             manifest_hash=result.manifest_hash,
             node_id=local_key,
         )
-        return prepared_training.build_config(
+        training = prepared_training.build_config(
             result=result,
             local_public_key=local_key,
             run_root=config.run_root,
             metrics_publisher=metrics,
         )
+        if training_decorator is not None:
+            return training_decorator(result, local_key, training)
+        return training
 
     async def record_ready(result: FormationResult) -> None:
         await _write_topology_snapshot(
