@@ -78,6 +78,46 @@ def test_sketch_buffer_evicts_old_incomplete_rounds() -> None:
     assert buffer.dropped == 1
 
 
+@pytest.mark.parametrize("world_size", (4, 8, 16))
+def test_sketch_buffer_matches_direct_reference_with_missing_and_late_arrivals(
+    world_size: int,
+) -> None:
+    members = tuple(f"peer-{index:02d}" for index in range(world_size))
+    sketches = {
+        member: count_sketch(
+            {"weight": np.array([float(index), 1.0], dtype=np.float32)},
+            seed=17,
+        )
+        for index, member in enumerate(members)
+    }
+    buffer = ConsensusSketchBuffer(participant_keys=members)
+
+    for member in reversed(members[1:]):
+        assert (
+            buffer.add(
+                round_id=3,
+                sender_public_key=member,
+                sketch=sketches[member],
+            )
+            is None
+        )
+    assert buffer.pending_rounds() == (3,)
+    result = buffer.add(
+        round_id=3,
+        sender_public_key=members[0],
+        sketch=sketches[members[0]],
+    )
+
+    assert result is not None
+    assert result.sketch_count == world_size
+    assert result.normalized_rms == pytest.approx(
+        normalized_rms_consensus_distance(
+            [sketches[member] for member in sorted(members)]
+        )
+    )
+    assert buffer.pending_rounds() == ()
+
+
 def test_sketch_publisher_is_bounded_and_non_blocking() -> None:
     published: list[tuple[int, np.ndarray]] = []
 

@@ -11,7 +11,9 @@ from safetensors.numpy import (
 )
 
 from benchmarks.noloco.compression import measure_bundle_wire_bytes
+from benchmarks.noloco.compression_diagnostic import run_diagnostic
 from dromeus.algorithms.codec import (
+    BitmapTopKInt8Codec,
     DenseInt8Codec,
     NamedSafetensorsUpdateBundleCodec,
     TopKInt8Codec,
@@ -214,6 +216,56 @@ def test_topk_int8_rejects_invalid_indices_and_schema() -> None:
     ].astype(np.int64)
     with pytest.raises(ValueError, match="dtype"):
         codec.decode(wrong_dtype)
+
+
+def test_bitmap_topk_int8_format_and_roundtrip_are_deterministic() -> None:
+    schema = _schema(size=10)
+    codec = BitmapTopKInt8Codec(schema, top_k_fraction=0.4)
+    source = {
+        "weight": np.array(
+            [1.0, -4.0, 4.0, 0.5, -3.0, 2.0, 0.0, 0.25, -0.1, 0.1],
+            dtype=np.float32,
+        )
+    }
+
+    encoded = codec.encode(source)
+    decoded = codec.decode(encoded)["weight"]
+
+    assert codec.codec_id == "topk-bitmap-int8-v2"
+    assert tuple(item.name for item in codec.encoded_schema.tensors) == (
+        "weight.__bitmap",
+        "weight.__scale",
+        "weight.__values",
+        "weight.__zero_point",
+    )
+    assert np.array_equal(
+        encoded["weight.__bitmap"].view(np.uint8),
+        np.array([0b00110110, 0], dtype=np.uint8),
+    )
+    assert np.flatnonzero(decoded).tolist() == [1, 2, 4, 5]
+    assert all(
+        np.array_equal(encoded[name], codec.encode(source)[name])
+        for name in encoded
+    )
+
+    invalid = {name: value.copy() for name, value in encoded.items()}
+    invalid["weight.__bitmap"].view(np.uint8)[1] = np.uint8(0b10000000)
+    with pytest.raises(ValueError, match="padding"):
+        codec.decode(invalid)
+
+
+def test_bitmap_topk_diagnostic_preserves_quality_at_forty_percent() -> None:
+    identity = run_diagnostic(
+        outer_codec="identity",
+        slow_codec="identity",
+    )
+    compressed = run_diagnostic(
+        outer_codec="bitmap",
+        slow_codec="dense",
+        top_k_fraction=0.4,
+    )
+
+    assert compressed.objective / identity.objective <= 1.05
 
 
 class _Trainer:
@@ -497,6 +549,18 @@ def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
             "slow_weights": slow_codec.encoded_schema,
         },
     )
+    bitmap_outer_codec = BitmapTopKInt8Codec(schema, top_k_fraction=0.4)
+    bitmap_bundle_codec = NamedSafetensorsUpdateBundleCodec(
+        artifact_root=tmp_path / "bitmap-compressed",
+        run_id="compression-measurement",
+        manifest_hash="1" * 64,
+        sender_public_key="measurement-node",
+        algorithm_id="noloco",
+        artifact_schemas={
+            "outer_gradient": bitmap_outer_codec.encoded_schema,
+            "slow_weights": slow_codec.encoded_schema,
+        },
+    )
     identity = identity_bundle_codec.encode(round_id=0, artifacts=logical)
     compressed = compressed_bundle_codec.encode(
         round_id=0,
@@ -508,6 +572,25 @@ def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
             "outer_gradient": UpdateCodecBinding(
                 codec_id=outer_codec.codec_id,
                 codec_version=1,
+                logical_schema=schema,
+            ),
+            "slow_weights": UpdateCodecBinding(
+                codec_id=slow_codec.codec_id,
+                codec_version=1,
+                logical_schema=schema,
+            ),
+        },
+    )
+    bitmap_compressed = bitmap_bundle_codec.encode(
+        round_id=0,
+        artifacts={
+            "outer_gradient": bitmap_outer_codec.encode(gradient),
+            "slow_weights": slow_codec.encode(slow),
+        },
+        codec_bindings={
+            "outer_gradient": UpdateCodecBinding(
+                codec_id=bitmap_outer_codec.codec_id,
+                codec_version=2,
                 logical_schema=schema,
             ),
             "slow_weights": UpdateCodecBinding(
@@ -547,9 +630,18 @@ def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
                 "slow_weights": schema,
             },
         )
+        bitmap_measurement = measure_bundle_wire_bytes(
+            bitmap_compressed,
+            transport=transport,
+            logical_artifact_schemas={
+                "outer_gradient": schema,
+                "slow_weights": schema,
+            },
+        )
     finally:
         identity_bundle_codec.release(identity)
         compressed_bundle_codec.release(compressed)
+        bitmap_bundle_codec.release(bitmap_compressed)
 
     ratio = identity_measurement.wire_bytes / compressed_measurement.wire_bytes
     assert identity_measurement.raw_artifact_bytes == 89_391_696
@@ -566,3 +658,4 @@ def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
     )
     assert identity_measurement.encoded_artifact_bytes > 85 * 1024 * 1024
     assert ratio >= 5.0
+    assert identity_measurement.wire_bytes / bitmap_measurement.wire_bytes >= 5.0

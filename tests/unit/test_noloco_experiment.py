@@ -12,6 +12,9 @@ from benchmarks.noloco.dromeus_adapter import (
     DromeusComparabilityError,
     DromeusExperimentAdapter,
 )
+from benchmarks.noloco.dromeus_official_runner import (
+    create_analysis_training_decorator,
+)
 from benchmarks.noloco.experiment import (
     ArtifactIntegrityError,
     ArtifactValidationError,
@@ -20,7 +23,9 @@ from benchmarks.noloco.experiment import (
     RunSelector,
     load_frozen_experiment,
 )
+from benchmarks.noloco.official_launch import materialize_official_launch
 from benchmarks.noloco.pilot import PilotCandidate
+from benchmarks.noloco.trajectory_launch import materialize_trajectory_launch
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.canonical import canonical_hash, file_sha256
 from dromeus.manifests.models import (
@@ -125,6 +130,13 @@ def _run(
             "trajectory_interval": 1 if profile == "trajectory" else 2,
             "absolute_tolerance": 1e-6,
             "relative_tolerance": 1e-6,
+            "evaluation_interval_rounds": 25,
+            "countsketch_interval_rounds": 1,
+            "analysis_checkpoint_interval_rounds": 50,
+            "analysis_storage_budget_bytes_per_node": 512 * 1024 * 1024,
+            "residual_l2_bound": 3.6,
+            "residual_to_signal_ratio_bound": 0.35,
+            "overlap_enabled": False,
         },
     }
 
@@ -139,7 +151,7 @@ def _write_experiment(root: Path) -> tuple[Path, dict[str, object]]:
     ]
     runs.append(_run(root, profile="trajectory", world_size=4, seed=17))
     value: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "frozen",
         "source": {
             "repository": "gensyn-ai/noloco",
@@ -212,7 +224,18 @@ def _write_experiment(root: Path) -> tuple[Path, dict[str, object]]:
             },
         ],
         "pilot": {"path": pilot.name, "sha256": file_sha256(pilot)},
-        "hardware": {"accelerator_class": "nvidia-a10g"},
+        "hardware": {
+            "accelerator_class": "nvidia-a10g",
+            "instance_type": "g5.xlarge",
+            "container_image_digest": f"sha256:{'b' * 64}",
+            "python_version": "3.12.11",
+            "pytorch_version": "2.12.1+cu130",
+            "cuda_version": "13.0",
+            "cudnn_version": 92000,
+            "nccl_version": "2.29.7",
+            "driver_version": "595.91.07",
+            "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+        },
         "runs": runs,
     }
     path = root / "experiment.yaml"
@@ -238,6 +261,13 @@ def test_load_and_resolve_frozen_experiment(tmp_path: Path) -> None:
     assert len(resolved.run.participants) == 8
     assert resolved.run.transfer.chunk_size_bytes == 1024 * 1024
     assert resolved.run.transfer.window_size == 4
+    assert resolved.run.evidence.evaluation_interval_rounds == 25
+    assert resolved.run.evidence.countsketch_interval_rounds == 1
+    assert resolved.run.evidence.analysis_checkpoint_interval_rounds == 50
+    assert resolved.run.evidence.analysis_storage_budget_bytes_per_node == (
+        512 * 1024 * 1024
+    )
+    assert not resolved.run.evidence.overlap_enabled
     assert {item.ablation_id for item in resolved.ablations} == {
         "identity",
         "compressed",
@@ -380,8 +410,8 @@ def _environment(model_hash: str) -> EnvironmentFingerprint:
     return EnvironmentFingerprint(
         dromeus_version="0.2.0",
         dromeus_commit="a" * 40,
-        pytorch_version="2.8.0",
-        axl_version="axl-pinned",
+        pytorch_version="2.12.1+cu130",
+        axl_version="628e28ace077f26dfe8d0259009b357216a9d8d4",
         model_definition_hash=model_hash,
         container_image_digest=f"sha256:{'b' * 64}",
     )
@@ -411,14 +441,14 @@ def test_pilot_candidate_builds_matched_frozen_ablation_inputs() -> None:
         exclude={"run_id", "artifact_codecs"},
     )
     assert identity_common == compressed_common
-    assert candidate.round_count == 2
+    assert candidate.round_count == 500
     assert identity.transport.chunk_size_bytes == 1024 * 1024
     assert identity.transport.window_size == 4
     assert identity.training is not None
     assert identity.training.learning_rate_schedule is not None
-    assert identity.training.learning_rate_schedule.total_inner_steps == 100
+    assert identity.training.learning_rate_schedule.total_inner_steps == 25_000
     assert [item.codec_id for item in compressed.artifact_codecs or ()] == [
-        "topk-int8-v1",
+        "topk-bitmap-int8-v2",
         "dense-int8-v1",
     ]
 
@@ -566,3 +596,135 @@ def test_dromeus_adapter_rejects_environment_model_mismatch(tmp_path: Path) -> N
                 window_size=4,
             ),
         )
+
+
+def test_dromeus_adapter_rejects_frozen_runtime_mismatch(tmp_path: Path) -> None:
+    path, _ = _write_experiment(tmp_path)
+    resolved = load_frozen_experiment(path).resolve(
+        RunSelector(profile="official", world_size=4, benchmark_seed=17)
+    )
+    environment = _environment(resolved.model.definition_hash).model_copy(
+        update={"container_image_digest": f"sha256:{'c' * 64}"}
+    )
+
+    with pytest.raises(DromeusComparabilityError, match="runtime"):
+        DromeusExperimentAdapter(resolved).build_draft(
+            run_id="bad-runtime",
+            environment=environment,
+            transport=TransportLimits(
+                max_payload_bytes=16 * 1024 * 1024,
+                max_retries=3,
+                retry_timeout_seconds=10.0,
+                chunk_size_bytes=1024 * 1024,
+                window_size=4,
+            ),
+        )
+
+
+def test_materialize_trajectory_launch_writes_bound_node_configs(
+    tmp_path: Path,
+) -> None:
+    frozen_root = tmp_path / "frozen"
+    frozen_root.mkdir()
+    experiment_path, _ = _write_experiment(frozen_root)
+    run = load_frozen_experiment(experiment_path).resolve(
+        RunSelector(profile="trajectory", world_size=4, benchmark_seed=17)
+    )
+    output_root = tmp_path / "launch"
+    runtime_root = Path("/opt/dromeus/trajectory")
+
+    result = materialize_trajectory_launch(
+        run=run,
+        output_root=output_root,
+        runtime_root=runtime_root,
+        run_id="trajectory-w4-s17",
+        environment=_environment(run.model.definition_hash),
+        bootstrap_uri="tls://203.0.113.10:9300",
+    )
+
+    assert result.draft.round_count == 2
+    assert [item.codec_id for item in result.draft.artifact_codecs or ()] == [
+        "identity-v1",
+        "identity-v1",
+    ]
+    assert len(result.node_configs) == 4
+    assert result.node_configs[0].role.value == "initiator"
+    assert all(
+        item.manifest_expectation
+        == DromeusExperimentAdapter(run).manifest_expectation(draft=result.draft)
+        for item in result.node_configs
+    )
+    assert result.node_configs[0].draft_path == runtime_root / "draft.yaml"
+    assert result.node_configs[3].run_root == runtime_root / "rank-3" / "run"
+    assert (output_root / "draft.yaml").is_file()
+    assert len(tuple(output_root.glob("node-*.yaml"))) == 4
+
+
+def test_official_analysis_decorator_preflights_storage(tmp_path: Path) -> None:
+    experiment_path, _ = _write_experiment(tmp_path)
+    experiment = load_frozen_experiment(experiment_path)
+    official = experiment.resolve(
+        RunSelector(profile="official", world_size=16, benchmark_seed=17)
+    )
+    trajectory = experiment.resolve(
+        RunSelector(profile="trajectory", world_size=4, benchmark_seed=17)
+    )
+
+    decorator = create_analysis_training_decorator(
+        run=official,
+        output_root=tmp_path / "analysis",
+        available_bytes=512 * 1024 * 1024,
+    )
+
+    assert callable(decorator)
+    with pytest.raises(ValueError, match="available"):
+        create_analysis_training_decorator(
+            run=official,
+            output_root=tmp_path / "analysis",
+            available_bytes=1,
+        )
+    with pytest.raises(ValueError, match="official"):
+        create_analysis_training_decorator(
+            run=trajectory,
+            output_root=tmp_path / "analysis",
+            available_bytes=512 * 1024 * 1024,
+        )
+
+
+def test_materialize_official_launch_closes_dromeus_and_nccl_inputs(
+    tmp_path: Path,
+) -> None:
+    frozen_root = tmp_path / "frozen"
+    frozen_root.mkdir()
+    experiment_path, _ = _write_experiment(frozen_root)
+    run = load_frozen_experiment(experiment_path).resolve(
+        RunSelector(profile="official", world_size=8, benchmark_seed=29)
+    )
+    output_root = tmp_path / "launch"
+    runtime_root = Path("/opt/dromeus/official")
+
+    launch = materialize_official_launch(
+        run=run,
+        ablation_id="compressed",
+        output_root=output_root,
+        runtime_root=runtime_root,
+        run_id="official-w8-s29-compressed",
+        environment=_environment(run.model.definition_hash),
+        bootstrap_uri="tls://203.0.113.10:9300",
+    )
+
+    assert len(launch.node_configs) == 8
+    assert launch.node_configs[0].role.value == "initiator"
+    assert launch.node_configs[-1].run_root == runtime_root / "rank-7" / "run"
+    assert launch.draft.artifact_codecs is not None
+    assert [item.codec_id for item in launch.draft.artifact_codecs] == [
+        "topk-int8-v1",
+        "dense-int8-v1",
+    ]
+    metadata = json.loads(launch.metadata_path.read_text(encoding="utf-8"))
+    assert metadata["docker_shm_size_bytes"] == 1024 * 1024 * 1024
+    assert metadata["nccl_socket_interface"] == "ens5"
+    assert metadata["dromeus_runner_module"] == (
+        "benchmarks.noloco.dromeus_official_runner"
+    )
+    assert len(tuple(output_root.glob("node-*.yaml"))) == 8

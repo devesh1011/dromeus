@@ -10,9 +10,9 @@ from support.sample_manifest import manifest_data
 
 from dromeus import node as node_module
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
-from dromeus.membership.formation import create_invitation
+from dromeus.membership.formation import FormationResult, create_invitation
 from dromeus.node import NodeRole, load_node_config, main
-from dromeus.runtime import ParticipantFormation
+from dromeus.runtime import ParticipantFormation, TrainingConfig
 
 
 def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> None:
@@ -111,9 +111,29 @@ def test_run_node_uses_deep_runtime_lifecycle(
         async def run_to_completion(self, **kwargs: object) -> None:
             captured["lifecycle"] = kwargs
 
+    base_training = cast(TrainingConfig, object())
+    decorated_training = cast(TrainingConfig, object())
+
+    class FakePreparedTraining:
+        def build_config(self, **kwargs: object) -> TrainingConfig:
+            captured["training_build"] = kwargs
+            return base_training
+
     def fake_prepare_cifar_training(**kwargs: object) -> object:
         captured["training_prepare"] = kwargs
-        return object()
+        return FakePreparedTraining()
+
+    def decorate_training(
+        result: FormationResult,
+        local_public_key: str,
+        training: TrainingConfig,
+    ) -> TrainingConfig:
+        captured["training_decorator"] = {
+            "result": result,
+            "local_public_key": local_public_key,
+            "training": training,
+        }
+        return decorated_training
 
     monkeypatch.setattr(node_module, "AXLTransport", FakeTransport)
     monkeypatch.setattr(node_module, "NodeRuntime", FakeRuntime)
@@ -134,7 +154,12 @@ def test_run_node_uses_deep_runtime_lifecycle(
         training_device="cuda",
     )
 
-    asyncio.run(node_module.run_node(config))
+    asyncio.run(
+        node_module.run_node(
+            config,
+            training_decorator=decorate_training,
+        )
+    )
 
     lifecycle = cast(dict[str, object], captured["lifecycle"])
     training_prepare = cast(dict[str, object], captured["training_prepare"])
@@ -146,6 +171,20 @@ def test_run_node_uses_deep_runtime_lifecycle(
         "manifest_expectation",
         "ready_hook",
         "completion_hook",
+    }
+    training_factory = lifecycle["training_factory"]
+    assert callable(training_factory)
+    formation_result = FormationResult(
+        manifest=manifest,
+        manifest_hash="a" * 64,
+        checkpoint_path=tmp_path / "checkpoint.safetensors",
+    )
+    assert training_factory(formation_result) is decorated_training
+    decorator_call = cast(dict[str, object], captured["training_decorator"])
+    assert decorator_call == {
+        "result": formation_result,
+        "local_public_key": "peer-1",
+        "training": base_training,
     }
 
 

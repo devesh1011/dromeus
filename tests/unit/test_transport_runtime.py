@@ -18,7 +18,11 @@ from support.in_memory_transport import (
 )
 from support.sample_manifest import manifest_data, write_checkpoint
 
-from dromeus.algorithms.codec import DenseInt8Codec, TopKInt8Codec
+from dromeus.algorithms.codec import (
+    BitmapTopKInt8Codec,
+    DenseInt8Codec,
+    TopKInt8Codec,
+)
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import RoundCommit
@@ -271,7 +275,18 @@ def test_runtime_builds_noloco_from_sealed_manifest() -> None:
     }
 
 
-def test_runtime_builds_compressed_noloco_codecs_from_manifest() -> None:
+@pytest.mark.parametrize(
+    ("codec_id", "codec_type", "fraction"),
+    (
+        ("topk-int8-v1", TopKInt8Codec, 0.01),
+        ("topk-bitmap-int8-v2", BitmapTopKInt8Codec, 0.4),
+    ),
+)
+def test_runtime_builds_compressed_noloco_codecs_from_manifest(
+    codec_id: str,
+    codec_type: type[TopKInt8Codec] | type[BitmapTopKInt8Codec],
+    fraction: float,
+) -> None:
     data = manifest_data()
     data.update(
         {
@@ -293,8 +308,8 @@ def test_runtime_builds_compressed_noloco_codecs_from_manifest() -> None:
             "artifact_codecs": [
                 {
                     "artifact_name": "outer_gradient",
-                    "codec_id": "topk-int8-v1",
-                    "top_k_fraction": 0.01,
+                    "codec_id": codec_id,
+                    "top_k_fraction": fraction,
                     "lossy_allowed": True,
                 },
                 {
@@ -324,11 +339,11 @@ def test_runtime_builds_compressed_noloco_codecs_from_manifest() -> None:
     algorithm = build_algorithm(manifest=manifest, trainer=RuntimeTrainer())
 
     assert isinstance(algorithm, NoLoCoAlgorithm)
-    assert isinstance(algorithm.artifact_codecs["outer_gradient"], TopKInt8Codec)
+    assert isinstance(algorithm.artifact_codecs["outer_gradient"], codec_type)
     assert isinstance(algorithm.artifact_codecs["slow_weights"], DenseInt8Codec)
     outer = algorithm.artifact_codecs["outer_gradient"]
-    assert isinstance(outer, TopKInt8Codec)
-    assert outer.top_k_fraction == 0.01
+    assert isinstance(outer, codec_type)
+    assert outer.top_k_fraction == fraction
 
 
 def test_transfer_begin_retains_exact_wire_v1_shape() -> None:

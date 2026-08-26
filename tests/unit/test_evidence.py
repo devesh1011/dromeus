@@ -9,6 +9,7 @@ import pytest
 from dromeus.telemetry.events import JsonlEventSink, emit_event
 from dromeus.telemetry.evidence import (
     BenchmarkNodeReadyEvidence,
+    ConsensusSketchSentEvidence,
     EvidenceError,
     EvidenceLog,
     RoundMetricsEvidence,
@@ -66,6 +67,22 @@ def test_typed_evidence_jsonl_round_trip_ignores_flexible_diagnostics(
     assert log.node_id == "peer-0"
     assert log.records == (expected,)
     assert decode_evidence(encode_evidence(expected)) == expected
+
+
+def test_consensus_telemetry_bytes_are_separate_strict_evidence() -> None:
+    record = ConsensusSketchSentEvidence(
+        run_id="run-1",
+        manifest_hash="a" * 64,
+        node_id="peer-0",
+        message_id="consensus-sketch-metric-peer0-3",
+        round_id=3,
+        payload_bytes=16 * 1024,
+        recipient_count=15,
+        successful_recipient_count=15,
+        retry_count=1,
+    )
+
+    assert decode_evidence(encode_evidence(record)) == record
 
 
 def _invalid_records() -> tuple[dict[str, object], ...]:
