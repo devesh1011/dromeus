@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import math
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
@@ -519,6 +520,9 @@ class AXLPairTransport:
             message_id=f"update-ready-{round_id}",
             payload=PairCommitMessage(round_id=round_id, checksum=bundle_checksum),
             round_id=round_id,
+            exchange_timeout_seconds=(
+                self._transport_limits.transfer_lifetime_limit
+            ),
         )
         message = decode_message(
             envelope.payload,
@@ -562,8 +566,10 @@ class AXLPairTransport:
 
     @property
     def _timeout_seconds(self) -> float:
-        return self._transport_limits.retry_timeout_seconds * (
-            self._transport_limits.max_retries + 4
+        return max(
+            self._transport_limits.transfer_lifetime_limit,
+            self._transport_limits.retry_timeout_seconds
+            * (self._transport_limits.max_retries + 4),
         )
 
     async def _send_pair_message(
@@ -602,8 +608,16 @@ class AXLPairTransport:
         message_id: MessageId,
         payload: PairCommitMessage,
         round_id: RoundId,
+        exchange_timeout_seconds: float | None = None,
     ) -> Envelope:
-        attempts = self._transport_limits.max_retries + 1
+        attempts = (
+            math.ceil(
+                exchange_timeout_seconds
+                / self._transport_limits.retry_timeout_seconds
+            )
+            if exchange_timeout_seconds is not None
+            else self._transport_limits.max_retries + 1
+        )
         for attempt in range(attempts):
             await self._send_pair_message(
                 destination=destination,
@@ -737,8 +751,12 @@ class GossipEngine:
             timeout_seconds
             if timeout_seconds is not None
             else (
-                transport_limits.retry_timeout_seconds
-                * (transport_limits.max_retries + 4)
+                max(
+                    transport_limits.transfer_lifetime_limit,
+                    transport_limits.retry_timeout_seconds
+                    * (transport_limits.max_retries + 4),
+                )
+                + transport_limits.retry_timeout_seconds
                 if transport_limits is not None
                 else None
             )
@@ -817,6 +835,16 @@ class GossipEngine:
                 raise PairCommitError("local update round does not match current round")
             local_compute_seconds = time.perf_counter() - local_started
 
+            peer_wait_started = time.perf_counter()
+            remote_digest = await self._with_pair_timeout(
+                self._transport.exchange_update_ready(
+                    peer=peer,
+                    round_id=round_id,
+                    bundle_checksum=materialized.digest,
+                )
+            )
+            peer_wait_seconds = time.perf_counter() - peer_wait_started
+
             transfer_started = time.perf_counter()
             exchange = await self._with_pair_timeout(
                 self._transport.exchange_update(
@@ -835,18 +863,8 @@ class GossipEngine:
                 )
             except (ValueError, TypeError) as error:
                 raise PairCommitError("peer update validation failed") from error
-
-            peer_wait_started = time.perf_counter()
-            remote_digest = await self._with_pair_timeout(
-                self._transport.exchange_update_ready(
-                    peer=peer,
-                    round_id=round_id,
-                    bundle_checksum=materialized.digest,
-                )
-            )
             if remote_digest != peer_bundle.digest:
                 raise PairCommitError("peer UPDATE_READY bundle digest mismatch")
-            peer_wait_seconds = time.perf_counter() - peer_wait_started
 
             mixing_started = time.perf_counter()
             try:
