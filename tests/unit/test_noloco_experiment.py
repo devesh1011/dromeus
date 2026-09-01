@@ -134,7 +134,7 @@ def _run(
             "countsketch_interval_rounds": 1,
             "analysis_checkpoint_interval_rounds": 50,
             "analysis_storage_budget_bytes_per_node": 512 * 1024 * 1024,
-            "residual_l2_bound": 3.6,
+            "residual_l2_bound": 6.0,
             "residual_to_signal_ratio_bound": 0.35,
             "overlap_enabled": False,
         },
@@ -451,6 +451,8 @@ def test_pilot_candidate_builds_matched_frozen_ablation_inputs() -> None:
         "topk-bitmap-int8-v2",
         "dense-int8-v1",
     ]
+    assert compressed.artifact_codecs is not None
+    assert compressed.artifact_codecs[0].top_k_fraction == 0.45
 
 
 def test_dromeus_adapter_projects_one_exact_noloco_draft(tmp_path: Path) -> None:

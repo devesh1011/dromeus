@@ -23,7 +23,8 @@ def _copy_pilot_report(destination: Path) -> None:
         REPO_ROOT
         / "aws"
         / "results"
-        / "dromeus-noloco-bitmap-pilot-20260823T105548Z"
+        / "m2"
+        / "pilot"
         / "pilot-report.json",
         destination,
     )
@@ -66,7 +67,7 @@ def test_build_frozen_experiment_document_closes_complete_matrix(
         "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
     )
     assert experiment.hardware.container_image_digest == (
-        "sha256:da86b19c764a0f6ccd36d55b532b23f9416766177fe6a444a4d42c019979be1c"
+        "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c"
     )
     assert experiment.hardware.nccl_version == "2.29.7"
     assert experiment.hardware.accelerator_class == "NVIDIA-A10G"
@@ -82,6 +83,7 @@ def test_build_frozen_experiment_document_closes_complete_matrix(
         "topk-bitmap-int8-v2",
         "dense-int8-v1",
     ]
+    assert experiment.ablations[1].artifact_codecs[0].top_k_fraction == 0.45
 
 
 @pytest.mark.parametrize(

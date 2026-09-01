@@ -44,7 +44,7 @@ def test_gpu_container_is_digest_pinned_and_records_noloco_source() -> None:
     )
     assert lock["status"] == "built-and-gpu-verified"
     assert lock["image"]["digest"] == (
-        "sha256:da86b19c764a0f6ccd36d55b532b23f9416766177fe6a444a4d42c019979be1c"
+        "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c"
     )
     assert "benchmarks/results/" in dockerignore
     assert "benchmarks/noloco/container/runtime-lock.json" in dockerignore

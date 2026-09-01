@@ -267,6 +267,44 @@ class StaticPairTransport:
         return None
 
 
+class ReadinessGuardTransport(StaticPairTransport):
+    def __init__(self, peer_bundle: UpdateBundle) -> None:
+        super().__init__(peer_bundle)
+        self.calls: list[str] = []
+        self.ready_exchanged = False
+
+    async def exchange_update_ready(
+        self,
+        *,
+        peer: str,
+        round_id: int,
+        bundle_checksum: str,
+    ) -> str:
+        self.calls.append("ready")
+        self.ready_exchanged = True
+        return await super().exchange_update_ready(
+            peer=peer,
+            round_id=round_id,
+            bundle_checksum=bundle_checksum,
+        )
+
+    async def exchange_update(
+        self,
+        *,
+        peer: str,
+        round_id: int,
+        bundle: UpdateBundle,
+    ) -> PairExchangeResult:
+        self.calls.append("update")
+        if not self.ready_exchanged:
+            raise PairCommitError("bulk transfer started before peer readiness")
+        return await super().exchange_update(
+            peer=peer,
+            round_id=round_id,
+            bundle=bundle,
+        )
+
+
 class RejectingCommitTransport(StaticPairTransport):
     async def exchange_round_committed(
         self,
@@ -292,6 +330,21 @@ class StubPairReceiver:
 
     async def advance_round(self, round_id: int) -> None:
         return None
+
+
+class DelayedPairReceiver(StubPairReceiver):
+    def __init__(self, envelope: Envelope, *, timeout_count: int) -> None:
+        super().__init__(envelope)
+        self.timeout_count = timeout_count
+        self.receive_count = 0
+
+    async def receive(
+        self, channel: object, *, timeout_seconds: float
+    ) -> Envelope:
+        self.receive_count += 1
+        if self.receive_count <= self.timeout_count:
+            raise TimeoutError
+        return await super().receive(channel, timeout_seconds=timeout_seconds)
 
 
 class StubPairSender:
@@ -507,6 +560,54 @@ def test_round_committed_rejects_payload_round_mismatch(tmp_path: Path) -> None:
                 round_id=0,
                 state_checksum="2" * 64,
             )
+
+    asyncio.run(run())
+
+
+def test_update_ready_uses_transfer_lifetime_for_round_entry_skew(
+    tmp_path: Path,
+) -> None:
+    async def run() -> None:
+        payload = encode_message(
+            PairCommitMessage(round_id=0, checksum="1" * 64)
+        )
+        envelope = create_envelope(
+            message_type=MessageType.UPDATE_READY,
+            message_id="update-ready-0",
+            run_id="test-run",
+            manifest_hash="0" * 64,
+            sender_public_key="peer-1",
+            algorithm_id="d-psgd",
+            round_id=0,
+            correlation_id="pair-round-0",
+            payload=payload,
+        )
+        receiver = DelayedPairReceiver(envelope, timeout_count=2)
+        transport = AXLPairTransport(
+            local_public_key="peer-0",
+            run_id="test-run",
+            manifest_hash="0" * 64,
+            algorithm_id="d-psgd",
+            transport_limits=TransportLimits(
+                max_payload_bytes=1024,
+                max_retries=1,
+                retry_timeout_seconds=0.01,
+                transfer_lifetime_seconds=0.05,
+            ),
+            receiver=cast(Receiver, receiver),
+            sender=cast(OutboundScheduler, StubPairSender()),
+            transfer_manager=cast(TransferManager, object()),
+            metadata_root=tmp_path,
+        )
+
+        checksum = await transport.exchange_update_ready(
+            peer="peer-1",
+            round_id=0,
+            bundle_checksum="2" * 64,
+        )
+
+        assert checksum == "1" * 64
+        assert receiver.receive_count == 3
 
     asyncio.run(run())
 
@@ -765,6 +866,64 @@ def test_release_runs_after_bundle_outcomes(
                 await engine.run()
         assert len(codec.released) == 2
         assert not any(path.is_file() for path in tmp_path.rglob("*"))
+
+    asyncio.run(run())
+
+
+def test_pair_readiness_is_exchanged_before_bulk_transfer(tmp_path: Path) -> None:
+    async def run() -> None:
+        schema = TensorSchema(
+            tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
+        )
+        local_codec = NamedSafetensorsUpdateBundleCodec(
+            artifact_root=tmp_path / "local",
+            run_id="test-run",
+            manifest_hash="0" * 64,
+            sender_public_key="peer-0",
+            algorithm_id="d-psgd",
+            artifact_schemas={"trained_weights": schema},
+        )
+        peer_codec = NamedSafetensorsUpdateBundleCodec(
+            artifact_root=tmp_path / "peer",
+            run_id="test-run",
+            manifest_hash="0" * 64,
+            sender_public_key="peer-1",
+            algorithm_id="d-psgd",
+            artifact_schemas={"trained_weights": schema},
+        )
+        peer_bundle = peer_codec.encode(
+            round_id=0,
+            artifacts={
+                "trained_weights": {
+                    "weight": np.array([3.0], dtype=np.float32)
+                }
+            },
+            codec_bindings={
+                "trained_weights": UpdateCodecBinding(
+                    codec_id="safetensors-v1",
+                    codec_version=1,
+                    logical_schema=schema,
+                )
+            },
+        )
+        transport = ReadinessGuardTransport(peer_bundle)
+        engine = GossipEngine(
+            local_public_key="peer-0",
+            round_count=1,
+            scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
+            algorithm=DPSGDAdapter(
+                trainer=LinearTrainer(1.0),
+                tensor_schema=schema,
+                local_steps=1,
+                bundle_codec=local_codec,
+            ),
+            transport=transport,
+            commit_callback=lambda commit: None,
+        )
+
+        await engine.run()
+
+        assert transport.calls == ["ready", "update"]
 
     asyncio.run(run())
 

@@ -512,8 +512,10 @@ def test_manifest_codec_settings_freeze_supported_combinations() -> None:
         )
 
 
+@pytest.mark.parametrize("bitmap_fraction", (0.4, 0.45))
 def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
     tmp_path: Path,
+    bitmap_fraction: float,
 ) -> None:
     model = build_model(seed=17)
     schema = TensorSchema(
@@ -549,7 +551,10 @@ def test_resnet18_complete_wire_bundle_exceeds_five_x_compression(
             "slow_weights": slow_codec.encoded_schema,
         },
     )
-    bitmap_outer_codec = BitmapTopKInt8Codec(schema, top_k_fraction=0.4)
+    bitmap_outer_codec = BitmapTopKInt8Codec(
+        schema,
+        top_k_fraction=bitmap_fraction,
+    )
     bitmap_bundle_codec = NamedSafetensorsUpdateBundleCodec(
         artifact_root=tmp_path / "bitmap-compressed",
         run_id="compression-measurement",
