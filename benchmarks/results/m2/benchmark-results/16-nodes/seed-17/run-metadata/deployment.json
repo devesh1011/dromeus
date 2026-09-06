@@ -1,0 +1,77 @@
+{
+  "benchmark_seed": 17,
+  "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "cuda": "13.0",
+  "driver": "595.91.07",
+  "gpu": "NVIDIA A10G",
+  "instance_type": "g5.xlarge",
+  "nccl": "2.29.7",
+  "pytorch": "2.12.1+cu130",
+  "regions": [
+    {
+      "ranks": [
+        0,
+        1
+      ],
+      "region": "us-east-1"
+    },
+    {
+      "ranks": [
+        2,
+        3
+      ],
+      "region": "us-west-2"
+    },
+    {
+      "ranks": [
+        4,
+        5
+      ],
+      "region": "us-east-2"
+    },
+    {
+      "ranks": [
+        6,
+        7
+      ],
+      "region": "eu-central-1"
+    },
+    {
+      "ranks": [
+        8,
+        9
+      ],
+      "region": "eu-west-1"
+    },
+    {
+      "ranks": [
+        10,
+        11
+      ],
+      "region": "eu-west-2"
+    },
+    {
+      "ranks": [
+        12,
+        13
+      ],
+      "region": "ap-northeast-1"
+    },
+    {
+      "ranks": [
+        14,
+        15
+      ],
+      "region": "ap-south-1"
+    }
+  ],
+  "root_volume": {
+    "delete_on_termination": true,
+    "encrypted": true,
+    "size_gib": 80,
+    "type": "gp3"
+  },
+  "schema_version": 1,
+  "topology": "eight-worker-full-mesh-axl",
+  "world_size": 16
+}

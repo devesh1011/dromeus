@@ -21,10 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def _copy_pilot_report(destination: Path) -> None:
     shutil.copyfile(
         REPO_ROOT
-        / "aws"
+        / "benchmarks"
         / "results"
         / "m2"
-        / "pilot"
+        / "compression-calibration"
         / "pilot-report.json",
         destination,
     )

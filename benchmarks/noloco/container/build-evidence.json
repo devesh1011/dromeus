@@ -1,0 +1,25 @@
+{
+  "aws": {
+    "ami": "ami-0eac3fc37325af5ae",
+    "instance_type": "g5.xlarge",
+    "region": "us-east-1"
+  },
+  "base_image_digest": "sha256:78a2f9fd8f605301464fc61c42be3acb5a65cd92b0c91f481c3dcdd411dff810",
+  "driver": "595.91.07",
+  "gpu_preflight": {
+    "cuda": "13.0",
+    "cuda_available": true,
+    "cudnn": 92000,
+    "device_name": "NVIDIA A10G",
+    "nccl": "2.29.7",
+    "python": "3.12.11",
+    "torch": "2.12.1+cu130"
+  },
+  "image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "image_repository": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark",
+  "image_size_bytes": 5823557237,
+  "image_tag": "noloco-readiness60-bound6-20260829",
+  "schema_version": 1,
+  "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+  "verified_at": "2026-08-29T10:03:28Z"
+}

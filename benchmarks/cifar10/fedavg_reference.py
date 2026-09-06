@@ -19,12 +19,20 @@ from dromeus.manifests.models import (
     Sha256,
     TrainingPolicy,
 )
-from dromeus.training.cifar10 import DATA_SOURCE, create_trainer
+from dromeus.training.cifar10 import (
+    DATA_SOURCE,
+    CIFAR10TrainerSettings,
+    create_trainer,
+)
 from dromeus.training.data import (
     ClassificationData,
     iid_partition_index_hashes,
 )
-from dromeus.training.trainer import checkpoint_hash, derive_benchmark_seed
+from dromeus.training.trainer import (
+    TrainerSettings,
+    checkpoint_hash,
+    derive_benchmark_seed,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,9 +264,10 @@ def run_fedavg(
     initial_checkpoint: Path,
     config: FedAvgConfig,
 ) -> FedAvgResult:
-    """Run four local blocks followed by central equal-weight averaging."""
-    if len(partitions) != 4:
-        raise ValueError("FedAvg reference requires exactly four partitions")
+    """Run N local blocks followed by central equal-weight averaging."""
+    participant_count = config.dataset.participant_count
+    if len(partitions) != participant_count:
+        raise ValueError("FedAvg partition count does not match frozen config")
     if any(len(partition) == 0 for partition in partitions):
         raise ValueError("FedAvg partitions must not be empty")
     if not test_data.matches_source(source=config.data_source, split="test"):
@@ -274,7 +283,7 @@ def run_fedavg(
         raise ValueError("FedAvg partition sizes do not match frozen config")
     expected_hashes = iid_partition_index_hashes(
         source_sample_count=source_sample_count,
-        participant_count=4,
+        participant_count=participant_count,
         seed=config.dataset.iid_partition_seed,
     )
     for partition_index, partition in enumerate(partitions):
@@ -282,7 +291,7 @@ def run_fedavg(
         if (
             provenance is None
             or provenance.seed != config.dataset.iid_partition_seed
-            or provenance.participant_count != 4
+            or provenance.participant_count != participant_count
             or provenance.partition_index != partition_index
             or provenance.source_sample_count != source_sample_count
             or provenance.indices_sha256 != expected_hashes[partition_index]
@@ -298,30 +307,42 @@ def run_fedavg(
         create_trainer(
             train_data=partition,
             test_data=test_data,
-            seed=trainer_seed + index,
-            batch_size=config.batch_size,
-            learning_rate=config.learning_rate,
-            momentum=config.training.momentum if config.training is not None else 0.0,
-            weight_decay=(
-                config.training.weight_decay if config.training is not None else 0.0
-            ),
-            learning_rate_milestones=(
-                config.training.learning_rate_milestones
-                if config.training is not None
-                else ()
-            ),
-            learning_rate_gamma=(
-                config.training.learning_rate_gamma
-                if config.training is not None
-                else 0.1
-            ),
-            device=config.device,
-            augment=config.augment,
-            crop_padding=(
-                config.training.crop_padding if config.training is not None else 0
-            ),
-            normalize=(
-                config.training.normalize if config.training is not None else False
+            settings=CIFAR10TrainerSettings(
+                trainer=TrainerSettings(
+                    seed=trainer_seed + index,
+                    batch_size=config.batch_size,
+                    learning_rate=config.learning_rate,
+                    momentum=(
+                        config.training.momentum
+                        if config.training is not None
+                        else 0.0
+                    ),
+                    weight_decay=(
+                        config.training.weight_decay
+                        if config.training is not None
+                        else 0.0
+                    ),
+                    learning_rate_milestones=(
+                        config.training.learning_rate_milestones
+                        if config.training is not None
+                        else ()
+                    ),
+                    learning_rate_gamma=(
+                        config.training.learning_rate_gamma
+                        if config.training is not None
+                        else 0.1
+                    ),
+                    device=config.device,
+                    augment=config.augment,
+                ),
+                model_id=config.model_id,
+                model_definition_hash=config.model_definition_hash,
+                crop_padding=(
+                    config.training.crop_padding if config.training is not None else 0
+                ),
+                normalize=(
+                    config.training.normalize if config.training is not None else False
+                ),
             ),
         )
         for index, partition in enumerate(partitions)

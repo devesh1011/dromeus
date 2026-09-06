@@ -1,0 +1,15 @@
+{
+  "analysis_points": 10,
+  "divergence_slope": -0.0006090161083201763,
+  "maximum_node_accuracy": 0.9304,
+  "maximum_residual_l2_norm": 4.684382127916511,
+  "maximum_residual_to_signal_ratio": 0.32629841810762467,
+  "mean_accuracy": 0.92928125,
+  "minimum_compression_ratio": 5.067911273833514,
+  "minimum_node_accuracy": 0.9284,
+  "schema_version": 1,
+  "seed": 17,
+  "status": "accepted",
+  "total_update_retries": 60,
+  "world_size": 16
+}

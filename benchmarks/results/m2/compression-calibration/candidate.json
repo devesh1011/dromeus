@@ -1,0 +1,18 @@
+{
+  "accuracy_floor": 0.9,
+  "benchmark_seed": 17,
+  "complete_wire_compression_floor": 5.0,
+  "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "draft_hash": "b73ff02525bc5273b918efaeea78dfcec48ca69a812b8029ee226f4cefc495e8",
+  "residual_l2_bound": 6.0,
+  "residual_to_signal_ratio_bound": 0.35,
+  "round_count": 500,
+  "run_id": "noloco-topk45-calibration-w4-s17-20260829",
+  "schema_version": 1,
+  "source_artifact": "../experiment-config/experiment.yaml",
+  "source_top_k_fraction": 0.4,
+  "status": "diagnostic-candidate",
+  "top_k_fraction": 0.45,
+  "total_inner_steps": 25000,
+  "world_size": 4
+}

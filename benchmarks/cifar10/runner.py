@@ -122,7 +122,7 @@ def create_draft(
         container_image_digest=image_digest,
     )
     return DraftRunSpec(
-        manifest_version=2,
+        manifest_version=3,
         protocol_version=1,
         run_id=run_id,
         algorithm_id=DPSGD_ALGORITHM_ID,

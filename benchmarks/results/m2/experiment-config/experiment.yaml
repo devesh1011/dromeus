@@ -1,0 +1,1122 @@
+ablations:
+- ablation_id: identity
+  artifact_codecs:
+  - artifact_name: outer_gradient
+    codec_id: identity-v1
+  - artifact_name: slow_weights
+    codec_id: identity-v1
+- ablation_id: compressed
+  artifact_codecs:
+  - artifact_name: outer_gradient
+    codec_id: topk-bitmap-int8-v2
+    lossy_allowed: true
+    top_k_fraction: 0.45
+  - artifact_name: slow_weights
+    codec_id: dense-int8-v1
+    lossy_allowed: true
+algorithm:
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-08
+  adam_learning_rate: 0.001
+  alpha: 0.5
+  beta: 0.7
+  gamma: 0.7
+  gradient_clip_norm: 1.0
+  inner_steps: 50
+dataset:
+  dataset_id: cifar10
+  partition_seed: 7
+  preprocessing_hash: fab263925c870b8df3cd8f82e3258262e4f8db4943db449988058a60eaf04bf0
+  revision: 0b2714987fa478483af9968de7c934580d0bb9a2
+  sample_count: 50000
+  source: huggingface-uoft-cs-cifar10
+hardware:
+  accelerator_class: NVIDIA-A10G
+  axl_commit: 628e28ace077f26dfe8d0259009b357216a9d8d4
+  container_image_digest: sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c
+  cuda_version: '13.0'
+  cudnn_version: 92000
+  driver_version: 595.91.07
+  instance_type: g5.xlarge
+  nccl_version: 2.29.7
+  python_version: 3.12.11
+  pytorch_version: 2.12.1+cu130
+model:
+  definition_hash: c5792864784d4c27d51a34e94e1457b2b4f4a3c38970c2d3340e7094be0be178
+  dtype: float32
+  model_id: resnet18-groupnorm-cifar10-v1
+  parameter_count: 11173962
+  tensor_schema_hash: 2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706
+pilot:
+  path: pilot-report.json
+  sha256: 8789163afe2abe469edf06fb47c5a89a78e134cf095bae5a5251ec0921f51ff2
+runs:
+- checkpoint:
+    path: checkpoint-17.safetensors
+    sha256: 3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 5305628465778583288
+  pairing_digest: d9f28145663277662ed2310de095c1ada540f6d2d7f25453e5c92d77ee7f7bcf
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  partition_index_hashes:
+  - 8449b5f1d35d8aa28bb291fbac46f61024b8e1af8958d8ceb0632114a946e0d0
+  - ea3479730de2e13b550e684ecbd855a67a41944a984cdbd6e9ef8f72d742766a
+  - ad3b58c97f87dc1f6418da54af0a5e38cbe97cf69f3909a00b5a6bd4e99626d1
+  - 2352edbc8bbe0bf3db0b47528aa651651d37629b2dba41233ae6dad8f2c74e2f
+  rank_seeds:
+  - augmentation_seed: 4081446417412172837
+    loader_seed: 4081446417412172838
+    rank: 0
+    trainer_seed: 4081446417412172836
+  - augmentation_seed: 4081446417412172838
+    loader_seed: 4081446417412172839
+    rank: 1
+    trainer_seed: 4081446417412172837
+  - augmentation_seed: 4081446417412172839
+    loader_seed: 4081446417412172840
+    rank: 2
+    trainer_seed: 4081446417412172838
+  - augmentation_seed: 4081446417412172840
+    loader_seed: 4081446417412172841
+    rank: 3
+    trainer_seed: 4081446417412172839
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 17
+  selector:
+    benchmark_seed: 17
+    profile: official
+    world_size: 4
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-29.safetensors
+    sha256: 1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 7504242182432257736
+  pairing_digest: d42bd1e75c38f772f6f88ea336ea816a70dae007dc386fc2ae6687c1ed50b508
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  partition_index_hashes:
+  - 8449b5f1d35d8aa28bb291fbac46f61024b8e1af8958d8ceb0632114a946e0d0
+  - ea3479730de2e13b550e684ecbd855a67a41944a984cdbd6e9ef8f72d742766a
+  - ad3b58c97f87dc1f6418da54af0a5e38cbe97cf69f3909a00b5a6bd4e99626d1
+  - 2352edbc8bbe0bf3db0b47528aa651651d37629b2dba41233ae6dad8f2c74e2f
+  rank_seeds:
+  - augmentation_seed: 6818390934802465996
+    loader_seed: 6818390934802465997
+    rank: 0
+    trainer_seed: 6818390934802465995
+  - augmentation_seed: 6818390934802465997
+    loader_seed: 6818390934802465998
+    rank: 1
+    trainer_seed: 6818390934802465996
+  - augmentation_seed: 6818390934802465998
+    loader_seed: 6818390934802465999
+    rank: 2
+    trainer_seed: 6818390934802465997
+  - augmentation_seed: 6818390934802465999
+    loader_seed: 6818390934802466000
+    rank: 3
+    trainer_seed: 6818390934802465998
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 29
+  selector:
+    benchmark_seed: 29
+    profile: official
+    world_size: 4
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-41.safetensors
+    sha256: 5370fb8db9d438a99ee8f57c702e520a3e540adf25cda287ba147fa763c81c26
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 6721867757288999816
+  pairing_digest: 63461cf003fda7bd75cdeb6b1ac0935359acfb76e7bdd29b76f9fe850652aff2
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  partition_index_hashes:
+  - 8449b5f1d35d8aa28bb291fbac46f61024b8e1af8958d8ceb0632114a946e0d0
+  - ea3479730de2e13b550e684ecbd855a67a41944a984cdbd6e9ef8f72d742766a
+  - ad3b58c97f87dc1f6418da54af0a5e38cbe97cf69f3909a00b5a6bd4e99626d1
+  - 2352edbc8bbe0bf3db0b47528aa651651d37629b2dba41233ae6dad8f2c74e2f
+  rank_seeds:
+  - augmentation_seed: 622384149650767377
+    loader_seed: 622384149650767378
+    rank: 0
+    trainer_seed: 622384149650767376
+  - augmentation_seed: 622384149650767378
+    loader_seed: 622384149650767379
+    rank: 1
+    trainer_seed: 622384149650767377
+  - augmentation_seed: 622384149650767379
+    loader_seed: 622384149650767380
+    rank: 2
+    trainer_seed: 622384149650767378
+  - augmentation_seed: 622384149650767380
+    loader_seed: 622384149650767381
+    rank: 3
+    trainer_seed: 622384149650767379
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 41
+  selector:
+    benchmark_seed: 41
+    profile: official
+    world_size: 4
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-17.safetensors
+    sha256: 3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 5305628465778583288
+  pairing_digest: 422900a6155e11ac5ddd52bd6f09110774397a1fe8305c2c9c4df937540fd6f6
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  partition_index_hashes:
+  - 1b0f732703e3f2089cf0072de703f1d02399aa5eddeb91bea80e2cc3db254e35
+  - d347b8966ce98a38b041b208767b04939a9993e3bb1c94c3712fdeadc31a27d8
+  - e3d21897e3e8eafca79bed10a75526ac9a369ca795b6dfee14bcc08a931b57e5
+  - 4507b1196cd8dce9416b500768f518276f2469af3d6c89afca2e4be2812afe38
+  - 52dde2aaaac24807623a40fccc14df8c38558cda0949a3b535400b8b14adeaf2
+  - 3b82e62f1ec58a47d41f12fc80398e31e87473f8053c8fa1f548298f1d7c321e
+  - d711da8542f58d5b619e5345717f4b069a96745e488aef9d32722d4a1c19e275
+  - 928da320477cc24c240d16a14e6bc86ce8950552017232217f65e9a8e7bc45a3
+  rank_seeds:
+  - augmentation_seed: 4081446417412172837
+    loader_seed: 4081446417412172838
+    rank: 0
+    trainer_seed: 4081446417412172836
+  - augmentation_seed: 4081446417412172838
+    loader_seed: 4081446417412172839
+    rank: 1
+    trainer_seed: 4081446417412172837
+  - augmentation_seed: 4081446417412172839
+    loader_seed: 4081446417412172840
+    rank: 2
+    trainer_seed: 4081446417412172838
+  - augmentation_seed: 4081446417412172840
+    loader_seed: 4081446417412172841
+    rank: 3
+    trainer_seed: 4081446417412172839
+  - augmentation_seed: 4081446417412172841
+    loader_seed: 4081446417412172842
+    rank: 4
+    trainer_seed: 4081446417412172840
+  - augmentation_seed: 4081446417412172842
+    loader_seed: 4081446417412172843
+    rank: 5
+    trainer_seed: 4081446417412172841
+  - augmentation_seed: 4081446417412172843
+    loader_seed: 4081446417412172844
+    rank: 6
+    trainer_seed: 4081446417412172842
+  - augmentation_seed: 4081446417412172844
+    loader_seed: 4081446417412172845
+    rank: 7
+    trainer_seed: 4081446417412172843
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 17
+  selector:
+    benchmark_seed: 17
+    profile: official
+    world_size: 8
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-29.safetensors
+    sha256: 1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 7504242182432257736
+  pairing_digest: dfa6e3863c431b490c1dd71f3904875fa1f7612df3da88e451fe778c8316b7d1
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  partition_index_hashes:
+  - 1b0f732703e3f2089cf0072de703f1d02399aa5eddeb91bea80e2cc3db254e35
+  - d347b8966ce98a38b041b208767b04939a9993e3bb1c94c3712fdeadc31a27d8
+  - e3d21897e3e8eafca79bed10a75526ac9a369ca795b6dfee14bcc08a931b57e5
+  - 4507b1196cd8dce9416b500768f518276f2469af3d6c89afca2e4be2812afe38
+  - 52dde2aaaac24807623a40fccc14df8c38558cda0949a3b535400b8b14adeaf2
+  - 3b82e62f1ec58a47d41f12fc80398e31e87473f8053c8fa1f548298f1d7c321e
+  - d711da8542f58d5b619e5345717f4b069a96745e488aef9d32722d4a1c19e275
+  - 928da320477cc24c240d16a14e6bc86ce8950552017232217f65e9a8e7bc45a3
+  rank_seeds:
+  - augmentation_seed: 6818390934802465996
+    loader_seed: 6818390934802465997
+    rank: 0
+    trainer_seed: 6818390934802465995
+  - augmentation_seed: 6818390934802465997
+    loader_seed: 6818390934802465998
+    rank: 1
+    trainer_seed: 6818390934802465996
+  - augmentation_seed: 6818390934802465998
+    loader_seed: 6818390934802465999
+    rank: 2
+    trainer_seed: 6818390934802465997
+  - augmentation_seed: 6818390934802465999
+    loader_seed: 6818390934802466000
+    rank: 3
+    trainer_seed: 6818390934802465998
+  - augmentation_seed: 6818390934802466000
+    loader_seed: 6818390934802466001
+    rank: 4
+    trainer_seed: 6818390934802465999
+  - augmentation_seed: 6818390934802466001
+    loader_seed: 6818390934802466002
+    rank: 5
+    trainer_seed: 6818390934802466000
+  - augmentation_seed: 6818390934802466002
+    loader_seed: 6818390934802466003
+    rank: 6
+    trainer_seed: 6818390934802466001
+  - augmentation_seed: 6818390934802466003
+    loader_seed: 6818390934802466004
+    rank: 7
+    trainer_seed: 6818390934802466002
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 29
+  selector:
+    benchmark_seed: 29
+    profile: official
+    world_size: 8
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-41.safetensors
+    sha256: 5370fb8db9d438a99ee8f57c702e520a3e540adf25cda287ba147fa763c81c26
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 6721867757288999816
+  pairing_digest: d1b4962b25238fdb001998c0c8351c9ce1536f44fa80e8100ebb6057fc539f08
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  partition_index_hashes:
+  - 1b0f732703e3f2089cf0072de703f1d02399aa5eddeb91bea80e2cc3db254e35
+  - d347b8966ce98a38b041b208767b04939a9993e3bb1c94c3712fdeadc31a27d8
+  - e3d21897e3e8eafca79bed10a75526ac9a369ca795b6dfee14bcc08a931b57e5
+  - 4507b1196cd8dce9416b500768f518276f2469af3d6c89afca2e4be2812afe38
+  - 52dde2aaaac24807623a40fccc14df8c38558cda0949a3b535400b8b14adeaf2
+  - 3b82e62f1ec58a47d41f12fc80398e31e87473f8053c8fa1f548298f1d7c321e
+  - d711da8542f58d5b619e5345717f4b069a96745e488aef9d32722d4a1c19e275
+  - 928da320477cc24c240d16a14e6bc86ce8950552017232217f65e9a8e7bc45a3
+  rank_seeds:
+  - augmentation_seed: 622384149650767377
+    loader_seed: 622384149650767378
+    rank: 0
+    trainer_seed: 622384149650767376
+  - augmentation_seed: 622384149650767378
+    loader_seed: 622384149650767379
+    rank: 1
+    trainer_seed: 622384149650767377
+  - augmentation_seed: 622384149650767379
+    loader_seed: 622384149650767380
+    rank: 2
+    trainer_seed: 622384149650767378
+  - augmentation_seed: 622384149650767380
+    loader_seed: 622384149650767381
+    rank: 3
+    trainer_seed: 622384149650767379
+  - augmentation_seed: 622384149650767381
+    loader_seed: 622384149650767382
+    rank: 4
+    trainer_seed: 622384149650767380
+  - augmentation_seed: 622384149650767382
+    loader_seed: 622384149650767383
+    rank: 5
+    trainer_seed: 622384149650767381
+  - augmentation_seed: 622384149650767383
+    loader_seed: 622384149650767384
+    rank: 6
+    trainer_seed: 622384149650767382
+  - augmentation_seed: 622384149650767384
+    loader_seed: 622384149650767385
+    rank: 7
+    trainer_seed: 622384149650767383
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 41
+  selector:
+    benchmark_seed: 41
+    profile: official
+    world_size: 8
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-17.safetensors
+    sha256: 3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 5305628465778583288
+  pairing_digest: 158228385494bac0ddffaae1b5308b9a5c6e0265b4d1a49f689bb331b0f84040
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  - node_index: 8
+    public_key: 9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636
+    rank: 8
+  - node_index: 9
+    public_key: a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56
+    rank: 9
+  - node_index: 10
+    public_key: b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28
+    rank: 10
+  - node_index: 11
+    public_key: c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7
+    rank: 11
+  - node_index: 12
+    public_key: d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91
+    rank: 12
+  - node_index: 13
+    public_key: da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4
+    rank: 13
+  - node_index: 14
+    public_key: e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb
+    rank: 14
+  - node_index: 15
+    public_key: e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0
+    rank: 15
+  partition_index_hashes:
+  - 0cc5257f77c421a9f7624c4c7c0208c354c77a82bdf16525bbe89137efdfaa5a
+  - a9d57f07bba49993220e6ffdb4732b953ac41bf7b78723737f23fbce2a16cd17
+  - c287da2b9e9752ee319c6db2000661981a8d346aa26fd54881549514a2ae9151
+  - ad591ae9ea3563702686cef68a10703208907d948ec5c635db31d7212616a95e
+  - 29cd294eac1a9ae17d72945f264fc3853a76c9d1e8958223f56979d06fae7f69
+  - e36ea4b5e2cc500cbc8e9cfb964e11f6df6b294d8e656091ffc2651ea046867f
+  - 075fa7447bdbb99980f1ec1673d959b01c8c66e79284143aa31fcfb2612a4cf1
+  - 67b139c8924274c03a2aaae80fd5dce62bc28db0c99e5c1994bf9842db58c07f
+  - 81f7f6466f5dac03d58823a0f17d3a13d4fca5d64988419205d06271be62674b
+  - d93fe008c483658efac1ae1f94f20610cf758a0f0f011ed136c771c458905d9d
+  - 6e6fb4352ce2643102998376ac1559a39675df6410b7e25991b8b19c52941a39
+  - 05f5c2aeda31cfc32b2383bd477619208a844ed1894e34fb48d5ff3dbba02258
+  - 4fe68e05891ad246dfa8f47bac46a86a603c91927a0dc05bddedbdcbc3cadc1d
+  - 29263952e58d5aefcdf7e63125cfc2cf4dfb4b4f1a3246581b7092363295dca7
+  - acca0f6fa4af032f79eca30d8e291f8b3fa40d16592604b31feb27b581af3de8
+  - 63137286b4ed9f1b459e6bcabf4df97530bc2e9aa55f2629a48428fd604ded6b
+  rank_seeds:
+  - augmentation_seed: 4081446417412172837
+    loader_seed: 4081446417412172838
+    rank: 0
+    trainer_seed: 4081446417412172836
+  - augmentation_seed: 4081446417412172838
+    loader_seed: 4081446417412172839
+    rank: 1
+    trainer_seed: 4081446417412172837
+  - augmentation_seed: 4081446417412172839
+    loader_seed: 4081446417412172840
+    rank: 2
+    trainer_seed: 4081446417412172838
+  - augmentation_seed: 4081446417412172840
+    loader_seed: 4081446417412172841
+    rank: 3
+    trainer_seed: 4081446417412172839
+  - augmentation_seed: 4081446417412172841
+    loader_seed: 4081446417412172842
+    rank: 4
+    trainer_seed: 4081446417412172840
+  - augmentation_seed: 4081446417412172842
+    loader_seed: 4081446417412172843
+    rank: 5
+    trainer_seed: 4081446417412172841
+  - augmentation_seed: 4081446417412172843
+    loader_seed: 4081446417412172844
+    rank: 6
+    trainer_seed: 4081446417412172842
+  - augmentation_seed: 4081446417412172844
+    loader_seed: 4081446417412172845
+    rank: 7
+    trainer_seed: 4081446417412172843
+  - augmentation_seed: 4081446417412172845
+    loader_seed: 4081446417412172846
+    rank: 8
+    trainer_seed: 4081446417412172844
+  - augmentation_seed: 4081446417412172846
+    loader_seed: 4081446417412172847
+    rank: 9
+    trainer_seed: 4081446417412172845
+  - augmentation_seed: 4081446417412172847
+    loader_seed: 4081446417412172848
+    rank: 10
+    trainer_seed: 4081446417412172846
+  - augmentation_seed: 4081446417412172848
+    loader_seed: 4081446417412172849
+    rank: 11
+    trainer_seed: 4081446417412172847
+  - augmentation_seed: 4081446417412172849
+    loader_seed: 4081446417412172850
+    rank: 12
+    trainer_seed: 4081446417412172848
+  - augmentation_seed: 4081446417412172850
+    loader_seed: 4081446417412172851
+    rank: 13
+    trainer_seed: 4081446417412172849
+  - augmentation_seed: 4081446417412172851
+    loader_seed: 4081446417412172852
+    rank: 14
+    trainer_seed: 4081446417412172850
+  - augmentation_seed: 4081446417412172852
+    loader_seed: 4081446417412172853
+    rank: 15
+    trainer_seed: 4081446417412172851
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 17
+  selector:
+    benchmark_seed: 17
+    profile: official
+    world_size: 16
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-29.safetensors
+    sha256: 1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 7504242182432257736
+  pairing_digest: 8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  - node_index: 8
+    public_key: 9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636
+    rank: 8
+  - node_index: 9
+    public_key: a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56
+    rank: 9
+  - node_index: 10
+    public_key: b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28
+    rank: 10
+  - node_index: 11
+    public_key: c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7
+    rank: 11
+  - node_index: 12
+    public_key: d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91
+    rank: 12
+  - node_index: 13
+    public_key: da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4
+    rank: 13
+  - node_index: 14
+    public_key: e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb
+    rank: 14
+  - node_index: 15
+    public_key: e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0
+    rank: 15
+  partition_index_hashes:
+  - 0cc5257f77c421a9f7624c4c7c0208c354c77a82bdf16525bbe89137efdfaa5a
+  - a9d57f07bba49993220e6ffdb4732b953ac41bf7b78723737f23fbce2a16cd17
+  - c287da2b9e9752ee319c6db2000661981a8d346aa26fd54881549514a2ae9151
+  - ad591ae9ea3563702686cef68a10703208907d948ec5c635db31d7212616a95e
+  - 29cd294eac1a9ae17d72945f264fc3853a76c9d1e8958223f56979d06fae7f69
+  - e36ea4b5e2cc500cbc8e9cfb964e11f6df6b294d8e656091ffc2651ea046867f
+  - 075fa7447bdbb99980f1ec1673d959b01c8c66e79284143aa31fcfb2612a4cf1
+  - 67b139c8924274c03a2aaae80fd5dce62bc28db0c99e5c1994bf9842db58c07f
+  - 81f7f6466f5dac03d58823a0f17d3a13d4fca5d64988419205d06271be62674b
+  - d93fe008c483658efac1ae1f94f20610cf758a0f0f011ed136c771c458905d9d
+  - 6e6fb4352ce2643102998376ac1559a39675df6410b7e25991b8b19c52941a39
+  - 05f5c2aeda31cfc32b2383bd477619208a844ed1894e34fb48d5ff3dbba02258
+  - 4fe68e05891ad246dfa8f47bac46a86a603c91927a0dc05bddedbdcbc3cadc1d
+  - 29263952e58d5aefcdf7e63125cfc2cf4dfb4b4f1a3246581b7092363295dca7
+  - acca0f6fa4af032f79eca30d8e291f8b3fa40d16592604b31feb27b581af3de8
+  - 63137286b4ed9f1b459e6bcabf4df97530bc2e9aa55f2629a48428fd604ded6b
+  rank_seeds:
+  - augmentation_seed: 6818390934802465996
+    loader_seed: 6818390934802465997
+    rank: 0
+    trainer_seed: 6818390934802465995
+  - augmentation_seed: 6818390934802465997
+    loader_seed: 6818390934802465998
+    rank: 1
+    trainer_seed: 6818390934802465996
+  - augmentation_seed: 6818390934802465998
+    loader_seed: 6818390934802465999
+    rank: 2
+    trainer_seed: 6818390934802465997
+  - augmentation_seed: 6818390934802465999
+    loader_seed: 6818390934802466000
+    rank: 3
+    trainer_seed: 6818390934802465998
+  - augmentation_seed: 6818390934802466000
+    loader_seed: 6818390934802466001
+    rank: 4
+    trainer_seed: 6818390934802465999
+  - augmentation_seed: 6818390934802466001
+    loader_seed: 6818390934802466002
+    rank: 5
+    trainer_seed: 6818390934802466000
+  - augmentation_seed: 6818390934802466002
+    loader_seed: 6818390934802466003
+    rank: 6
+    trainer_seed: 6818390934802466001
+  - augmentation_seed: 6818390934802466003
+    loader_seed: 6818390934802466004
+    rank: 7
+    trainer_seed: 6818390934802466002
+  - augmentation_seed: 6818390934802466004
+    loader_seed: 6818390934802466005
+    rank: 8
+    trainer_seed: 6818390934802466003
+  - augmentation_seed: 6818390934802466005
+    loader_seed: 6818390934802466006
+    rank: 9
+    trainer_seed: 6818390934802466004
+  - augmentation_seed: 6818390934802466006
+    loader_seed: 6818390934802466007
+    rank: 10
+    trainer_seed: 6818390934802466005
+  - augmentation_seed: 6818390934802466007
+    loader_seed: 6818390934802466008
+    rank: 11
+    trainer_seed: 6818390934802466006
+  - augmentation_seed: 6818390934802466008
+    loader_seed: 6818390934802466009
+    rank: 12
+    trainer_seed: 6818390934802466007
+  - augmentation_seed: 6818390934802466009
+    loader_seed: 6818390934802466010
+    rank: 13
+    trainer_seed: 6818390934802466008
+  - augmentation_seed: 6818390934802466010
+    loader_seed: 6818390934802466011
+    rank: 14
+    trainer_seed: 6818390934802466009
+  - augmentation_seed: 6818390934802466011
+    loader_seed: 6818390934802466012
+    rank: 15
+    trainer_seed: 6818390934802466010
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 29
+  selector:
+    benchmark_seed: 29
+    profile: official
+    world_size: 16
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-41.safetensors
+    sha256: 5370fb8db9d438a99ee8f57c702e520a3e540adf25cda287ba147fa763c81c26
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 6721867757288999816
+  pairing_digest: 611826d9d6dc608c3b2ba34304ab16fd6cd849ee23c4fc5fd1aa53bb1917dd6e
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+    rank: 4
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+    rank: 5
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+    rank: 6
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+    rank: 7
+  - node_index: 8
+    public_key: 9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636
+    rank: 8
+  - node_index: 9
+    public_key: a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56
+    rank: 9
+  - node_index: 10
+    public_key: b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28
+    rank: 10
+  - node_index: 11
+    public_key: c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7
+    rank: 11
+  - node_index: 12
+    public_key: d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91
+    rank: 12
+  - node_index: 13
+    public_key: da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4
+    rank: 13
+  - node_index: 14
+    public_key: e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb
+    rank: 14
+  - node_index: 15
+    public_key: e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0
+    rank: 15
+  partition_index_hashes:
+  - 0cc5257f77c421a9f7624c4c7c0208c354c77a82bdf16525bbe89137efdfaa5a
+  - a9d57f07bba49993220e6ffdb4732b953ac41bf7b78723737f23fbce2a16cd17
+  - c287da2b9e9752ee319c6db2000661981a8d346aa26fd54881549514a2ae9151
+  - ad591ae9ea3563702686cef68a10703208907d948ec5c635db31d7212616a95e
+  - 29cd294eac1a9ae17d72945f264fc3853a76c9d1e8958223f56979d06fae7f69
+  - e36ea4b5e2cc500cbc8e9cfb964e11f6df6b294d8e656091ffc2651ea046867f
+  - 075fa7447bdbb99980f1ec1673d959b01c8c66e79284143aa31fcfb2612a4cf1
+  - 67b139c8924274c03a2aaae80fd5dce62bc28db0c99e5c1994bf9842db58c07f
+  - 81f7f6466f5dac03d58823a0f17d3a13d4fca5d64988419205d06271be62674b
+  - d93fe008c483658efac1ae1f94f20610cf758a0f0f011ed136c771c458905d9d
+  - 6e6fb4352ce2643102998376ac1559a39675df6410b7e25991b8b19c52941a39
+  - 05f5c2aeda31cfc32b2383bd477619208a844ed1894e34fb48d5ff3dbba02258
+  - 4fe68e05891ad246dfa8f47bac46a86a603c91927a0dc05bddedbdcbc3cadc1d
+  - 29263952e58d5aefcdf7e63125cfc2cf4dfb4b4f1a3246581b7092363295dca7
+  - acca0f6fa4af032f79eca30d8e291f8b3fa40d16592604b31feb27b581af3de8
+  - 63137286b4ed9f1b459e6bcabf4df97530bc2e9aa55f2629a48428fd604ded6b
+  rank_seeds:
+  - augmentation_seed: 622384149650767377
+    loader_seed: 622384149650767378
+    rank: 0
+    trainer_seed: 622384149650767376
+  - augmentation_seed: 622384149650767378
+    loader_seed: 622384149650767379
+    rank: 1
+    trainer_seed: 622384149650767377
+  - augmentation_seed: 622384149650767379
+    loader_seed: 622384149650767380
+    rank: 2
+    trainer_seed: 622384149650767378
+  - augmentation_seed: 622384149650767380
+    loader_seed: 622384149650767381
+    rank: 3
+    trainer_seed: 622384149650767379
+  - augmentation_seed: 622384149650767381
+    loader_seed: 622384149650767382
+    rank: 4
+    trainer_seed: 622384149650767380
+  - augmentation_seed: 622384149650767382
+    loader_seed: 622384149650767383
+    rank: 5
+    trainer_seed: 622384149650767381
+  - augmentation_seed: 622384149650767383
+    loader_seed: 622384149650767384
+    rank: 6
+    trainer_seed: 622384149650767382
+  - augmentation_seed: 622384149650767384
+    loader_seed: 622384149650767385
+    rank: 7
+    trainer_seed: 622384149650767383
+  - augmentation_seed: 622384149650767385
+    loader_seed: 622384149650767386
+    rank: 8
+    trainer_seed: 622384149650767384
+  - augmentation_seed: 622384149650767386
+    loader_seed: 622384149650767387
+    rank: 9
+    trainer_seed: 622384149650767385
+  - augmentation_seed: 622384149650767387
+    loader_seed: 622384149650767388
+    rank: 10
+    trainer_seed: 622384149650767386
+  - augmentation_seed: 622384149650767388
+    loader_seed: 622384149650767389
+    rank: 11
+    trainer_seed: 622384149650767387
+  - augmentation_seed: 622384149650767389
+    loader_seed: 622384149650767390
+    rank: 12
+    trainer_seed: 622384149650767388
+  - augmentation_seed: 622384149650767390
+    loader_seed: 622384149650767391
+    rank: 13
+    trainer_seed: 622384149650767389
+  - augmentation_seed: 622384149650767391
+    loader_seed: 622384149650767392
+    rank: 14
+    trainer_seed: 622384149650767390
+  - augmentation_seed: 622384149650767392
+    loader_seed: 622384149650767393
+    rank: 15
+    trainer_seed: 622384149650767391
+  round_count: 500
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  scheduler_seed: 41
+  selector:
+    benchmark_seed: 41
+    profile: official
+    world_size: 16
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+- checkpoint:
+    path: checkpoint-17.safetensors
+    sha256: 3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d
+  evidence:
+    absolute_tolerance: 1.0e-06
+    analysis_checkpoint_interval_rounds: 50
+    analysis_storage_budget_bytes_per_node: 536870912
+    countsketch_interval_rounds: 1
+    evaluation_interval_rounds: 25
+    overlap_enabled: false
+    relative_tolerance: 1.0e-06
+    residual_l2_bound: 6.0
+    residual_to_signal_ratio_bound: 0.35
+    trajectory_interval: 1
+  model_seed: 5305628465778583288
+  pairing_digest: a8637cc3eab745a41ef5d7e86a6431a191f8e3ed33d759c56b1daa9269fcea84
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+    rank: 0
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+    rank: 1
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+    rank: 2
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+    rank: 3
+  partition_index_hashes:
+  - 8449b5f1d35d8aa28bb291fbac46f61024b8e1af8958d8ceb0632114a946e0d0
+  - ea3479730de2e13b550e684ecbd855a67a41944a984cdbd6e9ef8f72d742766a
+  - ad3b58c97f87dc1f6418da54af0a5e38cbe97cf69f3909a00b5a6bd4e99626d1
+  - 2352edbc8bbe0bf3db0b47528aa651651d37629b2dba41233ae6dad8f2c74e2f
+  rank_seeds:
+  - augmentation_seed: 4081446417412172837
+    loader_seed: 4081446417412172838
+    rank: 0
+    trainer_seed: 4081446417412172836
+  - augmentation_seed: 4081446417412172838
+    loader_seed: 4081446417412172839
+    rank: 1
+    trainer_seed: 4081446417412172837
+  - augmentation_seed: 4081446417412172839
+    loader_seed: 4081446417412172840
+    rank: 2
+    trainer_seed: 4081446417412172838
+  - augmentation_seed: 4081446417412172840
+    loader_seed: 4081446417412172841
+    rank: 3
+    trainer_seed: 4081446417412172839
+  round_count: 2
+  schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 100
+    warmup_inner_steps: 10
+  scheduler_seed: 17
+  selector:
+    benchmark_seed: 17
+    profile: trajectory
+    world_size: 4
+  transfer:
+    chunk_size_bytes: 1048576
+    window_size: 4
+schema_version: 2
+source:
+  commit: a1b4a425bdc4050a356cf9f4bae7c383419703ab
+  files:
+  - src/noloco/sparse_optimizer_c.py
+  outer_gradient_convention: phi-minus-theta-v1
+  repository: gensyn-ai/noloco
+status: frozen
+workload:
+  augment: true
+  batch_size: 128
+  crop_padding: 4
+  normalize: true
+  weight_decay: 0.0

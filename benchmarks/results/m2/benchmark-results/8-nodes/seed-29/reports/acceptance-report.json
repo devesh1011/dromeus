@@ -1,0 +1,100 @@
+{
+  "accuracy": {
+    "maximum": 0.9275,
+    "mean": 0.926525,
+    "minimum": 0.9247,
+    "stddev": 0.0008452070752188533
+  },
+  "artifact": {
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_sha256": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "path": "../../../../experiment-config/experiment.yaml"
+  },
+  "communication": {
+    "exchange_retries": 1,
+    "identity_complete_wire_bytes": 89499868,
+    "maximum_observed_update_payload_bytes_with_retries": 17672221,
+    "minimum_encoded_compression_ratio": 5.067911273833514,
+    "nominal_complete_wire_bytes": 17672081,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "telemetry_retries": 0,
+    "transport_event_labeled_retries": 1
+  },
+  "divergence": {
+    "final_below_post_warmup_peak": true,
+    "passed": true,
+    "point_count": 10,
+    "trend_slope_per_inner_step": -0.0005496086418646506
+  },
+  "evidence": {
+    "checkpoint_archive_count": 8,
+    "checkpoint_manifest_sha256": "f28c6e35ecf210437c4e32821d5f41b4deddf6b600e21844ad983b5a36458679",
+    "divergence_report_sha256": "2e7b7d0a386963c6e65df7d60e2f60ce2da3fae68cb3b206955843ff62dcc9a2",
+    "local_analysis_tensor_count_after_analysis": 0,
+    "rank_log_sha256": [
+      "970edc8b98e088188f1d00043019a5762e0d7b9b32ae244d21fe790844536250",
+      "59344558c77851aae135bf9944a024354256242f2acb14a49089ef25aec51ce5",
+      "a4818a90217af06535c9be2f73caff5bd549a7a6438decfc5efdc28b4db2a7c0",
+      "729503a55f8446efce0b49fcad3c36444b1a496dbc98658c24d79508e1e69c95",
+      "f38d17f10caa41e3020693429836fd98a6d3a2de011635da2daccc9b9eed2bfe",
+      "720a59af89a58b0bdea2ede4a409c74f1914b25c14e2e91fed65c0a600fe37d6",
+      "7506e926e8840b0d6c1e7e810f9c6f6ebd057a2e5f0ccb62cce7697b23937bb2",
+      "7be95a3babdca4ae8a55923e1939e68e4cdbb1a998f52397fd96f87ca2d443e9"
+    ],
+    "reconciliation_sha256": "7e62b543866cbd74f229b75e343967746d9cc16e1658abcce37ef2fcbff24fa5",
+    "remote_analysis_tensor_count_after_analysis": 0
+  },
+  "execution": {
+    "clean_exit_count": 8,
+    "node_complete_timestamps": [
+      "2026-09-03T10:15:48.086157+00:00",
+      "2026-09-03T10:15:41.877487+00:00",
+      "2026-09-03T10:15:44.005897+00:00",
+      "2026-09-03T10:15:44.126755+00:00",
+      "2026-09-03T10:15:41.883132+00:00",
+      "2026-09-03T10:15:45.684548+00:00",
+      "2026-09-03T10:15:48.112912+00:00",
+      "2026-09-03T10:15:45.734446+00:00"
+    ],
+    "node_start_timestamps": [
+      "2026-09-03T08:05:56.819391+00:00",
+      "2026-09-03T08:06:30.088213+00:00",
+      "2026-09-03T08:06:34.268056+00:00",
+      "2026-09-03T08:06:32.979234+00:00",
+      "2026-09-03T08:06:30.407445+00:00",
+      "2026-09-03T08:06:30.411881+00:00",
+      "2026-09-03T08:06:50.918881+00:00",
+      "2026-09-03T08:06:36.237255+00:00"
+    ],
+    "round_count": 500,
+    "run_failure_count": 0
+  },
+  "gates": {
+    "accuracy_at_least_90_percent": true,
+    "all_ranks_complete": true,
+    "checkpoint_archive_complete": true,
+    "divergence": true,
+    "nominal_complete_wire_at_least_5x": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "strict_reconciliation": true,
+    "temporary_tensors_deleted": true,
+    "topology_complete": true
+  },
+  "manifest_hash": "d71b52a951a9d770b02a0a9835b845f101279c551e50d1f677696e48cdbe6366",
+  "residual": {
+    "l2_bound": 6.0,
+    "maximum_l2_norm": 4.6903622627182555,
+    "maximum_to_signal_ratio": 0.3080710103099842,
+    "ratio_bound": 0.35
+  },
+  "run_id": "noloco-topk45-official-w8-s29-20260829",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 29,
+    "profile": "official",
+    "world_size": 8
+  },
+  "status": "accepted"
+}

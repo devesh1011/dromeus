@@ -1,0 +1,47 @@
+{
+  "aggregate": {
+    "all_divergence_slopes_negative": true,
+    "all_temporary_tensors_deleted": true,
+    "maximum_node_accuracy": 0.9315,
+    "maximum_residual_l2_norm": 4.637983827467084,
+    "maximum_residual_to_signal_ratio": 0.29689973279651766,
+    "mean_of_seed_mean_accuracies": 0.9276749999999999,
+    "minimum_node_accuracy": 0.923,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "total_exchange_retries": 1
+  },
+  "per_seed": [
+    {
+      "divergence_slope": -0.00030362690117287133,
+      "exchange_retries": 0,
+      "maximum_residual_l2_norm": 4.555979162298655,
+      "maximum_residual_to_signal_ratio": 0.2965785077320018,
+      "mean_accuracy": 0.930825,
+      "seed": 17
+    },
+    {
+      "divergence_slope": -0.00032737777634851977,
+      "exchange_retries": 1,
+      "maximum_residual_l2_norm": 4.62675215669632,
+      "maximum_residual_to_signal_ratio": 0.29624926466362955,
+      "mean_accuracy": 0.9285,
+      "seed": 29
+    },
+    {
+      "divergence_slope": -0.0002945851087523378,
+      "exchange_retries": 0,
+      "maximum_residual_l2_norm": 4.637983827467084,
+      "maximum_residual_to_signal_ratio": 0.29689973279651766,
+      "mean_accuracy": 0.9237,
+      "seed": 41
+    }
+  ],
+  "schema_version": 1,
+  "seeds": [
+    17,
+    29,
+    41
+  ],
+  "status": "accepted",
+  "world_size": 4
+}

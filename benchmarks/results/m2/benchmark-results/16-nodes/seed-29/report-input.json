@@ -1,0 +1,35 @@
+{
+  "artifact": "../../../experiment-config/experiment.yaml",
+  "axl_logs": {
+    "29": [
+      "logs/node-0/dromeus.jsonl",
+      "logs/node-1/dromeus.jsonl",
+      "logs/node-2/dromeus.jsonl",
+      "logs/node-3/dromeus.jsonl",
+      "logs/node-4/dromeus.jsonl",
+      "logs/node-5/dromeus.jsonl",
+      "logs/node-6/dromeus.jsonl",
+      "logs/node-7/dromeus.jsonl",
+      "logs/node-8/dromeus.jsonl",
+      "logs/node-9/dromeus.jsonl",
+      "logs/node-10/dromeus.jsonl",
+      "logs/node-11/dromeus.jsonl",
+      "logs/node-12/dromeus.jsonl",
+      "logs/node-13/dromeus.jsonl",
+      "logs/node-14/dromeus.jsonl",
+      "logs/node-15/dromeus.jsonl"
+    ]
+  },
+  "checkpoint_archive_manifest": "checkpoint-checksums.sha256",
+  "milestone": "M2",
+  "run_id": "noloco-topk45-official-w16-s29-20260829",
+  "seed_reports": {
+    "29": "reports/acceptance-report.json"
+  },
+  "seeds": [
+    29
+  ],
+  "status": "accepted",
+  "summary": "summary.json",
+  "world_size": 16
+}

@@ -29,10 +29,12 @@ from dromeus.telemetry.metrics import (
     RoundTiming,
 )
 from dromeus.training.cifar10 import (
+    CIFAR10TrainerSettings,
     create_initial_checkpoint,
     create_trainer,
     load_cifar10,
 )
+from dromeus.training.trainer import TrainerSettings
 from dromeus.transport.axl import AXLBridgeConfig
 
 from .server import (
@@ -457,13 +459,28 @@ class Worker:
             }
             node_index = node_indices[local_key]
             partition_index = result.manifest.dataset.node_index_partitions[node_index]
+            policy = result.manifest.training
+            if policy is None:
+                raise ValueError("formed manifest is missing training policy")
             trainer = await asyncio.to_thread(
                 create_trainer,
                 train_data=partitions[partition_index],
                 test_data=test_data,
-                seed=17 + node_index,
-                batch_size=result.manifest.training.batch_size,
-                learning_rate=result.manifest.learning_rate,
+                settings=CIFAR10TrainerSettings(
+                    trainer=TrainerSettings(
+                        seed=17 + node_index,
+                        batch_size=policy.batch_size,
+                        learning_rate=result.manifest.learning_rate,
+                        momentum=policy.momentum,
+                        weight_decay=policy.weight_decay,
+                        learning_rate_milestones=policy.learning_rate_milestones,
+                        learning_rate_gamma=policy.learning_rate_gamma,
+                    ),
+                    model_id=result.manifest.model_id,
+                    model_definition_hash=result.manifest.model_definition_hash,
+                    crop_padding=policy.crop_padding,
+                    normalize=policy.normalize,
+                ),
             )
             metrics = WorkerMetricsPublisher(
                 state=self.state,

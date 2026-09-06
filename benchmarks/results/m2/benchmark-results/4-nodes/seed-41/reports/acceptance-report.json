@@ -1,0 +1,67 @@
+{
+  "accuracy": {
+    "maximum": 0.9242,
+    "mean": 0.9237,
+    "minimum": 0.923,
+    "stddev": 0.0004415880433163877
+  },
+  "artifact": {
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_sha256": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "path": "../../../../experiment-config/experiment.yaml"
+  },
+  "communication": {
+    "exchange_retries": 0,
+    "identity_complete_wire_bytes": 89499868,
+    "maximum_observed_update_payload_bytes_with_retries": 17672078,
+    "minimum_encoded_compression_ratio": 5.067911273833514,
+    "nominal_complete_wire_bytes": 17672081,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "telemetry_retries": 0,
+    "transport_event_labeled_retries": 0
+  },
+  "divergence": {
+    "final_below_post_warmup_peak": true,
+    "passed": true,
+    "point_count": 10,
+    "trend_slope_per_inner_step": -0.0002945851087523378
+  },
+  "evidence": {
+    "divergence_report_sha256": "6b2b65253c5282f1f5b447fe16bf14659ddf8453a8abc67e697f5553955b4cc1",
+    "local_analysis_tensor_count_after_analysis": 0,
+    "rank_log_sha256": [
+      "ed41846bd3ec6562238dcdbc88b7a9c457920ba3d6b92225179890d66f1c5133",
+      "04dad9077fc9e7119f53133a83a920ed2fd703d410b0027b56ac89459f293ba3",
+      "b11db04c79b22b428da8adae660d44e06d2cf0777eb3cc5b831f1130cd566f2c",
+      "61f92d5cb12a5360ed9bfb5af519564517f7a8ced5765df24fd3b3891b4d6729"
+    ],
+    "reconciliation_sha256": "033dcec63c0082015e42cccac8dd057d37a3453c55688ffb6476b9ff6015cc10",
+    "remote_analysis_tensor_count_after_analysis": 0
+  },
+  "gates": {
+    "accuracy_at_least_90_percent": true,
+    "all_ranks_complete": true,
+    "divergence": true,
+    "nominal_complete_wire_at_least_5x": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "strict_reconciliation": true,
+    "temporary_tensors_deleted": true
+  },
+  "manifest_hash": "25093ddbd8666226d9ebf7ad990112d30d660741cb8e931e2144e8fbfd7cbbbd",
+  "residual": {
+    "l2_bound": 6.0,
+    "maximum_l2_norm": 4.637983827467084,
+    "maximum_to_signal_ratio": 0.29689973279651766,
+    "ratio_bound": 0.35
+  },
+  "run_id": "noloco-topk45-official-w4-s41-20260830",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 41,
+    "profile": "official",
+    "world_size": 4
+  },
+  "status": "accepted"
+}

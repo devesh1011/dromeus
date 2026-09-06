@@ -1,0 +1,92 @@
+algorithm_config:
+  adam:
+    beta1: 0.9
+    beta2: 0.999
+    epsilon: 1.0e-08
+    gradient_clip_norm: 1.0
+    learning_rate: 0.001
+  alpha: 0.5
+  beta: 0.7
+  gamma: 0.7
+  inner_steps: 50
+algorithm_id: noloco
+artifact_codecs:
+- artifact_name: outer_gradient
+  codec_id: topk-bitmap-int8-v2
+  lossy_allowed: true
+  top_k_fraction: 0.45
+- artifact_name: slow_weights
+  codec_id: dense-int8-v1
+  lossy_allowed: true
+  top_k_fraction: null
+codec_id: safetensors-v1
+consensus_sketch:
+  seed: 4589171939306243064
+  size: 4096
+dataset:
+  class_count: 10
+  dataset_id: cifar10
+  iid_partition_seed: 7
+  image_shape:
+  - 3
+  - 32
+  - 32
+  node_index_partitions:
+  - 0
+  - 1
+  - 2
+  - 3
+  partition_sample_counts:
+  - 12500
+  - 12500
+  - 12500
+  - 12500
+  preprocessing_hash: fab263925c870b8df3cd8f82e3258262e4f8db4943db449988058a60eaf04bf0
+  sample_count: 50000
+  version: huggingface-0b2714987fa478483af9968de7c934580d0bb9a2
+environment:
+  axl_version: 628e28ace077f26dfe8d0259009b357216a9d8d4
+  container_image_digest: sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c
+  dromeus_commit: 411daee
+  dromeus_version: 0.1.0
+  model_definition_hash: c5792864784d4c27d51a34e94e1457b2b4f4a3c38970c2d3340e7094be0be178
+  protocol_version: 1
+  pytorch_version: 2.12.1+cu130
+learning_rate: 0.001
+local_steps: 50
+manifest_version: 3
+model_definition_hash: c5792864784d4c27d51a34e94e1457b2b4f4a3c38970c2d3340e7094be0be178
+model_id: resnet18-groupnorm-cifar10-v1
+optimizer: adam
+peer_scheduler_seed: 17
+protocol_version: 1
+round_count: 500
+run_id: noloco-topk45-official-w4-s17-20260830
+training:
+  batch_size: 128
+  crop_padding: 4
+  final_consensus_rounds: 0
+  learning_rate_gamma: 0.1
+  learning_rate_milestones: []
+  learning_rate_schedule:
+    final_learning_rate: 0.0001
+    peak_learning_rate: 0.001
+    schedule_id: linear-warmup-cosine-v1
+    start_learning_rate: 0.0001
+    total_inner_steps: 25000
+    warmup_inner_steps: 1000
+  momentum: 0.0
+  normalize: true
+  weight_decay: 0.0
+transport:
+  artifact_store_capacity_bytes: 268435456
+  chunk_size_bytes: 1048576
+  max_artifact_bytes: 67108864
+  max_concurrent_transfers: 4
+  max_inflight_bytes: 8388608
+  max_message_payload_bytes: 2097152
+  max_payload_bytes: 134217728
+  max_retries: 3
+  retry_timeout_seconds: 5.0
+  transfer_lifetime_seconds: 60.0
+  window_size: 4
