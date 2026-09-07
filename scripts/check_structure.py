@@ -10,6 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src" / "dromeus"
 
 ALLOWED: dict[str, frozenset[str]] = {
+    "adapters": frozenset(
+        {"adapters", "manifests", "membership", "persistence", "runtime", "training"}
+    ),
+    "application": frozenset(
+        {"application", "manifests", "membership", "persistence", "runtime", "training"}
+    ),
     "algorithms": frozenset({"algorithms", "manifests", "training"}),
     "gossip": frozenset(
         {
@@ -107,8 +113,20 @@ def main() -> int:
         allowed = ALLOWED.get(source_owner, frozenset())
         tree = parsed(path)
         for imported in imported_names(tree):
+            if path == SOURCE / "gossip" / "engine.py" and any(
+                imported == prefix or imported.startswith(f"{prefix}.")
+                for prefix in (
+                    "dromeus.gossip.axl",
+                    "dromeus.transport",
+                    "dromeus.protocol",
+                )
+            ):
+                errors.append(
+                    f"gossip interface: {path.relative_to(ROOT)} imports {imported}; "
+                    "the engine must use the pair-transport interface"
+                )
             if imported == "support" or imported.startswith(
-                ("support.", "tests.", "benchmarks.")
+                ("support.", "tests.", "benchmarks.", "datasets", "PIL")
             ):
                 errors.append(
                     f"production isolation: {path.relative_to(ROOT)} imports {imported}"
