@@ -28,7 +28,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY src ./src
 COPY benchmarks ./benchmarks
-RUN uv sync --frozen --no-dev \
+RUN uv sync --frozen --no-dev --extra benchmark \
     && printf \
        '{"binary_sha256":"%s","source_commit":"%s"}\n' \
        "$AXL_BINARY_SHA256" "$AXL_GIT_COMMIT" \
