@@ -19,10 +19,12 @@ from dromeus.algorithms.base import (
     checksum_tensors,
 )
 from dromeus.algorithms.codec import (
+    CodecDescription,
     IdentityCodec,
     NamedSafetensorsUpdateBundleCodec,
     NamedUpdateBundleCodec,
     UpdateCodec,
+    describe_update_codec,
 )
 from dromeus.manifests.models import RoundId, TensorSchema, UpdateCodecBinding
 from dromeus.training.base import (
@@ -52,15 +54,17 @@ class DPSGDAdapter:
     _local_decoded: dict[str, np.ndarray] | None = field(
         default=None, init=False, repr=False
     )
+    _codec_description: CodecDescription = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.local_steps <= 0:
             raise ValueError("local_steps must be positive")
         if self.training_round_count is not None and self.training_round_count <= 0:
             raise ValueError("training_round_count must be positive")
+        self._codec_description = describe_update_codec(self.codec, self.tensor_schema)
         if (
             self.manifest_codec_id is not None
-            and self.manifest_codec_id != self.codec.codec_id
+            and self.manifest_codec_id != self._codec_description.codec_id
         ):
             raise ValueError("algorithm codec does not match manifest")
 
@@ -164,7 +168,9 @@ class DPSGDAdapter:
                 manifest_hash=manifest_hash,
                 sender_public_key=sender_public_key,
                 algorithm_id=algorithm_id,
-                artifact_schemas={_TRAINED_WEIGHTS: self.tensor_schema},
+                artifact_schemas={
+                    _TRAINED_WEIGHTS: self._codec_description.encoded_schema
+                },
             )
 
     def snapshot(self) -> AlgorithmSnapshot:
@@ -185,8 +191,7 @@ class DPSGDAdapter:
         result = self.trainer.evaluate()
         if result is None:
             return None
-        loss, accuracy = result
-        return AlgorithmEvaluation(loss=float(loss), accuracy=float(accuracy))
+        return AlgorithmEvaluation.from_result(result)
 
     def observations(self) -> AlgorithmObservations:
         return AlgorithmObservations(local_loss=self.trainer.local_loss)
@@ -196,7 +201,7 @@ class DPSGDAdapter:
         state: dict[str, object] = {
             "round_id": self._round_id,
             "phase": self._phase,
-            "codec_id": self.codec.codec_id,
+            "codec_id": self._codec_description.codec_id,
             "weights": self.trainer.weights(),
             "codec": self.codec.state_dict(),
         }
@@ -216,7 +221,7 @@ class DPSGDAdapter:
             raise ValueError("algorithm state round_id is invalid")
         if not isinstance(phase, str) or not phase:
             raise ValueError("algorithm state phase is invalid")
-        if codec_id != self.codec.codec_id:
+        if codec_id != self._codec_description.codec_id:
             raise ValueError("algorithm state codec does not match")
         if not isinstance(weights_value, Mapping) or not all(
             isinstance(name, str) and isinstance(value, np.ndarray)
@@ -270,7 +275,7 @@ class DPSGDAdapter:
 
     def _codec_binding(self) -> UpdateCodecBinding:
         return UpdateCodecBinding(
-            codec_id=self.codec.codec_id,
-            codec_version=1,
+            codec_id=self._codec_description.codec_id,
+            codec_version=self._codec_description.codec_version,
             logical_schema=self.tensor_schema,
         )
