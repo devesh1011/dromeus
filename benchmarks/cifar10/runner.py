@@ -19,6 +19,20 @@ from benchmarks.cifar10.official import (
     load_frozen_benchmark_plan,
     prepare_dpsgd_node_configs,
 )
+from benchmarks.workloads.cifar10.dataset import (
+    DATA_SOURCE,
+    DATASET_REVISION,
+    DATASET_VERSION,
+    PREPROCESSING_HASH,
+    create_initial_checkpoint,
+    load_cifar10,
+)
+from benchmarks.workloads.cifar10.resnet32 import (
+    MODEL_DEFINITION_HASH,
+    MODEL_ID,
+    build_model,
+)
+from dromeus.adapters.classification.torch_trainer import derive_benchmark_seed
 from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
 from dromeus.manifests.models import (
     DPSGD_ALGORITHM_ID,
@@ -38,16 +52,6 @@ from dromeus.telemetry.evidence import (
     RoundMetricsEvidence,
     RunFailedEvidence,
 )
-from dromeus.training.cifar10 import (
-    DATA_SOURCE,
-    DATASET_REVISION,
-    DATASET_VERSION,
-    PREPROCESSING_HASH,
-    create_initial_checkpoint,
-    load_cifar10,
-)
-from dromeus.training.resnet32 import MODEL_DEFINITION_HASH, MODEL_ID, build_model
-from dromeus.training.trainer import derive_benchmark_seed
 
 if TYPE_CHECKING:
     from benchmarks.cifar10.report import SeedBenchmarkInput
@@ -303,24 +307,25 @@ def write_pilot_evidence(
     if len(set(node_ids)) != 4:
         raise ValueError("pilot logs must identify four distinct nodes")
     artifact_hashes: list[str] = []
+    dataset = draft.require_iid_dataset()
     for path in data_artifacts:
         artifact = DatasetArtifact.model_validate_json(
             path.read_text(encoding="utf-8")
         )
         if (
-            artifact.dataset_version != draft.dataset.version
-            or artifact.preprocessing_hash != draft.dataset.preprocessing_hash
+            artifact.dataset_version != dataset.version
+            or artifact.preprocessing_hash != dataset.preprocessing_hash
         ):
             raise ValueError("pilot data artifact does not match the draft")
         artifact_hashes.append(hashlib.sha256(path.read_bytes()).hexdigest())
     evidence = PilotEvidence(
         status="complete",
         model_definition_hash=draft.model_definition_hash,
-        dataset=draft.dataset,
+        dataset=draft.require_iid_dataset(),
         data_source=DATA_SOURCE,
         local_steps=draft.local_steps,
         round_count=draft.round_count,
-        learning_rate=draft.learning_rate,
+        learning_rate=draft.require_learning_rate(),
         training=training,
         node_ids=cast(tuple[str, str, str, str], tuple(node_ids)),
         data_artifact_sha256=cast(
@@ -363,10 +368,10 @@ def write_frozen_plan(
         benchmark_seeds=benchmark_seeds,
         local_steps=draft.local_steps,
         round_count=draft.round_count,
-        learning_rate=draft.learning_rate,
+        learning_rate=draft.require_learning_rate(),
         model_id=draft.model_id,
         model_definition_hash=draft.model_definition_hash,
-        dataset=draft.dataset,
+        dataset=draft.require_iid_dataset(),
         environment=draft.environment,
         data_source=DATA_SOURCE,
         weight_decay=training.weight_decay,

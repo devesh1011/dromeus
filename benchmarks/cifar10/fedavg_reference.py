@@ -11,6 +11,20 @@ from pathlib import Path
 import numpy as np
 from pydantic import TypeAdapter, ValidationError
 
+from benchmarks.workloads.cifar10.dataset import (
+    DATA_SOURCE,
+    CIFAR10TrainerSettings,
+    create_trainer,
+)
+from benchmarks.workloads.cifar10.partitioning import (
+    ClassificationData,
+    iid_partition_index_hashes,
+)
+from dromeus.adapters.classification.torch_trainer import (
+    TrainerSettings,
+    checkpoint_hash,
+    derive_benchmark_seed,
+)
 from dromeus.manifests.models import (
     DatasetContract,
     EnvironmentFingerprint,
@@ -18,20 +32,6 @@ from dromeus.manifests.models import (
     SealedManifest,
     Sha256,
     TrainingPolicy,
-)
-from dromeus.training.cifar10 import (
-    DATA_SOURCE,
-    CIFAR10TrainerSettings,
-    create_trainer,
-)
-from dromeus.training.data import (
-    ClassificationData,
-    iid_partition_index_hashes,
-)
-from dromeus.training.trainer import (
-    TrainerSettings,
-    checkpoint_hash,
-    derive_benchmark_seed,
 )
 
 
@@ -69,10 +69,10 @@ class FedAvgConfig:
         return cls(
             local_steps=manifest.local_steps,
             round_count=manifest.round_count,
-            learning_rate=manifest.learning_rate,
+            learning_rate=manifest.require_learning_rate(),
             model_id=manifest.model_id,
             model_definition_hash=manifest.model_definition_hash,
-            dataset=manifest.dataset,
+            dataset=manifest.require_iid_dataset(),
             environment=manifest.environment,
             data_source=(
                 DATA_SOURCE
