@@ -17,15 +17,16 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-    "datasets>=3,<5",
     "msgpack>=1.1,<2",
     "numpy>=2,<3",
-    "pillow>=10,<13",
     "pydantic>=2.11,<3",
     "pyyaml>=6.0,<7",
     "safetensors>=0.5,<1",
     "torch>=2.7,<3",
 ]
+
+[project.optional-dependencies]
+benchmark = ["datasets>=3,<5", "pillow>=10,<13"]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
@@ -37,6 +38,8 @@ explicit = true
 
 [dependency-groups]
 dev = [
+  "datasets>=3,<5",
+  "pillow>=10,<13",
   "matplotlib>=3.9,<4",
   "pyright>=1.1.400",
   "pytest>=8.4",
@@ -47,7 +50,7 @@ dev = [
 packages = ["src/dromeus"]
 
 [tool.pyright]
-include = ["src", "tests", "benchmarks"]
+include = ["src", "tests", "benchmarks", "examples"]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
