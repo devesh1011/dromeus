@@ -1,0 +1,47 @@
+axl_bridge_url: http://127.0.0.1:9302
+benchmark_seed: 17
+bootstrap_uri: tls://32.193.225.100:9300
+dataset_cache: /home/ubuntu/dromeus-official/runs/w16-s17-topk45-official500/cifar-cache
+draft_path: /home/ubuntu/dromeus-official/runs/w16-s17-topk45-official500/draft.yaml
+invitation_path: /home/ubuntu/dromeus-official/runs/w16-s17-topk45-official500/invitation.json
+invitation_timeout_seconds: 1200.0
+manifest_expectation:
+  draft_hash: 2f2af8d7f40943a9175d03e1e67db0189a2e79f2a76a767eca02c7a18f353343
+  initial_checkpoint_hash: 3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d
+  participants:
+  - node_index: 0
+    public_key: 00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e
+  - node_index: 1
+    public_key: 07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814
+  - node_index: 2
+    public_key: 0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9
+  - node_index: 3
+    public_key: 2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0
+  - node_index: 4
+    public_key: 7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa
+  - node_index: 5
+    public_key: 89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85
+  - node_index: 6
+    public_key: 8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352
+  - node_index: 7
+    public_key: 8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b
+  - node_index: 8
+    public_key: 9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636
+  - node_index: 9
+    public_key: a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56
+  - node_index: 10
+    public_key: b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28
+  - node_index: 11
+    public_key: c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7
+  - node_index: 12
+    public_key: d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91
+  - node_index: 13
+    public_key: da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4
+  - node_index: 14
+    public_key: e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb
+  - node_index: 15
+    public_key: e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0
+  tensor_schema_hash: 2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706
+role: participant
+run_root: /home/ubuntu/dromeus-official/runs/w16-s17-topk45-official500/rank-8/run
+training_device: cuda
