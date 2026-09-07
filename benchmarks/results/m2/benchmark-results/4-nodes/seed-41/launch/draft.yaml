@@ -61,7 +61,7 @@ optimizer: adam
 peer_scheduler_seed: 41
 protocol_version: 1
 round_count: 500
-run_id: noloco-topk45-official-w4-s41-20260830
+run_id: noloco-topk45-official-w4-s41-axllog-rerun-20260907
 training:
   batch_size: 128
   crop_padding: 4
