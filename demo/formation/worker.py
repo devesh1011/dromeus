@@ -17,6 +17,13 @@ from pathlib import Path
 from types import FrameType
 from typing import cast
 
+from benchmarks.workloads.cifar10.dataset import (
+    CIFAR10TrainerSettings,
+    create_initial_checkpoint,
+    create_trainer,
+    load_cifar10,
+)
+from dromeus.adapters.classification.torch_trainer import TrainerSettings
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import Invitation
 from dromeus.membership.formation import create_invitation
@@ -28,13 +35,6 @@ from dromeus.telemetry.metrics import (
     JsonlMetricsPublisher,
     RoundTiming,
 )
-from dromeus.training.cifar10 import (
-    CIFAR10TrainerSettings,
-    create_initial_checkpoint,
-    create_trainer,
-    load_cifar10,
-)
-from dromeus.training.trainer import TrainerSettings
 from dromeus.transport.axl import AXLBridgeConfig
 
 from .server import (
@@ -448,17 +448,18 @@ class Worker:
                 cache_dir=cache_dir,
                 train=False,
             )
+            dataset = result.manifest.require_iid_dataset()
             partitions = await asyncio.to_thread(
                 train_data.split_iid,
                 participant_count=len(result.manifest.participants),
-                seed=result.manifest.dataset.iid_partition_seed,
+                seed=dataset.iid_partition_seed,
             )
             node_indices = {
                 participant.public_key: participant.node_index
                 for participant in result.manifest.participants
             }
             node_index = node_indices[local_key]
-            partition_index = result.manifest.dataset.node_index_partitions[node_index]
+            partition_index = dataset.node_index_partitions[node_index]
             policy = result.manifest.training
             if policy is None:
                 raise ValueError("formed manifest is missing training policy")
