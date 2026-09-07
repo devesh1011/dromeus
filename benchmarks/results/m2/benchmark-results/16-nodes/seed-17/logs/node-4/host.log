@@ -1,0 +1,3 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating train split:   0%|          | 0/50000 [00:00<?, ? examples/s]Generating train split:  31%|███       | 15300/50000 [00:00<00:00, 102245.66 examples/s]Generating train split:  87%|████████▋ | 43600/50000 [00:00<00:00, 186628.73 examples/s]Generating train split: 100%|██████████| 50000/50000 [00:00<00:00, 175842.34 examples/s]
+Generating test split:   0%|          | 0/10000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 10000/10000 [00:00<00:00, 256356.75 examples/s]
