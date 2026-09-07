@@ -9,8 +9,8 @@
   "nccl_cross_region_performance_eligible": false,
   "nccl_socket_interface": "ens5",
   "reference_runner_module": "benchmarks.noloco_reference.runner",
-  "run_id": "noloco-topk45-official-w4-s29-20260830",
-  "runtime_root": "/home/ubuntu/dromeus-official/runs/w4-s29-topk45-official500-20260830",
+  "run_id": "noloco-topk45-official-w4-s29-axllog-rerun-20260907",
+  "runtime_root": "/home/ubuntu/dromeus-official/runs/w4-s29-axllog-rerun-20260907",
   "schema_version": 1,
   "selector": {
     "benchmark_seed": 29,

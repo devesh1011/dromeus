@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "validated-rerun",
+  "seed": 29,
+  "mean_accuracy": 0.9285,
+  "minimum_node_accuracy": 0.9275,
+  "maximum_node_accuracy": 0.9299,
+  "maximum_residual_l2_norm": 4.62675215669632,
+  "maximum_residual_to_signal_ratio": 0.29624926466362955,
+  "divergence_slope": -0.00032737777634851977,
+  "state_exchange_retries": 1,
+  "transport_update_retries": 0,
+  "axl_log_count": 4
+}
