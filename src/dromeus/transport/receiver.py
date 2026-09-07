@@ -71,8 +71,11 @@ class ReceiverPolicy:
 
 @dataclass
 class ReceiverStats:
+    """Valid/rejected traffic and valid telemetry discarded on saturation."""
+
     accepted_messages: int = 0
     rejected_messages: int = 0
+    dropped_telemetry_messages: int = 0
 
 
 @dataclass
@@ -135,7 +138,7 @@ class Receiver:
                 )
                 continue
             if should_route:
-                await self._route(envelope)
+                should_route = await self._route(envelope)
             self.stats.accepted_messages += 1
             emit_event(
                 "message_received",
@@ -220,20 +223,58 @@ class Receiver:
             return False
         return True
 
-    async def _route(self, envelope: Envelope) -> None:
+    async def _route(self, envelope: Envelope) -> bool:
         if envelope.message_type in CONTROL_TYPES:
-            await self._queues[MessageChannel.CONTROL].put(envelope)
-            return
+            return await self._enqueue_required(MessageChannel.CONTROL, envelope)
         if envelope.message_type in TRANSFER_TYPES:
-            await self._queues[MessageChannel.TRANSFER].put(envelope)
-            return
+            return await self._enqueue_required(MessageChannel.TRANSFER, envelope)
         if envelope.message_type in ACK_TYPES:
-            await self._queues[MessageChannel.ACKNOWLEDGMENT].put(envelope)
-            return
+            return await self._enqueue_required(MessageChannel.ACKNOWLEDGMENT, envelope)
         if envelope.message_type in TELEMETRY_TYPES:
-            await self._queues[MessageChannel.TELEMETRY].put(envelope)
-            return
-        await self._queues[MessageChannel.PAIR_COMMIT].put(envelope)
+            # Drop incoming telemetry rather than stopping the sole transport reader.
+            try:
+                self._queues[MessageChannel.TELEMETRY].put_nowait(envelope)
+            except asyncio.QueueFull:
+                self.stats.dropped_telemetry_messages += 1
+                emit_event(
+                    "telemetry_message_dropped",
+                    run_id=envelope.run_id,
+                    message_id=envelope.message_id,
+                    peer_id=envelope.sender_public_key,
+                    round_id=envelope.round_id,
+                    reason="queue_full",
+                    dropped_telemetry_messages=self.stats.dropped_telemetry_messages,
+                    sink=self.event_sink,
+                )
+                return False
+            return True
+        return await self._enqueue_required(MessageChannel.PAIR_COMMIT, envelope)
+
+    async def _enqueue_required(
+        self, channel: MessageChannel, envelope: Envelope
+    ) -> bool:
+        """Keep protocol backpressure, allowing shutdown to end a blocked put."""
+        queue = self._queues[channel]
+        try:
+            queue.put_nowait(envelope)
+            return True
+        except asyncio.QueueFull:
+            pass
+        admission = asyncio.create_task(queue.put(envelope))
+        stopping = asyncio.create_task(self._stop.wait())
+        try:
+            done, _ = await asyncio.wait(
+                (admission, stopping), return_when=asyncio.FIRST_COMPLETED
+            )
+            if admission in done:
+                admission.result()
+                return True
+            return False
+        finally:
+            for task in (admission, stopping):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(admission, stopping, return_exceptions=True)
 
     async def receive(
         self,
