@@ -7,11 +7,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --no-install-project --no-install-package torch
+RUN uv sync --frozen --extra benchmark --no-dev --no-install-project --no-install-package torch
 
 COPY src/ src/
 COPY benchmarks/ benchmarks/
-RUN uv sync --frozen --no-dev --no-install-package torch \
+RUN uv sync --frozen --extra benchmark --no-dev --no-install-package torch \
     && uv pip install --python .venv/bin/python \
         torch==2.12.1 \
         --index-url https://download.pytorch.org/whl/cu130
