@@ -320,7 +320,7 @@ def _atomic_save_tensors(path: Path, tensors: Mapping[str, np.ndarray]) -> Sha25
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
         save_file(
-            {name: np.ascontiguousarray(value) for name, value in tensors.items()},
+            {name: value.copy(order="C") for name, value in tensors.items()},
             str(temporary),
         )
         _fsync_file(temporary)

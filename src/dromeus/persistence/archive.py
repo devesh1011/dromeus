@@ -189,7 +189,7 @@ class CheckpointRef:
             raise RunArchiveError(f"checkpoint hash mismatch: {self.relative_path}")
         try:
             return {
-                name: np.ascontiguousarray(value)
+                name: value.copy(order="C")
                 for name, value in _LOAD_SAFETENSORS(data).items()
             }
         except (SafetensorError, ValueError, TypeError) as error:
