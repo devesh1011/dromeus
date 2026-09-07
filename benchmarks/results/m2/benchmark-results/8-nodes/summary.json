@@ -1,0 +1,57 @@
+{
+  "accepted_seeds": [
+    17,
+    29,
+    41
+  ],
+  "aggregate": {
+    "all_divergence_slopes_negative": true,
+    "all_temporary_tensors_deleted": true,
+    "maximum_node_accuracy": 0.9322,
+    "maximum_residual_l2_norm": 4.7006444037424595,
+    "maximum_residual_to_signal_ratio": 0.3080710103099842,
+    "mean_of_seed_mean_accuracies": 0.9283291666666666,
+    "minimum_node_accuracy": 0.9247,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "total_exchange_retries": 10
+  },
+  "pending_seeds": [],
+  "per_seed": [
+    {
+      "acceptance_report": "seed-17/reports/acceptance-report.json",
+      "divergence_slope": -0.0004605116134158246,
+      "maximum_accuracy": 0.9322,
+      "maximum_residual_l2_norm": 4.603545702635469,
+      "maximum_residual_to_signal_ratio": 0.3002583445700444,
+      "mean_accuracy": 0.9307875,
+      "minimum_accuracy": 0.9296,
+      "seed": 17,
+      "status": "accepted"
+    },
+    {
+      "acceptance_report": "seed-29/reports/acceptance-report.json",
+      "divergence_slope": -0.0005496086418646506,
+      "maximum_accuracy": 0.9275,
+      "maximum_residual_l2_norm": 4.6903622627182555,
+      "maximum_residual_to_signal_ratio": 0.3080710103099842,
+      "mean_accuracy": 0.926525,
+      "minimum_accuracy": 0.9247,
+      "seed": 29,
+      "status": "accepted"
+    },
+    {
+      "acceptance_report": "seed-41/reports/acceptance-report.json",
+      "divergence_slope": -0.0004667266470472046,
+      "maximum_accuracy": 0.929,
+      "maximum_residual_l2_norm": 4.7006444037424595,
+      "maximum_residual_to_signal_ratio": 0.29663893842176625,
+      "mean_accuracy": 0.927675,
+      "minimum_accuracy": 0.927,
+      "seed": 41,
+      "status": "accepted"
+    }
+  ],
+  "schema_version": 1,
+  "status": "seeds-17-29-41-accepted",
+  "world_size": 8
+}

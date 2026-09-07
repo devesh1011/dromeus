@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+import json
+from collections.abc import Mapping
+from pathlib import Path
+
+import pytest
+
+from dromeus.telemetry.events import JsonlEventSink, emit_event
+
+
+class _FailingSink:
+    def append(self, record: Mapping[str, object]) -> None:
+        del record
+        raise OSError("sink unavailable")
+
+
+def test_jsonl_event_sink_appends_correlated_records(tmp_path: Path) -> None:
+    path = tmp_path / "node.jsonl"
+    sink = JsonlEventSink(path)
+
+    emit_event(
+        "round_metric",
+        sink=sink,
+        run_id="run-1",
+        manifest_hash="a" * 64,
+        node_id="peer-0",
+        message_id="message-1",
+        transfer_id="transfer-1",
+        peer_id="peer-1",
+        round_id=3,
+        loss=0.25,
+    )
+    emit_event("round_complete", sink=sink, run_id="run-1", node_id="peer-0")
+
+    records = [json.loads(line) for line in path.read_text().splitlines()]
+    assert len(records) == 2
+    assert records[0]["manifest_hash"] == "a" * 64
+    assert records[0]["node_id"] == "peer-0"
+    assert records[0]["peer_id"] == "peer-1"
+    assert records[0]["loss"] == 0.25
+
+
+def test_flexible_diagnostic_sink_failure_is_best_effort() -> None:
+    emit_event("debug", sink=_FailingSink(), run_id="run-1")
+
+
+def test_stdout_event_contains_run_context(capsys: pytest.CaptureFixture[str]) -> None:
+    emit_event("test", run_id="run-1", round_id=2)
+
+    output = capsys.readouterr().out
+    assert json.loads(output)["run_id"] == "run-1"

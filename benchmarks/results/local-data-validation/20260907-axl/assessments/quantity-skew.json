@@ -1,0 +1,3904 @@
+{
+  "assessment": {
+    "compression_gap_passed": true,
+    "decision": "pass",
+    "identity_minus_compressed_accuracy": 0.0,
+    "identity_reference_parity": {
+      "atol": 1e-06,
+      "max_absolute_error": 0.0,
+      "passed": true,
+      "per_step": [
+        {
+          "completed_outer_steps": 0,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 1,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 2,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 3,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 4,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 5,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 6,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 7,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 8,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 0
+        },
+        {
+          "completed_outer_steps": 0,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 1,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 2,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 3,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 4,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 5,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 6,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 7,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 8,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 1
+        },
+        {
+          "completed_outer_steps": 0,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 1,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 2,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 3,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 4,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 5,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 6,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 7,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 8,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 2
+        },
+        {
+          "completed_outer_steps": 0,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 1,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 2,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 3,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 4,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 5,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 6,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 7,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        },
+        {
+          "completed_outer_steps": 8,
+          "max_absolute_error": 0.0,
+          "max_tolerance_fraction": 0.0,
+          "passed": true,
+          "rank": 3
+        }
+      ],
+      "rtol": 1e-06
+    },
+    "utility_passed": {
+      "bitmap-int8": true,
+      "identity": true
+    },
+    "wire_ratio_identity_to_compressed": 0.9402189997040544
+  },
+  "bitmap-int8": {
+    "accepted_wire_bytes": {
+      "formation-control": 26394,
+      "round-protocol": 540640,
+      "telemetry": 1620384
+    },
+    "common_mean_accuracy": 0.994140625,
+    "common_worst_accuracy": 0.994140625,
+    "data_plan_sha256": "45867f982a47090835789788f32b15029fdd68e2503b52f7f116b8457046d4d2",
+    "encoded_artifact_bytes": 33600,
+    "experiment_sha256": "d3c68077ae9f7d82439844cea4da0450a247997bc88127f945b5681270b9b4d6",
+    "local_mean_accuracy": 0.9921875,
+    "local_worst_accuracy": 0.984375,
+    "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+    "maximum_error_feedback_residual_l2": 1.1244048014535126,
+    "maximum_error_feedback_residual_to_signal": 0.5365042127256069,
+    "mean_commit_interval_seconds": 0.9377416601560071,
+    "nodes": [
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          1.4283251249871682,
+          0.816118834001827,
+          1.059058750004624,
+          0.929004374993383,
+          0.8073613330052467,
+          0.5275947080081096,
+          1.0360369169939077,
+          1.0284606670029461
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.021785665303468704,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "4322c820485737517c52e77131c0205a1b31fb6a4c6023ef8ffae08ae60b69c1",
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.010805657133460045,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.8861264480435054,
+            "error_feedback_residual_to_signal_ratio": 0.5365042127256069,
+            "error_feedback_signal_l2_norm": 1.6516672693802528,
+            "evaluation_accuracy": 0.890625,
+            "evaluation_loss": 0.7191018909215927,
+            "evaluation_seconds": 0.021734666006523184,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.4690974160039332,
+            "local_loss": 0.39685505628585815,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-0",
+            "mixing_seconds": 0.0010260419949190691,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.7056240829988383,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:57.511706Z",
+            "transfer_id": "12aeafba-728c-4043-82ae-0e01e7f957d2",
+            "transfer_seconds": 0.09621391700056847
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 1.1244048014535126,
+            "error_feedback_residual_to_signal_ratio": 0.5289717233842578,
+            "error_feedback_signal_l2_norm": 2.125642547128588,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.17398759722709656,
+            "evaluation_seconds": 0.11889945800066926,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.34862541599432006,
+            "local_loss": 0.08871544897556305,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-1",
+            "mixing_seconds": 0.0006579159962711856,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.36942629200348165,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:58.424867Z",
+            "transfer_id": "06eabde7-dde9-4440-8fb4-15365fe8bd9a",
+            "transfer_seconds": 0.06513033299415838
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.44254709102660467,
+            "error_feedback_residual_to_signal_ratio": 0.2778576287554861,
+            "error_feedback_signal_l2_norm": 1.592711681189955,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.05248743807896972,
+            "evaluation_seconds": 0.027927791001275182,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.49673974998586345,
+            "local_loss": 0.05505006015300751,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-2",
+            "mixing_seconds": 0.0014779589982936159,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.36514508300751913,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:59.392916Z",
+            "transfer_id": "ed627911-e1cc-4ac8-8166-cb17fe9a1604",
+            "transfer_seconds": 0.06695420799951535
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.1435467327589772,
+            "error_feedback_residual_to_signal_ratio": 0.23729429382016493,
+            "error_feedback_signal_l2_norm": 0.6049312457035526,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.025235824286937714,
+            "evaluation_seconds": 0.18558874999871477,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.04879354199510999,
+            "local_loss": 0.02073182538151741,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-3",
+            "mixing_seconds": 0.0009267499990528449,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.7747370829893043,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:00.479519Z",
+            "transfer_id": "cbe2b9b1-7e3a-45cf-bdf9-0241c8ace6db",
+            "transfer_seconds": 0.06231599999591708
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.060482207690240423,
+            "error_feedback_residual_to_signal_ratio": 0.3195199010558869,
+            "error_feedback_signal_l2_norm": 0.18929089390166512,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.01693098747637123,
+            "evaluation_seconds": 0.39251412500743754,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.5117439169989666,
+            "local_loss": 0.0071726515889167786,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-4",
+            "mixing_seconds": 0.0010412499977974221,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.034002917003817856,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.493845Z",
+            "transfer_id": "05c3dcbe-1db9-4c9d-8126-e5396c2d82f5",
+            "transfer_seconds": 0.06364795900299214
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.017793488002477834,
+            "error_feedback_residual_to_signal_ratio": 0.2059927032300061,
+            "error_feedback_signal_l2_norm": 0.08637921500845633,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.013507397496141493,
+            "evaluation_seconds": 0.1914395829953719,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.014668999996501952,
+            "local_loss": 0.003791246796026826,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-5",
+            "mixing_seconds": 0.001457833990571089,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.03644345801149029,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.820468Z",
+            "transfer_id": "0473d0e7-2446-403e-af23-fc5498d8ef2c",
+            "transfer_seconds": 0.07168458300293423
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.01043373692782157,
+            "error_feedback_residual_to_signal_ratio": 0.3739187231305603,
+            "error_feedback_signal_l2_norm": 0.027903756304223492,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.011848674330394715,
+            "evaluation_seconds": 0.04465770800015889,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.4420316660107346,
+            "local_loss": 0.003643787931650877,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-6",
+            "mixing_seconds": 0.0016553749883314595,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.3137184579973109,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.710078Z",
+            "transfer_id": "36350f36-8be7-418d-a1b5-76be331dbe1c",
+            "transfer_seconds": 0.07147054201050196
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.006422722719746751,
+            "error_feedback_residual_to_signal_ratio": 0.3957046276052721,
+            "error_feedback_signal_l2_norm": 0.016231103382883916,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.010805657191667706,
+            "evaluation_seconds": 0.0640960409946274,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6355032499996014,
+            "local_loss": 0.002697596326470375,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-134b1c07-7",
+            "mixing_seconds": 0.0010674999939510599,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.26073212499613874,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:03.757661Z",
+            "transfer_id": "89b5e0dc-dcdd-49ca-aa41-545a1551ace6",
+            "transfer_seconds": 0.07106233299418818
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+        "rank": 0,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "12aeafba-728c-4043-82ae-0e01e7f957d2"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "06eabde7-dde9-4440-8fb4-15365fe8bd9a"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "ed627911-e1cc-4ac8-8166-cb17fe9a1604"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "cbe2b9b1-7e3a-45cf-bdf9-0241c8ace6db"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "05c3dcbe-1db9-4c9d-8126-e5396c2d82f5"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "0473d0e7-2446-403e-af23-fc5498d8ef2c"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "36350f36-8be7-418d-a1b5-76be331dbe1c"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "89b5e0dc-dcdd-49ca-aa41-545a1551ace6"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 19842,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 41948,
+            "CHUNK_ACK": 21280,
+            "CONSENSUS_SKETCH": 405096,
+            "JOIN_ACCEPTED": 1536,
+            "MANIFEST_SEALED": 9153,
+            "ROUND_COMMITTED": 17984,
+            "START": 1518,
+            "TRANSFER_BEGIN": 25920,
+            "TRANSFER_COMPLETE": 17871,
+            "UPDATE_READY": 17792
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "1": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "2": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "3": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "4": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "5": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "6": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "7": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "None": {
+              "formation-control": 19842
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 19842,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          1.4052179170103045,
+          1.0132503749919124,
+          0.8191825000103563,
+          0.60727962499368,
+          0.8097111660026712,
+          1.1075629999977536,
+          0.7688478750060312,
+          1.0355968749936437
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022192688658833504,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "2dd9e4bc87bfa5d882c55308407ccff00159d573ba52128b36df4729106bafe2",
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.026746716350317,
+          "per_class": [
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.541492598928089,
+            "error_feedback_residual_to_signal_ratio": 0.38903944590096035,
+            "error_feedback_signal_l2_norm": 1.3918706820951503,
+            "evaluation_accuracy": 0.828125,
+            "evaluation_loss": 0.7021532952785492,
+            "evaluation_seconds": 0.3382240000064485,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.3595320830063429,
+            "local_loss": 0.46845555305480957,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-0",
+            "mixing_seconds": 0.0010086669935844839,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.4117101250158157,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:57.876745Z",
+            "transfer_id": "68c9020b-b7b8-4c7d-9c6e-0e163c4a4c68",
+            "transfer_seconds": 0.08105004200479016
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.8348525496794837,
+            "error_feedback_residual_to_signal_ratio": 0.5309625271554406,
+            "error_feedback_signal_l2_norm": 1.5723379842869376,
+            "evaluation_accuracy": 0.96875,
+            "evaluation_loss": 0.18568824976682663,
+            "evaluation_seconds": 0.3880369999969844,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.532057791002444,
+            "local_loss": 0.14537116885185242,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-1",
+            "mixing_seconds": 0.0008606670016888529,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.058481416999711655,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:58.939961Z",
+            "transfer_id": "2a70727b-1607-4418-bd15-7734667c0a5b",
+            "transfer_seconds": 0.07145312499778811
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.407063768542995,
+            "error_feedback_residual_to_signal_ratio": 0.3255999838508001,
+            "error_feedback_signal_l2_norm": 1.2501959113410894,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.07450350234284997,
+            "evaluation_seconds": 0.03644854101003148,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.3150853749975795,
+            "local_loss": 0.09421079605817795,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-2",
+            "mixing_seconds": 0.0013746250042458996,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.03645091599901207,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:59.407369Z",
+            "transfer_id": "de5c5c23-fd8d-48de-8f07-c46bf11a30c9",
+            "transfer_seconds": 0.06667575000028592
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.14973296399222344,
+            "error_feedback_residual_to_signal_ratio": 0.2740140090670335,
+            "error_feedback_signal_l2_norm": 0.5464427329903175,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.04448644327931106,
+            "evaluation_seconds": 0.22684004199982155,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.04879970800539013,
+            "local_loss": 0.02830924093723297,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-3",
+            "mixing_seconds": 0.001194291005958803,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.44299475000298116,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:00.204797Z",
+            "transfer_id": "b15c7fab-ee28-4871-91e3-7269102207b8",
+            "transfer_seconds": 0.06656700000166893
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.04510000876701658,
+            "error_feedback_residual_to_signal_ratio": 0.21666892913778638,
+            "error_feedback_signal_l2_norm": 0.20815171306051045,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.03341158933471888,
+            "evaluation_seconds": 0.2409111250017304,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.25761591699847486,
+            "local_loss": 0.017178406938910484,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-4",
+            "mixing_seconds": 0.0011396249901736155,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.238137916996493,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.028625Z",
+            "transfer_id": "8db896fb-f51e-4136-80ed-de5c54c4a775",
+            "transfer_seconds": 0.07246500000474043
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.02263173382629349,
+            "error_feedback_residual_to_signal_ratio": 0.31623291391166314,
+            "error_feedback_signal_l2_norm": 0.0715666612508762,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.02956301812082529,
+            "evaluation_seconds": 0.40464962500846013,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.46296545800578315,
+            "local_loss": 0.009330207481980324,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-5",
+            "mixing_seconds": 0.0016319589922204614,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.3298286249919329,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.300051Z",
+            "transfer_id": "72162e6b-891b-44e6-8c8d-72396d5fddcb",
+            "transfer_seconds": 0.06023000000277534
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.015070148218140933,
+            "error_feedback_residual_to_signal_ratio": 0.416538285518026,
+            "error_feedback_signal_l2_norm": 0.03617950316235399,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.02788801840506494,
+            "evaluation_seconds": 0.02083816700906027,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.22985329100629315,
+            "local_loss": 0.01010914146900177,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-6",
+            "mixing_seconds": 0.0027592080004978925,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.04444666601193603,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.685218Z",
+            "transfer_id": "6441e67d-97a5-4c84-a9bf-4eebda3d2ec1",
+            "transfer_seconds": 0.07253829098772258
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.010083679282777386,
+            "error_feedback_residual_to_signal_ratio": 0.4421042235558926,
+            "error_feedback_signal_l2_norm": 0.022808375820690542,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.026746715418994427,
+            "evaluation_seconds": 0.07556549999571871,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.36043379199691117,
+            "local_loss": 0.01761312410235405,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-67c57e4c-7",
+            "mixing_seconds": 0.0018288330029463395,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.5667900829866994,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:03.776845Z",
+            "transfer_id": "7e3d9597-b6ab-43e1-a174-61aadc6d0ed1",
+            "transfer_seconds": 0.0743886249983916
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+        "rank": 1,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "68c9020b-b7b8-4c7d-9c6e-0e163c4a4c68"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "2a70727b-1607-4418-bd15-7734667c0a5b"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "de5c5c23-fd8d-48de-8f07-c46bf11a30c9"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "b15c7fab-ee28-4871-91e3-7269102207b8"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "8db896fb-f51e-4136-80ed-de5c54c4a775"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "72162e6b-891b-44e6-8c8d-72396d5fddcb"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "6441e67d-97a5-4c84-a9bf-4eebda3d2ec1"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "7e3d9597-b6ab-43e1-a174-61aadc6d0ed1"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 38768,
+            "CHUNK_ACK": 21935,
+            "CONSENSUS_SKETCH": 405096,
+            "JOIN_REQUEST": 509,
+            "READY": 506,
+            "ROUND_COMMITTED": 17984,
+            "START_ACK": 514,
+            "TRANSFER_BEGIN": 23424,
+            "TRANSFER_COMPLETE": 15912,
+            "UPDATE_READY": 17792
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "1": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "2": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "3": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "4": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "5": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "6": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "7": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "None": {
+              "formation-control": 2184
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          1.2683202079933835,
+          0.8131015830003889,
+          1.2084715420060093,
+          0.7801545830006944,
+          0.4922799589985516,
+          0.8427858329960145,
+          1.038960624995525,
+          1.023547500008135
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.0213021170347929,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "3d9754b6216712be057555e83a5009992d1be2f0e6a0c4c85aa373b65f2a851c",
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.028683386743068695,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.3590691713722525,
+            "error_feedback_residual_to_signal_ratio": 0.27804998531907754,
+            "error_feedback_signal_l2_norm": 1.2913835293326883,
+            "evaluation_accuracy": 0.890625,
+            "evaluation_loss": 0.7025530934333801,
+            "evaluation_seconds": 0.051545416994486004,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6729284999892116,
+            "local_loss": 0.38647136092185974,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-0",
+            "mixing_seconds": 0.0013349159999052063,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.034221709007397294,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:57.541675Z",
+            "transfer_id": "e0f43e6e-ff85-4345-80b5-8d49d5173074",
+            "transfer_seconds": 0.0958325829997193
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.6528208022220241,
+            "error_feedback_residual_to_signal_ratio": 0.4824685029012172,
+            "error_feedback_signal_l2_norm": 1.353084809259944,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.19872600957751274,
+            "evaluation_seconds": 0.11990958399837837,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6487062910018722,
+            "local_loss": 0.11424402892589569,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-1",
+            "mixing_seconds": 0.0007875419978518039,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.031006083998363465,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:58.423565Z",
+            "transfer_id": "9d53f6dd-b093-4264-84ff-42e005dee9ab",
+            "transfer_seconds": 0.06800775000010617
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.39649234829193014,
+            "error_feedback_residual_to_signal_ratio": 0.37897661246418646,
+            "error_feedback_signal_l2_norm": 1.0462185138915372,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.10461122542619705,
+            "evaluation_seconds": 0.03857470799994189,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.1965033340093214,
+            "local_loss": 0.09206689894199371,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-2",
+            "mixing_seconds": 0.0007823749911040068,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.7924410840059863,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:59.550556Z",
+            "transfer_id": "a905a41e-efda-40c4-a3c4-55efc2fd49fd",
+            "transfer_seconds": 0.08867004100466147
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.20954150909911995,
+            "error_feedback_residual_to_signal_ratio": 0.33448489745784893,
+            "error_feedback_signal_l2_norm": 0.6264602996777333,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.06334814801812172,
+            "evaluation_seconds": 0.18629483300901484,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.634332457993878,
+            "local_loss": 0.06246811896562576,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-3",
+            "mixing_seconds": 0.0014618749992223457,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.029319374996703118,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:00.477971Z",
+            "transfer_id": "1f89e175-02e5-48ee-b085-4f583326d7df",
+            "transfer_seconds": 0.06352129099832382
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.11117878795364637,
+            "error_feedback_residual_to_signal_ratio": 0.3391639169451727,
+            "error_feedback_signal_l2_norm": 0.32780252379152375,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.04178217041771859,
+            "evaluation_seconds": 0.22808458301005885,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.18685924999590497,
+            "local_loss": 0.02940937876701355,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-4",
+            "mixing_seconds": 0.0010530410072533414,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.03347333398414776,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.012162Z",
+            "transfer_id": "a5fb1e75-d951-4bf5-86ab-95721b3bf2c4",
+            "transfer_seconds": 0.07316833399818279
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.053031338766485234,
+            "error_feedback_residual_to_signal_ratio": 0.3087918003457456,
+            "error_feedback_signal_l2_norm": 0.17173817020758814,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.03323711233679205,
+            "evaluation_seconds": 0.1760324170027161,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.33099420899816323,
+            "local_loss": 0.018381457775831223,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-5",
+            "mixing_seconds": 0.0010154589981539175,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.20068216801155359,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.802795Z",
+            "transfer_id": "cee1baa0-8f93-471b-a1d7-672cfdb6f41f",
+            "transfer_seconds": 0.06866779200208839
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.021476674503588103,
+            "error_feedback_residual_to_signal_ratio": 0.2382382773131676,
+            "error_feedback_signal_l2_norm": 0.09014787525245874,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.02917294530197978,
+            "evaluation_seconds": 0.06614391699258704,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.18625324999447912,
+            "local_loss": 0.04664825648069382,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-6",
+            "mixing_seconds": 0.0014780420024180785,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.5888546669884818,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.732722Z",
+            "transfer_id": "aa00abbc-6cf2-4b23-9fcf-9c9447569ff2",
+            "transfer_seconds": 0.07220141599827912
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.01647945004590075,
+            "error_feedback_residual_to_signal_ratio": 0.3820492233816325,
+            "error_feedback_signal_l2_norm": 0.043134363420598495,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.028683386160992086,
+            "evaluation_seconds": 0.029148708999855444,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.8108332080009859,
+            "local_loss": 0.0057006231509149075,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-c532bbc3-7",
+            "mixing_seconds": 0.0014320829941425472,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.0584721249906579,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:03.718773Z",
+            "transfer_id": "927ecac9-a945-4ee9-b785-8e5079ea5216",
+            "transfer_seconds": 0.07021041700500064
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+        "rank": 2,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "e0f43e6e-ff85-4345-80b5-8d49d5173074"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "9d53f6dd-b093-4264-84ff-42e005dee9ab"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "a905a41e-efda-40c4-a3c4-55efc2fd49fd"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "1f89e175-02e5-48ee-b085-4f583326d7df"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "a5fb1e75-d951-4bf5-86ab-95721b3bf2c4"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "cee1baa0-8f93-471b-a1d7-672cfdb6f41f"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "aa00abbc-6cf2-4b23-9fcf-9c9447569ff2"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "927ecac9-a945-4ee9-b785-8e5079ea5216"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 38768,
+            "CHUNK_ACK": 21935,
+            "CONSENSUS_SKETCH": 405096,
+            "JOIN_REQUEST": 509,
+            "READY": 506,
+            "ROUND_COMMITTED": 17984,
+            "START_ACK": 514,
+            "TRANSFER_BEGIN": 23424,
+            "TRANSFER_COMPLETE": 15912,
+            "UPDATE_READY": 17792
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "1": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "2": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "3": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "4": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "5": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "6": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "7": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "None": {
+              "formation-control": 2184
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          1.1929650840029353,
+          1.0100513749930542,
+          0.9580102500040084,
+          0.4671970409981441,
+          1.1232755840028403,
+          0.7933609159954358,
+          0.7722632920049364,
+          1.0243777079886058
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.021411221474409103,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "9589be046914f3d4868f8e0384eeb052d83c326d24221fed4d7e5dd9ef3e9094",
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.01723267324268818,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.3864174211805203,
+            "error_feedback_residual_to_signal_ratio": 0.3001371777503865,
+            "error_feedback_signal_l2_norm": 1.287469363431844,
+            "evaluation_accuracy": 0.9375,
+            "evaluation_loss": 0.6531224250793457,
+            "evaluation_seconds": 0.351011999999173,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.7196441669948399,
+            "local_loss": 0.5041385293006897,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-0",
+            "mixing_seconds": 0.0010307089978596196,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.05143962499278132,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:57.894641Z",
+            "transfer_id": "dc69f409-3394-4703-b073-6fca69a7b342",
+            "transfer_seconds": 0.0852770839992445
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.6910429286318626,
+            "error_feedback_residual_to_signal_ratio": 0.4926377723866238,
+            "error_feedback_signal_l2_norm": 1.4027404461579323,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.1590184848755598,
+            "evaluation_seconds": 0.4041432910016738,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.5271732090041041,
+            "local_loss": 0.13424433767795563,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-1",
+            "mixing_seconds": 0.0007123749965103343,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.04728354199323803,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:58.958024Z",
+            "transfer_id": "331409c8-8aa9-42ea-a13e-8f17f7fccdf0",
+            "transfer_seconds": 0.07397183400462382
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.4135952289125956,
+            "error_feedback_residual_to_signal_ratio": 0.3992505190595077,
+            "error_feedback_signal_l2_norm": 1.035929095062616,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.07278798334300518,
+            "evaluation_seconds": 0.022077375004300848,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.41559416700329166,
+            "local_loss": 0.07201123982667923,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-2",
+            "mixing_seconds": 0.0013997499918332323,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.036644541993155144,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:51:59.533691Z",
+            "transfer_id": "733da37c-914e-47b4-8ae5-325f2a830dd4",
+            "transfer_seconds": 0.0887927080038935
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.15171526658327833,
+            "error_feedback_residual_to_signal_ratio": 0.24868123865991654,
+            "error_feedback_signal_l2_norm": 0.6100792621141645,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.036345638800412416,
+            "evaluation_seconds": 0.24016045800817665,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.3302338749927003,
+            "local_loss": 0.052613310515880585,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-3",
+            "mixing_seconds": 0.001273957997909747,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.03178654200746678,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:00.218483Z",
+            "transfer_id": "c14e73dd-add2-48b7-9f6c-05b54792b6ab",
+            "transfer_seconds": 0.06938229200022761
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.07054523423334627,
+            "error_feedback_residual_to_signal_ratio": 0.3124040123464129,
+            "error_feedback_signal_l2_norm": 0.22581411071993962,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.025643006432801485,
+            "evaluation_seconds": 0.393502000006265,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.25750012500793673,
+            "local_loss": 0.02683567814528942,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-4",
+            "mixing_seconds": 0.001479874990764074,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.5501070830068784,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:01.495181Z",
+            "transfer_id": "08698e64-236c-4fc1-a122-66ed00ad99d4",
+            "transfer_seconds": 0.0615784999972675
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.04466498018823166,
+            "error_feedback_residual_to_signal_ratio": 0.3734864633533678,
+            "error_feedback_signal_l2_norm": 0.11958928788798606,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.0208222100045532,
+            "evaluation_seconds": 0.38416966701333877,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.2906991250056308,
+            "local_loss": 0.00560259073972702,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-5",
+            "mixing_seconds": 0.0013182909897295758,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.033463166997535154,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.279508Z",
+            "transfer_id": "0e82a568-61f9-44b4-bb3b-70f61761dc67",
+            "transfer_seconds": 0.0639111249911366
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.02425799923854819,
+            "error_feedback_residual_to_signal_ratio": 0.3496765444186691,
+            "error_feedback_signal_l2_norm": 0.06937268062653923,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.018113965285010636,
+            "evaluation_seconds": 0.08808524999767542,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.23792391701135784,
+            "local_loss": 0.027452902868390083,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-6",
+            "mixing_seconds": 0.0012079999869456515,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.0626224169973284,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:02.756331Z",
+            "transfer_id": "eb3942c5-7efb-408f-a5e8-d1beb3d05ec9",
+            "transfer_seconds": 0.07440754200797528
+          },
+          {
+            "encoded_artifact_bytes": 1050,
+            "error_feedback_residual_l2_norm": 0.014824938899059736,
+            "error_feedback_residual_to_signal_ratio": 0.37344851498045556,
+            "error_feedback_signal_l2_norm": 0.03969741023025784,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.01723267196211964,
+            "evaluation_seconds": 0.04497245899983682,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.8003063750074944,
+            "local_loss": 0.020091908052563667,
+            "manifest_hash": "65f3975dd49c7c59426ceed4f3499f9e5b2b3e0b98bc82cb4029af8496b41644",
+            "message_id": "metric-df0bffaa-7",
+            "mixing_seconds": 0.0013552500022342429,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.04028687498066574,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+            "timestamp": "2026-09-06T19:52:03.737598Z",
+            "transfer_id": "cbd7f58a-3ec2-4f82-b887-4481f6f552cb",
+            "transfer_seconds": 0.0779464170045685
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+        "rank": 3,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "dc69f409-3394-4703-b073-6fca69a7b342"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "331409c8-8aa9-42ea-a13e-8f17f7fccdf0"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "733da37c-914e-47b4-8ae5-325f2a830dd4"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "c14e73dd-add2-48b7-9f6c-05b54792b6ab"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "08698e64-236c-4fc1-a122-66ed00ad99d4"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "0e82a568-61f9-44b4-bb3b-70f61761dc67"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "eb3942c5-7efb-408f-a5e8-d1beb3d05ec9"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "cbd7f58a-3ec2-4f82-b887-4481f6f552cb"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 38768,
+            "CHUNK_ACK": 21935,
+            "CONSENSUS_SKETCH": 405096,
+            "JOIN_REQUEST": 509,
+            "READY": 506,
+            "ROUND_COMMITTED": 17984,
+            "START_ACK": 514,
+            "TRANSFER_BEGIN": 23424,
+            "TRANSFER_COMPLETE": 15912,
+            "UPDATE_READY": 17792
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "1": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "2": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "3": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "4": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "5": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "6": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "7": {
+              "round-protocol": 16895,
+              "telemetry": 50637
+            },
+            "None": {
+              "formation-control": 2184
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2184,
+            "round-protocol": 135160,
+            "telemetry": 405096
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      }
+    ],
+    "raw_update_tensor_bytes": 9216,
+    "round_retries": 0,
+    "run_id": "federated-v1-quantity-skew-bitmap-int8-94219dd30d",
+    "seconds": 8.132275791998836,
+    "status": "complete",
+    "transport": "real-local-axl",
+    "variant": "bitmap-int8",
+    "weight_dispersion": [
+      {
+        "completed_outer_steps": 0,
+        "mean_coordinate_std": 0.0,
+        "rms_coordinate_std": 0.0
+      },
+      {
+        "completed_outer_steps": 1,
+        "mean_coordinate_std": 0.012316365519331561,
+        "rms_coordinate_std": 0.025645999566068108
+      },
+      {
+        "completed_outer_steps": 2,
+        "mean_coordinate_std": 0.04105938650253746,
+        "rms_coordinate_std": 0.05897092656071392
+      },
+      {
+        "completed_outer_steps": 3,
+        "mean_coordinate_std": 0.06282880031491866,
+        "rms_coordinate_std": 0.07358783111124309
+      },
+      {
+        "completed_outer_steps": 4,
+        "mean_coordinate_std": 0.06245111545372349,
+        "rms_coordinate_std": 0.07318821428609837
+      },
+      {
+        "completed_outer_steps": 5,
+        "mean_coordinate_std": 0.024723141606598213,
+        "rms_coordinate_std": 0.0296548226177326
+      },
+      {
+        "completed_outer_steps": 6,
+        "mean_coordinate_std": 0.02382220424664441,
+        "rms_coordinate_std": 0.02622892677614454
+      },
+      {
+        "completed_outer_steps": 7,
+        "mean_coordinate_std": 0.02443435633110737,
+        "rms_coordinate_std": 0.03002810679802504
+      },
+      {
+        "completed_outer_steps": 8,
+        "mean_coordinate_std": 0.016631784204472245,
+        "rms_coordinate_std": 0.018807016192795702
+      }
+    ]
+  },
+  "data_plan_sha256": "45867f982a47090835789788f32b15029fdd68e2503b52f7f116b8457046d4d2",
+  "identity": {
+    "accepted_wire_bytes": {
+      "formation-control": 26073,
+      "round-protocol": 508320,
+      "telemetry": 1620096
+    },
+    "common_mean_accuracy": 0.994140625,
+    "common_worst_accuracy": 0.994140625,
+    "data_plan_sha256": "45867f982a47090835789788f32b15029fdd68e2503b52f7f116b8457046d4d2",
+    "encoded_artifact_bytes": 17920,
+    "experiment_sha256": "d3c68077ae9f7d82439844cea4da0450a247997bc88127f945b5681270b9b4d6",
+    "local_mean_accuracy": 0.9921875,
+    "local_worst_accuracy": 0.984375,
+    "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+    "maximum_error_feedback_residual_l2": 0.0,
+    "maximum_error_feedback_residual_to_signal": 0.0,
+    "mean_commit_interval_seconds": 0.8665388840940977,
+    "nodes": [
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          0.8891845420002937,
+          0.8334947909897892,
+          1.0078788340033498,
+          0.7021899999963352,
+          0.7663817910070065,
+          1.0353907919925405,
+          0.7959920830035117,
+          1.1500618340069195
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.02263430878520012,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "e9ffc203ff71343e387c88f37199e17f161d24b1eded69dfecc2290d491aa7c1",
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.012852379120886326,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.6516672693802528,
+            "evaluation_accuracy": 0.859375,
+            "evaluation_loss": 0.6904886066913605,
+            "evaluation_seconds": 0.10460237500956282,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.4843131249945145,
+            "local_loss": 0.39685505628585815,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-0",
+            "mixing_seconds": 0.0008626250055385754,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.24899312401248608,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:49.397310Z",
+            "transfer_id": "31266601-9927-4fbc-9712-a78330412941",
+            "transfer_seconds": 0.062196625003707595
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.3950294429139247,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.1289075594395399,
+            "evaluation_seconds": 0.08341570899938233,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.32244787500530947,
+            "local_loss": 0.0860532745718956,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-1",
+            "mixing_seconds": 0.0011384999961592257,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.33184124900435563,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.209920Z",
+            "transfer_id": "98e63abf-14ff-4ddb-8192-8b8b09cba3f1",
+            "transfer_seconds": 0.061614417005330324
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.4835726702813898,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.04348278883844614,
+            "evaluation_seconds": 0.08213987501221709,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.5859283749887254,
+            "local_loss": 0.04435644671320915,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-2",
+            "mixing_seconds": 0.0018290830048499629,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.2655363329977263,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:51.215982Z",
+            "transfer_id": "a6f0a20e-767c-4272-9185-197de01d37b5",
+            "transfer_seconds": 0.06170700000075158
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.1752191901285274,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.024453700287267566,
+            "evaluation_seconds": 0.22186891600722447,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.01461729199218098,
+            "local_loss": 0.015836715698242188,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-3",
+            "mixing_seconds": 0.0009193750011036173,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.5313181259843986,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.057893Z",
+            "transfer_id": "75b335cf-f82f-432d-b963-481a2afcf1ab",
+            "transfer_seconds": 0.06211583399272058
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.07281886253230993,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.01779183396138251,
+            "evaluation_seconds": 0.2386567079956876,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.18723154100007378,
+            "local_loss": 0.006892197299748659,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-4",
+            "mixing_seconds": 0.0006322499975794926,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.2911101660138229,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.841047Z",
+            "transfer_id": "ed1dcc32-6d53-4b30-902c-79df717041a1",
+            "transfer_seconds": 0.05369412498839665
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.0362487013975711,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.014976692735217512,
+            "evaluation_seconds": 0.3393792080023559,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.4324478329945123,
+            "local_loss": 0.004398621618747711,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-5",
+            "mixing_seconds": 0.0008649160008644685,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.28388662400539033,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.977500Z",
+            "transfer_id": "f1a9114b-12ea-4ef0-9253-aa0cb518659a",
+            "transfer_seconds": 0.0692446250031935
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.018975761578029854,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.013522316701710224,
+            "evaluation_seconds": 0.055192208994412795,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.3186777499940945,
+            "local_loss": 0.004406237043440342,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-6",
+            "mixing_seconds": 0.0015142079937504604,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.058376875007525086,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:54.489212Z",
+            "transfer_id": "c617e672-8431-437f-81f5-1563b9728676",
+            "transfer_seconds": 0.06522062499425374
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.010804328933496966,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.012852378364186734,
+            "evaluation_seconds": 0.043165750001207925,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.8427033330081031,
+            "local_loss": 0.0034318366087973118,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-134b1c07-7",
+            "mixing_seconds": 0.0011709579994203523,
+            "node_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.16045154101448134,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:55.627308Z",
+            "transfer_id": "eb8e108a-9696-4b0f-82e3-18b47934d7c7",
+            "transfer_seconds": 0.0791461249900749
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+        "rank": 0,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "31266601-9927-4fbc-9712-a78330412941"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "98e63abf-14ff-4ddb-8192-8b8b09cba3f1"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "a6f0a20e-767c-4272-9185-197de01d37b5"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "75b335cf-f82f-432d-b963-481a2afcf1ab"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "ed1dcc32-6d53-4b30-902c-79df717041a1"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "f1a9114b-12ea-4ef0-9253-aa0cb518659a"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "c617e672-8431-437f-81f5-1563b9728676"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "eb8e108a-9696-4b0f-82e3-18b47934d7c7"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 19557,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 37819,
+            "CHUNK_ACK": 21184,
+            "CONSENSUS_SKETCH": 405024,
+            "JOIN_ACCEPTED": 1527,
+            "MANIFEST_SEALED": 8913,
+            "ROUND_COMMITTED": 17888,
+            "START": 1509,
+            "TRANSFER_BEGIN": 22311,
+            "TRANSFER_COMPLETE": 17790,
+            "UPDATE_READY": 17696
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "1": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "2": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "3": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "4": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "5": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "6": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "7": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "None": {
+              "formation-control": 19557
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 19557,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          1.0431141250010114,
+          0.8357069159974344,
+          0.8237607500050217,
+          1.0116029999917373,
+          0.7626950000121724,
+          0.4860457089962438,
+          1.0330772080051247,
+          0.8204787499998929
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022746361792087555,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "8a7335090d30d4fed74326f7278d82c5b3819b60eb48ff9f8b9b18e8e2c6306d",
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.028523797169327736,
+          "per_class": [
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.3918706820951503,
+            "evaluation_accuracy": 0.8125,
+            "evaluation_loss": 0.6912441998720169,
+            "evaluation_seconds": 0.5543757090053987,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.20152908300224226,
+            "local_loss": 0.46845555305480957,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-0",
+            "mixing_seconds": 0.0010269579943269491,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.2400287080090493,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.032523Z",
+            "transfer_id": "d3491cfd-4290-4fad-91fa-5baef4368204",
+            "transfer_seconds": 0.05785329200443812
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.2263683251263777,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.16652674600481987,
+            "evaluation_seconds": 0.4979270829935558,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.16138529099407606,
+            "local_loss": 0.14549481868743896,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-1",
+            "mixing_seconds": 0.0006949159869691357,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.04842575000657234,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.811645Z",
+            "transfer_id": "2d547898-29bb-4f42-95ea-4a0fe0158dbb",
+            "transfer_seconds": 0.05972124999971129
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.46723702749551344,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.07287131529301405,
+            "evaluation_seconds": 0.07978212500165682,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.2163959169993177,
+            "local_loss": 0.08176318556070328,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-2",
+            "mixing_seconds": 0.0011266660003457218,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.0355009990016697,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:51.217703Z",
+            "transfer_id": "fca15c18-7edf-4fd6-8a53-66cc7b7eae07",
+            "transfer_seconds": 0.06303687499894295
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.196551486149846,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.04695718176662922,
+            "evaluation_seconds": 0.11258662499312777,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.18479487499280367,
+            "local_loss": 0.02599850483238697,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-3",
+            "mixing_seconds": 0.001371667007333599,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.6706493339879671,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.261769Z",
+            "transfer_id": "04a00a3d-f44c-4219-8cdb-fcaa23d4b08d",
+            "transfer_seconds": 0.06514062499627471
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.09096154936810942,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.035516742849722505,
+            "evaluation_seconds": 0.3630778749939054,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.5472814580134582,
+            "local_loss": 0.018601907417178154,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-4",
+            "mixing_seconds": 0.0015559999883407727,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.032912665978074074,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.275197Z",
+            "transfer_id": "454a3156-fd7c-4392-8c44-d78c25c43808",
+            "transfer_seconds": 0.058684582996647805
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.045155846207524775,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.030576845863834023,
+            "evaluation_seconds": 0.16137658299703617,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.0150060830055736,
+            "local_loss": 0.010888786055147648,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-5",
+            "mixing_seconds": 0.0010711250070016831,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.034552917000837624,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.559710Z",
+            "transfer_id": "9a4661ff-c92e-43ed-a92a-6a7716139643",
+            "transfer_seconds": 0.06285366699739825
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.02262396641289538,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.02901800419203937,
+            "evaluation_seconds": 0.023413125003571622,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.40091325000685174,
+            "local_loss": 0.011317633092403412,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-6",
+            "mixing_seconds": 0.0014929169992683455,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.39348958400660194,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:54.454984Z",
+            "transfer_id": "7532aa4b-e1b8-4b5d-bb79-d25742572cd1",
+            "transfer_seconds": 0.0632312079978874
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.012601872252060355,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.02852379740215838,
+            "evaluation_seconds": 0.2535285829944769,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.35741341700486373,
+            "local_loss": 0.01678876020014286,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-67c57e4c-7",
+            "mixing_seconds": 0.0008167499909177423,
+            "node_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.3453470429958543,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:55.505418Z",
+            "transfer_id": "3c0aa192-877b-4897-97ff-927091c21e3d",
+            "transfer_seconds": 0.08071966700663324
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+        "rank": 1,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "d3491cfd-4290-4fad-91fa-5baef4368204"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "2d547898-29bb-4f42-95ea-4a0fe0158dbb"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "fca15c18-7edf-4fd6-8a53-66cc7b7eae07"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "04a00a3d-f44c-4219-8cdb-fcaa23d4b08d"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "454a3156-fd7c-4392-8c44-d78c25c43808"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "9a4661ff-c92e-43ed-a92a-6a7716139643"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "7532aa4b-e1b8-4b5d-bb79-d25742572cd1"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "3c0aa192-877b-4897-97ff-927091c21e3d"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 34648,
+            "CHUNK_ACK": 21836,
+            "CONSENSUS_SKETCH": 405024,
+            "JOIN_REQUEST": 506,
+            "READY": 503,
+            "ROUND_COMMITTED": 17888,
+            "START_ACK": 511,
+            "TRANSFER_BEGIN": 19824,
+            "TRANSFER_COMPLETE": 15840,
+            "UPDATE_READY": 17696
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "1": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "2": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "3": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "4": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "5": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "6": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "7": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "None": {
+              "formation-control": 2172
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          0.8136093330103904,
+          0.8326384999963921,
+          1.2160204169922508,
+          0.4945228330034297,
+          1.0755398750043241,
+          0.7258277499931864,
+          0.7960036250005942,
+          1.146939875005046
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022834178060293198,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "0c5073931d5851e71cfd4e509cfc8ba0f8c4620f829fc4045ffe4bd431034f6b",
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.029111018404364586,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.2913835293326883,
+            "evaluation_accuracy": 0.828125,
+            "evaluation_loss": 0.6841234415769577,
+            "evaluation_seconds": 0.11770454100042116,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.21309883300273214,
+            "local_loss": 0.38647136092185974,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-0",
+            "mixing_seconds": 0.001426083006663248,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.03610350000963081,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:49.411299Z",
+            "transfer_id": "ff30185c-091a-4314-ad6e-67d396494f5c",
+            "transfer_seconds": 0.06481241699657403
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.1353391032882427,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.1609859373420477,
+            "evaluation_seconds": 0.08215687499614432,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6022335419984302,
+            "local_loss": 0.10986842215061188,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-1",
+            "mixing_seconds": 0.000711208995198831,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.03904833199339919,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.208654Z",
+            "transfer_id": "e70ccdc0-37dd-4a8c-b23a-9893963d4998",
+            "transfer_seconds": 0.06150516700290609
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.47837561137132334,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.06638057949021459,
+            "evaluation_seconds": 0.07869374999427237,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.2865317079995293,
+            "local_loss": 0.08060292899608612,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-2",
+            "mixing_seconds": 0.0006434999959310517,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.7752874180150684,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:51.420881Z",
+            "transfer_id": "a9657d7d-b216-4dcf-bb6c-1e0e1392fe77",
+            "transfer_seconds": 0.06139033300860319
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.24125416809475325,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.04555738647468388,
+            "evaluation_seconds": 0.23622583399992436,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.30958108299819287,
+            "local_loss": 0.04744253307580948,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-3",
+            "mixing_seconds": 0.0015430420025950298,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.030703541982802562,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.073041Z",
+            "transfer_id": "7e6fe6d6-3c88-49aa-84f9-d1c2013ef597",
+            "transfer_seconds": 0.06259812500502449
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.1458602082967732,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.03660614974796772,
+            "evaluation_seconds": 0.3645934579981258,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.18423949999851175,
+            "local_loss": 0.024128703400492668,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-4",
+            "mixing_seconds": 0.0008083749999059364,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.5840632079925854,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.276809Z",
+            "transfer_id": "9ff1e4e6-0ec8-4f93-81ec-6d4784d7410a",
+            "transfer_seconds": 0.0583834170101909
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.09111940985372047,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.032731244806200266,
+            "evaluation_seconds": 0.3583678750001127,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.24935091700172052,
+            "local_loss": 0.020435981452465057,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-5",
+            "mixing_seconds": 0.0012846659956267104,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.028531291012768634,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.996597Z",
+            "transfer_id": "55a6a384-d48c-4f51-9c87-2907ff367f7a",
+            "transfer_seconds": 0.07196566599304788
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.052511275574298334,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.030475110979750752,
+            "evaluation_seconds": 0.07376204199681524,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.3118600829911884,
+            "local_loss": 0.044880907982587814,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-6",
+            "mixing_seconds": 0.001111541991122067,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_wait_seconds": 0.04380154199316166,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:54.508020Z",
+            "transfer_id": "60500efa-ea9a-431e-bb35-b4efb9834b49",
+            "transfer_seconds": 0.0683482080057729
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.03275251883588372,
+            "evaluation_accuracy": 0.984375,
+            "evaluation_loss": 0.029111017531249672,
+            "evaluation_seconds": 0.02897970800404437,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.9463162920001196,
+            "local_loss": 0.007541002240031958,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-c532bbc3-7",
+            "mixing_seconds": 0.0019442920020082965,
+            "node_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.035386125004151836,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:55.609981Z",
+            "transfer_id": "4c59616e-8c70-475d-91d0-689c803f18e5",
+            "transfer_seconds": 0.08035766599641647
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+        "rank": 2,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "ff30185c-091a-4314-ad6e-67d396494f5c"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "e70ccdc0-37dd-4a8c-b23a-9893963d4998"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "a9657d7d-b216-4dcf-bb6c-1e0e1392fe77"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "7e6fe6d6-3c88-49aa-84f9-d1c2013ef597"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "9ff1e4e6-0ec8-4f93-81ec-6d4784d7410a"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "55a6a384-d48c-4f51-9c87-2907ff367f7a"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "60500efa-ea9a-431e-bb35-b4efb9834b49"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "4c59616e-8c70-475d-91d0-689c803f18e5"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 34648,
+            "CHUNK_ACK": 21836,
+            "CONSENSUS_SKETCH": 405024,
+            "JOIN_REQUEST": 506,
+            "READY": 503,
+            "ROUND_COMMITTED": 17888,
+            "START_ACK": 511,
+            "TRANSFER_BEGIN": 19824,
+            "TRANSFER_COMPLETE": 15840,
+            "UPDATE_READY": 17696
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "1": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "2": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "3": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "4": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "5": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "6": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "7": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "None": {
+              "formation-control": 2172
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      },
+      {
+        "commit_interval_note": "first interval starts at training construction and includes readiness/setup; later intervals include actual compute, transport, evaluation and commit persistence",
+        "commit_intervals_seconds": [
+          0.8620912500045961,
+          0.8351466669992078,
+          1.0281091249926249,
+          0.8057047080073971,
+          0.45092358300462365,
+          0.7959276249894174,
+          1.0370533750101458,
+          0.8161296249891166
+        ],
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022807495668530464,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "final_checkpoint_sha256": "94f7256ee3e14c13af72082297c02f97ae55acc52045e0b6351398fddeb8112a",
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.01839248649775982,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "metrics": [
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.287469363431844,
+            "evaluation_accuracy": 0.921875,
+            "evaluation_loss": 0.6418148577213287,
+            "evaluation_seconds": 0.5680338750098599,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.4094877500028815,
+            "local_loss": 0.5041385293006897,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-0",
+            "mixing_seconds": 0.0008600000001024455,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.03255925000121351,
+            "retries": 0,
+            "round_id": 0,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.048132Z",
+            "transfer_id": "0bf00c1f-2edd-40c9-bd8c-cc86e93917f0",
+            "transfer_seconds": 0.05629791699175257
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 1.185890809931515,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.14616353996098042,
+            "evaluation_seconds": 0.5139702909946209,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.15810145798604935,
+            "local_loss": 0.13300417363643646,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-1",
+            "mixing_seconds": 0.0010962090018438175,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.03833399999712128,
+            "retries": 0,
+            "round_id": 1,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:50.829380Z",
+            "transfer_id": "44aa2b6c-da65-46dd-b157-c62580c48217",
+            "transfer_seconds": 0.05889258399838582
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.4588602631912134,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.054376332089304924,
+            "evaluation_seconds": 0.09463749999122228,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.38485037500504404,
+            "local_loss": 0.06690771132707596,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-2",
+            "mixing_seconds": 0.0012197500036563724,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.05530716700013727,
+            "retries": 0,
+            "round_id": 2,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:51.438072Z",
+            "transfer_id": "94f954de-f9dc-4d11-86fa-6c781db75aae",
+            "transfer_seconds": 0.06232875000569038
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.19505672141565092,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.03214374603703618,
+            "evaluation_seconds": 0.11157745799573604,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6006261660077143,
+            "local_loss": 0.0403287336230278,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-3",
+            "mixing_seconds": 0.0008575410029152408,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.0327317080082139,
+            "retries": 0,
+            "round_id": 3,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.260495Z",
+            "transfer_id": "71ae50cb-e15e-45a4-8340-137b01048695",
+            "transfer_seconds": 0.06621604200336151
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.10707328372711775,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.02478340221568942,
+            "evaluation_seconds": 0.2250238749984419,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.24507591700239573,
+            "local_loss": 0.02108883671462536,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-4",
+            "mixing_seconds": 0.0006133329879958183,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "134b1c07e9ffbb0d9c45ea849e0ff5b2f542b578060e54a22a2f8ad696ebbc41",
+            "peer_wait_seconds": 0.02785516600124538,
+            "retries": 0,
+            "round_id": 4,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:52.825135Z",
+            "transfer_id": "48d0ce9f-7418-45d0-9e24-ddebd8d2becd",
+            "transfer_seconds": 0.05610362500010524
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.06834999990704463,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.021313539589755237,
+            "evaluation_seconds": 0.14888637499825563,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.33500149998872075,
+            "local_loss": 0.005926952697336674,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-5",
+            "mixing_seconds": 0.0009357079979963601,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.16288391599664465,
+            "retries": 0,
+            "round_id": 5,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:53.545061Z",
+            "transfer_id": "7a718c10-bd3b-42e5-a6fd-680c6ad0ae0e",
+            "transfer_seconds": 0.061403290994348936
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.03724138555833588,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.019555678823962808,
+            "evaluation_seconds": 0.040136875002644956,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.10684891599521507,
+            "local_loss": 0.03000733070075512,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-6",
+            "mixing_seconds": 0.0014806669933022931,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "c532bbc3c7473ecc8b0539d57c2a29fab6faced37cf8acfb458d6e3153f4b304",
+            "peer_wait_seconds": 0.7006747080013156,
+            "retries": 0,
+            "round_id": 6,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:54.473785Z",
+            "transfer_id": "927b428f-2bce-4a25-bd5b-b1e3470291f7",
+            "transfer_seconds": 0.06717766600195318
+          },
+          {
+            "encoded_artifact_bytes": 560,
+            "error_feedback_residual_l2_norm": 0.0,
+            "error_feedback_residual_to_signal_ratio": 0.0,
+            "error_feedback_signal_l2_norm": 0.024161368529129885,
+            "evaluation_accuracy": 1.0,
+            "evaluation_loss": 0.01839248603209853,
+            "evaluation_seconds": 0.23824341699946672,
+            "event": "round_metrics",
+            "evidence_version": 1,
+            "local_compute_seconds": 0.6384648749954067,
+            "local_loss": 0.019349556416273117,
+            "manifest_hash": "0d67e47941cb61f21a5a8e0491228e2070187f20d3422ef032f67efec7175493",
+            "message_id": "metric-df0bffaa-7",
+            "mixing_seconds": 0.0007982079987414181,
+            "node_id": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+            "peer_id": "67c57e4c645950e0a3af5fce108e7e35ba65cff82143f62035beae56ed054e1a",
+            "peer_wait_seconds": 0.036908833018969744,
+            "retries": 0,
+            "round_id": 7,
+            "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+            "timestamp": "2026-09-06T19:51:55.487648Z",
+            "transfer_id": "eacded80-2c5f-4fd7-ab48-115df2a1724c",
+            "transfer_seconds": 0.08546312499674968
+          }
+        ],
+        "optimizer_steps": 400,
+        "public_key": "df0bffaa345178f85e92ab89b413bbb78b900a165074983f9e2783a4119c06f5",
+        "rank": 3,
+        "sample_presentations": 6400,
+        "transfer_diagnostics": [
+          {
+            "retries": 0,
+            "transfer_id": "0bf00c1f-2edd-40c9-bd8c-cc86e93917f0"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "44aa2b6c-da65-46dd-b157-c62580c48217"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "94f954de-f9dc-4d11-86fa-6c781db75aae"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "71ae50cb-e15e-45a4-8340-137b01048695"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "48d0ce9f-7418-45d0-9e24-ddebd8d2becd"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "7a718c10-bd3b-42e5-a6fd-680c6ad0ae0e"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "927b428f-2bce-4a25-bd5b-b1e3470291f7"
+          },
+          {
+            "retries": 0,
+            "transfer_id": "eacded80-2c5f-4fd7-ab48-115df2a1724c"
+          }
+        ],
+        "wire": {
+          "accepted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "accepted_bytes_by_message_type": {
+            "CHUNK": 34648,
+            "CHUNK_ACK": 21836,
+            "CONSENSUS_SKETCH": 405024,
+            "JOIN_REQUEST": 506,
+            "READY": 503,
+            "ROUND_COMMITTED": 17888,
+            "START_ACK": 511,
+            "TRANSFER_BEGIN": 19824,
+            "TRANSFER_COMPLETE": 15840,
+            "UPDATE_READY": 17696
+          },
+          "accepted_bytes_by_round": {
+            "0": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "1": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "2": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "3": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "4": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "5": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "6": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "7": {
+              "round-protocol": 15885,
+              "telemetry": 50628
+            },
+            "None": {
+              "formation-control": 2172
+            }
+          },
+          "attempted_bytes": {
+            "formation-control": 2172,
+            "round-protocol": 127080,
+            "telemetry": 405024
+          },
+          "boundary": "full serialized Dromeus envelopes, including retries; excludes AXL transport/TCP framing; sender totals are not doubled by receives"
+        }
+      }
+    ],
+    "raw_update_tensor_bytes": 9216,
+    "round_retries": 0,
+    "run_id": "federated-v1-quantity-skew-identity-13a66b4fbd",
+    "seconds": 7.6296027500065975,
+    "status": "complete",
+    "transport": "real-local-axl",
+    "variant": "identity",
+    "weight_dispersion": [
+      {
+        "completed_outer_steps": 0,
+        "mean_coordinate_std": 0.0,
+        "rms_coordinate_std": 0.0
+      },
+      {
+        "completed_outer_steps": 1,
+        "mean_coordinate_std": 0.025747776238454714,
+        "rms_coordinate_std": 0.03787491184443166
+      },
+      {
+        "completed_outer_steps": 2,
+        "mean_coordinate_std": 0.05237712335979773,
+        "rms_coordinate_std": 0.07752068923854177
+      },
+      {
+        "completed_outer_steps": 3,
+        "mean_coordinate_std": 0.03496864459963886,
+        "rms_coordinate_std": 0.047063005678329134
+      },
+      {
+        "completed_outer_steps": 4,
+        "mean_coordinate_std": 0.025641219628872405,
+        "rms_coordinate_std": 0.03328293898308136
+      },
+      {
+        "completed_outer_steps": 5,
+        "mean_coordinate_std": 0.006410228968818743,
+        "rms_coordinate_std": 0.007687006810085622
+      },
+      {
+        "completed_outer_steps": 6,
+        "mean_coordinate_std": 0.010784657917890595,
+        "rms_coordinate_std": 0.013832620772389602
+      },
+      {
+        "completed_outer_steps": 7,
+        "mean_coordinate_std": 0.009534685401962787,
+        "rms_coordinate_std": 0.012086466370137501
+      },
+      {
+        "completed_outer_steps": 8,
+        "mean_coordinate_std": 0.006710893707265301,
+        "rms_coordinate_std": 0.008835138379586105
+      }
+    ]
+  },
+  "local-only": {
+    "backend": "synchronous-in-process-development",
+    "common_mean_accuracy": 0.9931640625,
+    "common_worst_accuracy": 0.98828125,
+    "independent": "no pair exchange or outer optimizer",
+    "local_mean_accuracy": 0.9921875,
+    "local_worst_accuracy": 0.984375,
+    "method": "local-only",
+    "nccl_acceptance_eligible": false,
+    "nodes": [
+      {
+        "common_heldout": {
+          "accuracy": 0.98828125,
+          "loss": 0.07771501690149307,
+          "per_class": [
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.9765625,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.05881929770112038,
+          "per_class": [
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 0,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.99609375,
+          "loss": 0.058692652732133865,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.07597165554761887,
+          "per_class": [
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 1,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.051236461848020554,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.05564287304878235,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 2,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.05079931020736694,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.04592379927635193,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 3,
+        "sample_presentations": 6400
+      }
+    ],
+    "round_seconds": [
+      0.04352474999905098,
+      0.044304832990746945,
+      0.04463041700364556,
+      0.0441134169959696,
+      0.04386958399845753,
+      0.04562687499856111,
+      0.04402112499519717,
+      0.04288079199614003
+    ],
+    "seconds": 0.3562105419987347,
+    "shares": "model, datasets, initialization, generic inner trainer, seeded data order, LR schedule, public-key pair scheduler",
+    "upstream_commit": null
+  },
+  "profile": "quantity-skew",
+  "reference": {
+    "backend": "synchronous-in-process-development",
+    "common_mean_accuracy": 0.994140625,
+    "common_worst_accuracy": 0.994140625,
+    "independent": "NoLoCo outer optimizer and in-process pair exchange",
+    "local_mean_accuracy": 0.9921875,
+    "local_worst_accuracy": 0.984375,
+    "method": "reference",
+    "nccl_acceptance_eligible": false,
+    "nodes": [
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.02263430878520012,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.012852379120886326,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 0,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022746361792087555,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.028523797169327736,
+          "per_class": [
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 1,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022834178060293198,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 0.984375,
+          "loss": 0.029111018404364586,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9375,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 2,
+        "sample_presentations": 6400
+      },
+      {
+        "common_heldout": {
+          "accuracy": 0.994140625,
+          "loss": 0.022807495668530464,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 0
+            },
+            {
+              "accuracy": 0.984375,
+              "count": 128,
+              "label": 1
+            },
+            {
+              "accuracy": 0.9921875,
+              "count": 128,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 128,
+              "label": 3
+            }
+          ],
+          "sample_count": 512
+        },
+        "local_heldout": {
+          "accuracy": 1.0,
+          "loss": 0.01839248649775982,
+          "per_class": [
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 0
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 1
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 2
+            },
+            {
+              "accuracy": 1.0,
+              "count": 16,
+              "label": 3
+            }
+          ],
+          "sample_count": 64
+        },
+        "optimizer_steps": 400,
+        "rank": 3,
+        "sample_presentations": 6400
+      }
+    ],
+    "round_seconds": [
+      0.04617824999149889,
+      0.04441237499122508,
+      0.04423970899370033,
+      0.04417341599764768,
+      0.04377395799383521,
+      0.04414587499923073,
+      0.04411200000322424,
+      0.04386658300063573
+    ],
+    "seconds": 0.3579597080097301,
+    "shares": "model, datasets, initialization, generic inner trainer, seeded data order, LR schedule, public-key pair scheduler",
+    "upstream_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "candidate": {
+    "benchmark_seed": 17,
+    "chunk_size_bytes": 1048576,
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "initial_checkpoint_sha256": "3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d",
+    "outer_gradient_codec_id": "topk-bitmap-int8-v2",
+    "round_count": 500,
+    "sealed_manifest_hash": "77aa23b9ef239ed473b2c9133d364173c32d790f33c5768ec0ba98d7dec2e4c4",
+    "slow_weight_codec_id": "dense-int8-v1",
+    "top_k_fraction": 0.45,
+    "total_inner_steps": 25000,
+    "warmup_inner_steps": 1000,
+    "window_size": 4,
+    "world_size": 4
+  },
+  "evidence_root": "evidence",
+  "gates": {
+    "accuracy_at_least_90_percent": true,
+    "all_ranks_complete": true,
+    "complete_wire_at_least_5x": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "zero_run_failures": true
+  },
+  "purpose": "pre-freeze residual calibration after the 40% eight-node ratio excursion",
+  "results": {
+    "complete_wire_compression_ratio": 5.064478144933808,
+    "final_accuracy": {
+      "maximum": 0.9315,
+      "mean": 0.930825,
+      "minimum": 0.9302,
+      "stddev": 0.0005068283733178285
+    },
+    "identity_complete_wire_bytes": 89499868,
+    "maximum_complete_wire_bytes_per_node_round": 17672081,
+    "maximum_residual_l2_norm": 4.555979162298655,
+    "maximum_residual_to_signal_ratio": 0.2965785077320018,
+    "ranks": [
+      {
+        "final_accuracy": 0.9315,
+        "final_loss": 0.5524202331542969,
+        "final_state_sha256": "39bcf3490f92128c546e1f4d43baa954276fc14d8d5dc80429d94648c1596e1e",
+        "log_sha256": "39b72cafe1c51744e2a4e823ccd7cab417cb810e6a60bcb418d8e29dcd547e3d",
+        "maximum_residual_l2_norm": 4.555979162298655,
+        "maximum_residual_to_signal_ratio": 0.29566373458629275,
+        "node_id": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+        "rank": 0,
+        "total_local_compute_seconds": 3323.108867187042,
+        "total_transfer_retries": 0,
+        "total_transfer_seconds": 1366.0877718159645
+      },
+      {
+        "final_accuracy": 0.9311,
+        "final_loss": 0.5601324966430664,
+        "final_state_sha256": "7f95773691da8ba8ac9d4f154af44cfc4728b15e95317ab2f4ec4523e6b34e4d",
+        "log_sha256": "c7391c3aff7681e897ed2c15a69c8915a0103844a936187ce2eecc747592dfe2",
+        "maximum_residual_l2_norm": 4.462707633270534,
+        "maximum_residual_to_signal_ratio": 0.2957021346577642,
+        "node_id": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+        "rank": 1,
+        "total_local_compute_seconds": 3305.649482443023,
+        "total_transfer_retries": 0,
+        "total_transfer_seconds": 1353.7079043100057
+      },
+      {
+        "final_accuracy": 0.9302,
+        "final_loss": 0.552195118522644,
+        "final_state_sha256": "163aa0c0dec1f77b1a4ab4fb11fe19beeaff4adb8fedb15aa695fab01350dbcb",
+        "log_sha256": "568eed023b5ee5db3c66667024537f5a26686d83b54cd0f6ad9e41dd1e5209a4",
+        "maximum_residual_l2_norm": 4.503926341193899,
+        "maximum_residual_to_signal_ratio": 0.2965785077320018,
+        "node_id": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+        "rank": 2,
+        "total_local_compute_seconds": 3334.468394382002,
+        "total_transfer_retries": 0,
+        "total_transfer_seconds": 1363.0360255459782
+      },
+      {
+        "final_accuracy": 0.9305,
+        "final_loss": 0.5506762406349183,
+        "final_state_sha256": "a452e4d5fd268c4676ee7fe35cc27cea3818c5240348a344b045c37122c999a8",
+        "log_sha256": "24742ca8543e667da73a1604689f34293fa3b4287917b435661e3a1fac57e32f",
+        "maximum_residual_l2_norm": 4.478717692803508,
+        "maximum_residual_to_signal_ratio": 0.2961944053826596,
+        "node_id": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+        "rank": 3,
+        "total_local_compute_seconds": 3302.608205205055,
+        "total_transfer_retries": 0,
+        "total_transfer_seconds": 1357.3625265789815
+      }
+    ]
+  },
+  "run_id": "noloco-topk45-calibration-w4-s17-20260829",
+  "schema_version": 1,
+  "source": {
+    "commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "outer_gradient_convention": "phi-minus-theta-v1",
+    "previous_frozen_artifact": "aws/results/noloco-paper25k-frozen-readiness60-20260829/experiment.yaml",
+    "repository": "gensyn-ai/noloco"
+  },
+  "status": "passed"
+}

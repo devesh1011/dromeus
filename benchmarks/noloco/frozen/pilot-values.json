@@ -1,0 +1,56 @@
+{
+  "analysis_checkpoint_interval_rounds": 50,
+  "analysis_storage_budget_bytes_per_node": 536870912,
+  "chunk_size_bytes": 1048576,
+  "codec": {
+    "outer_gradient": {
+      "codec_id": "topk-bitmap-int8-v2",
+      "top_k_fraction": 0.45
+    },
+    "slow_weights": {
+      "codec_id": "dense-int8-v1"
+    }
+  },
+  "countsketch_interval_rounds": 1,
+  "environment": {
+    "accelerator_class": "NVIDIA-A10G-g5.xlarge",
+    "cuda": "13.0",
+    "cudnn": 92000,
+    "driver": "595.91.07",
+    "python": "3.12.11",
+    "torch": "2.12.1+cu130"
+  },
+  "evaluation_interval_rounds": 25,
+  "evidence": {
+    "path": "../../../aws/results/m2/compression-calibration/pilot-report.json",
+    "sha256": "8789163afe2abe469edf06fb47c5a89a78e134cf095bae5a5251ec0921f51ff2"
+  },
+  "fp32_tolerance": {
+    "absolute": 1e-06,
+    "relative": 1e-06
+  },
+  "inner_steps": 50,
+  "learning_rate_schedule": {
+    "final_learning_rate": 0.0001,
+    "peak_learning_rate": 0.001,
+    "schedule_id": "linear-warmup-cosine-v1",
+    "start_learning_rate": 0.0001,
+    "total_inner_steps": 25000,
+    "warmup_inner_steps": 1000
+  },
+  "outer_round_count": 500,
+  "overlap": false,
+  "residual_bounds": {
+    "l2_norm": 6.0,
+    "residual_to_signal_ratio": 0.35
+  },
+  "schema_version": 1,
+  "status": "frozen",
+  "training_horizon": {
+    "outer_step_interval": 50,
+    "source": "NoLoCo paper Section 4",
+    "total_inner_steps": 25000,
+    "warmup_inner_steps": 1000
+  },
+  "window_size": 4
+}

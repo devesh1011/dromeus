@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from dromeus.manifests.canonical import canonical_hash
+from dromeus.manifests.canonical import canonical_hash, validate_sealed_draft
 from dromeus.manifests.models import ApplicationTaskContract, DraftRunSpec, TensorSchema
 from dromeus.membership.formation import FormationResult
 from dromeus.persistence.run_store import RunStore
@@ -50,8 +51,9 @@ class PreparedApplication:
         run_root: Path,
         metrics_publisher: MetricsService | None = None,
     ) -> TrainingConfig:
-        if result.manifest.draft_hash != self._draft_hash:
-            raise ValueError("formed draft does not match prepared application")
+        validate_sealed_draft(result.manifest, expected_draft_hash=self._draft_hash)
+        if canonical_hash(result.manifest) != result.manifest_hash:
+            raise ValueError("formed manifest hash does not match its contents")
         if result.manifest.tensor_schema != self.tensor_schema:
             raise ValueError("formed tensor schema does not match application")
         if local_public_key not in {
@@ -103,12 +105,27 @@ def prepare_application(
     if trainer.completed_steps:
         raise ValueError("prepare a fresh trainer before formation")
     trainer.weights()
+    outer_policy = draft.model_dump(
+        mode="json",
+        include={
+            "algorithm_id",
+            "algorithm_config",
+            "artifact_codecs",
+            "codec_id",
+            "local_steps",
+        },
+    )
+    outer_identity = definition_hash(
+        json.dumps(outer_policy, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    )
     trainer.bind_contract(
         ":".join(
             (
+                "application-restore-v2",
                 draft.model_definition_hash,
                 canonical_hash(draft.dataset),
                 canonical_hash(draft.application_training),
+                outer_identity,
             )
         )
     )

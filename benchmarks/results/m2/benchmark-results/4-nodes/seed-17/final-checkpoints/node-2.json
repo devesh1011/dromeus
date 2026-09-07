@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "seed": 17,
+  "node_index": 2,
+  "committed_round": 499,
+  "algorithm_state_sha256": "37c8b7b049e8ebe35212d9575dac7068cc738d11d2929653c1f45eba85b478c2",
+  "size_bytes": 268241824,
+  "storage": "s3-versioned",
+  "packaged_locally": false,
+  "reason": "fresh AXL-log rerun checkpoint archived outside local staging package",
+  "s3": {
+    "bucket": "dromeus-m2-evidence-20260902",
+    "key": "m2/recovery-reruns/w4/20260907/seed-17/node-2/committed-round-000499.safetensors",
+    "version_id": "SCfpFGlF.bElCaX2mgZGctXcPwENFGJ.",
+    "checksum_sha256_base64": "N8i3sEno6+NSEtlXXaxwaMxzjRHSkpZTwfReuoW0eMI="
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "algorithm_state_sha256": "a1ac24725243348f9c4f985f4446d42687ce89f6b3e7eb43777c481dcacddaf2",
+  "committed_round": 499,
+  "node_index": 11,
+  "packaged_locally": false,
+  "reason": "large optimizer-state checkpoint archived outside report-ready local package",
+  "schema_version": 1,
+  "seed": 29,
+  "size_bytes": 268241824,
+  "storage": "s3-versioned",
+  "s3": {
+    "bucket": "dromeus-m2-evidence-20260902",
+    "checksum_sha256_base64": "oawkclJDNI+cT5hfREbUJofOifaz5+tDd3xIHcrN2vI=",
+    "key": "m2/official/w16/seed-29/node-11/committed-round-000499.safetensors",
+    "version_id": "mwrWZ1sw3FZDZj0ypJ6UyreloONQcTPm"
+  }
+}

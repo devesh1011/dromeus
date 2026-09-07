@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "world_size": 8,
+  "round_count": 500,
+  "maximum_residual_l2_norm": 4.7006444037424595,
+  "maximum_residual_to_signal_ratio": 0.29663893842176625,
+  "node_round_count": 4000,
+  "minimum_compression_ratio": 5.067911273833514,
+  "maximum_update_payload_bytes": 17672649,
+  "total_update_retries": 8,
+  "total_telemetry_retries": 0
+}

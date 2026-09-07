@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "validated-fresh-reruns",
+  "recovery_report": "recovery-report.json",
+  "seeds": {
+    "17": {
+      "validation_report": "seed-17/reports/validation-report.json",
+      "axl_log_provenance": "seed-17/axl-log-provenance.json",
+      "package_checksums": "seed-17/checksums.sha256"
+    },
+    "29": {
+      "validation_report": "seed-29/reports/validation-report.json",
+      "axl_log_provenance": "seed-29/axl-log-provenance.json",
+      "package_checksums": "seed-29/checksums.sha256"
+    },
+    "41": {
+      "validation_report": "seed-41/reports/validation-report.json",
+      "axl_log_provenance": "seed-41/axl-log-provenance.json",
+      "package_checksums": "seed-41/checksums.sha256"
+    }
+  }
+}

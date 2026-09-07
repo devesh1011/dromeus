@@ -1,0 +1,12 @@
+{
+  "maximum_residual_l2_norm": 4.603545702635469,
+  "maximum_residual_to_signal_ratio": 0.3002583445700444,
+  "maximum_update_payload_bytes": 18731799,
+  "minimum_compression_ratio": 5.067911273833514,
+  "node_round_count": 4000,
+  "passed": true,
+  "round_count": 500,
+  "total_telemetry_retries": 0,
+  "total_update_retries": 0,
+  "world_size": 8
+}

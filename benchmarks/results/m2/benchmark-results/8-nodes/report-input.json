@@ -1,0 +1,57 @@
+{
+  "aggregate_report": "summary.json",
+  "artifact": "../../experiment-config/experiment.yaml",
+  "axl_logs": {
+    "17": [
+      "seed-17/logs/node-0/dromeus.jsonl",
+      "seed-17/logs/node-1/dromeus.jsonl",
+      "seed-17/logs/node-2/dromeus.jsonl",
+      "seed-17/logs/node-3/dromeus.jsonl",
+      "seed-17/logs/node-4/dromeus.jsonl",
+      "seed-17/logs/node-5/dromeus.jsonl",
+      "seed-17/logs/node-6/dromeus.jsonl",
+      "seed-17/logs/node-7/dromeus.jsonl"
+    ],
+    "29": [
+      "seed-29/logs/node-0/dromeus.jsonl",
+      "seed-29/logs/node-1/dromeus.jsonl",
+      "seed-29/logs/node-2/dromeus.jsonl",
+      "seed-29/logs/node-3/dromeus.jsonl",
+      "seed-29/logs/node-4/dromeus.jsonl",
+      "seed-29/logs/node-5/dromeus.jsonl",
+      "seed-29/logs/node-6/dromeus.jsonl",
+      "seed-29/logs/node-7/dromeus.jsonl"
+    ],
+    "41": [
+      "seed-41/logs/node-0/dromeus.jsonl",
+      "seed-41/logs/node-1/dromeus.jsonl",
+      "seed-41/logs/node-2/dromeus.jsonl",
+      "seed-41/logs/node-3/dromeus.jsonl",
+      "seed-41/logs/node-4/dromeus.jsonl",
+      "seed-41/logs/node-5/dromeus.jsonl",
+      "seed-41/logs/node-6/dromeus.jsonl",
+      "seed-41/logs/node-7/dromeus.jsonl"
+    ]
+  },
+  "checkpoint_archive_manifests": {
+    "17": "seed-17/checkpoint-checksums.sha256",
+    "29": "seed-29/checkpoint-checksums.sha256",
+    "41": "seed-41/checkpoint-checksums.sha256"
+  },
+  "milestone": "M2",
+  "note": "All three w8 seeds are accepted.",
+  "pending_seeds": [],
+  "schema_version": 1,
+  "seed_reports": {
+    "17": "seed-17/reports/acceptance-report.json",
+    "29": "seed-29/reports/acceptance-report.json",
+    "41": "seed-41/reports/acceptance-report.json"
+  },
+  "seeds": [
+    17,
+    29,
+    41
+  ],
+  "status": "w8-seeds-17-29-41-accepted",
+  "world_size": 8
+}

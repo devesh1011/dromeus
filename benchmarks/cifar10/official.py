@@ -10,6 +10,12 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from benchmarks.cifar10.fedavg_reference import FedAvgConfig
+from benchmarks.workloads.cifar10.runtime import (
+    BenchmarkNodeConfig as NodeConfig,
+)
+from benchmarks.workloads.cifar10.runtime import (
+    load_benchmark_node_config as load_node_config,
+)
 from dromeus.manifests.canonical import parse_draft_yaml
 from dromeus.manifests.models import (
     DPSGD_ALGORITHM_ID,
@@ -20,7 +26,9 @@ from dromeus.manifests.models import (
     Sha256,
     TrainingPolicy,
 )
-from dromeus.node import NodeConfig, NodeRole, load_node_config
+from dromeus.node import (
+    NodeRole,
+)
 
 
 class OfficialBenchmarkError(ValueError):

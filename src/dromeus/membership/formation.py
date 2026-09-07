@@ -12,6 +12,7 @@ from dromeus.manifests.canonical import (
     canonical_json,
     file_sha256,
     parse_sealed_json,
+    validate_sealed_draft,
 )
 from dromeus.manifests.models import (
     DataContract,
@@ -75,6 +76,10 @@ def validate_ready(
         and local_tensor_schema != manifest.tensor_schema
     ):
         raise ReadyValidationError("local model tensor schema does not match manifest")
+    try:
+        validate_sealed_draft(manifest)
+    except ValueError as error:
+        raise ReadyValidationError(str(error)) from error
 
 
 def create_invitation(
@@ -103,9 +108,7 @@ def seal_manifest(
 ) -> SealedManifest:
     expected_count = draft.participant_count
     if len(participant_keys) != expected_count:
-        raise FormationError(
-            "participant key count does not match declared membership"
-        )
+        raise FormationError("participant key count does not match declared membership")
     ordered_keys = tuple(sorted(participant_keys))
     participants = tuple(
         Participant(public_key=public_key, node_index=node_index)
@@ -333,13 +336,8 @@ class FormationProtocol:
             and invitation.enrollment_expires_at <= datetime.now(UTC)
         ):
             raise FormationError("invitation has expired")
-        if (
-            invitation.expected_participant_count
-            != self._draft.participant_count
-        ):
-            raise FormationError(
-                "invitation participant count does not match draft"
-            )
+        if invitation.expected_participant_count != self._draft.participant_count:
+            raise FormationError("invitation participant count does not match draft")
         local_key = await self._transport.local_public_key()
         emit_event(
             "formation_started",
@@ -371,8 +369,12 @@ class FormationProtocol:
             if envelope.message_type is not MessageType.MANIFEST_SEALED:
                 continue
             manifest = parse_sealed_json(envelope.payload)
-            if manifest.draft_hash != canonical_hash(self._draft):
-                raise FormationError("sealed manifest draft hash mismatch")
+            try:
+                validate_sealed_draft(
+                    manifest, expected_draft_hash=canonical_hash(self._draft)
+                )
+            except ValueError as error:
+                raise FormationError(str(error)) from error
             manifest_hash = canonical_hash(manifest)
         if not accepted:
             raise FormationError("initiator never accepted join request")

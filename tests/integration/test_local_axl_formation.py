@@ -15,8 +15,20 @@ from urllib.request import urlopen
 
 import numpy as np
 import pytest
+from support.paths import REPO_ROOT
 from support.sample_manifest import manifest_data, write_checkpoint
 
+from benchmarks.workloads.cifar10.dataset import (
+    CIFAR10TrainerSettings,
+    create_initial_checkpoint,
+    create_trainer,
+    load_cifar10,
+)
+from benchmarks.workloads.cifar10.resnet32 import MODEL_DEFINITION_HASH
+from dromeus.adapters.classification.torch_trainer import (
+    PyTorchTrainer,
+    TrainerSettings,
+)
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
@@ -27,14 +39,6 @@ from dromeus.protocol.models import MessageType
 from dromeus.runtime import NodeRuntime, NodeState, TrainingConfig
 from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
-from dromeus.training.cifar10 import (
-    CIFAR10TrainerSettings,
-    create_initial_checkpoint,
-    create_trainer,
-    load_cifar10,
-)
-from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
-from dromeus.training.trainer import PyTorchTrainer, TrainerSettings
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.interface import AsyncTransport, ReceivedBytes
 
@@ -43,7 +47,6 @@ pytestmark = pytest.mark.skipif(
     reason="set DROMEUS_RUN_AXL_TESTS=1 to run real AXL integration tests",
 )
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 LOG_ROOT = Path(os.environ.get("DROMEUS_AXL_LOG_ROOT", REPO_ROOT / "logs"))
 AXL_COMMIT = "628e28ace077f26dfe8d0259009b357216a9d8d4"
 
@@ -349,8 +352,8 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
     assert test_data.matches_source(source=pilot_data_source, split="test")
     partitions = await asyncio.to_thread(
         train_data.split_iid,
-        participant_count=len(draft.dataset.partition_sample_counts),
-        seed=draft.dataset.iid_partition_seed,
+        participant_count=draft.participant_count,
+        seed=draft.require_iid_dataset().iid_partition_seed,
     )
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -389,7 +392,9 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
             recording_trainers: list[RecordingTrainer] = []
             for index, transport in enumerate(transports):
                 node_index = node_indices[local_keys[index]]
-                partition_index = draft.dataset.node_index_partitions[node_index]
+                partition_index = (
+                    draft.require_iid_dataset().node_index_partitions[node_index]
+                )
                 trainer = await asyncio.to_thread(
                     create_trainer,
                     train_data=partitions[partition_index],
@@ -398,7 +403,7 @@ async def _test_four_local_axl_nodes_train_cifar10() -> None:
                         trainer=TrainerSettings(
                             seed=17 + node_index,
                             batch_size=128,
-                            learning_rate=draft.learning_rate,
+                            learning_rate=draft.require_learning_rate(),
                             momentum=0.9,
                             weight_decay=1e-4,
                             learning_rate_milestones=(8_000, 12_000),

@@ -1,0 +1,231 @@
+{
+  "artifact": "../../../benchmarks/results/m2/experiment-config/experiment.yaml",
+  "bootstrap_note": "Regenerate launch inputs if the rank-0 public IP changes before execution.",
+  "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "execution_order": [
+    {
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "world_size": 4
+    },
+    {
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "world_size": 8
+    },
+    {
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "world_size": 16
+    }
+  ],
+  "experiment_sha256": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+  "official_package": "../../../benchmarks/results/m2/benchmark-results",
+  "official_package_checksums": "../../../benchmarks/results/m2/benchmark-results/4-nodes/checksums.sha256",
+  "official_package_report_input": "../../../benchmarks/results/m2/benchmark-results/4-nodes/report-input.json",
+  "runs": [
+    {
+      "acceptance_report_sha256": "cebaa43c71529fc0f7d6a08cba786a7877e90755d25b91bae1d2c92e2670364c",
+      "benchmark_seed": 17,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-17/reports/acceptance-report.json",
+      "launch": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-17/launch",
+      "run_id": "noloco-topk45-official-w4-s17-20260829",
+      "status": "accepted",
+      "world_size": 4
+    },
+    {
+      "acceptance_report_sha256": "aeda8f55c3fb0c6d7ae91a5ab523f365ce1316c5b885c1bd85f0d176d890e56a",
+      "benchmark_seed": 29,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-29/reports/acceptance-report.json",
+      "launch": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-29/launch",
+      "run_id": "noloco-topk45-official-w4-s29-20260830",
+      "status": "accepted",
+      "world_size": 4
+    },
+    {
+      "acceptance_report_sha256": "12743bc290d9c3dbf8b077266487cc889e62a0223bad377322acb48f5cfc8d3d",
+      "benchmark_seed": 41,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-41/reports/acceptance-report.json",
+      "launch": "../../../benchmarks/results/m2/benchmark-results/4-nodes/seed-41/launch",
+      "run_id": "noloco-topk45-official-w4-s41-20260830",
+      "status": "accepted",
+      "world_size": 4
+    },
+    {
+      "acceptance_report_sha256": "9e39264be53473fc3a8f61438b2e1a07da899861b667d211af192f06668ce41f",
+      "benchmark_seed": 17,
+      "completed_nodes": 8,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-17/reports/acceptance-report.json",
+      "final_mean_accuracy": 0.9307875,
+      "last_observed_at": "2026-09-02T10:42:50Z",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-17/launch",
+      "manifest_hash": "296a5fd7b075aa59ac2eb88e6f6c975899e2bfda7df090706bd4b21e924b402a",
+      "observed_exchange_retries": 1,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w8-s17-20260829",
+      "started_at": "2026-09-02T08:25:20Z",
+      "stopped_at": "2026-09-02T10:48:49Z",
+      "status": "accepted",
+      "world_size": 8
+    },
+    {
+      "acceptance_report_sha256": "664e7959d3962c03427d801338f49aae749a069a5b99bb33027219413af32016",
+      "attempt_count": 4,
+      "benchmark_seed": 29,
+      "completed_nodes": 8,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-29/reports/acceptance-report.json",
+      "final_mean_accuracy": 0.926525,
+      "last_observed_at": "2026-09-03T13:38:09Z",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-29/launch",
+      "manifest_hash": "d71b52a951a9d770b02a0a9835b845f101279c551e50d1f677696e48cdbe6366",
+      "observed_exchange_retries": 1,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w8-s29-20260829",
+      "started_at": "2026-09-03T08:05:51Z",
+      "stopped_at": "2026-09-03T19:51:54Z",
+      "status": "accepted",
+      "topology_regions": [
+        "us-east-1",
+        "us-west-2",
+        "us-east-2",
+        "eu-west-1"
+      ],
+      "world_size": 8
+    },
+    {
+      "benchmark_seed": 41,
+      "acceptance_report_sha256": "642258fb91cdb2658b36a5381eed61244beea29982085508da8f54dc0f7656aa",
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-41/reports/acceptance-report.json",
+      "final_mean_accuracy": 0.927675,
+      "completed_nodes": 8,
+      "last_observed_at": "2026-09-04T09:16:37Z",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/8-nodes/seed-41/launch",
+      "manifest_hash": "bb0fcc476c08eb29e773da821c2ac68a8e665764717ffb45ef2e1249ce11715c",
+      "observed_exchange_retries": 8,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w8-s41-20260829",
+      "started_at": "2026-09-04T07:17:17Z",
+      "stopped_at": "2026-09-04T09:33:06Z",
+      "status": "accepted",
+      "topology_regions": [
+        "us-east-1",
+        "us-west-2",
+        "us-east-2",
+        "ca-central-1"
+      ],
+      "world_size": 8
+    },
+    {
+      "acceptance_report_sha256": "a8e7e73918c03faa00797f3b3a0a62bb82800c883f23a67b9cb5170cdab41db1",
+      "benchmark_seed": 17,
+      "attempt_count": 3,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-17/launch",
+      "completed_nodes": 16,
+      "last_observed_at": "2026-09-05T18:47:52Z",
+      "final_mean_accuracy": 0.92928125,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-17/reports/acceptance-report.json",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "manifest_hash": "466714b8fa0dab896a42e5a305fde72635d6d62debf2cde4c1f705d6d16fa0cc",
+      "observed_exchange_retries": 60,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w16-s17-20260829",
+      "started_at": "2026-09-05T13:48:33Z",
+      "stopped_at": "2026-09-05T18:49:58Z",
+      "status": "accepted",
+      "topology_regions": [
+        "us-east-1",
+        "us-west-2",
+        "us-east-2",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "ap-northeast-1",
+        "ap-south-1"
+      ],
+      "world_size": 16
+    },
+    {
+      "benchmark_seed": 29,
+      "acceptance_report_sha256": "af65a77a0a92606059cedec16f61e5af17c6a05d22a20cdcb0f4907f240d26d6",
+      "attempt_count": 1,
+      "completed_nodes": 16,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-29/reports/acceptance-report.json",
+      "final_mean_accuracy": 0.92491875,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-29/launch",
+      "last_observed_at": "2026-09-06T09:07:29Z",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "manifest_hash": "b96ac4c0ee5d29f5fd9bd118f0f9f8888380937a4306571836490818b565ffc9",
+      "observed_exchange_retries": 37,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w16-s29-20260829",
+      "started_at": "2026-09-06T05:46:48Z",
+      "status": "accepted",
+      "stopped_at": "2026-09-06T09:07:29Z",
+      "topology_regions": [
+        "us-east-1",
+        "us-west-2",
+        "eu-north-1",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "ap-northeast-1",
+        "ap-south-1"
+      ],
+      "world_size": 16
+    },
+    {
+      "acceptance_report_sha256": "809ab07953202f68860b8ba9ac22b58aaefccce8722f317d67abac55e03cf2fd",
+      "benchmark_seed": 41,
+      "attempt_count": 1,
+      "completed_nodes": 16,
+      "evidence": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-41/reports/acceptance-report.json",
+      "final_mean_accuracy": 0.92434375,
+      "launch": "../../../benchmarks/results/m2/benchmark-results/16-nodes/seed-41/launch",
+      "last_observed_at": "2026-09-06T16:34:24Z",
+      "last_observed_round_max": 499,
+      "last_observed_round_min": 499,
+      "manifest_hash": "3e1b465c09511d736a6e6ebfa9dda582774f6809e0a3f1c9e48724609e0c6ec5",
+      "observed_exchange_retries": 56,
+      "observed_run_failures": 0,
+      "run_id": "noloco-topk45-official-w16-s41-20260829",
+      "started_at": "2026-09-06T12:23:00Z",
+      "status": "accepted",
+      "stopped_at": "2026-09-06T16:34:24Z",
+      "topology_regions": [
+        "us-east-1",
+        "us-west-2",
+        "eu-north-1",
+        "eu-central-1",
+        "eu-west-1",
+        "ap-southeast-2",
+        "ap-northeast-1",
+        "ap-south-1"
+      ],
+      "world_size": 16
+    }
+  ],
+  "schema_version": 1,
+  "status": "w4-w8-w16-seeds17-29-41-accepted",
+  "top_k_fraction": 0.45,
+  "w4_summary": "../../../benchmarks/results/m2/benchmark-results/4-nodes/summary.json",
+  "w8_package_checksums": "../../../benchmarks/results/m2/benchmark-results/8-nodes/checksums.sha256",
+  "w8_report_input": "../../../benchmarks/results/m2/benchmark-results/8-nodes/report-input.json",
+  "w8_summary": "../../../benchmarks/results/m2/benchmark-results/8-nodes/summary.json"
+}

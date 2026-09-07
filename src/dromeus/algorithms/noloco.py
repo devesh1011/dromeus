@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
@@ -176,8 +177,7 @@ class NoLoCoAlgorithm:
         }
         self._error_feedback_residual = {
             name: (
-                logical["outer_gradient"][name]
-                - local["outer_gradient"][name]
+                logical["outer_gradient"][name] - local["outer_gradient"][name]
                 if self._codec_descriptions["outer_gradient"].lossy
                 else np.zeros_like(value, dtype=np.float32)
             ).astype(np.float32)
@@ -359,29 +359,56 @@ class NoLoCoAlgorithm:
         }
         if not trainer_state:
             raise ValueError("NoLoCo trainer checkpoint state is missing")
-        self.trainer.load_checkpoint_tensors(trainer_state)
-        restored_weights = self.trainer.weights()
-        self._validate_tensors(restored_weights)
-        if any(
-            not np.array_equal(restored_weights[name], slow_weights[name])
-            for name in names
-        ):
-            raise ValueError("NoLoCo trainer and slow weights do not match")
-        for artifact_name, codec in self.artifact_codecs.items():
-            codec_prefix = f"{_STATE_PREFIX}codec.{artifact_name}."
-            codec.load_state_dict(
-                {
-                    name.removeprefix(codec_prefix): value.copy()
-                    for name, value in state.items()
-                    if name.startswith(codec_prefix)
-                }
-            )
+        previous_trainer = {
+            name: value.copy(order="C")
+            for name, value in self.trainer.checkpoint_tensors().items()
+        }
+        previous_codecs = {
+            name: deepcopy(codec.state_dict())
+            for name, codec in self.artifact_codecs.items()
+        }
+        try:
+            self.trainer.load_checkpoint_tensors(trainer_state)
+            restored_weights = self.trainer.weights()
+            self._validate_tensors(restored_weights)
+            if any(
+                not np.array_equal(restored_weights[name], slow_weights[name])
+                for name in names
+            ):
+                raise ValueError("NoLoCo trainer and slow weights do not match")
+            for artifact_name, codec in self.artifact_codecs.items():
+                codec_prefix = f"{_STATE_PREFIX}codec.{artifact_name}."
+                codec.load_state_dict(
+                    {
+                        name.removeprefix(codec_prefix): value.copy()
+                        for name, value in state.items()
+                        if name.startswith(codec_prefix)
+                    }
+                )
+        except Exception as error:
+            rollback_errors: list[Exception] = []
+            try:
+                self.trainer.load_checkpoint_tensors(previous_trainer)
+            except Exception as rollback_error:
+                rollback_errors.append(rollback_error)
+            for name, codec in self.artifact_codecs.items():
+                try:
+                    codec.load_state_dict(previous_codecs[name])
+                except Exception as rollback_error:
+                    rollback_errors.append(rollback_error)
+            if rollback_errors:
+                raise RuntimeError(
+                    "NoLoCo checkpoint rollback failed"
+                ) from ExceptionGroup(
+                    "restore and rollback errors", [error, *rollback_errors]
+                )
+            raise
         self._round_id = round_id
         self._completed_outer_steps = completed_outer_steps
         self._phase = phase_by_value[phase_value]
-        self._slow_weights = self._copy_tensors(slow_weights)
-        self._outer_momentum = self._copy_tensors(outer_momentum)
-        self._error_feedback_residual = self._copy_tensors(residual)
+        self._slow_weights = slow_weights
+        self._outer_momentum = outer_momentum
+        self._error_feedback_residual = residual
         self._local_artifacts = None
 
     def state_dict(self) -> dict[str, object]:
@@ -456,9 +483,7 @@ def _tensor_l2_norm(tensors: Mapping[str, np.ndarray]) -> float:
     for value in tensors.values():
         flattened = np.asarray(value, dtype=np.float32).reshape(-1)
         for start in range(0, flattened.size, 1_048_576):
-            chunk = flattened[start : start + 1_048_576].astype(
-                np.float64, copy=False
-            )
+            chunk = flattened[start : start + 1_048_576].astype(np.float64, copy=False)
             total += float(np.sum(np.square(chunk), dtype=np.float64))
     return math.sqrt(total)
 

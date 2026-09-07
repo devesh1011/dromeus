@@ -5,6 +5,13 @@
 .venv/
 __pycache__/
 
+# Local documentation
+docs/
+graphify-out
+learning-records
+lessons
+reference
+
 # Logs
 logs/*.log
 
@@ -13,4 +20,8 @@ logs/*.log
 
 # Misc
 .DS_Store
-benchmarks/results/
+misc/
+tmp
+
+# Local AWS instance credentials and connection state
+aws

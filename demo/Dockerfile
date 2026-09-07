@@ -23,6 +23,8 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
+COPY benchmarks/__init__.py ./benchmarks/__init__.py
+COPY benchmarks/workloads ./benchmarks/workloads
 COPY demo ./demo
 RUN uv venv /app/.venv \
     && UV_HTTP_TIMEOUT=120 uv pip install --python /app/.venv/bin/python \

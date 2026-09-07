@@ -22,12 +22,12 @@ from urllib.request import Request, urlopen
 import numpy as np
 from safetensors.numpy import save_file  # pyright: ignore[reportUnknownVariableType]
 
+from benchmarks.workloads.cifar10.dataset import DATASET_VERSION, PREPROCESSING_HASH
+from benchmarks.workloads.cifar10.resnet32 import MODEL_DEFINITION_HASH
 from dromeus.manifests.models import DraftRunSpec, Tensor, TensorSchema
 from dromeus.membership.formation import create_invitation
 from dromeus.protocol import Envelope, MessageType, decode_envelope
 from dromeus.runtime import NodeRuntime, NodeState
-from dromeus.training.cifar10 import DATASET_VERSION, PREPROCESSING_HASH
-from dromeus.training.resnet32 import MODEL_DEFINITION_HASH
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 from dromeus.transport.interface import ReceivedBytes
 

@@ -17,6 +17,13 @@ from pathlib import Path
 from types import FrameType
 from typing import cast
 
+from benchmarks.workloads.cifar10.dataset import (
+    CIFAR10TrainerSettings,
+    create_initial_checkpoint,
+    create_trainer,
+    load_cifar10,
+)
+from dromeus.adapters.classification.torch_trainer import TrainerSettings
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import Invitation
 from dromeus.membership.formation import create_invitation
@@ -27,11 +34,6 @@ from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.metrics import (
     JsonlMetricsPublisher,
     RoundTiming,
-)
-from dromeus.training.cifar10 import (
-    create_initial_checkpoint,
-    create_trainer,
-    load_cifar10,
 )
 from dromeus.transport.axl import AXLBridgeConfig
 
@@ -446,24 +448,40 @@ class Worker:
                 cache_dir=cache_dir,
                 train=False,
             )
+            dataset = result.manifest.require_iid_dataset()
             partitions = await asyncio.to_thread(
                 train_data.split_iid,
                 participant_count=len(result.manifest.participants),
-                seed=result.manifest.dataset.iid_partition_seed,
+                seed=dataset.iid_partition_seed,
             )
             node_indices = {
                 participant.public_key: participant.node_index
                 for participant in result.manifest.participants
             }
             node_index = node_indices[local_key]
-            partition_index = result.manifest.dataset.node_index_partitions[node_index]
+            partition_index = dataset.node_index_partitions[node_index]
+            policy = result.manifest.training
+            if policy is None:
+                raise ValueError("formed manifest is missing training policy")
             trainer = await asyncio.to_thread(
                 create_trainer,
                 train_data=partitions[partition_index],
                 test_data=test_data,
-                seed=17 + node_index,
-                batch_size=result.manifest.training.batch_size,
-                learning_rate=result.manifest.learning_rate,
+                settings=CIFAR10TrainerSettings(
+                    trainer=TrainerSettings(
+                        seed=17 + node_index,
+                        batch_size=policy.batch_size,
+                        learning_rate=result.manifest.learning_rate,
+                        momentum=policy.momentum,
+                        weight_decay=policy.weight_decay,
+                        learning_rate_milestones=policy.learning_rate_milestones,
+                        learning_rate_gamma=policy.learning_rate_gamma,
+                    ),
+                    model_id=result.manifest.model_id,
+                    model_definition_hash=result.manifest.model_definition_hash,
+                    crop_padding=policy.crop_padding,
+                    normalize=policy.normalize,
+                ),
             )
             metrics = WorkerMetricsPublisher(
                 state=self.state,

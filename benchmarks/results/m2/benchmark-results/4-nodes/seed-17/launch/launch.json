@@ -1,0 +1,20 @@
+{
+  "ablation_id": "compressed",
+  "analysis_module": "benchmarks.noloco.analysis",
+  "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "docker_shm_size_bytes": 1073741824,
+  "dromeus_runner_module": "benchmarks.noloco.dromeus_official_runner",
+  "gloo_socket_interface": "ens5",
+  "nccl_backend": "nccl",
+  "nccl_cross_region_performance_eligible": false,
+  "nccl_socket_interface": "ens5",
+  "reference_runner_module": "benchmarks.noloco_reference.runner",
+  "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+  "runtime_root": "/home/ubuntu/dromeus-official/runs/w4-s17-axllog-rerun-20260907",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 17,
+    "profile": "official",
+    "world_size": 4
+  }
+}

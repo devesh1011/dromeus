@@ -20,7 +20,11 @@ from torch import nn
 from dromeus.manifests.canonical import load_safetensors
 from dromeus.manifests.models import TensorSchema
 from dromeus.training.base import EvaluationResult
-from dromeus.training.model_state import floating_model_state, tensor_schema_for_model
+from dromeus.training.model_state import (
+    floating_model_state,
+    model_state_alias_groups,
+    tensor_schema_for_model,
+)
 from dromeus.training.state import InitialCheckpoint, create_initial_checkpoint
 
 _from_numpy = cast(Callable[[np.ndarray], torch.Tensor], torch.from_numpy)  # pyright: ignore[reportUnknownMemberType]
@@ -81,6 +85,7 @@ class PyTorchTrainer:
                 "exchange requires non-scalar FP32 state; use shape [1] for scalars"
             )
         self._schema = tensor_schema_for_model(model)
+        self._aliases = model_state_alias_groups(model)
         self._steps = 0
         self._local_loss: float | None = None
         # Reject unusable state before the node starts AXL.
@@ -113,6 +118,7 @@ class PyTorchTrainer:
         return self._local_loss
 
     def weights(self) -> dict[str, np.ndarray]:
+        self._validate_alias_layout()
         if tensor_schema_for_model(self._model) != self._schema:
             raise ValueError("application changed its model tensor schema")
         return _copy_state(
@@ -125,6 +131,7 @@ class PyTorchTrainer:
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         current = self.weights()
         candidate = self._validate_like(weights, current)
+        self._validate_alias_values(candidate)
         with torch.no_grad():
             for name, target in floating_model_state(self._model).items():
                 target.copy_(_from_numpy(candidate[name]).to(target.device))
@@ -165,6 +172,7 @@ class PyTorchTrainer:
         self.load_weights(load_safetensors(str(path)))
 
     def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        self._validate_alias_layout()
         state = {
             f"model.{name}": value.detach().cpu().numpy().copy()
             for name, value in self._model.state_dict().items()
@@ -209,6 +217,9 @@ class PyTorchTrainer:
         self._validate_like(
             {k: candidate[k] for k in model_keys}, {k: old[k] for k in model_keys}
         )
+        self._validate_alias_values(
+            {name.removeprefix("model."): candidate[name] for name in model_keys}
+        )
         for key in meta_keys - {"meta.loss"}:
             self._validate_like({key: candidate[key]}, {key: old[key]})
         if not np.array_equal(
@@ -244,6 +255,21 @@ class PyTorchTrainer:
         self._steps = int(state["meta.steps"][0])
         loss = state["meta.loss"]
         self._local_loss = float(loss[0]) if loss.size else None
+
+    def _validate_alias_layout(self) -> None:
+        if model_state_alias_groups(self._model) != self._aliases:
+            raise ValueError("application changed its model alias layout")
+
+    def _validate_alias_values(self, values: Mapping[str, np.ndarray]) -> None:
+        for group in self._aliases:
+            if (
+                group[0] not in values
+            ):  # Integer buffers do not participate in exchange.
+                continue
+            if any(
+                not np.array_equal(values[group[0]], values[name]) for name in group[1:]
+            ):
+                raise ValueError(f"conflicting values for tied model aliases: {group}")
 
     @staticmethod
     def _validate_like(
