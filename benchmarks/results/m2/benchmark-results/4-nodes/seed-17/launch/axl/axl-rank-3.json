@@ -1,0 +1,14 @@
+{
+  "PrivateKeyPath": "/home/ubuntu/dromeus-official/axl-private.pem",
+  "Peers": [
+    "tls://32.196.133.243:9300",
+    "tls://100.53.64.122:9300",
+    "tls://3.71.202.56:9300"
+  ],
+  "Listen": [
+    "tls://0.0.0.0:9300"
+  ],
+  "api_port": 9302,
+  "bridge_addr": "127.0.0.1",
+  "max_message_size": 16777216
+}
