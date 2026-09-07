@@ -1,0 +1,8 @@
+# Adapt paths and bridge URL independently on each machine.
+role: initiator
+draft_path: examples/custom-regression-draft.yaml
+axl_bridge_url: http://127.0.0.1:9002
+run_root: runs/custom-regression/node-0
+invitation_path: runs/custom-regression/invitation.json
+bootstrap_uri: axl://custom-regression-v1
+invitation_timeout_seconds: 300
