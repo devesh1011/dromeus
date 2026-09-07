@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import importlib
+import inspect
 import json
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import Annotated, cast
 from urllib.parse import urlparse
 
 import yaml
@@ -32,13 +34,9 @@ from dromeus.runtime import (
     NodeRuntime,
     ParticipantFormation,
     TrainingConfig,
-    prepare_cifar_training,
+    WorkloadFactory,
 )
-from dromeus.telemetry.events import JsonlEventSink, emit_event
-from dromeus.telemetry.evidence import (
-    BenchmarkNodeReadyEvidence,
-    append_evidence,
-)
+from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 
@@ -57,11 +55,8 @@ class NodeConfig(BaseModel):
     draft_path: Path
     axl_bridge_url: Annotated[str, Field(min_length=1)]
     run_root: Path
-    dataset_cache: Path
     invitation_path: Path
     bootstrap_uri: Annotated[str, Field(min_length=1)]
-    benchmark_seed: int
-    training_device: Literal["cpu", "cuda"] = "cpu"
     invitation_timeout_seconds: Annotated[float, Field(gt=0)] = 300.0
     manifest_expectation: SealedManifestExpectation | None = None
 
@@ -93,20 +88,19 @@ def load_node_config(path: Path) -> NodeConfig:
 async def run_node(
     config: NodeConfig,
     *,
+    prepare_training: WorkloadFactory,
     training_decorator: TrainingDecorator | None = None,
+    on_ready: Callable[[FormationResult, str, EventSink], None | Awaitable[None]]
+    | None = None,
 ) -> None:
-    """Form, train, persist, and stop one production AXL-backed CIFAR node."""
+    """Run a developer-supplied workload; this module never selects models or data."""
     draft, event_sink = await asyncio.to_thread(
         _prepare_node_start,
         config,
     )
-    prepared_training = await asyncio.to_thread(
-        prepare_cifar_training,
-        draft=draft,
-        dataset_cache=config.dataset_cache,
-        benchmark_seed=config.benchmark_seed,
-        device=config.training_device,
-    )
+    prepared_training = await asyncio.to_thread(prepare_training, draft)
+    prepared_training.validate_draft(draft)
+    local_tensor_schema = prepared_training.tensor_schema
     transport = AXLTransport(AXLBridgeConfig(base_url=config.axl_bridge_url))
     local_key = await transport.local_public_key()
     runtime = NodeRuntime(
@@ -117,6 +111,7 @@ async def run_node(
         artifact_root=config.run_root / "formation-artifacts",
         event_sink=event_sink,
         failure=FailureConfig.for_run_root(config.run_root),
+        local_tensor_schema=local_tensor_schema,
     )
     if config.role is NodeRole.INITIATOR:
         checkpoint = await asyncio.to_thread(
@@ -168,16 +163,17 @@ async def run_node(
             run_store_root / "topology-ready.json",
         )
         await asyncio.to_thread(
-            append_evidence,
-            event_sink,
-            BenchmarkNodeReadyEvidence(
-                run_id=result.manifest.run_id,
-                manifest_hash=result.manifest_hash,
-                node_id=local_key,
-                benchmark_seed=config.benchmark_seed,
-                transport="axl",
-            ),
+            emit_event,
+            "node_ready",
+            run_id=result.manifest.run_id,
+            manifest_hash=result.manifest_hash,
+            node_id=local_key,
+            sink=event_sink,
         )
+        if on_ready is not None:
+            notification = on_ready(result, local_key, event_sink)
+            if inspect.isawaitable(notification):
+                await notification
 
     async def record_complete(result: NodeRunResult) -> None:
         await _write_topology_snapshot(
@@ -218,7 +214,6 @@ def _prepare_node_start(
         run_id=draft.run_id,
         sink=event_sink,
         role=config.role,
-        benchmark_seed=config.benchmark_seed,
     )
     return draft, event_sink
 
@@ -253,6 +248,9 @@ def _atomic_write(path: Path, payload: bytes) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run a Dromeus node")
     parser.add_argument("--config", required=True, type=Path)
+    parser.add_argument(
+        "--factory", required=True, help="Local module:callable preparing the workload"
+    )
     return parser
 
 
@@ -263,7 +261,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         _parser().error(f"config file does not exist: {config_path}")
 
     config = load_node_config(config_path)
-    asyncio.run(run_node(config))
+    module_name, separator, factory_name = str(args.factory).partition(":")
+    if not separator or not module_name or not factory_name:
+        raise ValueError("factory must be a local module:callable")
+    factory = getattr(importlib.import_module(module_name), factory_name)
+    if not callable(factory):
+        raise ValueError("workload factory must be callable")
+    asyncio.run(run_node(config, prepare_training=cast(WorkloadFactory, factory)))
     return 0
 
 

@@ -20,14 +20,16 @@ from dromeus.algorithms.codec import (
 )
 from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
-from dromeus.gossip.engine import (
+from dromeus.gossip.axl import (
     AXLFailureBroadcaster,
     AXLPairTransport,
+    decode_run_failure,
+)
+from dromeus.gossip.engine import GossipEngine
+from dromeus.gossip.interfaces import (
     GossipAlgorithm,
-    GossipEngine,
     RoundCommit,
     RunFailure,
-    decode_run_failure,
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.canonical import validate_sealed_expectation
@@ -35,7 +37,7 @@ from dromeus.manifests.models import (
     DPSGD_ALGORITHM_ID,
     NOLOCO_ALGORITHM_ID,
     ConsensusSketchMessage,
-    DatasetContract,
+    DataContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
@@ -59,11 +61,7 @@ from dromeus.telemetry.evidence import (
 )
 from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.training.base import WeightTrainer
-from dromeus.training.cifar10 import (
-    PreparedCIFAR10Training as TrainingOwnedCIFAR,
-)
-from dromeus.training.cifar10 import prepare_training
-from dromeus.training.trainer import InitialCheckpoint
+from dromeus.training.state import InitialCheckpoint
 from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
 
@@ -157,14 +155,15 @@ type ReadyHook = Callable[[FormationResult], None | Awaitable[None]]
 type CompletionHook = Callable[[NodeRunResult], None | Awaitable[None]]
 
 
-@dataclass(frozen=True, slots=True)
-class PreparedCIFARTraining:
-    """Runtime composition over the deep training-owned CIFAR interface."""
+class PreparedTraining(Protocol):
+    """Application-owned workload, validated before network startup."""
 
-    _training: TrainingOwnedCIFAR
+    @property
+    def tensor_schema(self) -> TensorSchema | None: ...
 
-    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
-        return self._training.create_initial_checkpoint(path)
+    def validate_draft(self, draft: DraftRunSpec) -> None: ...
+
+    def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint: ...
 
     def build_config(
         self,
@@ -172,40 +171,11 @@ class PreparedCIFARTraining:
         result: FormationResult,
         local_public_key: str,
         run_root: Path,
-        metrics_publisher: MetricsService,
-    ) -> TrainingConfig:
-        trainer = self._training.create_trainer(
-            manifest=result.manifest,
-            local_public_key=local_public_key,
-        )
-        return TrainingConfig(
-            algorithm=build_algorithm(
-                manifest=result.manifest,
-                trainer=trainer,
-            ),
-            load_checkpoint=trainer.load_checkpoint,
-            run_store=RunStore(run_root / "run-store"),
-            artifact_root=run_root / "rounds",
-            metrics_publisher=metrics_publisher,
-        )
+        metrics_publisher: MetricsService | None = None,
+    ) -> TrainingConfig: ...
 
 
-def prepare_cifar_training(
-    *,
-    draft: DraftRunSpec,
-    dataset_cache: Path,
-    benchmark_seed: int,
-    device: str = "cpu",
-) -> PreparedCIFARTraining:
-    """Prepare local data through the deep training-owned interface."""
-    return PreparedCIFARTraining(
-        _training=prepare_training(
-            draft=draft,
-            cache_dir=dataset_cache,
-            benchmark_seed=benchmark_seed,
-            device=device,
-        )
-    )
+type WorkloadFactory = Callable[[DraftRunSpec], PreparedTraining]
 
 
 def build_algorithm(
@@ -272,11 +242,12 @@ class NodeRuntime:
         transport: AsyncTransport,
         draft: DraftRunSpec,
         environment: EnvironmentFingerprint,
-        dataset: DatasetContract,
+        dataset: DataContract,
         artifact_root: Path,
         event_sink: EventSink | None = None,
         training: TrainingConfig | None = None,
         failure: FailureConfig | None = None,
+        local_tensor_schema: TensorSchema | None = None,
     ) -> None:
         self._transport = transport
         self._formation = FormationProtocol(
@@ -287,6 +258,7 @@ class NodeRuntime:
             transport_limits=draft.transport,
             artifact_root=artifact_root,
             event_sink=event_sink,
+            local_tensor_schema=local_tensor_schema,
         )
         self._state = NodeState.CREATED
         self._result: FormationResult | None = None
