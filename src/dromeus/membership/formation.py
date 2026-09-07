@@ -12,9 +12,10 @@ from dromeus.manifests.canonical import (
     canonical_json,
     file_sha256,
     parse_sealed_json,
+    validate_sealed_draft,
 )
 from dromeus.manifests.models import (
-    DatasetContract,
+    DataContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
@@ -56,8 +57,9 @@ def validate_ready(
     manifest: SealedManifest,
     local_public_key: PublicKey,
     environment: EnvironmentFingerprint,
-    dataset: DatasetContract,
+    dataset: DataContract,
     checkpoint_hash: Sha256,
+    local_tensor_schema: TensorSchema | None = None,
 ) -> None:
     if local_public_key not in {
         participant.public_key for participant in manifest.participants
@@ -69,6 +71,15 @@ def validate_ready(
         raise ReadyValidationError("dataset contract does not match manifest")
     if checkpoint_hash != manifest.initial_checkpoint_hash:
         raise ReadyValidationError("checkpoint hash does not match manifest")
+    if (
+        local_tensor_schema is not None
+        and local_tensor_schema != manifest.tensor_schema
+    ):
+        raise ReadyValidationError("local model tensor schema does not match manifest")
+    try:
+        validate_sealed_draft(manifest)
+    except ValueError as error:
+        raise ReadyValidationError(str(error)) from error
 
 
 def create_invitation(
@@ -83,7 +94,7 @@ def create_invitation(
         initiator_public_key=initiator_public_key,
         bootstrap_uri=bootstrap_uri,
         draft_hash=canonical_hash(draft),
-        expected_participant_count=draft.dataset.participant_count,
+        expected_participant_count=draft.participant_count,
         enrollment_expires_at=enrollment_expires_at,
     )
 
@@ -95,11 +106,9 @@ def seal_manifest(
     initial_checkpoint_hash: Sha256,
     tensor_schema: TensorSchema,
 ) -> SealedManifest:
-    expected_count = draft.dataset.participant_count
+    expected_count = draft.participant_count
     if len(participant_keys) != expected_count:
-        raise FormationError(
-            "participant key count does not match the dataset contract"
-        )
+        raise FormationError("participant key count does not match declared membership")
     ordered_keys = tuple(sorted(participant_keys))
     participants = tuple(
         Participant(public_key=public_key, node_index=node_index)
@@ -142,15 +151,17 @@ class FormationProtocol:
         transport: AsyncTransport,
         draft: DraftRunSpec,
         environment: EnvironmentFingerprint,
-        dataset: DatasetContract,
+        dataset: DataContract,
         transport_limits: TransportLimits,
         artifact_root: Path,
+        local_tensor_schema: TensorSchema | None = None,
         event_sink: EventSink | None = None,
     ) -> None:
         self._transport = transport
         self._draft = draft
         self._environment = environment
         self._dataset = dataset
+        self._local_tensor_schema = local_tensor_schema
         self._transport_limits = transport_limits
         self._artifact_root = artifact_root
         self._event_sink = event_sink
@@ -213,7 +224,7 @@ class FormationProtocol:
             bootstrap_uri=bootstrap_uri,
         )
         participant_keys = {local_key}
-        participant_count = self._draft.dataset.participant_count
+        participant_count = self._draft.participant_count
         while len(participant_keys) < participant_count:
             envelope = await self._next_control()
             if envelope.message_type is not MessageType.JOIN_REQUEST:
@@ -264,6 +275,7 @@ class FormationProtocol:
             environment=self._environment,
             dataset=self._dataset,
             checkpoint_hash=checkpoint_hash,
+            local_tensor_schema=self._local_tensor_schema,
         )
         ready_keys = {local_key}
         while len(ready_keys) < len(manifest.participants):
@@ -324,13 +336,8 @@ class FormationProtocol:
             and invitation.enrollment_expires_at <= datetime.now(UTC)
         ):
             raise FormationError("invitation has expired")
-        if (
-            invitation.expected_participant_count
-            != self._draft.dataset.participant_count
-        ):
-            raise FormationError(
-                "invitation participant count does not match draft"
-            )
+        if invitation.expected_participant_count != self._draft.participant_count:
+            raise FormationError("invitation participant count does not match draft")
         local_key = await self._transport.local_public_key()
         emit_event(
             "formation_started",
@@ -362,8 +369,12 @@ class FormationProtocol:
             if envelope.message_type is not MessageType.MANIFEST_SEALED:
                 continue
             manifest = parse_sealed_json(envelope.payload)
-            if manifest.draft_hash != canonical_hash(self._draft):
-                raise FormationError("sealed manifest draft hash mismatch")
+            try:
+                validate_sealed_draft(
+                    manifest, expected_draft_hash=canonical_hash(self._draft)
+                )
+            except ValueError as error:
+                raise FormationError(str(error)) from error
             manifest_hash = canonical_hash(manifest)
         if not accepted:
             raise FormationError("initiator never accepted join request")
@@ -393,6 +404,7 @@ class FormationProtocol:
             environment=self._environment,
             dataset=self._dataset,
             checkpoint_hash=checkpoint.sha256,
+            local_tensor_schema=self._local_tensor_schema,
         )
         await self._send_control(
             destination=invitation.initiator_public_key,
@@ -493,7 +505,7 @@ class FormationProtocol:
         )
         transfer_budget = (
             self._transport_limits.transfer_lifetime_limit
-            * self._draft.dataset.participant_count
+            * self._draft.participant_count
         )
         return max(retry_budget, transfer_budget)
 
