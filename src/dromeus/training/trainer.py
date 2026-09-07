@@ -1,542 +1,260 @@
-"""Generic PyTorch classification trainer."""
+"""Adapt application-owned PyTorch training to Dromeus tensor exchange.
+
+Callbacks own batching, optimizer, loss, scheduling, and random generators. State
+callbacks must save/restore all of that state as numeric arrays, including a
+loader position and RNG states when relevant. They never receive peer data.
+"""
 
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Callable
-from dataclasses import dataclass
+import math
+from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import cast
 
 import numpy as np
 import torch
-from safetensors.torch import (
-    load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
-)
-from safetensors.torch import (
-    save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
-)
-from torch import Tensor, nn
-from torch.utils.data import DataLoader, Dataset
+from torch import nn
 
-from dromeus.manifests.canonical import file_sha256
-from dromeus.manifests.models import TensorSchema, WarmupCosineSchedule
+from dromeus.manifests.canonical import load_safetensors
+from dromeus.manifests.models import TensorSchema
+from dromeus.training.base import EvaluationResult
 from dromeus.training.model_state import floating_model_state, tensor_schema_for_model
+from dromeus.training.state import InitialCheckpoint, create_initial_checkpoint
 
-BatchTransform = Callable[[Tensor, bool, torch.Generator], Tensor]
-_TRAINING_STATE_PREFIX = "__dromeus_training__."
-_COMPLETED_STEPS = f"{_TRAINING_STATE_PREFIX}completed_steps"
-_BATCHES_CONSUMED = f"{_TRAINING_STATE_PREFIX}batches_consumed"
-_AUGMENTATION_RNG = f"{_TRAINING_STATE_PREFIX}augmentation_rng"
-_LOADER_EPOCH_RNG = f"{_TRAINING_STATE_PREFIX}loader_epoch_rng"
-_MOMENTUM_PREFIX = f"{_TRAINING_STATE_PREFIX}momentum."
-_ADAM_FIRST_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.exp_avg."
-_ADAM_SECOND_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.exp_avg_sq."
-_ADAM_STEP_PREFIX = f"{_TRAINING_STATE_PREFIX}adam.step."
-_load_checkpoint = cast(Callable[..., dict[str, Tensor]], _load_file)
-_save_checkpoint = cast(Callable[..., None], _save_file)
+_from_numpy = cast(Callable[[np.ndarray], torch.Tensor], torch.from_numpy)  # pyright: ignore[reportUnknownMemberType]
+
+TrainStep = Callable[[nn.Module], float | None]
+Evaluate = Callable[[nn.Module], Mapping[str, float]]
+SaveState = Callable[[], dict[str, np.ndarray]]
+LoadState = Callable[[dict[str, np.ndarray]], None]
 
 
-@dataclass(frozen=True, slots=True)
-class InitialCheckpoint:
-    """Canonical checkpoint handoff data for initiator formation."""
-
-    path: Path
-    tensor_schema: TensorSchema
-    sha256: str
-
-
-@dataclass(frozen=True, slots=True)
-class TrainerSettings:
-    """Validated local optimizer, schedule, loader, and device settings."""
-
-    seed: int = 0
-    batch_size: int = 32
-    learning_rate: float = 0.1
-    optimizer: Literal["sgd", "adam"] = "sgd"
-    momentum: float = 0.0
-    weight_decay: float = 0.0
-    adam_beta1: float = 0.9
-    adam_beta2: float = 0.999
-    adam_epsilon: float = 1e-8
-    gradient_clip_norm: float | None = None
-    learning_rate_milestones: tuple[int, ...] = ()
-    learning_rate_gamma: float = 0.1
-    learning_rate_schedule: WarmupCosineSchedule | None = None
-    device: str = "cpu"
-    augment: bool = True
-
-    def __post_init__(self) -> None:
-        if self.batch_size <= 0:
-            raise ValueError("batch_size must be positive")
-        if self.learning_rate <= 0 or not np.isfinite(self.learning_rate):
-            raise ValueError("learning_rate must be positive and finite")
-        if not 0 <= self.momentum < 1 or not np.isfinite(self.momentum):
-            raise ValueError("momentum must be finite in [0, 1)")
-        if self.weight_decay < 0 or not np.isfinite(self.weight_decay):
-            raise ValueError("weight_decay must be finite and non-negative")
-        if self.optimizer not in ("sgd", "adam"):
-            raise ValueError("optimizer must be sgd or adam")
-        if not 0 <= self.adam_beta1 < 1 or not np.isfinite(self.adam_beta1):
-            raise ValueError("Adam beta1 must be finite in [0, 1)")
-        if not 0 <= self.adam_beta2 < 1 or not np.isfinite(self.adam_beta2):
-            raise ValueError("Adam beta2 must be finite in [0, 1)")
-        if self.adam_epsilon <= 0 or not np.isfinite(self.adam_epsilon):
-            raise ValueError("Adam epsilon must be positive and finite")
-        if self.gradient_clip_norm is not None and (
-            self.gradient_clip_norm <= 0
-            or not np.isfinite(self.gradient_clip_norm)
-        ):
-            raise ValueError("gradient clip norm must be positive and finite")
-        if any(
-            milestone <= 0 for milestone in self.learning_rate_milestones
-        ) or any(
-            right <= left
-            for left, right in zip(
-                self.learning_rate_milestones,
-                self.learning_rate_milestones[1:],
-                strict=False,
-            )
-        ):
-            raise ValueError("learning-rate milestones must be strictly increasing")
-        if not 0 < self.learning_rate_gamma < 1 or not np.isfinite(
-            self.learning_rate_gamma
-        ):
-            raise ValueError("learning_rate_gamma must be finite in (0, 1)")
-        if (
-            self.learning_rate_schedule is not None
-            and self.learning_rate_milestones
-        ):
-            raise ValueError(
-                "warmup-cosine and milestone schedules are mutually exclusive"
-            )
-        if self.learning_rate_schedule is not None and not np.isclose(
-            self.learning_rate,
-            self.learning_rate_schedule.peak_learning_rate,
-            rtol=0.0,
-            atol=0.0,
-        ):
-            raise ValueError("learning rate must equal warmup-cosine peak")
-
-
-def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
-    """Derive one stable RNG seed for a named benchmark concern."""
-    digest = hashlib.sha256(f"{benchmark_seed}:{purpose}".encode()).digest()
-    return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
-
-
-def create_initial_checkpoint(
-    path: Path,
-    *,
-    model: nn.Module,
-    model_definition: str,
-) -> InitialCheckpoint:
-    """Write and describe the canonical checkpoint before formation."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    _save_checkpoint(
-        {
-            name: value.detach().cpu()
-            for name, value in floating_model_state(model).items()
-        },
-        str(path),
-        metadata={"model_definition": model_definition},
-    )
-    return InitialCheckpoint(
-        path=path,
-        tensor_schema=tensor_schema_for_model(model),
-        sha256=checkpoint_hash(path),
-    )
-
-
-def checkpoint_hash(path: Path) -> str:
-    """Return a checkpoint's SHA-256 digest."""
-    return file_sha256(path)
+def _copy_state(state: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
+    result: dict[str, np.ndarray] = {}
+    for name, value in state.items():
+        if not name or value.dtype.kind not in "biuf" or not np.isfinite(value).all():
+            raise ValueError("checkpoint state needs named finite numeric arrays")
+        result[name] = value.copy(order="C")
+    return result
 
 
 class PyTorchTrainer:
-    """Own a classification model, optimizer, loader, and checkpoint seam."""
+    """A custom local step plus complete application state, with no model registry.
+
+    Exchange currently supports non-scalar FP32 floating model state. Integer
+    buffers stay local and are checkpointed. Callbacks must not replace the model
+    or mutate its schema. Each instance is used serially by one node's runtime.
+    """
 
     def __init__(
         self,
         *,
         model: nn.Module,
-        model_definition: str,
-        train_data: Dataset[tuple[Tensor, int]],
-        test_data: Dataset[tuple[Tensor, int]] | None = None,
-        settings: TrainerSettings,
-        batch_transform: BatchTransform | None = None,
+        train_step: TrainStep,
+        save_state: SaveState,
+        load_state: LoadState,
+        state_identity: str,
+        evaluate: Evaluate | None = None,
     ) -> None:
-        self._settings = settings
-        self._device = torch.device(settings.device)
-        self._model_definition = model_definition
-        self._model = model.to(self._device)
-        self._optimizer_name = settings.optimizer
-        self._optimizer = (
-            torch.optim.SGD(
-                self._model.parameters(),
-                lr=settings.learning_rate,
-                momentum=settings.momentum,
-                weight_decay=settings.weight_decay,
+        if not state_identity.strip():
+            raise ValueError(
+                "state identity must bind local data and training configuration"
             )
-            if settings.optimizer == "sgd"
-            else torch.optim.Adam(
-                self._model.parameters(),
-                lr=settings.learning_rate,
-                betas=(settings.adam_beta1, settings.adam_beta2),
-                eps=settings.adam_epsilon,
-                weight_decay=settings.weight_decay,
+        self._model = model
+        self._train_step = train_step
+        self._evaluate = evaluate
+        self._save_state = save_state
+        self._load_state = load_state
+        self._identity = np.frombuffer(
+            hashlib.sha256(state_identity.encode()).digest(), dtype=np.uint8
+        ).copy()
+        self._contract_identity: str | None = None
+        values = floating_model_state(model)
+        if not values:
+            raise ValueError("model must expose floating exchangeable state")
+        if any(
+            value.dtype != torch.float32 or value.ndim == 0 for value in values.values()
+        ):
+            raise ValueError(
+                "exchange requires non-scalar FP32 state; use shape [1] for scalars"
             )
-        )
-        self._gradient_clip_norm = settings.gradient_clip_norm
-        self._base_learning_rate = settings.learning_rate
-        self._learning_rate_milestones = settings.learning_rate_milestones
-        self._learning_rate_gamma = settings.learning_rate_gamma
-        self._learning_rate_schedule = settings.learning_rate_schedule
-        self._completed_steps = 0
-        self._augment = settings.augment
-        self._batch_transform = batch_transform
-        self._augmentation_generator = torch.Generator(device="cpu")
-        self._augmentation_generator.manual_seed(settings.seed + 1)
-        self._loader_generator = torch.Generator(device="cpu")
-        self._loader_generator.manual_seed(settings.seed + 2)
-        self._batch_size = settings.batch_size
-        self._test_data = test_data or train_data
-        self._train_loader = self._make_loader(train_data, shuffle=True)
-        self._batches_consumed = 0
-        self._epoch_generator_state = self._loader_generator.get_state().clone()
-        self._train_iterator = iter(self._train_loader)
-        self._tensor_schema = tensor_schema_for_model(self._model)
-        self._last_local_loss: float | None = None
-        self._apply_learning_rate()
+        self._schema = tensor_schema_for_model(model)
+        self._steps = 0
+        self._local_loss: float | None = None
+        # Reject unusable state before the node starts AXL.
+        self.checkpoint_tensors()
 
     @property
     def tensor_schema(self) -> TensorSchema:
-        return self._tensor_schema
+        return self._schema
 
     @property
-    def settings(self) -> TrainerSettings:
-        """Return immutable construction settings for audit and verification."""
-        return self._settings
+    def completed_steps(self) -> int:
+        return self._steps
 
-    @property
-    def last_local_loss(self) -> float | None:
-        return self._last_local_loss
+    def bind_contract(self, identity: str) -> None:
+        """Bind durable state to shared application semantics before formation."""
+        if self._contract_identity is not None:
+            if identity != self._contract_identity:
+                raise ValueError("trainer is already bound to another application")
+            return
+        if self._steps:
+            raise ValueError("bind the application contract before training")
+        self._identity = np.frombuffer(
+            hashlib.sha256(self._identity.tobytes() + identity.encode()).digest(),
+            dtype=np.uint8,
+        ).copy()
+        self._contract_identity = identity
 
     @property
     def local_loss(self) -> float | None:
-        return self._last_local_loss
-
-    @property
-    def learning_rate(self) -> float:
-        return float(self._optimizer.param_groups[0]["lr"])
+        return self._local_loss
 
     def weights(self) -> dict[str, np.ndarray]:
-        return {
-            name: value.detach().cpu().numpy().copy()
-            for name, value in floating_model_state(self._model).items()
-        }
-
-    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
-        expected = floating_model_state(self._model)
-        if set(weights) != set(expected):
-            raise ValueError("weight names do not match model")
-        with torch.no_grad():
-            for name, target in expected.items():
-                value = np.asarray(weights[name])
-                expected_dtype = target.detach().cpu().numpy().dtype
-                if value.shape != tuple(target.shape) or value.dtype != expected_dtype:
-                    raise ValueError(f"weight {name} does not match model")
-                target.copy_(
-                    torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                        cast(Any, np.ascontiguousarray(value))
-                    ).to(self._device)
-                )
-
-    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
-        """Return model, optimizer, schedule, and stochastic-loader state."""
-        state = self.weights()
-        state[_COMPLETED_STEPS] = np.array([self._completed_steps], dtype=np.int64)
-        state[_BATCHES_CONSUMED] = np.array(
-            [self._batches_consumed],
-            dtype=np.int64,
-        )
-        state[_AUGMENTATION_RNG] = (
-            self._augmentation_generator.get_state().cpu().numpy().copy()
-        )
-        state[_LOADER_EPOCH_RNG] = self._epoch_generator_state.cpu().numpy().copy()
-        for name, parameter in self._model.named_parameters():
-            optimizer_state = self._optimizer.state.get(parameter, {})
-            momentum = optimizer_state.get("momentum_buffer")
-            if isinstance(momentum, Tensor):
-                state[f"{_MOMENTUM_PREFIX}{name}"] = (
-                    momentum.detach().cpu().numpy().copy()
-                )
-            first_moment = optimizer_state.get("exp_avg")
-            second_moment = optimizer_state.get("exp_avg_sq")
-            step = optimizer_state.get("step")
-            if (
-                isinstance(first_moment, Tensor)
-                and isinstance(second_moment, Tensor)
-                and isinstance(step, Tensor)
-            ):
-                state[f"{_ADAM_FIRST_PREFIX}{name}"] = (
-                    first_moment.detach().cpu().numpy().copy()
-                )
-                state[f"{_ADAM_SECOND_PREFIX}{name}"] = (
-                    second_moment.detach().cpu().numpy().copy()
-                )
-                state[f"{_ADAM_STEP_PREFIX}{name}"] = (
-                    step.detach().cpu().numpy().copy()
-                )
-        return state
-
-    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
-        """Restore a complete tensor checkpoint produced by `checkpoint_tensors`."""
-        required = {
-            _COMPLETED_STEPS,
-            _BATCHES_CONSUMED,
-            _AUGMENTATION_RNG,
-            _LOADER_EPOCH_RNG,
-        }
-        if not required.issubset(state):
-            raise ValueError("training checkpoint metadata is incomplete")
-        model_names = set(floating_model_state(self._model))
-        if not model_names.issubset(state):
-            raise ValueError("training checkpoint model state is incomplete")
-        self.load_weights({name: state[name] for name in model_names})
-        completed_steps = _single_non_negative_int(state[_COMPLETED_STEPS])
-        batches_consumed = _single_non_negative_int(state[_BATCHES_CONSUMED])
-        if batches_consumed > len(self._train_loader):
-            raise ValueError("training checkpoint batch position is invalid")
-
-        self._optimizer.state.clear()
-        for name, parameter in self._model.named_parameters():
-            if self._optimizer_name == "sgd":
-                key = f"{_MOMENTUM_PREFIX}{name}"
-                if key not in state:
-                    continue
-                value = np.asarray(state[key])
-                expected_dtype = parameter.detach().cpu().numpy().dtype
-                if (
-                    value.dtype != expected_dtype
-                    or value.shape != tuple(parameter.shape)
-                ):
-                    raise ValueError(f"momentum state {name} does not match model")
-                self._optimizer.state[parameter]["momentum_buffer"] = (
-                    torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                        cast(Any, np.ascontiguousarray(value))
-                    ).to(self._device)
-                )
-                continue
-            first_key = f"{_ADAM_FIRST_PREFIX}{name}"
-            second_key = f"{_ADAM_SECOND_PREFIX}{name}"
-            step_key = f"{_ADAM_STEP_PREFIX}{name}"
-            present = {first_key, second_key, step_key} & set(state)
-            if not present:
-                continue
-            if present != {first_key, second_key, step_key}:
-                raise ValueError(f"Adam state {name} is incomplete")
-            first = np.asarray(state[first_key])
-            second = np.asarray(state[second_key])
-            step = np.asarray(state[step_key])
-            expected_dtype = parameter.detach().cpu().numpy().dtype
-            if (
-                first.dtype != expected_dtype
-                or second.dtype != expected_dtype
-                or first.shape != tuple(parameter.shape)
-                or second.shape != tuple(parameter.shape)
-                or step.size != 1
-            ):
-                raise ValueError(f"Adam state {name} does not match model")
-            self._optimizer.state[parameter].update(
-                {
-                    "exp_avg": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                        cast(Any, np.ascontiguousarray(first))
-                    ).to(self._device),
-                    "exp_avg_sq": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                        cast(Any, np.ascontiguousarray(second))
-                    ).to(self._device),
-                    "step": torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-                        cast(Any, np.ascontiguousarray(step))
-                    ).to(self._device),
-                }
-            )
-
-        augmentation_state = _rng_state_tensor(
-            state[_AUGMENTATION_RNG],
-            name="augmentation",
-        )
-        loader_epoch_state = _rng_state_tensor(
-            state[_LOADER_EPOCH_RNG],
-            name="loader",
-        )
-        self._augmentation_generator.set_state(augmentation_state)
-        self._loader_generator.set_state(loader_epoch_state)
-        self._epoch_generator_state = loader_epoch_state.clone()
-        self._train_iterator = iter(self._train_loader)
-        for _ in range(batches_consumed):
-            try:
-                next(self._train_iterator)
-            except StopIteration as error:
-                raise ValueError(
-                    "training checkpoint batch position is invalid"
-                ) from error
-        self._batches_consumed = batches_consumed
-        self._completed_steps = completed_steps
-        self._apply_learning_rate()
-
-    def train_local_steps(self, step_count: int) -> None:
-        if step_count < 0:
-            raise ValueError("step_count must be non-negative")
-        if (
-            self._learning_rate_schedule is not None
-            and self._completed_steps + step_count
-            > self._learning_rate_schedule.total_inner_steps
-        ):
-            raise ValueError("local training exceeds learning-rate schedule")
-        self._model.train()
-        for _ in range(step_count):
-            self._apply_learning_rate()
-            images, labels = self._next_batch()
-            self._optimizer.zero_grad(set_to_none=True)
-            loss = nn.functional.cross_entropy(self._model(images), labels)
-            self._last_local_loss = float(loss.detach().cpu().item())
-            loss.backward()  # pyright: ignore[reportUnknownMemberType]
-            if self._gradient_clip_norm is not None:
-                nn.utils.clip_grad_norm_(
-                    self._model.parameters(), self._gradient_clip_norm
-                )
-            self._optimizer.step()  # pyright: ignore[reportUnknownMemberType]
-            self._completed_steps += 1
-        self._apply_learning_rate()
-
-    def evaluate(
-        self,
-        data: Dataset[tuple[Tensor, int]] | None = None,
-    ) -> tuple[float, float]:
-        """Return mean cross-entropy and accuracy without changing train state."""
-        loader = self._make_loader(data or self._test_data, shuffle=False)
-        was_training = self._model.training
-        self._model.eval()
-        total_loss = 0.0
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for images, labels in loader:
-                images = self._prepare_batch(images.to(self._device), augment=False)
-                labels = labels.to(self._device)
-                logits = self._model(images)
-                batch_size = labels.shape[0]
-                total_loss += (
-                    float(nn.functional.cross_entropy(logits, labels).item())
-                    * batch_size
-                )
-                correct += int((logits.argmax(dim=1) == labels).sum().item())
-                total += batch_size
-        self._model.train(was_training)
-        return total_loss / total, correct / total
-
-    def save_checkpoint(self, path: Path) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        _save_checkpoint(
+        if tensor_schema_for_model(self._model) != self._schema:
+            raise ValueError("application changed its model tensor schema")
+        return _copy_state(
             {
-                name: value.detach().cpu()
+                name: value.detach().cpu().numpy()
                 for name, value in floating_model_state(self._model).items()
-            },
-            str(path),
-            metadata={"model_definition": self._model_definition},
-        )
-
-    def load_checkpoint(self, path: Path) -> None:
-        values = _load_checkpoint(str(path), device=str(self._device))
-        self.load_weights(
-            {
-                name: value.detach().cpu().numpy().astype(np.float32, copy=False)
-                for name, value in values.items()
             }
         )
 
-    @staticmethod
-    def checkpoint_hash(path: Path) -> str:
-        return checkpoint_hash(path)
+    def load_weights(self, weights: dict[str, np.ndarray]) -> None:
+        current = self.weights()
+        candidate = self._validate_like(weights, current)
+        with torch.no_grad():
+            for name, target in floating_model_state(self._model).items():
+                target.copy_(_from_numpy(candidate[name]).to(target.device))
 
-    def _make_loader(
-        self,
-        data: Dataset[tuple[Tensor, int]],
-        *,
-        shuffle: bool,
-    ) -> DataLoader[Any]:
-        return DataLoader(
-            data,
-            batch_size=self._batch_size,
-            shuffle=shuffle,
-            generator=self._loader_generator if shuffle else None,
-            drop_last=False,
-            num_workers=0,
-        )
+    def train_local_steps(self, step_count: int) -> None:
+        if step_count <= 0:
+            raise ValueError("local step count must be positive")
+        for _ in range(step_count):
+            loss = self._train_step(self._model)
+            if loss is not None and not math.isfinite(loss):
+                raise ValueError("application returned non-finite local loss")
+            self._local_loss = None if loss is None else float(loss)
+            self._steps += 1
+        self.weights()  # Detect non-finite or structurally changed model state.
 
-    def _next_batch(self) -> tuple[Tensor, Tensor]:
+    def evaluate(self) -> EvaluationResult | None:
+        if self._evaluate is None:
+            return None
+        modes = [(module, module.training) for module in self._model.modules()]
         try:
-            images, labels = next(self._train_iterator)
-        except StopIteration:
-            self._epoch_generator_state = self._loader_generator.get_state().clone()
-            self._train_iterator = iter(self._train_loader)
-            self._batches_consumed = 0
-            images, labels = next(self._train_iterator)
-        self._batches_consumed += 1
-        return (
-            self._prepare_batch(images.to(self._device), augment=self._augment),
-            labels.to(self._device),
+            self._model.eval()
+            with torch.no_grad():
+                return EvaluationResult(self._evaluate(self._model))
+        finally:
+            for module, training in modes:
+                module.training = training
+
+    def create_initial_checkpoint(
+        self, path: Path, *, model_definition: str
+    ) -> InitialCheckpoint:
+        self.weights()
+        return create_initial_checkpoint(
+            path, model=self._model, model_definition=model_definition
         )
 
-    def _prepare_batch(self, images: Tensor, *, augment: bool) -> Tensor:
-        if self._batch_transform is None:
-            return images
-        return self._batch_transform(
-            images,
-            augment,
-            self._augmentation_generator,
+    def load_checkpoint(self, path: Path) -> None:
+        """Load group initial weights, retaining local application state."""
+        self.load_weights(load_safetensors(str(path)))
+
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        state = {
+            f"model.{name}": value.detach().cpu().numpy().copy()
+            for name, value in self._model.state_dict().items()
+        }
+        state.update(
+            {
+                f"application.{name}": value
+                for name, value in _copy_state(self._save_state()).items()
+            }
         )
+        state.update(
+            {
+                "meta.version": np.array([1], dtype=np.int64),
+                "meta.identity": self._identity.copy(),
+                "meta.steps": np.array([self._steps], dtype=np.int64),
+                "meta.loss": np.array(
+                    [] if self._local_loss is None else [self._local_loss],
+                    dtype=np.float64,
+                ),
+                "meta.modes": np.array(
+                    [module.training for module in self._model.modules()],
+                    dtype=np.bool_,
+                ),
+            }
+        )
+        return _copy_state(state)
 
-    def _apply_learning_rate(self) -> None:
-        if self._learning_rate_schedule is not None:
-            learning_rate = self._learning_rate_schedule.learning_rate(
-                self._completed_steps
-            )
-        else:
-            decay_count = sum(
-                self._completed_steps >= milestone
-                for milestone in self._learning_rate_milestones
-            )
-            learning_rate = self._base_learning_rate * (
-                self._learning_rate_gamma**decay_count
-            )
-        for group in self._optimizer.param_groups:
-            group["lr"] = learning_rate
+    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
+        """Validate model/meta before restoring callbacks; roll back on failure.
 
+        Application load_state must also accept its own save_state output. If an
+        application violates that contract, rollback failure is fatal to the run.
+        """
+        candidate = _copy_state(state)
+        old = self.checkpoint_tensors()
+        model_keys = {name for name in old if name.startswith("model.")}
+        meta_keys = {name for name in old if name.startswith("meta.")}
+        if {
+            name for name in candidate if not name.startswith("application.")
+        } != model_keys | meta_keys:
+            raise ValueError("checkpoint model or metadata keys mismatch")
+        self._validate_like(
+            {k: candidate[k] for k in model_keys}, {k: old[k] for k in model_keys}
+        )
+        for key in meta_keys - {"meta.loss"}:
+            self._validate_like({key: candidate[key]}, {key: old[key]})
+        if not np.array_equal(
+            candidate["meta.version"], old["meta.version"]
+        ) or not np.array_equal(candidate["meta.identity"], self._identity):
+            raise ValueError("checkpoint version or local state identity mismatch")
+        if candidate["meta.steps"][0] < 0:
+            raise ValueError("checkpoint step count must be non-negative")
+        loss = candidate["meta.loss"]
+        if loss.dtype != np.float64 or loss.shape not in ((0,), (1,)):
+            raise ValueError("invalid checkpoint loss")
+        try:
+            self._restore(candidate)
+        except Exception:
+            self._restore(old)
+            raise
 
-def _single_non_negative_int(value: np.ndarray) -> int:
-    array = np.asarray(value)
-    if array.dtype != np.int64 or array.shape != (1,) or int(array[0]) < 0:
-        raise ValueError("training checkpoint counter is invalid")
-    return int(array[0])
+    def _restore(self, state: dict[str, np.ndarray]) -> None:
+        self._load_state(
+            {
+                name.removeprefix("application."): value.copy()
+                for name, value in state.items()
+                if name.startswith("application.")
+            }
+        )
+        with torch.no_grad():
+            for name, value in self._model.state_dict().items():
+                value.copy_(_from_numpy(state[f"model.{name}"]).to(value.device))
+        for module, mode in zip(
+            self._model.modules(), state["meta.modes"], strict=True
+        ):
+            module.training = bool(mode)
+        self._steps = int(state["meta.steps"][0])
+        loss = state["meta.loss"]
+        self._local_loss = float(loss[0]) if loss.size else None
 
-
-def _rng_state_tensor(value: np.ndarray, *, name: str) -> Tensor:
-    array = np.asarray(value)
-    if array.dtype != np.uint8 or array.ndim != 1:
-        raise ValueError(f"{name} RNG state is invalid")
-    return torch.from_numpy(  # pyright: ignore[reportUnknownMemberType]
-        cast(Any, np.ascontiguousarray(array))
-    )
-
-
-__all__ = [
-    "BatchTransform",
-    "InitialCheckpoint",
-    "PyTorchTrainer",
-    "TrainerSettings",
-    "checkpoint_hash",
-    "create_initial_checkpoint",
-    "derive_benchmark_seed",
-]
+    @staticmethod
+    def _validate_like(
+        state: Mapping[str, np.ndarray], expected: Mapping[str, np.ndarray]
+    ) -> dict[str, np.ndarray]:
+        if state.keys() != expected.keys():
+            raise ValueError("model state keys mismatch")
+        candidate = _copy_state(state)
+        if any(
+            candidate[name].shape != value.shape or candidate[name].dtype != value.dtype
+            for name, value in expected.items()
+        ):
+            raise ValueError("model state shape or dtype mismatch")
+        return candidate

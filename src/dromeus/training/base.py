@@ -2,9 +2,28 @@
 
 from __future__ import annotations
 
+import math
+from collections.abc import Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Protocol, runtime_checkable
 
 import numpy as np
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationResult:
+    """Named finite metrics with application-defined meaning and units."""
+
+    metrics: Mapping[str, float]
+
+    def __post_init__(self) -> None:
+        if any(
+            not name.strip() or not math.isfinite(value)
+            for name, value in self.metrics.items()
+        ):
+            raise ValueError("evaluation metrics need nonblank names and finite values")
+        object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
 
 
 class WeightTrainer(Protocol):
@@ -25,8 +44,8 @@ class WeightTrainer(Protocol):
         """Return the latest local loss, or none before training."""
         ...
 
-    def evaluate(self) -> tuple[float, float] | None:
-        """Return local evaluation loss and accuracy, or none when unavailable."""
+    def evaluate(self) -> EvaluationResult | tuple[float, float] | None:
+        """Return named metrics, a legacy loss/accuracy pair, or no evaluation."""
         ...
 
 
