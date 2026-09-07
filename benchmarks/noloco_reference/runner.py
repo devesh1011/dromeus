@@ -34,8 +34,7 @@ from benchmarks.noloco_reference.trajectory import (
     TrajectoryContext,
     TrajectoryWriter,
 )
-from dromeus.gossip.peer_scheduler import PeerScheduler
-from dromeus.training.cifar10 import (
+from benchmarks.workloads.cifar10.dataset import (
     DATA_SOURCE,
     DATASET_REVISION,
     PREPROCESSING_HASH,
@@ -43,7 +42,11 @@ from dromeus.training.cifar10 import (
     create_trainer,
     load_cifar10,
 )
-from dromeus.training.trainer import PyTorchTrainer, TrainerSettings
+from dromeus.adapters.classification.torch_trainer import (
+    PyTorchTrainer,
+    TrainerSettings,
+)
+from dromeus.gossip.peer_scheduler import PeerScheduler
 
 Backend = Literal["gloo", "nccl"]
 
