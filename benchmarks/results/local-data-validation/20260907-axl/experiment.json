@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "purpose": "synthetic local CPU non-IID development validation; not M2 acceptance",
+  "seed": 17,
+  "world_size": 4,
+  "profiles": ["iid", "label-skew-moderate", "label-skew-severe", "quantity-skew", "feature-skew"],
+  "model_definition": "torch.nn.Linear(in_features=8,out_features=4,bias=True);float32;v1",
+  "round_count": 8,
+  "inner_steps": 50,
+  "batch_size": 16,
+  "outer": {"alpha": 0.5, "beta": 0.7, "gamma": 0.7},
+  "adam": {"learning_rate": 0.01, "beta1": 0.9, "beta2": 0.999, "epsilon": 1e-8, "gradient_clip_norm": 1.0},
+  "weight_decay": 0.0,
+  "learning_rate_schedule": {
+    "schedule_id": "linear-warmup-cosine-v1",
+    "total_inner_steps": 400,
+    "warmup_inner_steps": 50,
+    "start_learning_rate": 0.005,
+    "peak_learning_rate": 0.01,
+    "final_learning_rate": 0.001
+  },
+  "variants": ["identity", "bitmap-int8"],
+  "top_k_fraction": 0.45,
+  "gates": {
+    "common_heldout_mean_accuracy_min": 0.8,
+    "common_heldout_worst_accuracy_min": 0.6,
+    "compressed_accuracy_gap_max": 0.1,
+    "reference_atol": 0.000001,
+    "reference_rtol": 0.000001
+  },
+  "transport": {"max_payload_bytes": 8388608, "max_retries": 3, "retry_timeout_seconds": 2.0, "chunk_size_bytes": 1024, "window_size": 2},
+  "compute_budget": "400 optimizer steps per node for every method; partial batches retained; repeated local passes permitted; actual sample presentations reported",
+  "evidence": "every committed outer state; local and explicit common held-out evaluation; application envelope byte accounting excluding AXL/TCP framing",
+  "claims": "equal-node objective; no sample weighting; no M2 compression or residual threshold; local synchronous reference is not NCCL"
+}
