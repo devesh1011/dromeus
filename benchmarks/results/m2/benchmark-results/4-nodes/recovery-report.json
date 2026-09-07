@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "status": "validated-fresh-reruns",
+  "created_at": "2026-09-06T21:26:33.900027+00:00",
+  "purpose": "Supply separately managed AXL process logs that were absent from the original accepted four-node packages. These are fresh deterministic reruns, not recovered original logs.",
+  "original_log_recovery": {
+    "status": "unrecoverable-from-inspected-sources",
+    "reason": "Original workers were terminated with delete-on-termination root volumes; no matching S3 log objects, CloudWatch log groups, EBS snapshots, AWS Backup recovery points, or Recycle Bin volumes existed. The local Trash had been emptied by the user."
+  },
+  "isolation": {
+    "parallel_runs": 3,
+    "workers": 12,
+    "separate_security_boundaries": true,
+    "cross_seed_peering": false,
+    "shared_axl_identities_across_isolated_overlays": true
+  },
+  "seeds": [
+    {
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+      "status": "validated-rerun",
+      "manifest_hash": "833ec4ad012a612fe81aec610e573fe08b5e8ba3feb07ac2febe56cf6922c4e5",
+      "mean_accuracy": 0.930825,
+      "residual_l2_max": 4.555979162298655,
+      "residual_ratio_max": 0.2965785077320018,
+      "divergence_slope": -0.00030362690117287133,
+      "state_exchange_retries": 0,
+      "transport_update_retries": 0,
+      "axl_log_count": 4,
+      "axl_log_total_bytes": 6733921,
+      "axl_log_sha256_by_rank": [
+        "24ed1b2cbbbdd5b9e5e1cbe0f186c3218e698678ef61e6ae4c6adce5fd0e8994",
+        "13e6d764ca2c55830cca72def37464f7ad3d0d4f7eb50dec32d0cfcfe10439c5",
+        "e3c6fc864bcf7004341b0b0a5bd7011f967606dc8cc1a27ff7d2e04fb5147004",
+        "a2f2901ee89d413c7b1594a19275bf74a67f0caf7cbbf1f034f78ea953503464"
+      ],
+      "checkpoint_hashes_match_prior_accepted_run": true,
+      "quality_metrics_match_prior_accepted_run": true,
+      "missing_rerun_time_ranges": [],
+      "validation_report": "seed-17/reports/validation-report.json",
+      "axl_log_provenance": "seed-17/axl-log-provenance.json",
+      "package_checksums": "seed-17/checksums.sha256"
+    },
+    {
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w4-s29-axllog-rerun-20260907",
+      "status": "validated-rerun",
+      "manifest_hash": "2c73dd74f24841451b0f16ff5501f338f7cf989531a5bb66e38e95cbf41fe976",
+      "mean_accuracy": 0.9285,
+      "residual_l2_max": 4.62675215669632,
+      "residual_ratio_max": 0.29624926466362955,
+      "divergence_slope": -0.00032737777634851977,
+      "state_exchange_retries": 1,
+      "transport_update_retries": 0,
+      "axl_log_count": 4,
+      "axl_log_total_bytes": 6734317,
+      "axl_log_sha256_by_rank": [
+        "4ecbf60826ed5ec0af4ac76cc2956b78e2e1fb15e50e78c834b45a7fcc42ba50",
+        "4a21a782f9b77b9f0d91ebafe28beee7a5cc914bff9a26a1754102de04b3916c",
+        "08305fc7f0076590613811cb160d2670e46d18bb33b7f7c3e4b051fd1a99fbf4",
+        "d943fce1a49b7089d9eb25ca252114f4c86d0b0bf599194e5a214df8b2abad78"
+      ],
+      "checkpoint_hashes_match_prior_accepted_run": true,
+      "quality_metrics_match_prior_accepted_run": true,
+      "missing_rerun_time_ranges": [],
+      "validation_report": "seed-29/reports/validation-report.json",
+      "axl_log_provenance": "seed-29/axl-log-provenance.json",
+      "package_checksums": "seed-29/checksums.sha256"
+    },
+    {
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+      "status": "validated-rerun",
+      "manifest_hash": "d8c37090897c49d03ecb7ddcaecf425881cee9ce48a952e053912b6c5f9997b7",
+      "mean_accuracy": 0.9237,
+      "residual_l2_max": 4.637983827467084,
+      "residual_ratio_max": 0.29689973279651766,
+      "divergence_slope": -0.0002945851087523378,
+      "state_exchange_retries": 5,
+      "transport_update_retries": 4,
+      "axl_log_count": 4,
+      "axl_log_total_bytes": 6734581,
+      "axl_log_sha256_by_rank": [
+        "c547064a8d8be190ab4d072a46ffc280009d59daacc35d24c7a88dd3163760dc",
+        "f9c0c211b82a6518413565f5dda01a291740364a28be3e522a0299a3134054d6",
+        "5af5c1c982d7b2a51eebffc25846a4ef68976d4153c2a7c62552261de9a96e1b",
+        "a361cc3d7873c0a74112e9452a5159d6bff0686256a5f31ce089d690a2258527"
+      ],
+      "checkpoint_hashes_match_prior_accepted_run": true,
+      "quality_metrics_match_prior_accepted_run": true,
+      "missing_rerun_time_ranges": [],
+      "validation_report": "seed-41/reports/validation-report.json",
+      "axl_log_provenance": "seed-41/axl-log-provenance.json",
+      "package_checksums": "seed-41/checksums.sha256"
+    }
+  ],
+  "totals": {
+    "validated_runs": 3,
+    "axl_logs": 12,
+    "axl_log_bytes": 20202819,
+    "node_rounds": 6000,
+    "checkpoint_archives": 12
+  },
+  "promotion": {
+    "existing_accepted_packages_modified": false,
+    "staged_only": true,
+    "accepted_package_checksums_need_update_now": false,
+    "required_if_promoted": [
+      "replace selected run directories only after explicit review",
+      "regenerate 4-nodes/checksums.sha256 and report-input/index hashes",
+      "update orchestration matrix acceptance hashes and run IDs",
+      "update canonical M2 progress record"
+    ]
+  },
+  "time_coverage_note": "Every rerun AXL process started before Dromeus node_start and was stopped after node_complete. AXL stdout/stderr does not timestamp every line; per-node lifecycle sidecars provide the coverage bounds."
+}
