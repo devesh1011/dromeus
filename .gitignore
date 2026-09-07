@@ -24,3 +24,4 @@ misc/
 tmp
 
 # Local AWS instance credentials and connection state
+aws
