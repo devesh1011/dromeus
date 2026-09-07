@@ -51,6 +51,22 @@ def canonical_hash(model: BaseModel) -> str:
     return hashlib.sha256(canonical_json(model)).hexdigest()
 
 
+def validate_sealed_draft(
+    manifest: SealedManifest,
+    *,
+    expected_draft_hash: str | None = None,
+) -> None:
+    """Verify the actual shared fields, not just the manifest's claimed hash."""
+    draft = DraftRunSpec.model_validate(
+        manifest.model_dump(mode="python", include=set(DraftRunSpec.model_fields))
+    )
+    actual = canonical_hash(draft)
+    if actual != manifest.draft_hash:
+        raise ValueError("sealed draft fields do not match the claimed draft hash")
+    if expected_draft_hash is not None and actual != expected_draft_hash:
+        raise ValueError("sealed draft does not match the expected local draft")
+
+
 def update_bundle_digest(metadata: OpaqueUpdateBundleMetadata) -> str:
     """Hash bundle identity and canonically ordered artifact descriptors."""
     ordered = tuple(sorted(metadata.artifacts, key=lambda artifact: artifact.name))

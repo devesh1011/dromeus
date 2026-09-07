@@ -34,6 +34,7 @@ from dromeus.protocol.models import (
 from dromeus.protocol.version import PROTOCOL_VERSION
 
 MANIFEST_VERSION = 3
+LOCAL_DATA_MANIFEST_VERSION = 4
 MIN_PARTICIPANT_COUNT = 4
 MAX_PARTICIPANT_COUNT = 16
 DPSGD_ALGORITHM_ID = "dpsgd"
@@ -115,6 +116,58 @@ class DatasetContract(DomainModel):
         return self
 
 
+class ClassificationTaskContract(DomainModel):
+    """Shared classification meaning, independent of each node's private records.
+
+    Label position is the target integer. Nodes may hold different amounts of
+    data and omit classes; each node has equal influence on the training objective.
+    Local paths, counts, and fingerprints never enter this shared identity.
+    """
+
+    dataset_id: Literal["local-classification-v1"]
+    input_shape: tuple[Annotated[int, Field(gt=0)], ...] = Field(min_length=1)
+    input_dtype: Literal["float32"]
+    label_names: tuple[Annotated[str, StringConstraints(min_length=1)], ...] = Field(
+        min_length=2
+    )
+    preprocessing_hash: Sha256
+    objective: Literal["equal-node"] = "equal-node"
+
+    @property
+    def class_count(self) -> int:
+        return len(self.label_names)
+
+    @model_validator(mode="after")
+    def valid_label_meanings(self) -> Self:
+        if any(not label.strip() for label in self.label_names):
+            raise ValueError("label names must not be blank")
+        if len(set(self.label_names)) != len(self.label_names):
+            raise ValueError("label names must be unique and ordered")
+        return self
+
+
+class ApplicationTaskContract(DomainModel):
+    """Application-defined input, target, preprocessing, and objective semantics.
+
+    The definition hash identifies the shared task, never node-local records.
+    """
+
+    dataset_id: Literal["application-v1"] = "application-v1"
+    task_id: Identifier
+    definition_hash: Sha256
+    objective: Literal["equal-node"] = "equal-node"
+
+
+class ApplicationTrainingPolicy(DomainModel):
+    """Identity of the application's local step, optimizer, and batching policy."""
+
+    policy_id: Identifier
+    definition_hash: Sha256
+
+
+DataContract = DatasetContract | ClassificationTaskContract | ApplicationTaskContract
+
+
 class EnvironmentFingerprint(DomainModel):
     dromeus_version: Identifier
     dromeus_commit: Annotated[
@@ -124,9 +177,9 @@ class EnvironmentFingerprint(DomainModel):
     pytorch_version: PackageVersion
     axl_version: Identifier
     model_definition_hash: Sha256
-    container_image_digest: Annotated[
-        str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")
-    ]
+    container_image_digest: (
+        Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")] | None
+    ) = None
 
 
 class TransportLimits(DomainModel):
@@ -244,13 +297,12 @@ class WarmupCosineSchedule(DomainModel):
             if self.warmup_inner_steps == 1:
                 return self.peak_learning_rate
             progress = completed_inner_steps / (self.warmup_inner_steps - 1)
-            return self.start_learning_rate + (
-                self.peak_learning_rate - self.start_learning_rate
-            ) * progress
+            return (
+                self.start_learning_rate
+                + (self.peak_learning_rate - self.start_learning_rate) * progress
+            )
         decay_steps = self.total_inner_steps - self.warmup_inner_steps
-        progress = (completed_inner_steps - self.warmup_inner_steps + 1) / (
-            decay_steps
-        )
+        progress = (completed_inner_steps - self.warmup_inner_steps + 1) / (decay_steps)
         return self.final_learning_rate + 0.5 * (
             self.peak_learning_rate - self.final_learning_rate
         ) * (1.0 + math.cos(math.pi * progress))
@@ -298,23 +350,28 @@ class AdamSettings(DomainModel):
 
 
 class NoLoCoConfig(DomainModel):
-    """Outer NoLoCo hyperparameters and the inner Adam configuration."""
+    """Outer NoLoCo settings plus an optional legacy Adam recipe."""
 
     alpha: Annotated[float, Field(ge=0.0, lt=1.0)]
     beta: Annotated[float, Field(gt=0.0)]
     gamma: Annotated[float, Field(gt=0.0)]
     inner_steps: Annotated[int, Field(gt=0)]
-    adam: AdamSettings
+    adam: AdamSettings | None = None
 
-    @model_validator(mode="after")
-    def frozen_hyperparameters(self) -> Self:
+    def require_adam(self) -> AdamSettings:
+        """Return the legacy recipe's optimizer settings."""
+        if self.adam is None:
+            raise ValueError("this recipe requires Adam settings")
+        return self.adam
+
+    def validate_legacy_recipe(self) -> None:
+        """Preserve the frozen M2/classification recipe's exact constraints."""
         if self.alpha != 0.5 or self.beta != 0.7 or self.gamma != 0.7:
             raise ValueError("NoLoCo requires alpha=0.5, beta=0.7, and gamma=0.7")
         if self.inner_steps != 50:
             raise ValueError("NoLoCo requires exactly 50 inner steps")
-        if self.adam.gradient_clip_norm != 1.0:
+        if self.require_adam().gradient_clip_norm != 1.0:
             raise ValueError("NoLoCo requires Adam gradient clipping at 1.0")
-        return self
 
 
 class ArtifactCodec(DomainModel):
@@ -355,60 +412,127 @@ class UpdateCodecBinding(DomainModel):
 
 
 class DraftRunSpec(DomainModel):
-    manifest_version: Literal[3] = MANIFEST_VERSION
+    manifest_version: Literal[3, 4] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION
     run_id: RunId
-    algorithm_id: AlgorithmId
+    algorithm_id: AlgorithmId = NOLOCO_ALGORITHM_ID
     model_id: Identifier
     model_definition_hash: Sha256
-    dataset: DatasetContract
+    dataset: DataContract = Field(discriminator="dataset_id")
+    expected_participant_count: (
+        Annotated[int, Field(ge=MIN_PARTICIPANT_COUNT, le=MAX_PARTICIPANT_COUNT)] | None
+    ) = None
     environment: EnvironmentFingerprint
     local_steps: Annotated[int, Field(gt=0)]
     round_count: Annotated[int, Field(gt=0)]
-    optimizer: Literal["sgd", "adam"] = "sgd"
-    learning_rate: Annotated[float, Field(gt=0)]
+    optimizer: Literal["sgd", "adam", "application"] = "sgd"
+    learning_rate: Annotated[float, Field(gt=0)] | None = None
     peer_scheduler_seed: int
     codec_id: Literal["safetensors-v1"]
     transport: TransportLimits
     consensus_sketch: ConsensusSketchConfig
     training: TrainingPolicy | None = None
+    application_training: ApplicationTrainingPolicy | None = None
     algorithm_config: NoLoCoConfig | None = None
     artifact_codecs: tuple[ArtifactCodec, ...] | None = None
 
+    @property
+    def participant_count(self) -> int:
+        """Resolve fixed membership without relying on private dataset sizes."""
+        if isinstance(self.dataset, DatasetContract):
+            return self.dataset.participant_count
+        assert self.expected_participant_count is not None
+        return self.expected_participant_count
+
+    def require_iid_dataset(self) -> DatasetContract:
+        """Return the legacy recipe contract or reject a local-data run."""
+        if not isinstance(self.dataset, DatasetContract):
+            raise ValueError("this recipe requires the manifest v3 CIFAR-10 contract")
+        return self.dataset
+
+    def require_learning_rate(self) -> float:
+        if self.learning_rate is None:
+            raise ValueError("this recipe requires a learning rate")
+        return self.learning_rate
+
     @model_validator(mode="after")
     def valid_manifest(self) -> Self:
+        if self.manifest_version == MANIFEST_VERSION:
+            if self.environment.container_image_digest is None:
+                raise ValueError("manifest v3 requires a container image digest")
+            if not isinstance(self.dataset, DatasetContract):
+                raise ValueError("manifest v3 requires the CIFAR-10 dataset contract")
+            if self.expected_participant_count is not None:
+                raise ValueError(
+                    "manifest v3 derives membership from dataset partitions"
+                )
+        else:
+            if not isinstance(
+                self.dataset, (ClassificationTaskContract, ApplicationTaskContract)
+            ):
+                raise ValueError(
+                    "manifest v4 requires a local classification task "
+                    "or application task"
+                )
+            if self.expected_participant_count is None:
+                raise ValueError("manifest v4 requires expected participant count")
+            validate_participant_count(self.expected_participant_count)
         if self.environment.model_definition_hash != self.model_definition_hash:
             raise ValueError("environment model hash does not match draft")
-        if self.training is None:
-            raise ValueError("manifest v3 requires training policy")
+        application = isinstance(self.dataset, ApplicationTaskContract)
+        if application:
+            if self.optimizer != "application" or self.application_training is None:
+                raise ValueError(
+                    "application tasks require application training policy"
+                )
+            if self.training is not None or self.learning_rate is not None:
+                raise ValueError(
+                    "application training owns its optimizer and learning rate"
+                )
+        else:
+            if self.application_training is not None or self.optimizer == "application":
+                raise ValueError("application training requires an application task")
+            if self.training is None:
+                raise ValueError("manifest requires training policy")
+            self.require_learning_rate()
         if self.algorithm_id == DPSGD_ALGORITHM_ID:
-            if self.optimizer != "sgd":
-                raise ValueError("dpsgd requires sgd")
-            if self.training.learning_rate_schedule is not None:
-                raise ValueError("warmup-cosine is only supported for NoLoCo")
+            if not application:
+                if self.optimizer != "sgd":
+                    raise ValueError("dpsgd requires sgd")
+                assert self.training is not None
+                if self.training.learning_rate_schedule is not None:
+                    raise ValueError("warmup-cosine is only supported for NoLoCo")
+            if self.algorithm_config is not None or self.artifact_codecs is not None:
+                raise ValueError("dpsgd does not use NoLoCo configuration")
             return self
         if self.algorithm_id != NOLOCO_ALGORITHM_ID:
-            raise ValueError("manifest v3 requires dpsgd or noloco")
-        if self.optimizer != "adam":
-            raise ValueError("noloco requires adam")
-        if self.training.final_consensus_rounds != 0:
-            raise ValueError("NoLoCo requires final_consensus_rounds to be zero")
+            raise ValueError("manifest requires dpsgd or noloco")
         if self.algorithm_config is None or self.artifact_codecs is None:
             raise ValueError(
                 "NoLoCo requires algorithm and artifact codec configuration"
             )
-        schedule = self.training.learning_rate_schedule
-        if schedule is not None:
-            expected_steps = self.round_count * self.algorithm_config.inner_steps
-            if schedule.total_inner_steps != expected_steps:
-                raise ValueError(
-                    "warmup-cosine total steps must match round count"
-                )
-            peak = self.algorithm_config.adam.learning_rate
-            if schedule.peak_learning_rate != peak or self.learning_rate != peak:
-                raise ValueError(
-                    "warmup-cosine peak must match NoLoCo Adam learning rate"
-                )
+        if application:
+            if self.algorithm_config.adam is not None:
+                raise ValueError("application NoLoCo delegates its inner optimizer")
+            if self.local_steps != self.algorithm_config.inner_steps:
+                raise ValueError("local steps must match NoLoCo inner steps")
+        else:
+            if self.optimizer != "adam":
+                raise ValueError("noloco requires adam")
+            assert self.training is not None
+            if self.training.final_consensus_rounds != 0:
+                raise ValueError("NoLoCo requires final_consensus_rounds to be zero")
+            self.algorithm_config.validate_legacy_recipe()
+            schedule = self.training.learning_rate_schedule
+            if schedule is not None:
+                expected_steps = self.round_count * self.algorithm_config.inner_steps
+                if schedule.total_inner_steps != expected_steps:
+                    raise ValueError("warmup-cosine total steps must match round count")
+                peak = self.algorithm_config.require_adam().learning_rate
+                if schedule.peak_learning_rate != peak or self.learning_rate != peak:
+                    raise ValueError(
+                        "warmup-cosine peak must match NoLoCo Adam learning rate"
+                    )
         names = [codec.artifact_name for codec in self.artifact_codecs]
         if len(names) != len(set(names)) or set(names) != {
             "outer_gradient",
@@ -433,10 +557,7 @@ class DraftRunSpec(DomainModel):
             or self.transport.window_size is None
         ):
             raise ValueError("NoLoCo requires chunk size and window size")
-        if (
-            self.transport.chunk_size_bytes
-            > self.transport.message_payload_limit
-        ):
+        if self.transport.chunk_size_bytes > self.transport.message_payload_limit:
             raise ValueError("chunk size must not exceed message payload limit")
         return self
 
@@ -460,6 +581,11 @@ class Invitation(DomainModel):
 
 
 class SealedManifest(DraftRunSpec):
+    # Defaults are a draft-authoring convenience; sealed authority is explicit.
+    # Pydantic permits required overrides of defaulted, keyword-only fields.
+    algorithm_id: AlgorithmId = Field(  # pyright: ignore[reportGeneralTypeIssues]
+        ...
+    )
     draft_hash: Sha256
     participants: tuple[Participant, ...] = Field(
         min_length=MIN_PARTICIPANT_COUNT,
@@ -481,9 +607,9 @@ class SealedManifest(DraftRunSpec):
                 "participant node indices must be exactly 0 through "
                 f"{participant_count - 1}"
             )
-        if self.dataset.participant_count != participant_count:
+        if self.participant_count != participant_count:
             raise ValueError(
-                "dataset partition count must match participant count"
+                "declared participant count must match sealed participant count"
             )
         return self
 
