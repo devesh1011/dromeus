@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Protocol
 
 from dromeus.telemetry.events import EventSink
@@ -12,6 +14,7 @@ from dromeus.telemetry.evidence import (
     EvidenceRecord,
     RoundMetricsEvidence,
     RunFailedEvidence,
+    TaskRoundMetricsEvidence,
     append_evidence,
 )
 
@@ -34,6 +37,7 @@ class RoundTiming:
     error_feedback_residual_to_signal_ratio: float | None = None
     evaluation_loss: float | None = None
     evaluation_accuracy: float | None = None
+    evaluation_metrics: Mapping[str, float] | None = None
     transfer_id: str | None = None
     encoded_artifact_bytes: int | None = None
 
@@ -55,10 +59,8 @@ class RoundTiming:
             raise ValueError("retries must be non-negative")
         if self.encoded_artifact_bytes is not None and self.encoded_artifact_bytes <= 0:
             raise ValueError("encoded artifact bytes must be positive")
-        if self.local_loss is not None and (
-            not math.isfinite(self.local_loss) or self.local_loss < 0
-        ):
-            raise ValueError("local_loss must be finite and non-negative")
+        if self.local_loss is not None and (not math.isfinite(self.local_loss)):
+            raise ValueError("local_loss must be finite")
         observations = (
             self.error_feedback_residual_l2_norm,
             self.error_feedback_signal_l2_norm,
@@ -80,6 +82,19 @@ class RoundTiming:
             or not 0 <= self.evaluation_accuracy <= 1
         ):
             raise ValueError("evaluation_accuracy must be finite in [0, 1]")
+        if self.evaluation_metrics is not None:
+            if any(
+                not name.strip() or not math.isfinite(value)
+                for name, value in self.evaluation_metrics.items()
+            ):
+                raise ValueError(
+                    "task metrics require nonblank names and finite values"
+                )
+            object.__setattr__(
+                self,
+                "evaluation_metrics",
+                MappingProxyType(dict(self.evaluation_metrics)),
+            )
 
 
 class MetricsPublisher(Protocol):
@@ -139,52 +154,26 @@ class JsonlMetricsPublisher(MetricsPublisher):
         self._task = None
 
     def submit(self, timing: RoundTiming) -> bool:
-        record = RoundMetricsEvidence(
+        # Copy fields individually: mappingproxy is deliberately not pickleable.
+        payload: dict[str, object] = {
+            name: getattr(timing, name)
+            for name in timing.__dataclass_fields__
+            if name != "evaluation_metrics"
+        }
+        payload.update(
             run_id=self._run_id,
             manifest_hash=self._manifest_hash,
             node_id=self._node_id,
             message_id=f"metric-{self._node_id[:8]}-{timing.round_id}",
-            transfer_id=timing.transfer_id,
-            peer_id=timing.peer_id,
-            round_id=timing.round_id,
-            local_loss=(
-                float(timing.local_loss)
-                if timing.local_loss is not None
-                else None
-            ),
-            error_feedback_residual_l2_norm=(
-                float(timing.error_feedback_residual_l2_norm)
-                if timing.error_feedback_residual_l2_norm is not None
-                else None
-            ),
-            error_feedback_signal_l2_norm=(
-                float(timing.error_feedback_signal_l2_norm)
-                if timing.error_feedback_signal_l2_norm is not None
-                else None
-            ),
-            error_feedback_residual_to_signal_ratio=(
-                float(timing.error_feedback_residual_to_signal_ratio)
-                if timing.error_feedback_residual_to_signal_ratio is not None
-                else None
-            ),
-            evaluation_loss=(
-                float(timing.evaluation_loss)
-                if timing.evaluation_loss is not None
-                else None
-            ),
-            evaluation_accuracy=(
-                float(timing.evaluation_accuracy)
-                if timing.evaluation_accuracy is not None
-                else None
-            ),
-            local_compute_seconds=float(timing.local_compute_seconds),
-            peer_wait_seconds=float(timing.peer_wait_seconds),
-            transfer_seconds=float(timing.transfer_seconds),
-            mixing_seconds=float(timing.mixing_seconds),
-            evaluation_seconds=float(timing.evaluation_seconds),
-            retries=timing.retries,
-            encoded_artifact_bytes=timing.encoded_artifact_bytes,
         )
+        record: EvidenceRecord
+        if timing.evaluation_metrics is not None or (
+            timing.local_loss is not None and timing.local_loss < 0
+        ):
+            payload["evaluation_metrics"] = dict(timing.evaluation_metrics or {})
+            record = TaskRoundMetricsEvidence.model_validate(payload)
+        else:
+            record = RoundMetricsEvidence.model_validate(payload)
         return self._enqueue(record)
 
     def submit_failure(self, *, round_id: int, error_type: str, reason: str) -> bool:
@@ -218,9 +207,7 @@ class JsonlMetricsPublisher(MetricsPublisher):
             except TimeoutError:
                 continue
             try:
-                written = await asyncio.to_thread(
-                    append_evidence, self._sink, record
-                )
+                written = await asyncio.to_thread(append_evidence, self._sink, record)
                 if not written:
                     self._dropped += 1
             except Exception:

@@ -35,7 +35,7 @@ class EvidenceError(ValueError):
     """Official benchmark evidence is invalid, incompatible, or inconsistent."""
 
 
-class _EvidenceModel(BaseModel):
+class _EvidenceBase(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
@@ -43,7 +43,6 @@ class _EvidenceModel(BaseModel):
         allow_inf_nan=False,
     )
 
-    evidence_version: Literal[1] = EVIDENCE_VERSION
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     run_id: RunId
     manifest_hash: Sha256
@@ -55,6 +54,10 @@ class _EvidenceModel(BaseModel):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("evidence timestamp must include a timezone")
         return value
+
+
+class _EvidenceModel(_EvidenceBase):
+    evidence_version: Literal[1] = EVIDENCE_VERSION
 
 
 class BenchmarkNodeReadyEvidence(_EvidenceModel):
@@ -72,9 +75,7 @@ class RoundMetricsEvidence(_EvidenceModel):
     local_loss: float | None = Field(default=None, ge=0)
     error_feedback_residual_l2_norm: float | None = Field(default=None, ge=0)
     error_feedback_signal_l2_norm: float | None = Field(default=None, ge=0)
-    error_feedback_residual_to_signal_ratio: float | None = Field(
-        default=None, ge=0
-    )
+    error_feedback_residual_to_signal_ratio: float | None = Field(default=None, ge=0)
     evaluation_loss: float | None = Field(default=None, ge=0)
     evaluation_accuracy: float | None = Field(default=None, ge=0, le=1)
     local_compute_seconds: float = Field(ge=0)
@@ -84,6 +85,38 @@ class RoundMetricsEvidence(_EvidenceModel):
     evaluation_seconds: float = Field(ge=0)
     retries: int = Field(ge=0)
     encoded_artifact_bytes: int | None = Field(default=None, gt=0)
+
+
+class TaskRoundMetricsEvidence(_EvidenceBase):
+    """Task-independent version 2 metrics; benchmark version 1 stays unchanged."""
+
+    evidence_version: Literal[2] = 2
+    evaluation_metrics: dict[str, float] = Field(default_factory=dict)
+    event: Literal["task_round_metrics"] = "task_round_metrics"
+    message_id: MessageId
+    transfer_id: TransferId | None = None
+    peer_id: PublicKey
+    round_id: RoundId
+    local_loss: float | None = None
+    error_feedback_residual_l2_norm: float | None = Field(default=None, ge=0)
+    error_feedback_signal_l2_norm: float | None = Field(default=None, ge=0)
+    error_feedback_residual_to_signal_ratio: float | None = Field(default=None, ge=0)
+    evaluation_loss: float | None = Field(default=None, ge=0)
+    evaluation_accuracy: float | None = Field(default=None, ge=0, le=1)
+    local_compute_seconds: float = Field(ge=0)
+    peer_wait_seconds: float = Field(ge=0)
+    transfer_seconds: float = Field(ge=0)
+    mixing_seconds: float = Field(ge=0)
+    evaluation_seconds: float = Field(ge=0)
+    retries: int = Field(ge=0)
+    encoded_artifact_bytes: int | None = Field(default=None, gt=0)
+
+    @field_validator("evaluation_metrics")
+    @classmethod
+    def valid_names(cls, values: dict[str, float]) -> dict[str, float]:
+        if any(not name.strip() for name in values):
+            raise ValueError("metric names must not be blank")
+        return values
 
 
 class ConsensusDistanceEvidence(_EvidenceModel):
@@ -129,6 +162,7 @@ class RunFailedEvidence(_EvidenceModel):
 type EvidenceRecord = (
     BenchmarkNodeReadyEvidence
     | RoundMetricsEvidence
+    | TaskRoundMetricsEvidence
     | ConsensusDistanceEvidence
     | ConsensusSketchSentEvidence
     | TransferMessageSentEvidence
@@ -139,6 +173,7 @@ _EVIDENCE_EVENTS = frozenset(
     {
         "benchmark_node_ready",
         "round_metrics",
+        "task_round_metrics",
         "consensus_distance",
         "consensus_sketch_sent",
         "transfer_message_sent",
@@ -178,10 +213,7 @@ class EvidenceLog:
                     f"invalid JSONL record at {path}:{line_number}"
                 ) from error
             event = value.get("event")
-            if (
-                "evidence_version" not in value
-                and event not in _EVIDENCE_EVENTS
-            ):
+            if "evidence_version" not in value and event not in _EVIDENCE_EVENTS:
                 continue
             try:
                 record = decode_evidence(line)
@@ -198,15 +230,13 @@ class EvidenceLog:
         if len(node_ids) > 1:
             raise EvidenceError(f"evidence node id mismatch in {path}")
         for record_type in (
-            RoundMetricsEvidence,
+            (RoundMetricsEvidence, TaskRoundMetricsEvidence),
             ConsensusDistanceEvidence,
             ConsensusSketchSentEvidence,
             RunFailedEvidence,
         ):
             rounds = [
-                record.round_id
-                for record in records
-                if isinstance(record, record_type)
+                record.round_id for record in records if isinstance(record, record_type)
             ]
             if len(rounds) != len(set(rounds)):
                 raise EvidenceError(f"duplicate evidence round in {path}")
@@ -242,7 +272,7 @@ def decode_evidence(data: bytes | str) -> EvidenceRecord:
     """Strictly decode one supported evidence record."""
     value = _json_object(data)
     version = value.get("evidence_version")
-    if version != EVIDENCE_VERSION:
+    if version not in (EVIDENCE_VERSION, 2):
         raise EvidenceError(f"unsupported evidence version: {version}")
     try:
         return _EVIDENCE_ADAPTER.validate_json(
