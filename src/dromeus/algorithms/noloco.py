@@ -6,6 +6,7 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, cast
 
 import numpy as np
@@ -20,10 +21,12 @@ from dromeus.algorithms.base import (
     checksum_artifacts,
 )
 from dromeus.algorithms.codec import (
+    CodecDescription,
     IdentityCodec,
     NamedSafetensorsUpdateBundleCodec,
     NamedUpdateBundleCodec,
     UpdateCodec,
+    describe_update_codec,
     validate_tensor_map,
 )
 from dromeus.manifests.models import (
@@ -77,13 +80,22 @@ class NoLoCoAlgorithm:
     _local_artifacts: dict[str, dict[str, np.ndarray]] | None = field(
         default=None, init=False, repr=False
     )
+    _codec_descriptions: Mapping[str, CodecDescription] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         if set(self.artifact_codecs) != set(_ARTIFACT_NAMES):
             raise ValueError("NoLoCo codecs must cover both named artifacts")
+        self.artifact_codecs = MappingProxyType(dict(self.artifact_codecs))
+        self._codec_descriptions = MappingProxyType(
+            {
+                name: describe_update_codec(codec, self.tensor_schema)
+                for name, codec in self.artifact_codecs.items()
+            }
+        )
         if self.manifest_codec_ids is not None:
             actual = {
-                name: codec.codec_id for name, codec in self.artifact_codecs.items()
+                name: description.codec_id
+                for name, description in self._codec_descriptions.items()
             }
             if dict(self.manifest_codec_ids) != actual:
                 raise ValueError("NoLoCo codecs do not match manifest")
@@ -133,7 +145,7 @@ class NoLoCoAlgorithm:
                     - fast_weights[name].astype(np.float32)
                     + (
                         self._error_feedback_residual[name]
-                        if self._codec_is_lossy("outer_gradient")
+                        if self._codec_descriptions["outer_gradient"].lossy
                         else np.float32(0.0)
                     )
                 ).astype(np.float32)
@@ -166,7 +178,7 @@ class NoLoCoAlgorithm:
             name: (
                 logical["outer_gradient"][name]
                 - local["outer_gradient"][name]
-                if self._codec_is_lossy("outer_gradient")
+                if self._codec_descriptions["outer_gradient"].lossy
                 else np.zeros_like(value, dtype=np.float32)
             ).astype(np.float32)
             for name, value in self._slow_weights.items()
@@ -251,12 +263,8 @@ class NoLoCoAlgorithm:
                 sender_public_key=sender_public_key,
                 algorithm_id=algorithm_id,
                 artifact_schemas={
-                    name: (
-                        self._codec_encoded_schema(name)
-                        if self._codec_is_lossy(name)
-                        else self.tensor_schema
-                    )
-                    for name in _ARTIFACT_NAMES
+                    name: description.encoded_schema
+                    for name, description in self._codec_descriptions.items()
                 },
             )
 
@@ -271,8 +279,7 @@ class NoLoCoAlgorithm:
         result = self.trainer.evaluate()
         if result is None:
             return None
-        loss, accuracy = result
-        return AlgorithmEvaluation(loss=float(loss), accuracy=float(accuracy))
+        return AlgorithmEvaluation.from_result(result)
 
     def observations(self) -> AlgorithmObservations:
         observations = AlgorithmObservations(local_loss=self.trainer.local_loss)
@@ -314,7 +321,7 @@ class NoLoCoAlgorithm:
         for name, value in self._error_feedback_residual.items():
             state[f"{_STATE_PREFIX}error_feedback_residual.{name}"] = value.copy()
         for name, value in self.trainer.checkpoint_tensors().items():
-            state[f"{_STATE_PREFIX}trainer.{name}"] = np.ascontiguousarray(value).copy()
+            state[f"{_STATE_PREFIX}trainer.{name}"] = value.copy(order="C")
         for artifact_name, codec in self.artifact_codecs.items():
             for name, value in codec.state_dict().items():
                 if not isinstance(value, np.ndarray):
@@ -346,7 +353,7 @@ class NoLoCoAlgorithm:
         self._validate_tensors(residual)
         trainer_prefix = f"{_STATE_PREFIX}trainer."
         trainer_state = {
-            name.removeprefix(trainer_prefix): np.ascontiguousarray(value).copy()
+            name.removeprefix(trainer_prefix): value.copy(order="C")
             for name, value in state.items()
             if name.startswith(trainer_prefix)
         }
@@ -405,30 +412,12 @@ class NoLoCoAlgorithm:
     def _codec_bindings(self) -> dict[str, UpdateCodecBinding]:
         return {
             name: UpdateCodecBinding(
-                codec_id=self.artifact_codecs[name].codec_id,
-                codec_version=self._codec_version(name),
+                codec_id=description.codec_id,
+                codec_version=description.codec_version,
                 logical_schema=self.tensor_schema,
             )
-            for name in _ARTIFACT_NAMES
+            for name, description in self._codec_descriptions.items()
         }
-
-    def _codec_is_lossy(self, name: str) -> bool:
-        value = getattr(self.artifact_codecs[name], "lossy", False)
-        if not isinstance(value, bool):
-            raise TypeError("codec lossy marker must be boolean")
-        return value
-
-    def _codec_version(self, name: str) -> int:
-        value = getattr(self.artifact_codecs[name], "codec_version", 1)
-        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-            raise TypeError("codec version must be a positive integer")
-        return value
-
-    def _codec_encoded_schema(self, name: str) -> TensorSchema:
-        value = getattr(self.artifact_codecs[name], "encoded_schema", None)
-        if not isinstance(value, TensorSchema):
-            raise TypeError("lossy codec must declare an encoded schema")
-        return value
 
     @staticmethod
     def _counter(state: Mapping[str, np.ndarray], name: str) -> int:

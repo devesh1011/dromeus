@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
-from typing import Protocol, cast
+from typing import Protocol, cast, runtime_checkable
 from uuid import uuid4
 
 import numpy as np
@@ -43,11 +43,22 @@ NamedTensorMap = dict[str, TensorMap]
 StateMap = Mapping[str, object]
 
 
+@runtime_checkable
 class UpdateCodec(Protocol):
     """Encode/decode an algorithm update without owning transport concerns."""
 
     @property
     def codec_id(self) -> str: ...
+
+    @property
+    def codec_version(self) -> int: ...
+
+    @property
+    def lossy(self) -> bool: ...
+
+    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
+        """Resolve the wire schema, rejecting an incompatible logical schema."""
+        ...
 
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap: ...
 
@@ -56,6 +67,41 @@ class UpdateCodec(Protocol):
     def state_dict(self) -> dict[str, object]: ...
 
     def load_state_dict(self, state: StateMap) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class CodecDescription:
+    """Validated capabilities bound to an algorithm's logical schema."""
+
+    codec_id: str
+    codec_version: int
+    lossy: bool
+    encoded_schema: TensorSchema
+
+
+def describe_update_codec(
+    codec: object, logical_schema: TensorSchema
+) -> CodecDescription:
+    """Require complete capabilities before an algorithm can use a codec."""
+    if not isinstance(codec, UpdateCodec):
+        raise TypeError("codec must implement the complete UpdateCodec interface")
+    codec_id = cast(object, codec.codec_id)
+    codec_version = cast(object, codec.codec_version)
+    lossy = cast(object, codec.lossy)
+    encoded_schema = cast(object, codec.encoded_schema_for(logical_schema))
+    if not isinstance(codec_id, str) or not codec_id:
+        raise TypeError("codec ID must be a nonempty string")
+    if (
+        not isinstance(codec_version, int)
+        or isinstance(codec_version, bool)
+        or codec_version <= 0
+    ):
+        raise TypeError("codec version must be a positive integer")
+    if not isinstance(lossy, bool):
+        raise TypeError("codec lossy marker must be boolean")
+    if not isinstance(encoded_schema, TensorSchema):
+        raise TypeError("codec must resolve an encoded tensor schema")
+    return CodecDescription(codec_id, codec_version, lossy, encoded_schema)
 
 
 class NamedUpdateBundleCodec(Protocol):
@@ -93,12 +139,16 @@ class IdentityCodec:
         return self._codec_id
 
     @property
-    def encoded_schema(self) -> TensorSchema:
-        raise TypeError("identity codec schema is supplied by its algorithm")
+    def codec_version(self) -> int:
+        return 1
 
     @property
     def lossy(self) -> bool:
         return False
+
+    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
+        """Identity uses the algorithm's unchanged logical tensor schema."""
+        return logical_schema
 
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
         return _copy_tensors(tensors)
@@ -134,12 +184,20 @@ class DenseInt8Codec:
         return "dense-int8-v1"
 
     @property
+    def codec_version(self) -> int:
+        return 1
+
+    @property
     def encoded_schema(self) -> TensorSchema:
         return self._encoded_schema
 
     @property
     def lossy(self) -> bool:
         return True
+
+    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
+        _validate_codec_logical_schema(logical_schema, self.logical_schema)
+        return self.encoded_schema
 
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
         validate_tensor_map(tensors, self.logical_schema)
@@ -201,12 +259,20 @@ class TopKInt8Codec:
         return "topk-int8-v1"
 
     @property
+    def codec_version(self) -> int:
+        return 1
+
+    @property
     def encoded_schema(self) -> TensorSchema:
         return self._encoded_schema
 
     @property
     def lossy(self) -> bool:
         return True
+
+    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
+        _validate_codec_logical_schema(logical_schema, self.logical_schema)
+        return self.encoded_schema
 
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
         validate_tensor_map(tensors, self.logical_schema)
@@ -310,6 +376,10 @@ class BitmapTopKInt8Codec:
     def lossy(self) -> bool:
         return True
 
+    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
+        _validate_codec_logical_schema(logical_schema, self.logical_schema)
+        return self.encoded_schema
+
     def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
         validate_tensor_map(tensors, self.logical_schema)
         encoded: TensorMap = {}
@@ -363,6 +433,13 @@ class BitmapTopKInt8Codec:
     def load_state_dict(self, state: StateMap) -> None:
         if state:
             raise ValueError("bitmap top-k int8 codec has no state")
+
+
+def _validate_codec_logical_schema(
+    actual: TensorSchema, expected: TensorSchema
+) -> None:
+    if actual != expected:
+        raise ValueError("codec logical schema does not match algorithm")
 
 
 def _validate_lossy_logical_schema(schema: TensorSchema) -> None:
@@ -695,6 +772,7 @@ def validate_tensor_map(
 
 __all__ = [
     "BitmapTopKInt8Codec",
+    "CodecDescription",
     "DenseInt8Codec",
     "IdentityCodec",
     "NamedSafetensorsUpdateBundleCodec",
@@ -705,5 +783,6 @@ __all__ = [
     "TopKInt8Codec",
     "UpdateCodecBinding",
     "UpdateCodec",
+    "describe_update_codec",
     "validate_tensor_map",
 ]

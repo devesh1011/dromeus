@@ -19,6 +19,7 @@ from dromeus.manifests.models import (
     RoundId,
     TensorSchema,
 )
+from dromeus.training.base import EvaluationResult
 
 
 class SerializableState(Protocol):
@@ -39,8 +40,9 @@ class AlgorithmObservations:
     error_feedback_residual_to_signal_ratio: float | None = None
 
     def __post_init__(self) -> None:
+        if self.local_loss is not None and not math.isfinite(self.local_loss):
+            raise ValueError("local loss must be finite")
         values = (
-            ("local loss", self.local_loss),
             ("error-feedback residual norm", self.error_feedback_residual_l2_norm),
             ("error-feedback signal norm", self.error_feedback_signal_l2_norm),
             (
@@ -57,14 +59,29 @@ class AlgorithmObservations:
 class AlgorithmEvaluation:
     """Immutable algorithm evaluation result."""
 
-    loss: float
-    accuracy: float
+    loss: float | None = None
+    accuracy: float | None = None
+    metrics: Mapping[str, float] | None = None
 
     def __post_init__(self) -> None:
-        if not math.isfinite(self.loss) or self.loss < 0:
+        if self.loss is not None and (not math.isfinite(self.loss) or self.loss < 0):
             raise ValueError("evaluation loss must be finite and non-negative")
-        if not math.isfinite(self.accuracy) or not 0 <= self.accuracy <= 1:
+        if self.accuracy is not None and (
+            not math.isfinite(self.accuracy) or not 0 <= self.accuracy <= 1
+        ):
             raise ValueError("evaluation accuracy must be finite in [0, 1]")
+        if self.metrics is not None:
+            result = EvaluationResult(self.metrics)
+            object.__setattr__(self, "metrics", result.metrics)
+
+    @classmethod
+    def from_result(
+        cls, result: EvaluationResult | tuple[float, float]
+    ) -> AlgorithmEvaluation:
+        if isinstance(result, EvaluationResult):
+            return cls(metrics=result.metrics)
+        loss, accuracy = result
+        return cls(loss=float(loss), accuracy=float(accuracy))
 
 
 def checksum_tensors(tensors: Mapping[str, np.ndarray]) -> str:
@@ -175,9 +192,7 @@ class UpdateBundle:
 
     def validate_materialized(self, max_bytes: int) -> None:
         """Validate materialized hashes plus aggregate encoded size."""
-        declared = sum(
-            artifact.size_bytes for artifact in self.metadata.artifacts
-        )
+        declared = sum(artifact.size_bytes for artifact in self.metadata.artifacts)
         actual = sum(artifact.path.stat().st_size for artifact in self.artifacts)
         if actual != declared:
             raise ValueError("materialized update bundle size mismatch")
