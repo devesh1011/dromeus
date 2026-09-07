@@ -10,6 +10,15 @@ from typing import Literal, cast
 
 import yaml
 
+from benchmarks.workloads.cifar10.dataset import (
+    DATASET_VERSION,
+    PREPROCESSING_HASH,
+)
+from benchmarks.workloads.cifar10.resnet18_groupnorm import (
+    MODEL_DEFINITION_HASH,
+    MODEL_ID,
+)
+from dromeus.adapters.classification.torch_trainer import derive_benchmark_seed
 from dromeus.manifests.models import (
     AdamSettings,
     ArtifactCodec,
@@ -22,15 +31,6 @@ from dromeus.manifests.models import (
     TransportLimits,
     WarmupCosineSchedule,
 )
-from dromeus.training.cifar10 import (
-    DATASET_VERSION,
-    PREPROCESSING_HASH,
-)
-from dromeus.training.resnet18_groupnorm import (
-    MODEL_DEFINITION_HASH,
-    MODEL_ID,
-)
-from dromeus.training.trainer import derive_benchmark_seed
 
 AblationId = Literal["identity", "compressed"]
 CompressedCodecId = Literal["topk-int8-v1", "topk-bitmap-int8-v2"]

@@ -18,13 +18,13 @@ from pydantic import (
     model_validator,
 )
 
+from benchmarks.workloads.cifar10.models import resolve_model
+from benchmarks.workloads.cifar10.partitioning import iid_partition_index_hashes
+from dromeus.adapters.classification.torch_trainer import derive_benchmark_seed
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.canonical import canonical_hash, file_sha256
 from dromeus.manifests.models import ArtifactCodec, WarmupCosineSchedule
 from dromeus.protocol.models import Identifier, PublicKey, Sha256
-from dromeus.training.data import iid_partition_index_hashes
-from dromeus.training.models import resolve_model
-from dromeus.training.trainer import derive_benchmark_seed
 
 _OFFICIAL_SEEDS = frozenset((17, 29, 41))
 _OFFICIAL_WORLD_SIZES = frozenset((4, 8, 16))

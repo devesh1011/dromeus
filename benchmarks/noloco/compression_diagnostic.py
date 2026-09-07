@@ -190,10 +190,7 @@ def _slow_codec(schema: TensorSchema, codec: SlowCodec) -> UpdateCodec:
 
 
 def _encoded_schema(codec: UpdateCodec, logical_schema: TensorSchema) -> TensorSchema:
-    if getattr(codec, "lossy", False) is not True:
-        return logical_schema
-    value = getattr(codec, "encoded_schema", None)
-    return value if isinstance(value, TensorSchema) else logical_schema
+    return codec.encoded_schema_for(logical_schema)
 
 
 def _parser() -> argparse.ArgumentParser:

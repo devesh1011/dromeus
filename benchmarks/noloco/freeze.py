@@ -14,16 +14,16 @@ from typing import cast
 import yaml
 
 from benchmarks.noloco.experiment import FrozenExperiment, pairing_digest
-from dromeus.manifests.canonical import file_sha256
-from dromeus.training.cifar10 import (
+from benchmarks.workloads.cifar10.dataset import (
     DATASET_REVISION,
     PREPROCESSING_HASH,
     create_initial_checkpoint,
 )
-from dromeus.training.data import iid_partition_index_hashes
-from dromeus.training.models import resolve_model
-from dromeus.training.resnet18_groupnorm import MODEL_ID
-from dromeus.training.trainer import derive_benchmark_seed
+from benchmarks.workloads.cifar10.models import resolve_model
+from benchmarks.workloads.cifar10.partitioning import iid_partition_index_hashes
+from benchmarks.workloads.cifar10.resnet18_groupnorm import MODEL_ID
+from dromeus.adapters.classification.torch_trainer import derive_benchmark_seed
+from dromeus.manifests.canonical import file_sha256
 
 _BENCHMARK_SEEDS = (17, 29, 41)
 _WORLD_SIZES = (4, 8, 16)

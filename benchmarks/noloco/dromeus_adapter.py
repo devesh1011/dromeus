@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 
 from benchmarks.noloco.experiment import AblationId, ResolvedRun
+from dromeus.adapters.classification.torch_trainer import derive_benchmark_seed
 from dromeus.manifests.canonical import (
     canonical_hash,
     validate_sealed_expectation,
@@ -24,7 +25,6 @@ from dromeus.manifests.models import (
     TrainingPolicy,
     TransportLimits,
 )
-from dromeus.training.trainer import derive_benchmark_seed
 
 
 class DromeusAdapterError(ValueError):

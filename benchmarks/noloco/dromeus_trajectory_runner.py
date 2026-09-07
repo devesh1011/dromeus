@@ -14,13 +14,17 @@ from benchmarks.noloco.trajectory import (
     DromeusTrajectoryWriter,
     TrajectoryCapturingAlgorithm,
 )
+from benchmarks.workloads.cifar10.runtime import (
+    load_benchmark_node_config as load_node_config,
+)
+from benchmarks.workloads.cifar10.runtime import (
+    run_benchmark_node as run_node,
+)
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.membership.formation import FormationResult
 from dromeus.node import (
     TrainingDecorator,
-    load_node_config,
-    run_node,
 )
 from dromeus.runtime import TrainingConfig
 

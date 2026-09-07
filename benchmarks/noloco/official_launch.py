@@ -21,8 +21,13 @@ from benchmarks.noloco.experiment import (
     RunSelector,
     load_frozen_experiment,
 )
+from benchmarks.workloads.cifar10.runtime import (
+    BenchmarkNodeConfig as NodeConfig,
+)
 from dromeus.manifests.models import DraftRunSpec, EnvironmentFingerprint
-from dromeus.node import NodeConfig, NodeRole
+from dromeus.node import (
+    NodeRole,
+)
 
 
 @dataclass(frozen=True, slots=True)
