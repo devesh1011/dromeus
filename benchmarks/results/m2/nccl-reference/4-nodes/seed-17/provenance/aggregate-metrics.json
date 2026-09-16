@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "ranks": [
+    {
+      "rank": 0,
+      "backend": "nccl",
+      "acceptance_eligible": true,
+      "world_size": 4,
+      "completed_outer_steps": 500,
+      "final_loss": 0.5369086784362793,
+      "final_accuracy": 0.9278
+    },
+    {
+      "rank": 1,
+      "backend": "nccl",
+      "acceptance_eligible": true,
+      "world_size": 4,
+      "completed_outer_steps": 500,
+      "final_loss": 0.5470958786010742,
+      "final_accuracy": 0.9256
+    },
+    {
+      "rank": 2,
+      "backend": "nccl",
+      "acceptance_eligible": true,
+      "world_size": 4,
+      "completed_outer_steps": 500,
+      "final_loss": 0.5427265747070312,
+      "final_accuracy": 0.9266
+    },
+    {
+      "rank": 3,
+      "backend": "nccl",
+      "acceptance_eligible": true,
+      "world_size": 4,
+      "completed_outer_steps": 500,
+      "final_loss": 0.5369488672256469,
+      "final_accuracy": 0.9284
+    }
+  ],
+  "mean_final_accuracy": 0.9270999999999999,
+  "stddev_final_accuracy": 0.0010816653826392008,
+  "minimum_final_accuracy": 0.9256,
+  "maximum_final_accuracy": 0.9284,
+  "mean_final_loss": 0.5409199997425079,
+  "stddev_final_loss": 0.004279771748189463
+}

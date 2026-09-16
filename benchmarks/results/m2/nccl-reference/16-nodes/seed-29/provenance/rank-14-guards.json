@@ -1,0 +1,18 @@
+{
+  "guards": [
+    {
+      "case": "existing-marker",
+      "exit": 73,
+      "original_log_prefix_preserved": true,
+      "training_not_invoked": true
+    },
+    {
+      "case": "held-lock",
+      "exit": 73,
+      "original_log_prefix_preserved": true,
+      "training_not_invoked": true
+    }
+  ],
+  "status": "verified",
+  "wrapper_sha256": "8211fab362e74163c52b006c07f5e8dd72cca7351cdf1b1f2182f228f15eff66"
+}

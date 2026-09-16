@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-09-16",
+  "runs": [
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/4-nodes/seed-17/reports/acceptance-report.json",
+      "acceptance_report_sha256": "e6a6995b259393501e4c65d8b7365ff28d9eefd19a7e4e8c9e022c63418c10f9",
+      "logs": "benchmark-results/4-nodes/seed-17/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w4-s29-axllog-rerun-20260907",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/4-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "b8c33d89adcd0126038d873bc7a9a01ba446fae0af48e9bb25f4433e3719b33a",
+      "logs": "benchmark-results/4-nodes/seed-29/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/4-nodes/seed-41/reports/acceptance-report.json",
+      "acceptance_report_sha256": "6171a347a1d167dacc9ee1c3c05f1a62a3a2526e56fd1098c8343a401168cba0",
+      "logs": "benchmark-results/4-nodes/seed-41/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w8-s17-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/8-nodes/seed-17/reports/acceptance-report.json",
+      "acceptance_report_sha256": "9e39264be53473fc3a8f61438b2e1a07da899861b667d211af192f06668ce41f",
+      "logs": "benchmark-results/8-nodes/seed-17/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w8-s29-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/8-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "664e7959d3962c03427d801338f49aae749a069a5b99bb33027219413af32016",
+      "logs": "benchmark-results/8-nodes/seed-29/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w8-s41-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/8-nodes/seed-41/reports/acceptance-report.json",
+      "acceptance_report_sha256": "642258fb91cdb2658b36a5381eed61244beea29982085508da8f54dc0f7656aa",
+      "logs": "benchmark-results/8-nodes/seed-41/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w16-s17-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/16-nodes/seed-17/reports/acceptance-report.json",
+      "acceptance_report_sha256": "a8e7e73918c03faa00797f3b3a0a62bb82800c883f23a67b9cb5170cdab41db1",
+      "logs": "benchmark-results/16-nodes/seed-17/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w16-s29-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/16-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "af65a77a0a92606059cedec16f61e5af17c6a05d22a20cdcb0f4907f240d26d6",
+      "logs": "benchmark-results/16-nodes/seed-29/logs"
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w16-s41-20260829",
+      "status": "accepted",
+      "acceptance_report": "benchmark-results/16-nodes/seed-41/reports/acceptance-report.json",
+      "acceptance_report_sha256": "809ab07953202f68860b8ba9ac22b58aaefccce8722f317d67abac55e03cf2fd",
+      "logs": "benchmark-results/16-nodes/seed-41/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-nccl-official-w4-s17-20260909",
+      "status": "accepted",
+      "acceptance_report": "nccl-reference/4-nodes/seed-17/acceptance-report.json",
+      "acceptance_report_sha256": "747eb64f587a0256a32a7dc973b259d5ad70ae6cb6c03e779c94424eec964a28",
+      "logs": "nccl-reference/4-nodes/seed-17/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 4,
+      "seed": 29,
+      "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+      "status": "accepted-model-weight-evidence",
+      "acceptance_report": "nccl-reference/4-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "38420c573ba9b06178870cab3cb870b2bf1993d9ef59cdde00a07adb07b262e7",
+      "logs": "nccl-reference/4-nodes/seed-29/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 8,
+      "seed": 17,
+      "run_id": "noloco-nccl-w8-remediate-20260909",
+      "status": "accepted-model-weight-evidence",
+      "acceptance_report": "nccl-reference/8-nodes/seed-17/reports/acceptance-report.json",
+      "acceptance_report_sha256": "ae88f5ef40d40cd3d14abe7e56d9bde642ef835ba331e69359fbff8d4afe1869",
+      "logs": "nccl-reference/8-nodes/seed-17/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 8,
+      "seed": 29,
+      "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+      "status": "accepted-model-weight-evidence",
+      "acceptance_report": "nccl-reference/8-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "de03a2121f7b3fc103d5f7ba4eb51cf115191d77e31f2d28518e233679073291",
+      "logs": "nccl-reference/8-nodes/seed-29/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 16,
+      "seed": 17,
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "status": "accepted-model-weight-evidence",
+      "acceptance_report": "nccl-reference/16-nodes/seed-17/reports/acceptance-report.json",
+      "acceptance_report_sha256": "7b93044128a81370033b33c9eccf581a3d5d6a6ea5c892a1d7264af1f198036c",
+      "logs": "nccl-reference/16-nodes/seed-17/logs"
+    },
+    {
+      "method": "nccl",
+      "workers": 16,
+      "seed": 29,
+      "run_id": "noloco-nccl-w16-s29-r2-20260914",
+      "status": "accepted-model-weight-evidence",
+      "acceptance_report": "nccl-reference/16-nodes/seed-29/reports/acceptance-report.json",
+      "acceptance_report_sha256": "cb7d5cda8a68edfa79a4852dbe997643793d3780ba385a6d13d70e5a6d1f6524",
+      "logs": "nccl-reference/16-nodes/seed-29/logs"
+    },
+    {
+      "method": "identity_axl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+      "status": "accepted-identity-ablation-evidence",
+      "acceptance_report": "identity-ablation/4-nodes/reports/acceptance-report.json",
+      "acceptance_report_sha256": "f3888540c379bcb50fcc574b30af190c38f1cd8de61923b9b114f65b2464173d",
+      "logs": "identity-ablation/4-nodes/logs"
+    }
+  ],
+  "notes": [
+    "Only accepted results are indexed. Failures are disclosed in the reports and evidence-availability.json.",
+    "Seeds 41 at NCCL scales are unrun; no results are imputed."
+  ]
+}

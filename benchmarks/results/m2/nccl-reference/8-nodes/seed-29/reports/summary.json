@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "selector": {"profile": "official", "world_size": 8, "benchmark_seed": 29},
+  "backend": "nccl",
+  "acceptance_eligible": true,
+  "completed_outer_steps": 500,
+  "rank_count": 8,
+  "per_rank": [
+    {"rank": 0, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9303, "final_loss": 0.5599115510940552},
+    {"rank": 1, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9293, "final_loss": 0.557503370475769},
+    {"rank": 2, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9269, "final_loss": 0.564101123046875},
+    {"rank": 3, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9271, "final_loss": 0.5703456798553467},
+    {"rank": 4, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9288, "final_loss": 0.5567308294296265},
+    {"rank": 5, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9282, "final_loss": 0.5647021752357483},
+    {"rank": 6, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9287, "final_loss": 0.5636073768615723},
+    {"rank": 7, "world_size": 8, "backend": "nccl", "acceptance_eligible": true, "completed_outer_steps": 500, "final_accuracy": 0.9288, "final_loss": 0.5596945035934449}
+  ],
+  "aggregate": {
+    "mean_final_accuracy": 0.9285125,
+    "stddev_final_accuracy": 0.0010433569619262672,
+    "minimum_final_accuracy": 0.9269,
+    "maximum_final_accuracy": 0.9303,
+    "mean_final_loss": 0.5620745761990548,
+    "minimum_final_loss": 0.5567308294296265,
+    "maximum_final_loss": 0.5703456798553467,
+    "all_clean_exit": true
+  }
+}

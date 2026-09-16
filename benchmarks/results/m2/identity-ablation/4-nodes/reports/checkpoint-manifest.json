@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "manifest_hash": "d9884d0bf5ce322319cf641c4bd66e33d2a21fe4eb6a71b8f015c5ed3732ce18",
+  "checkpoint_round": 499,
+  "model_weight_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "final_model_weights": [
+    {"rank": 0, "path": "final-checkpoints/node-0.safetensors", "size_bytes": 44701384, "sha256": "c81ab80442c4e871b82d13bfeaae69c099f2d33914bafcf0f520259c54b99e88", "tensor_count": 62, "dtype": "float32", "finite": true},
+    {"rank": 1, "path": "final-checkpoints/node-1.safetensors", "size_bytes": 44701384, "sha256": "273da0de17c36a9061a2fa73a4296597ee8c6e641cedecec223b6e8bad1e174d", "tensor_count": 62, "dtype": "float32", "finite": true},
+    {"rank": 2, "path": "final-checkpoints/node-2.safetensors", "size_bytes": 44701384, "sha256": "43f34bf0883b47f62c9864ceb979da4238d7de17e02adde14cda0f7783c2fc41", "tensor_count": 62, "dtype": "float32", "finite": true},
+    {"rank": 3, "path": "final-checkpoints/node-3.safetensors", "size_bytes": 44701384, "sha256": "1fbe04a27a2f230a2b3ad706e0cd19b2417bbe23ac55fd2a38ffe56068e795bb", "tensor_count": 62, "dtype": "float32", "finite": true}
+  ],
+  "full_state_checkpoints": [
+    {"rank": 0, "path": null, "size_bytes": 268241824, "sha256": "5c94f0d0a0f3a76c86b41723becbbeebce3c1cd78f0fbbb4b2367be0b1eced5c", "committed_round": 499},
+    {"rank": 1, "path": null, "size_bytes": 268241824, "sha256": "a8ae4eaec937848a90d5afded65b4e843a6c7d8313ffb06c921af0d092389063", "committed_round": 499},
+    {"rank": 2, "path": null, "size_bytes": 268241824, "sha256": "9cf2edac1a0324514bc9d1dc9c255a94652b746c73a9e6c2ea46b14771d8da3b", "committed_round": 499},
+    {"rank": 3, "path": null, "size_bytes": 268241824, "sha256": "46373f9981a6fb3727efe504a4b065179e106a00f7dc28b4694a6846df04f35e", "committed_round": 499}
+  ],
+  "full_state_bytes_retained_locally": false,
+  "full_state_hashes_retained": true,
+  "optimizer_continuation_state": "present in retained full-state checkpoints; no public resume claim is made"
+}

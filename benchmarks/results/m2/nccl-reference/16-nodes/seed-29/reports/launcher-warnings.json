@@ -1,0 +1,12 @@
+[
+  {
+    "checkpoint_written_at": "2026-09-14T15:54:21.272803581Z",
+    "error": "DistNetworkError: Failed to recv, got 0 bytes. Connection was likely closed.",
+    "outcome": "caught and logged by torchrun; launcher exit code 0; final checkpoint and summary existed before warning",
+    "phase": "torchrun post-worker exit barrier",
+    "rank": 9,
+    "source": "provenance/torchrun-exit-barrier-source.txt",
+    "summary_written_at": "2026-09-14T15:54:25.061605033Z",
+    "timestamp": "2026-09-14T15:54:27.802Z"
+  }
+]

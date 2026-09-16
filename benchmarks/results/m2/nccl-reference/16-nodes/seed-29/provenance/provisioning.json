@@ -1,0 +1,170 @@
+{
+  "ap-south-1": {
+    "cidr": "10.184.0.0/16",
+    "igw": "igw-01fd4425ecd6c8ded",
+    "image_id": "ami-01269ca6531f2790f",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-00c2d4baf0ed57d36",
+      "i-0fb9cb4fd36ff7373"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "ap-south-1",
+    "rt": "rtb-08b3bda6e813ae3e7",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-0d6f4d8cb28ba705b",
+    "status": "allocated",
+    "subnets": [
+      "subnet-0dc452c69bbe62791"
+    ],
+    "vpc": "vpc-06fe882bf26d53059"
+  },
+  "eu-central-1": {
+    "cidr": "10.183.0.0/16",
+    "igw": "igw-0514f1a4004a05721",
+    "image_id": "ami-0689d7d748b757b61",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-03fdead368e297628",
+      "i-0bd29b1671bdd600d"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "eu-central-1",
+    "rt": "rtb-0af4a5cd636f0bf19",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-06771976cea393f69",
+    "status": "allocated",
+    "subnets": [
+      "subnet-0789ccc8ac6f41326",
+      "subnet-0cdf05d272b8efa42"
+    ],
+    "vpc": "vpc-0a9e3a1c7bad0d0ab"
+  },
+  "eu-north-1": {
+    "cidr": "10.186.0.0/16",
+    "igw": "igw-086b3bf3a766c3635",
+    "image_id": "ami-0a1a0eba60401b331",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-0f3d2aa052eedfb82",
+      "i-0f33004fa05e03094"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "eu-north-1",
+    "rt": "rtb-002b07fa380283283",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-0da8046f76b33ba06",
+    "status": "allocated",
+    "subnets": [
+      "subnet-0d71de06c32100953"
+    ],
+    "vpc": "vpc-0999f25a9eef13147"
+  },
+  "eu-west-3": {
+    "capacity_errors": [
+      {
+        "error": "An error occurred (InsufficientInstanceCapacity) when calling the RunInstances operation (reached max retries: 5): We currently do not have sufficient g5.xlarge capacity in the Availability Zone you requested (eu-west-3a). Our system will be working on provisioning additional capacity. You can currently get g5.xlarge capacity by not specifying an Availability Zone in your request or choosing eu-west-3b, eu-west-3c.",
+        "zone": "eu-west-3a"
+      }
+    ],
+    "cidr": "10.185.0.0/16",
+    "igw": "igw-0bd5eab75e6d5602f",
+    "image_id": "ami-0ae05d9107c401f9e",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-090089be7a5dee216",
+      "i-0819b1ae59fbab106"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "eu-west-3",
+    "rt": "rtb-0259ffb7ecec3cac2",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-09d4b4fa12cf06cf3",
+    "status": "allocated",
+    "subnets": [
+      "subnet-00da6a8ffb431ab72",
+      "subnet-016503c7a4678be4b"
+    ],
+    "vpc": "vpc-0288f568ad6ca67a5"
+  },
+  "sa-east-1": {
+    "cidr": "10.187.0.0/16",
+    "igw": "igw-07efcdf7bf39bc1af",
+    "image_id": "ami-07e5bb21a945dfa48",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-0374c0c6477d31250",
+      "i-03cb49d3953ddf9d6"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "sa-east-1",
+    "rt": "rtb-0d6a83d23f73a2ba8",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-05d737e999db448d9",
+    "status": "allocated",
+    "subnets": [
+      "subnet-041b8e1f42ef26794"
+    ],
+    "vpc": "vpc-096f96911345ec9cf"
+  },
+  "us-east-1": {
+    "cidr": "10.180.0.0/16",
+    "igw": "igw-01b7dfc817486753e",
+    "image_id": "ami-0eac3fc37325af5ae",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-0ee5df56df7d0b231",
+      "i-04e26df28723aea05"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "us-east-1",
+    "rt": "rtb-020f498c3a5eb1e56",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-08d08af49321794d7",
+    "status": "allocated",
+    "subnets": [
+      "subnet-096eeb67b84fde05d"
+    ],
+    "vpc": "vpc-05a5d47902a6e1acf"
+  },
+  "us-east-2": {
+    "cidr": "10.182.0.0/16",
+    "igw": "igw-0e51e16a833212675",
+    "image_id": "ami-0c897ab49061012e9",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-0450fa888229ee829",
+      "i-0854a2b1a7e42157e"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "us-east-2",
+    "rt": "rtb-01c6f8626d4288f88",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-077021aeaef862466",
+    "status": "allocated",
+    "subnets": [
+      "subnet-0acd08255653027d5"
+    ],
+    "vpc": "vpc-0e91a9e3c9bfd5c9d"
+  },
+  "us-west-2": {
+    "cidr": "10.181.0.0/16",
+    "igw": "igw-0aaf50574f3c8f653",
+    "image_id": "ami-0a4cc1ccbcec439f4",
+    "image_name": "Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.12 (Ubuntu 24.04) 20260822",
+    "instances": [
+      "i-05fb166fc7d28c5fa",
+      "i-0fc86d5bf7622ce35"
+    ],
+    "key": "noloco-nccl-w16-s29-r2-20260914",
+    "region": "us-west-2",
+    "rt": "rtb-0743f2eda1029efa2",
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "sg": "sg-02db13163b9e739a8",
+    "status": "allocated",
+    "subnets": [
+      "subnet-0de0b43ef7748d1ce"
+    ],
+    "vpc": "vpc-0f80291e00cb3fe7b"
+  }
+}

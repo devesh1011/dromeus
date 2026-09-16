@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "status": "completed-accepted",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "reference": {
+    "implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "source_repository": "gensyn-ai/noloco",
+    "source_path": "src/noloco/sparse_optimizer_c.py",
+    "outer_gradient_convention": "phi-minus-theta-v1",
+    "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524"
+  },
+  "frozen": {
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "dromeus_runtime_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "python": "3.12.11",
+    "pytorch": "2.12.1+cu130",
+    "cuda": "13.0",
+    "cudnn": 92000,
+    "nccl": "2.29.7",
+    "accelerator": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge"
+  },
+  "execution": {
+    "backend": "nccl",
+    "acceptance_eligible": true,
+    "round_count": 500,
+    "completed_outer_steps": 500,
+    "total_inner_steps_per_rank": 25000,
+    "clean_exit_count": 4,
+    "run_failure_count": 0,
+    "start_utc": "2026-09-09T18:14:43Z",
+    "end_utc": "2026-09-09T19:13:07Z",
+    "duration_seconds": 3504
+  },
+  "accuracy_comparison": {
+    "matching_axl_seed_29_mean": 0.9285,
+    "nccl_mean": 0.92955,
+    "delta_fractional": 0.00105,
+    "delta_percentage_points": 0.105,
+    "within_3_percentage_points": true,
+    "cross_fabric_speed_comparison_eligible": false
+  },
+  "network": {
+    "topology": "private-full-mesh-cross-region-vpc-peering",
+    "socket_interface": "ens5",
+    "ib_disabled": true,
+    "p2p_disabled": true,
+    "nccl_net": "Socket",
+    "master_addr_private": "10.247.1.214",
+    "master_port": 29500,
+    "regions": ["eu-west-3", "sa-east-1"],
+    "peering_connection_id": "pcx-06de69811fce970e8"
+  },
+  "evidence": {
+    "checkpoint_manifest": "checkpoint-manifest.json",
+    "checkpoint_validation": "reports/checkpoint-validation.json",
+    "official_launch_logs": "official/launch/",
+    "official_rank_summaries": "official/rank-*/reference-output/rank-*/summary.json",
+    "preflight_report": "preflight/report.json",
+    "optimizer_state_captured": false,
+    "continuation_state_claim": false
+  },
+  "cleanup": {
+    "pending": false,
+    "verification": "cleanup/final-state-verified.json",
+    "task_owned_resources_remaining": 0,
+    "remote_private_keys_destroyed": true,
+    "local_private_keys_destroyed": true
+  }
+}

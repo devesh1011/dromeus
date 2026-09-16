@@ -1,0 +1,24 @@
+{
+  "accepted_seed_reports": {
+    "17": "seed-17/reports/acceptance-report.json",
+    "29": "seed-29/reports/acceptance-report.json"
+  },
+  "aggregate_report": "summary.json",
+  "artifact": "../../experiment-config/experiment.yaml",
+  "backend": "nccl",
+  "checkpoint_manifests": {
+    "17": "seed-17/reports/checkpoint-manifest.json",
+    "29": "seed-29/reports/checkpoint-manifest.json"
+  },
+  "failed_attempts": {
+    "29": "failed-seed-29/reports/failure-report.json"
+  },
+  "milestone": "M2",
+  "note": "Seed17 binary checkpoints and archive were locally pruned. Seed29 final model-weight bytes are retained outside Git, with original logs, summaries, source identities and checksums.",
+  "pending_seeds": [
+    41
+  ],
+  "schema_version": 2,
+  "status": "accepted-seeds17-and29",
+  "world_size": 16
+}

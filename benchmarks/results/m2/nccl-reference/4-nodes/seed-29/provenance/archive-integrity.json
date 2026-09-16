@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "archive": "archives/nccl-w4-s29-retry3-final-evidence.tar.gz",
+  "archive_sha256": "9526466052ca8c33ec5740af36ea34265690de1270a16b714a1ff2434164ef26",
+  "archive_size_bytes": 621909083,
+  "listing": "archives/nccl-w4-s29-retry3-final-evidence.tar.list",
+  "listing_sha256": "76d450342d2059960028b61d47dcc43103d7e777cd6ebed63d71ed02dbbcfd84",
+  "listing_entries": 488,
+  "gzip_integrity": true,
+  "checkpoint_binaries_in_archive": true,
+  "optimizer_continuation_state_in_archive": false
+}

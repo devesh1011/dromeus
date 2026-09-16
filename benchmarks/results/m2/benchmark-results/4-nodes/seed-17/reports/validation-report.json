@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "status": "validated-rerun",
+  "purpose": "Fresh AXL-log-complete rerun staged separately; existing accepted evidence is unchanged.",
+  "seed": 17,
+  "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+  "manifest_hash": "833ec4ad012a612fe81aec610e573fe08b5e8ba3feb07ac2febe56cf6922c4e5",
+  "accuracy": {
+    "mean": 0.930825,
+    "stddev": 0.0005068283733178285,
+    "minimum": 0.9302,
+    "maximum": 0.9315
+  },
+  "execution": {
+    "round_count": 500,
+    "clean_exit_count": 4,
+    "node_start_timestamps": [
+      "2026-09-06T18:59:51.111048+00:00",
+      "2026-09-06T19:01:39.174638+00:00",
+      "2026-09-06T19:01:32.733986+00:00",
+      "2026-09-06T19:01:36.890690+00:00"
+    ],
+    "node_complete_timestamps": [
+      "2026-09-06T20:57:38.049672+00:00",
+      "2026-09-06T20:57:37.986233+00:00",
+      "2026-09-06T20:57:37.900305+00:00",
+      "2026-09-06T20:57:37.956305+00:00"
+    ],
+    "run_failure_count": 0
+  },
+  "communication": {
+    "state_exchange_retries": 0,
+    "transport_update_retries": 0,
+    "telemetry_retries": 0,
+    "minimum_encoded_compression_ratio": 5.067911273833514
+  },
+  "residual": {
+    "maximum_l2_norm": 4.555979162298655,
+    "maximum_to_signal_ratio": 0.2965785077320018,
+    "l2_bound": 6.0,
+    "ratio_bound": 0.35
+  },
+  "divergence": {
+    "passed": true,
+    "trend_slope_per_inner_step": -0.00030362690117287133,
+    "final_below_post_warmup_peak": true,
+    "point_count": 10
+  },
+  "evidence": {
+    "node_round_count": 2000,
+    "checkpoint_archive_count": 4,
+    "local_tensor_count_after_analysis": 0,
+    "remote_tensor_count_after_cleanup": 0,
+    "axl_logs": [
+      {
+        "rank": 0,
+        "dromeus_sha256": "c9efba65867d5d74b485277796763f5ce44e0465f579b4ee6c769e305f098fe5",
+        "axl_sha256": "24ed1b2cbbbdd5b9e5e1cbe0f186c3218e698678ef61e6ae4c6adce5fd0e8994",
+        "axl_size_bytes": 1687707
+      },
+      {
+        "rank": 1,
+        "dromeus_sha256": "c8a3a56c543b7aaadc53a926c1e5688046e7795a3141fd7fe1e43e98a9ffbe8d",
+        "axl_sha256": "13e6d764ca2c55830cca72def37464f7ad3d0d4f7eb50dec32d0cfcfe10439c5",
+        "axl_size_bytes": 1682452
+      },
+      {
+        "rank": 2,
+        "dromeus_sha256": "ff439dd80ddb119b0a2b880023d020e6b656501eb7e69d84fd259ebeb2180e34",
+        "axl_sha256": "e3c6fc864bcf7004341b0b0a5bd7011f967606dc8cc1a27ff7d2e04fb5147004",
+        "axl_size_bytes": 1681774
+      },
+      {
+        "rank": 3,
+        "dromeus_sha256": "20a9225c9dd0dc9a5dd8444abaf77e967fd2010d7afd86e4fd062a786ac1b297",
+        "axl_sha256": "a2f2901ee89d413c7b1594a19275bf74a67f0caf7cbbf1f034f78ea953503464",
+        "axl_size_bytes": 1681988
+      }
+    ],
+    "axl_provenance_sha256": "1043d7efb53c99bce927c5c7df3c94be76764b1583d4931f8acffef5d8b91de4"
+  },
+  "gates": {
+    "all_ranks_complete": true,
+    "accuracy_at_least_90_percent": true,
+    "strict_reconciliation": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "divergence": true,
+    "checkpoint_archive_complete": true,
+    "temporary_tensors_deleted": true,
+    "axl_logs_complete": true
+  }
+}

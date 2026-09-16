@@ -1,0 +1,358 @@
+{
+  "our_ipv6": "205:1a28:ae0c:3289:206c:dec9:fa9:935a",
+  "our_public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+  "peers": [
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 5,
+      "public_key": "a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56",
+      "root": "",
+      "up": true,
+      "uri": "tls://108.129.150.198:45794"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 4,
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "root": "",
+      "up": true,
+      "uri": "tls://44.255.89.47:43346"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 14,
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.89.56.239:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 2,
+      "public_key": "7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.148.115.145:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 6,
+      "public_key": "c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.40.132.138:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 13,
+      "public_key": "e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.201.26.194:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 12,
+      "public_key": "e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.235.17.68:9300"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 10,
+      "public_key": "da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.78.172.127:35594"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 1,
+      "public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "root": "",
+      "up": true,
+      "uri": "tls://32.193.225.100:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 11,
+      "public_key": "d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.182.46.144:9300"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 6,
+      "public_key": "c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.40.132.138:33994"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 3,
+      "public_key": "89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.19.242.109:51582"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 8,
+      "public_key": "8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.159.46.19:60828"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 12,
+      "public_key": "e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.235.17.68:56556"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 3,
+      "public_key": "89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.19.242.109:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 15,
+      "public_key": "9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.249.252.124:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 9,
+      "public_key": "b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.169.167.230:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 10,
+      "public_key": "da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.78.172.127:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 8,
+      "public_key": "8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.159.46.19:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 5,
+      "public_key": "a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56",
+      "root": "",
+      "up": true,
+      "uri": "tls://108.129.150.198:9300"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 1,
+      "public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "root": "",
+      "up": true,
+      "uri": "tls://32.193.225.100:51390"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 11,
+      "public_key": "d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.182.46.144:60768"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 7,
+      "public_key": "8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.184.126.122:9300"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 9,
+      "public_key": "b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.169.167.230:56024"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 7,
+      "public_key": "8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b",
+      "root": "",
+      "up": true,
+      "uri": "tls://18.184.126.122:32796"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 15,
+      "public_key": "9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.249.252.124:45844"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 14,
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "root": "",
+      "up": true,
+      "uri": "tls://35.89.56.239:34402"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 2,
+      "public_key": "7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa",
+      "root": "",
+      "up": true,
+      "uri": "tls://3.148.115.145:57076"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 13,
+      "public_key": "e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.201.26.194:46364"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 4,
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "root": "",
+      "up": true,
+      "uri": "tls://44.255.89.47:9300"
+    }
+  ],
+  "tree": [
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "89e6ea6c83cd3b7617c268346c48543db0af3be25a2a4ecff23d60994a377f85",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "da398c8c8033074a1693b3e2f15b75b11fb48792f7086770cde6644cff107ad4",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "8f00873f61e19f92a90d84d430f37da341696164a65d460ded5655acc5abeb7b",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "7d1fb8aaa754d2bb45fc3f43790620a15db89d6aeecfb91c5d44b79c07c32ffa",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "sequence": 2
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "b1bec74da8dfdb3e9d712bffb16e2f52177ccb6e3feb24cc54a0f4bd7673fd28",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "9ad8d86f2c684a9ecdb884c36aa0d241547689eb8030e43884775c3632930636",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "8da1e94adf2826ecd714557a778edb1558dc3f3baca57aa91195ee1a5158f352",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "d2db37dec5a9d4ffbecb8bbc9db526f211d3214a0b5cefe63db4a5af50d76b91",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "a71aacdb9ae3d3ed706d54da947f735c2d1c46d3268678f20aed87ad41193a56",
+      "sequence": 4
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "e507eb6f809f9fe9cdac7fa2623819c2ef187fbb98ae991031a1917a8266dbe0",
+      "sequence": 5
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "c841dc5f65a8775e285ce10a6370bf1483ea3d1d25353f345c27de2fb2ebd6e7",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "sequence": 3
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "e2069d15ae910b2639cdd71ebaa86d5370662d304eb47a0a3f72f2a55200cabb",
+      "sequence": 4
+    }
+  ]
+}

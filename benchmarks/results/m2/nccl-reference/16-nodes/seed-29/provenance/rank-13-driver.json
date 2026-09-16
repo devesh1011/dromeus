@@ -1,0 +1,4 @@
+{
+  "driver_version": "595.91.07",
+  "query": "nvidia-smi --query-gpu=driver_version --format=csv,noheader"
+}

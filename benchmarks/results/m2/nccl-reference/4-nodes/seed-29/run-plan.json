@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "completed-accepted",
+  "task_key": "w4-s29-retry3",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "frozen_contract": {
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "dromeus_runtime_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "reference_implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "model": "resnet18-groupnorm-cifar10-v1",
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "accelerator_class": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge",
+    "round_count": 500,
+    "total_inner_steps": 25000,
+    "inner_steps_per_round": 50,
+    "backend": "nccl",
+    "optimizer_state_captured": false
+  },
+  "placement": {
+    "resolved_training_regions": ["eu-west-3", "sa-east-1"],
+    "resolved_training_availability_zones": ["eu-west-3a", "sa-east-1a"],
+    "workers_per_region": 2,
+    "training_fleet_complete": true,
+    "network": "dedicated-per-region-vpcs-with-cross-region-private-peering",
+    "private_peering": {"connection_id": "pcx-06de69811fce970e8", "status": "active-during-run"},
+    "cross_region_performance_eligible": false,
+    "cidr_plan": {"eu-west-3": "10.247.0.0/16", "sa-east-1": "10.244.0.0/16"}
+  },
+  "resources": {
+    "root_volume_gib_per_worker": 80,
+    "torchrun_master_port": 29500,
+    "nccl_port_range": "29501-29599",
+    "run_tag_prefix": "noloco-nccl-w4-s29-retry3-20260909",
+    "task_owned_networks": true,
+    "task_owned_keys": true,
+    "task_owned_security_groups": true,
+    "task_owned_logs_and_outputs": true
+  },
+  "cost_estimate": {
+    "planned_four_worker_compute_usd_per_hour": 5.07,
+    "six_hour_compute_ceiling_usd": 30.42,
+    "excludes": ["EBS", "public IPv4", "cross-region data transfer", "image transfer", "taxes"]
+  },
+  "evidence_root": "benchmarks/results/m2/nccl-reference/4-nodes/seed-29/retry3-20260909"
+}

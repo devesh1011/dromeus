@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w8-remediate-20260909",
+  "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+  "run_script_sha256": "05baa4834aa0d27d5a8738d3616f7f97e0feaab64bef651b8d5f9a8893cc128",
+  "validate_script_sha256": "c491f285c23f3c53f970c73b137b476195adb640c1690b2d3cf9b6384d26c5c6",
+  "preflight_report_sha256": "c20119e3436786a22826a0dc14593f7eea1800730ea4257c1dc97d220b5827cf",
+  "preflight_checksums_sha256": "735c7d97fb2914c6db2f935be564f35322fc0838b6221aeb4f9645f5088451fe"
+}

@@ -1,0 +1,32 @@
+{
+  "artifact": "../../../experiment-config/experiment.yaml",
+  "backend": "nccl",
+  "checkpoint_manifests": {
+    "17": "reports/checkpoint-manifest.json"
+  },
+  "deployment_reports": {
+    "17": "reports/deployment.json"
+  },
+  "extended_three_seed_matrix": "provisional-not-started",
+  "limitations": [
+    "No cross-fabric speed equivalence claim.",
+    "Final artifacts are model-weight safetensors only; optimizer, outer-momentum, loader, and RNG continuation state is not captured or claimed.",
+    "The official reference runner emits final summaries but no per-round official trajectory or residual/compression telemetry.",
+    "NCCL warnings about deprecated environment names, unbatched pair P2P, and disabled IB are retained as diagnostics and are not runtime failures."
+  ],
+  "milestone": "M2",
+  "minimum_reference_per_scale": true,
+  "preflight": "reports/preflight-report.json",
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "schema_version": 1,
+  "seed_reports": {
+    "17": "reports/acceptance-report.json"
+  },
+  "seeds": [
+    17
+  ],
+  "status": "accepted-model-weight-evidence",
+  "summary": "reports/summary.json",
+  "validation": "reports/validation-report.json",
+  "world_size": 16
+}

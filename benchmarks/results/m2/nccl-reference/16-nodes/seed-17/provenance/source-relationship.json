@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "reference_repository": "gensyn-ai/noloco",
+  "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+  "reference_implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+  "dromeus_runtime_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+  "git_relationship": {
+    "merge_base": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "runtime_is_ancestor_of_reference": true,
+    "reference_change_scope": "independent NCCL optimizer/distributed harness and shared frozen workload seam",
+    "runtime_image_source_not_latest_development": true
+  },
+  "reference_source_files": [
+    "src/noloco/sparse_optimizer_c.py"
+  ],
+  "runtime_commit_subject": "test(unit): cover analysis and experiment paths",
+  "reference_commit_subject": "refactor(reference): source benchmark model recipes while preserving independent NoLoCo optimization"
+}

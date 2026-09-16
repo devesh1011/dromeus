@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "milestone": "M2",
+  "backend": "nccl",
+  "world_size": 4,
+  "status": "accepted-seed17-seed29",
+  "artifact": "../../experiment-config/experiment.yaml",
+  "aggregate_report": "summary.json",
+  "accepted_seed_reports": {
+    "17": "seed-17/acceptance-report.json",
+    "29": "seed-29/reports/acceptance-report.json"
+  },
+  "completed_seeds": [17, 29],
+  "in_progress_seeds": [],
+  "pending_seeds": [41],
+  "note": "Seed 29 is accepted on complete NCCL model-weight evidence. The compact tree retains reports, per-rank logs and summaries, provenance, cleanup state, and checkpoint hashes. Final checkpoint and archive bytes remain only in the active task worktree."
+}

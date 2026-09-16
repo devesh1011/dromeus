@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "verified-destroyed",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "remote_private_key_paths": ["/home/ubuntu/eu-west-3.pem", "/home/ubuntu/sa-east-1.pem"],
+  "remote_rank0_verification": "no matching .pem files remained under /home/ubuntu after shred -u",
+  "local_private_key_directory": ".task-secrets-w4-s29-retry3",
+  "local_private_key_files": ["eu-west-3.pem", "sa-east-1.pem", "eu-central-1.pem", "ca-central-1.pem"],
+  "local_verification": "directory removed after shred -u of all task-owned key files",
+  "verified_at_utc": "2026-09-09T19:46:42Z"
+}

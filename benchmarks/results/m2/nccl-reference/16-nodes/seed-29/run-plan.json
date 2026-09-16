@@ -1,0 +1,226 @@
+{
+  "all_ranks_first_outer_step_by": "2026-09-14T14:41:30Z",
+  "all_ranks_first_outer_step_verified": true,
+  "attempted_regions": [
+    "us-east-1",
+    "us-west-2",
+    "us-east-2",
+    "eu-central-1",
+    "ap-south-1",
+    "eu-west-3",
+    "eu-north-1",
+    "sa-east-1"
+  ],
+  "checkpoint_capture": "final model weights only; no resumable optimizer/loader/RNG state",
+  "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "controller_owner": "root 30-minute heartbeat after verified first round",
+  "cross_fabric_speed_equivalence_claim": false,
+  "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+  "gpu": "NVIDIA A10G",
+  "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+  "inner_steps_per_round": 50,
+  "instance_type": "g5.xlarge",
+  "launch_guard": "exclusive flock and no-clobber first-start marker; append-only stdout",
+  "maintenance_policy": "apt masked; periodic updates/reboot disabled; needrestart list-only and all restart overrides zero",
+  "monitoring_interval_minutes": 30,
+  "network": {
+    "ib_disabled": true,
+    "peering_count": 28,
+    "socket_interface": "ens5",
+    "topology": "private-full-mesh-vpc-peering"
+  },
+  "operational_runtime_ceiling_seconds": 21600,
+  "rank_map": [
+    {
+      "instance_id": "i-0ee5df56df7d0b231",
+      "private_ip": "10.180.1.50",
+      "public_ip": "44.202.211.177",
+      "rank": 0,
+      "region": "us-east-1",
+      "volume_ids": [
+        "vol-0c774b087572debfe"
+      ]
+    },
+    {
+      "instance_id": "i-04e26df28723aea05",
+      "private_ip": "10.180.1.243",
+      "public_ip": "44.202.234.105",
+      "rank": 1,
+      "region": "us-east-1",
+      "volume_ids": [
+        "vol-0ebc369d86546822e"
+      ]
+    },
+    {
+      "instance_id": "i-05fb166fc7d28c5fa",
+      "private_ip": "10.181.1.244",
+      "public_ip": "54.186.212.61",
+      "rank": 2,
+      "region": "us-west-2",
+      "volume_ids": [
+        "vol-0bb958dc00bb61091"
+      ]
+    },
+    {
+      "instance_id": "i-0fc86d5bf7622ce35",
+      "private_ip": "10.181.1.19",
+      "public_ip": "16.148.92.123",
+      "rank": 3,
+      "region": "us-west-2",
+      "volume_ids": [
+        "vol-0dac72ab8b567fd10"
+      ]
+    },
+    {
+      "instance_id": "i-0450fa888229ee829",
+      "private_ip": "10.182.1.33",
+      "public_ip": "3.142.195.110",
+      "rank": 4,
+      "region": "us-east-2",
+      "volume_ids": [
+        "vol-0bdbc85670f0e5bdf"
+      ]
+    },
+    {
+      "instance_id": "i-0854a2b1a7e42157e",
+      "private_ip": "10.182.1.155",
+      "public_ip": "3.148.205.247",
+      "rank": 5,
+      "region": "us-east-2",
+      "volume_ids": [
+        "vol-0ba7bf7437977510c"
+      ]
+    },
+    {
+      "instance_id": "i-03fdead368e297628",
+      "private_ip": "10.183.1.234",
+      "public_ip": "18.185.240.68",
+      "rank": 6,
+      "region": "eu-central-1",
+      "volume_ids": [
+        "vol-00fb12ba8a963c235"
+      ]
+    },
+    {
+      "instance_id": "i-0bd29b1671bdd600d",
+      "private_ip": "10.183.2.237",
+      "public_ip": "35.156.77.139",
+      "rank": 7,
+      "region": "eu-central-1",
+      "volume_ids": [
+        "vol-055086230acfe0793"
+      ]
+    },
+    {
+      "instance_id": "i-00c2d4baf0ed57d36",
+      "private_ip": "10.184.1.28",
+      "public_ip": "3.110.142.72",
+      "rank": 8,
+      "region": "ap-south-1",
+      "volume_ids": [
+        "vol-06e80e63e24b4fd9e"
+      ]
+    },
+    {
+      "instance_id": "i-0fb9cb4fd36ff7373",
+      "private_ip": "10.184.1.11",
+      "public_ip": "13.233.200.185",
+      "rank": 9,
+      "region": "ap-south-1",
+      "volume_ids": [
+        "vol-0dfb023a0dc21b257"
+      ]
+    },
+    {
+      "instance_id": "i-090089be7a5dee216",
+      "private_ip": "10.185.2.14",
+      "public_ip": "35.181.9.6",
+      "rank": 10,
+      "region": "eu-west-3",
+      "volume_ids": [
+        "vol-0da3bb28415380b5e"
+      ]
+    },
+    {
+      "instance_id": "i-0819b1ae59fbab106",
+      "private_ip": "10.185.2.125",
+      "public_ip": "35.181.61.168",
+      "rank": 11,
+      "region": "eu-west-3",
+      "volume_ids": [
+        "vol-0cea55b5694770cd7"
+      ]
+    },
+    {
+      "instance_id": "i-0f3d2aa052eedfb82",
+      "private_ip": "10.186.1.92",
+      "public_ip": "56.228.31.238",
+      "rank": 12,
+      "region": "eu-north-1",
+      "volume_ids": [
+        "vol-0bb197f5c7892ff58"
+      ]
+    },
+    {
+      "instance_id": "i-0f33004fa05e03094",
+      "private_ip": "10.186.1.195",
+      "public_ip": "16.171.22.171",
+      "rank": 13,
+      "region": "eu-north-1",
+      "volume_ids": [
+        "vol-0d2d67688a0156838"
+      ]
+    },
+    {
+      "instance_id": "i-0374c0c6477d31250",
+      "private_ip": "10.187.1.30",
+      "public_ip": "54.233.237.23",
+      "rank": 14,
+      "region": "sa-east-1",
+      "volume_ids": [
+        "vol-08e93460e204a72ca"
+      ]
+    },
+    {
+      "instance_id": "i-03cb49d3953ddf9d6",
+      "private_ip": "10.187.1.165",
+      "public_ip": "18.231.172.181",
+      "rank": 15,
+      "region": "sa-east-1",
+      "volume_ids": [
+        "vol-08a124a00794b34bc"
+      ]
+    }
+  ],
+  "recorded_at": "2026-09-14T14:41:32.407980+00:00",
+  "regions": [
+    "us-east-1",
+    "us-west-2",
+    "us-east-2",
+    "eu-central-1",
+    "ap-south-1",
+    "eu-west-3",
+    "eu-north-1",
+    "sa-east-1"
+  ],
+  "restart_policy": "no",
+  "round_count": 500,
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 29,
+    "profile": "official",
+    "world_size": 16
+  },
+  "status": "completed",
+  "total_inner_steps": 25000,
+  "wrapper_files": {
+    "capture_final.py": "8c35df7fc616b59aa95ec1e0231e8bddef9fabcfde262033fdc4567809b24f05",
+    "guard_check.py": "af271a534316c6b837ff8786f21f2b72ac99d45af665912e5930b3aaf15f3bed",
+    "nccl_smoke.py": "2ae7f047f21042918948dde4947188db796b8560c1be0c48a2f203df41c6e88d",
+    "run-reference.sh": "8211fab362e74163c52b006c07f5e8dd72cca7351cdf1b1f2182f228f15eff66",
+    "runtime_probe.py": "faf27d3165107db0903bfdf47d2c7f7dc38761ac0cab7515688c6ae8545bb6cb",
+    "upstream-fixture.json": "f22a57ddbe8e1494da8f01d577a354268454d9b68e214b8770ceeeb8d8a0ab23",
+    "validate_checkpoint.py": "c491f285c23f3c53f970c73b137b476195adb640c1690b2d3cf9b6384d26c5c6"
+  }
+}

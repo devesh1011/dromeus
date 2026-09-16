@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "selector": {"profile": "official", "world_size": 8, "benchmark_seed": 29},
+  "backend": "nccl",
+  "acceptance_report": "reports/acceptance-report.json",
+  "summary": "reports/summary.json",
+  "deployment": "reports/deployment.json",
+  "preflight": "reports/preflight-report.json",
+  "checkpoint_manifest": "reports/checkpoint-manifest.json",
+  "reference_source": "reports/reference-source.json",
+  "capture_provenance": "reports/capture-provenance.json",
+  "rank_logs": "logs",
+  "rank_summaries": "summaries",
+  "rank_checkpoints": "checkpoints",
+  "frozen_inputs": "frozen",
+  "cleanup": "cleanup",
+  "archive": "archives/nccl-w8-s29-retry2-final-evidence.tar.gz"
+}

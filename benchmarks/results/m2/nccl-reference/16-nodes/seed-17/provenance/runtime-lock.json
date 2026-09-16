@@ -1,0 +1,28 @@
+{
+  "base_image": {
+    "amd64_digest": "sha256:78a2f9fd8f605301464fc61c42be3acb5a65cd92b0c91f481c3dcdd411dff810",
+    "reference": "ghcr.io/astral-sh/uv:0.8.15-python3.12-bookworm-slim"
+  },
+  "gpu": "NVIDIA A10G",
+  "image": {
+    "digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "repository": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark",
+    "tag": "noloco-readiness60-bound6-20260829"
+  },
+  "python": "3.12.11",
+  "pytorch": {
+    "cuda": "13.0",
+    "cudnn": 92000,
+    "index": "https://download.pytorch.org/whl/cu130",
+    "nccl": "2.29.7",
+    "version": "2.12.1+cu130"
+  },
+  "schema_version": 1,
+  "status": "built-and-gpu-verified",
+  "upstream_noloco": {
+    "commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "outer_gradient_convention": "phi-minus-theta-v1",
+    "repository": "gensyn-ai/noloco",
+    "source": "src/noloco/sparse_optimizer_c.py"
+  }
+}

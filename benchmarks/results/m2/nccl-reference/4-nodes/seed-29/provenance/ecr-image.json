@@ -1,0 +1,17 @@
+{
+    "imageDetails": [
+        {
+            "registryId": "150911080841",
+            "repositoryName": "dromeus-m2-benchmark",
+            "imageDigest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+            "imageTags": [
+                "noloco-readiness60-bound6-20260829"
+            ],
+            "imageSizeInBytes": 5823557237,
+            "imagePushedAt": "2026-08-29T15:33:19.540000+05:30",
+            "imageManifestMediaType": "application/vnd.oci.image.index.v1+json",
+            "lastRecordedPullTime": "2026-09-09T00:13:33.401000+05:30",
+            "imageStatus": "ACTIVE"
+        }
+    ]
+}

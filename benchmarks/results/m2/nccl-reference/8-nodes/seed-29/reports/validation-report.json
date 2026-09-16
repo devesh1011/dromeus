@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "rank_count": 8,
+  "summary_count": 8,
+  "checkpoint_count": 8,
+  "all_summary_selectors_match": true,
+  "all_logs_present": true,
+  "all_command_exit_codes_zero": true,
+  "completed_outer_steps": 500,
+  "nccl_version_log_count": 8,
+  "socket_transport_log_count": 8,
+  "communicator_init_complete_log_count": 8,
+  "real_failure_marker_count": 0,
+  "warnings": {
+    "unbatched_p2p_warnings_retained": true,
+    "ib_disabled_warning_retained": true,
+    "cross_fabric_speed_claim": false
+  },
+  "model_schema": {
+    "tensor_count": 62,
+    "size_bytes": 44701664,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "all_finite_fp32": true,
+    "all_safetensors_readback_verified": true
+  }
+}

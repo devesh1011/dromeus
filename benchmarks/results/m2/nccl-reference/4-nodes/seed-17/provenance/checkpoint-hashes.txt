@@ -1,0 +1,4 @@
+06527de1fb56da01eef4769abc794f9b69ae1d5d0e102e1d805ee523e8ade44f  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/final-checkpoints/node-0.safetensors
+3e02ba4c68a8e40320dc21b071b6ee70a31969aba124e9ee12af533305503ab6  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/final-checkpoints/node-1.safetensors
+005f4f7d101e60fec42c67eee376ed9c1b7cb563ce1914dcdefb23b3e27f59fe  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/final-checkpoints/node-2.safetensors
+7ef944e6a4337d11791ab69c2b9072a587aebe2729ed5b42bafbf3f5b03b1f8e  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/final-checkpoints/node-3.safetensors

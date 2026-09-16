@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "started_at": "2026-09-08T18:58:19Z",
+  "selector": {
+    "profile": "official",
+    "world_size": 4,
+    "benchmark_seed": 17
+  },
+  "torchrun": {
+    "nnodes": 4,
+    "nproc_per_node": 1,
+    "master_addr": "10.240.1.84",
+    "master_port": 29500
+  },
+  "launch_attempt": {
+    "initial": "failed-before-training-missing-rank-argument",
+    "corrected": "started"
+  },
+  "resources_file": "provisioning/aws-resources.json",
+  "ended_at": "2026-09-08T19:38:54Z",
+  "duration_seconds": 2064,
+  "exit_codes": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "completed_outer_steps": [
+    500,
+    500,
+    500,
+    500
+  ]
+}

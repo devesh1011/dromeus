@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "status": "planned-read-only",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 4,
+    "benchmark_seed": 17
+  },
+  "frozen_contract": {
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "dromeus_source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "model": "resnet18-groupnorm-cifar10-v1",
+    "accelerator_class": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge",
+    "round_count": 500,
+    "inner_steps": 25000,
+    "outer_steps_per_round": 50,
+    "backend": "nccl",
+    "cross_region_performance_eligible": false
+  },
+  "placement": {
+    "regions": ["eu-west-1", "eu-north-1"],
+    "workers_per_region": 2,
+    "network": "dedicated-per-region-vpcs-with-cross-region-peering",
+    "availability_zones": {
+      "eu-west-1": ["eu-west-1a", "eu-west-1c"],
+      "eu-north-1": ["eu-north-1b", "eu-north-1c"]
+    },
+    "sibling_reserved_regions": ["us-east-1", "us-west-2", "us-east-2", "ca-central-1"],
+    "sibling_thread_id": "01a0822b-57c8-7bd3-a496-508b49ed6171"
+  },
+  "resources": {
+    "vpc_cidrs": {
+      "eu-west-1": "10.240.0.0/16",
+      "eu-north-1": "10.241.0.0/16"
+    },
+    "root_volume_gib_per_worker": 80,
+    "ssh_source_cidr": "119.252.223.10/32",
+    "torchrun_master_port": 29500,
+    "nccl_port_range": "29501-29599",
+    "run_tag_prefix": "noloco-nccl-w4-s17-20260909"
+  },
+  "pricing_snapshot": {
+    "eu-west-1_linux_g5_xlarge_usd_per_instance_hour": 1.123,
+    "eu-north-1_linux_g5_xlarge_usd_per_instance_hour": 1.067,
+    "four_worker_compute_usd_per_hour": 4.38,
+    "six_hour_compute_ceiling_usd": 26.28,
+    "notes": "Estimate excludes taxes, EBS, public IPv4, image pulls, dataset transfer, and cross-region data transfer. Cross-fabric speed comparison is ineligible."
+  },
+  "preflight_observations": {
+    "existing_paper_length_nccl_run_for_world_size_4_seed_17": false,
+    "active_nccl_compute_before_provisioning": false,
+    "eu_west_1_g5_offer_zones": ["eu-west-1a", "eu-west-1b", "eu-west-1c"],
+    "eu_north_1_g5_offer_zones": ["eu-north-1b", "eu-north-1c"],
+    "g_vt_quota_eu_west_1": 8,
+    "g_vt_quota_eu_north_1": 8,
+    "stopped_prior_dromeus_workers_preserved": true
+  },
+  "output_root": "benchmarks/results/m2/nccl-reference/4-nodes/seed-17"
+}

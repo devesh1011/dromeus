@@ -1,0 +1,962 @@
+[
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-0.log",
+    "size_bytes": 102832,
+    "sha256": "5ff66eadd37dbaa0f4fc59a00edbb223036465d8df01991bfcde73f912a1ef0c",
+    "retrieved_at": "2026-09-14T16:23:22.430754+00:00"
+  },
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-0/summary.json",
+    "local_path": "summaries/rank-0.json",
+    "size_bytes": 183,
+    "sha256": "865e2dba0b47b1909271f7b49485d36691c2fe1424e12e0313fe145332cb1faa",
+    "retrieved_at": "2026-09-14T16:23:25.972178+00:00"
+  },
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-0/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "143282ba128a1a12055265d2fc92da4afe40e6002305c879eabeeb7899ae4261",
+    "retrieved_at": "2026-09-14T16:23:28.735116+00:00"
+  },
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-0/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:31.569306+00:00"
+  },
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-0/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:34.428183+00:00"
+  },
+  {
+    "resource": "i-0ee5df56df7d0b231",
+    "region": "us-east-1",
+    "rank": 0,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-0.safetensors",
+    "local_path": "checkpoints/rank-0.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "0053094047e5aeb19d52f3f5d143c0b69b9b478339fc0076fcdf75b8cb70ba14",
+    "retrieved_at": "2026-09-14T16:23:58.760190+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-1.log",
+    "size_bytes": 104885,
+    "sha256": "1516c30675c873e7055709cc247d563d8a9626558470b7010ec1a5df163cc770",
+    "retrieved_at": "2026-09-14T16:23:22.407280+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-1/summary.json",
+    "local_path": "summaries/rank-1.json",
+    "size_bytes": 183,
+    "sha256": "27bc0a9d17649ca423f6f0f6f2900d8f96c3ab359b08f2ffab102e92f49afe32",
+    "retrieved_at": "2026-09-14T16:23:25.136633+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-1/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "143282ba128a1a12055265d2fc92da4afe40e6002305c879eabeeb7899ae4261",
+    "retrieved_at": "2026-09-14T16:23:27.943379+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-1/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:30.757085+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-1/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:33.563577+00:00"
+  },
+  {
+    "resource": "i-04e26df28723aea05",
+    "region": "us-east-1",
+    "rank": 1,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-1.safetensors",
+    "local_path": "checkpoints/rank-1.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "180dd84526905b3d1404d4e2300c682d179a4605b6f70c7cc8edea2d4385bbb7",
+    "retrieved_at": "2026-09-14T16:23:51.272268+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-2.log",
+    "size_bytes": 104711,
+    "sha256": "e2d77fd711c444e1a6d2c59a95cab6ec9335db13ab52af984538379f97e18a00",
+    "retrieved_at": "2026-09-14T16:23:23.477442+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-2/summary.json",
+    "local_path": "summaries/rank-2.json",
+    "size_bytes": 184,
+    "sha256": "7f1dc4f57970de28583be9a50e5e7e6999001561ab0bb75b6e59d7810c8751e2",
+    "retrieved_at": "2026-09-14T16:23:27.386502+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-2/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "76e608fcc7fd7621c585551e2e4b8e4737befe41032597b5e5b1cbc0e3c0d13f",
+    "retrieved_at": "2026-09-14T16:23:31.284984+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-2/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:35.198600+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-2/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:39.147263+00:00"
+  },
+  {
+    "resource": "i-05fb166fc7d28c5fa",
+    "region": "us-west-2",
+    "rank": 2,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-2.safetensors",
+    "local_path": "checkpoints/rank-2.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "087081cb3663f6c64453f825d9c6654ab6e82e978b328afac9905c48d591a0f9",
+    "retrieved_at": "2026-09-14T16:24:03.587098+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-3.log",
+    "size_bytes": 103498,
+    "sha256": "1a94abdc351bbcc026ec5e9c7ee8f500266fba3ac037f5e9b6e037514732233a",
+    "retrieved_at": "2026-09-14T16:23:23.495917+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-3/summary.json",
+    "local_path": "summaries/rank-3.json",
+    "size_bytes": 184,
+    "sha256": "b67341827a4539422fe74d8c2bd4c18e62460b58c7af059cb6b54eb8384dad65",
+    "retrieved_at": "2026-09-14T16:23:27.351221+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-3/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "76e608fcc7fd7621c585551e2e4b8e4737befe41032597b5e5b1cbc0e3c0d13f",
+    "retrieved_at": "2026-09-14T16:23:31.353204+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-3/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:35.272141+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-3/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:39.240652+00:00"
+  },
+  {
+    "resource": "i-0fc86d5bf7622ce35",
+    "region": "us-west-2",
+    "rank": 3,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-3.safetensors",
+    "local_path": "checkpoints/rank-3.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "916a083f9f78df06c20f072ec917cd35b363e2bf8c86b7e7864d5b78768944e1",
+    "retrieved_at": "2026-09-14T16:24:01.419285+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-4.log",
+    "size_bytes": 103915,
+    "sha256": "c0bcb40e63f5c1cec65d85584da13d5c34b119bef80eb60ab613aa392cf25811",
+    "retrieved_at": "2026-09-14T16:23:22.661660+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-4/summary.json",
+    "local_path": "summaries/rank-4.json",
+    "size_bytes": 184,
+    "sha256": "57bb3f1782bde12c28313ec2d47192ea9995201e32913531e855d915c5ab7401",
+    "retrieved_at": "2026-09-14T16:23:26.257708+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-4/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "e4fd129576fdbcc1d20c80a1425356d2d05b8c5b198274245c03c65d5d7adc60",
+    "retrieved_at": "2026-09-14T16:23:29.082856+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-4/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:32.078072+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-4/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:35.020647+00:00"
+  },
+  {
+    "resource": "i-0450fa888229ee829",
+    "region": "us-east-2",
+    "rank": 4,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-4.safetensors",
+    "local_path": "checkpoints/rank-4.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "9adfc611e098bb0bff2e00df95292beeff72c57d021c3ba1cca1b5909dd38911",
+    "retrieved_at": "2026-09-14T16:24:34.943711+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-5.log",
+    "size_bytes": 104769,
+    "sha256": "8224e8d4e0990b815bd16046d4d86b13604ba0f00721aa93f905d10a79e7d52b",
+    "retrieved_at": "2026-09-14T16:23:22.687844+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-5/summary.json",
+    "local_path": "summaries/rank-5.json",
+    "size_bytes": 184,
+    "sha256": "e35700f4b4d91b684bfe5e0bf76ae733577694aa3828cd595f2defbc10a8b7c0",
+    "retrieved_at": "2026-09-14T16:23:25.646868+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-5/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "e4fd129576fdbcc1d20c80a1425356d2d05b8c5b198274245c03c65d5d7adc60",
+    "retrieved_at": "2026-09-14T16:23:28.614808+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-5/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:31.654956+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-5/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:34.726393+00:00"
+  },
+  {
+    "resource": "i-0854a2b1a7e42157e",
+    "region": "us-east-2",
+    "rank": 5,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-5.safetensors",
+    "local_path": "checkpoints/rank-5.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "13f80c31b1f802bcd9140996302e2cdd668baa4020fe9533b373bc404cd9c940",
+    "retrieved_at": "2026-09-14T16:24:33.331624+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-6.log",
+    "size_bytes": 104593,
+    "sha256": "b39a0130cdd4bafd1832d963945e71006e84c6a465f7ac09b43aeac373747aaa",
+    "retrieved_at": "2026-09-14T16:23:21.644459+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-6/summary.json",
+    "local_path": "summaries/rank-6.json",
+    "size_bytes": 184,
+    "sha256": "57b70dce71fa368a2c3f1c28056ee1fa0a9e56a29adab30b2d8bb9bb9739b757",
+    "retrieved_at": "2026-09-14T16:23:23.557272+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-6/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "3cee97222379a79d79181caddb67bd2eb8cd91224c58853c811b25b8bc6ae021",
+    "retrieved_at": "2026-09-14T16:23:25.510204+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-6/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:27.535130+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-6/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:29.529865+00:00"
+  },
+  {
+    "resource": "i-03fdead368e297628",
+    "region": "eu-central-1",
+    "rank": 6,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-6.safetensors",
+    "local_path": "checkpoints/rank-6.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "378741e10414f3030467810d655524cf77a4fd662bd356e2b169447861765655",
+    "retrieved_at": "2026-09-14T16:24:27.120998+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-7.log",
+    "size_bytes": 104421,
+    "sha256": "3d9b8867040a27014bc8a9251339b1e25b4fdd88c09efdf2375f8f9e17a0e1b5",
+    "retrieved_at": "2026-09-14T16:23:22.678051+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-7/summary.json",
+    "local_path": "summaries/rank-7.json",
+    "size_bytes": 184,
+    "sha256": "525c694cc7b4bfc4a023ef983f9443fdbb880a34f8d4e3f4189a14def82032dd",
+    "retrieved_at": "2026-09-14T16:23:24.587083+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-7/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "3cee97222379a79d79181caddb67bd2eb8cd91224c58853c811b25b8bc6ae021",
+    "retrieved_at": "2026-09-14T16:23:26.506914+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-7/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:28.528051+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-7/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:30.478715+00:00"
+  },
+  {
+    "resource": "i-0bd29b1671bdd600d",
+    "region": "eu-central-1",
+    "rank": 7,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-7.safetensors",
+    "local_path": "checkpoints/rank-7.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "02ba08e3e65b38216067b187cc4a06798db4e65cfb1cef5ac4e638223b09199b",
+    "retrieved_at": "2026-09-14T16:23:46.661993+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-8.log",
+    "size_bytes": 103227,
+    "sha256": "98a082205af67fdc1717d247d176124d5e89d841c78cba37144d9e59b9ee26a8",
+    "retrieved_at": "2026-09-14T16:23:20.267217+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-8/summary.json",
+    "local_path": "summaries/rank-8.json",
+    "size_bytes": 184,
+    "sha256": "cdbfa912b30dc2b3eff43a8fe4d185b2d8d7b8257d0da8b5ea4898080ba972f4",
+    "retrieved_at": "2026-09-14T16:23:20.684161+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-8/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "8efa086562316e8a9ef9894a36ddbfd3655bae75c2d3f8e63cfc5ccbd9472c3c",
+    "retrieved_at": "2026-09-14T16:23:21.100423+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-8/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:21.510825+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-8/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:21.938985+00:00"
+  },
+  {
+    "resource": "i-00c2d4baf0ed57d36",
+    "region": "ap-south-1",
+    "rank": 8,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-8.safetensors",
+    "local_path": "checkpoints/rank-8.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "083eb575723116aa43f3d7d5023d683e83bb691f5557832eb4b36f8096d9cada",
+    "retrieved_at": "2026-09-14T16:23:29.975226+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-9.log",
+    "size_bytes": 106942,
+    "sha256": "819af444e6de3392c9fc8a2e2680ecf077dc8024f6d5337534ddc2ef8e3fedff",
+    "retrieved_at": "2026-09-14T16:23:20.266790+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-9/summary.json",
+    "local_path": "summaries/rank-9.json",
+    "size_bytes": 184,
+    "sha256": "bb7d34fd7019e06126cee2ec148782beccc252d737fbf623979fbc9745a3e2c5",
+    "retrieved_at": "2026-09-14T16:23:21.677092+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-9/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "a47e2646f97e409ddde698809909983106979c5fadbbe034ec63846822c60f9d",
+    "retrieved_at": "2026-09-14T16:23:22.078347+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-9/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "428f6253870f8f4a7b4e546f81ab4c56345d5111de3e1dd603dc0949a15efff9",
+    "retrieved_at": "2026-09-14T16:23:22.758856+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-9/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:23.218335+00:00"
+  },
+  {
+    "resource": "i-0fb9cb4fd36ff7373",
+    "region": "ap-south-1",
+    "rank": 9,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-9.safetensors",
+    "local_path": "checkpoints/rank-9.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "3186aa9ce72ac47ee97ee3981ccd59d220eb57b98f34474d5f843390affb3fad",
+    "retrieved_at": "2026-09-14T16:23:30.598532+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-10.log",
+    "size_bytes": 102927,
+    "sha256": "e594b52e7d2373cd083eaf71bf8a316e583d5591ebf8db46638e0dec3da03d58",
+    "retrieved_at": "2026-09-14T16:23:21.651787+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-10/summary.json",
+    "local_path": "summaries/rank-10.json",
+    "size_bytes": 185,
+    "sha256": "6b2663d4704a5be1d5b7204d0dced3f3e9a067c2de479aebfc35211393e11df4",
+    "retrieved_at": "2026-09-14T16:23:23.493911+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-10/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "3cee97222379a79d79181caddb67bd2eb8cd91224c58853c811b25b8bc6ae021",
+    "retrieved_at": "2026-09-14T16:23:25.441467+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-10/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:27.308603+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-10/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:29.222699+00:00"
+  },
+  {
+    "resource": "i-090089be7a5dee216",
+    "region": "eu-west-3",
+    "rank": 10,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-10.safetensors",
+    "local_path": "checkpoints/rank-10.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "ef644dacc8487ca7d5df4f8c28cefbef568e3a110dbe1ff2fd65f335a5abff25",
+    "retrieved_at": "2026-09-14T16:23:53.532806+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-11.log",
+    "size_bytes": 103769,
+    "sha256": "007dd46e4977a9e74b685c03cb25186e52298cb501e4957d151c0134d3cbe9a9",
+    "retrieved_at": "2026-09-14T16:23:22.654994+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-11/summary.json",
+    "local_path": "summaries/rank-11.json",
+    "size_bytes": 185,
+    "sha256": "775ac7250a010b3472477b3586892d76b202376910e56b5fdd041f0358282bc7",
+    "retrieved_at": "2026-09-14T16:23:25.344814+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-11/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "3cee97222379a79d79181caddb67bd2eb8cd91224c58853c811b25b8bc6ae021",
+    "retrieved_at": "2026-09-14T16:23:27.184005+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-11/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:29.097498+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-11/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:31.035539+00:00"
+  },
+  {
+    "resource": "i-0819b1ae59fbab106",
+    "region": "eu-west-3",
+    "rank": 11,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-11.safetensors",
+    "local_path": "checkpoints/rank-11.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "f0cc083a67ec9e42e5c59a4c7ff6ddfe52bd89f6ef3c55310f208c63793e1b79",
+    "retrieved_at": "2026-09-14T16:24:16.386533+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-12.log",
+    "size_bytes": 102583,
+    "sha256": "0ee7755adb646234b3f064b0f6d424ecdf2611784b1e8544b17c4119e67e2a2f",
+    "retrieved_at": "2026-09-14T16:23:21.861793+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-12/summary.json",
+    "local_path": "summaries/rank-12.json",
+    "size_bytes": 185,
+    "sha256": "cfb0fda7f3062dff5e5212b6c50edb8060d8532b024efafd55a938c543900abe",
+    "retrieved_at": "2026-09-14T16:23:24.047465+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-12/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "cd96cdb0524ff39c9c5e89a2443bb55ce2ad92ac1730e655360b56852ffdc2d3",
+    "retrieved_at": "2026-09-14T16:23:26.385134+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-12/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:28.573057+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-12/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:30.723359+00:00"
+  },
+  {
+    "resource": "i-0f3d2aa052eedfb82",
+    "region": "eu-north-1",
+    "rank": 12,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-12.safetensors",
+    "local_path": "checkpoints/rank-12.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "b5b763e0c59f48d5c7b9d0eecc3df72045ba2cf2eb25c72e9b47125fa919a5c9",
+    "retrieved_at": "2026-09-14T16:24:05.158237+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-13.log",
+    "size_bytes": 103426,
+    "sha256": "a975b0aeecd8529087ea729ac548c5830e87b9fdaa172cfece7ee4e399c42f6f",
+    "retrieved_at": "2026-09-14T16:23:22.925267+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-13/summary.json",
+    "local_path": "summaries/rank-13.json",
+    "size_bytes": 185,
+    "sha256": "b50018edc7e8ed41e48c926e2fa5af92a3589ed70061b817d780e43f24685bbd",
+    "retrieved_at": "2026-09-14T16:23:25.124186+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-13/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "cd96cdb0524ff39c9c5e89a2443bb55ce2ad92ac1730e655360b56852ffdc2d3",
+    "retrieved_at": "2026-09-14T16:23:27.370033+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-13/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:29.616290+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-13/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:31.892690+00:00"
+  },
+  {
+    "resource": "i-0f33004fa05e03094",
+    "region": "eu-north-1",
+    "rank": 13,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-13.safetensors",
+    "local_path": "checkpoints/rank-13.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "fbeeed81cf589967b6d1dd1353f22172e51fca955795893dd952831e34a92322",
+    "retrieved_at": "2026-09-14T16:24:21.059879+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-14.log",
+    "size_bytes": 102237,
+    "sha256": "16248570eb5972a5ebaddc2ff34d5114de38791e7be9c6867f7196421cac79f2",
+    "retrieved_at": "2026-09-14T16:23:24.109619+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-14/summary.json",
+    "local_path": "summaries/rank-14.json",
+    "size_bytes": 185,
+    "sha256": "2364a5a4c481fb4fe18a0567424f5446223c9d90a12367e3203ffb4d95c0ec0d",
+    "retrieved_at": "2026-09-14T16:23:28.868075+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-14/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "5d879a7ae4e741b3552079be37ba8d741c7ccfa3c2004edff12e4e5842d692fa",
+    "retrieved_at": "2026-09-14T16:23:33.524194+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-14/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:38.328285+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-14/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:43.191851+00:00"
+  },
+  {
+    "resource": "i-0374c0c6477d31250",
+    "region": "sa-east-1",
+    "rank": 14,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-14.safetensors",
+    "local_path": "checkpoints/rank-14.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "2656b3fc6cfba24f19cb7ba42f852e45e2203780e9c4209bb660c80fd180f367",
+    "retrieved_at": "2026-09-14T16:24:03.603746+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log",
+    "local_path": "logs/rank-15.log",
+    "size_bytes": 101303,
+    "sha256": "371169d5fcf004049821d9817dc9fa1d12089866070a3686ffce797f6663a238",
+    "retrieved_at": "2026-09-14T16:23:24.207335+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/reference-output/rank-15/summary.json",
+    "local_path": "summaries/rank-15.json",
+    "size_bytes": 184,
+    "sha256": "5f1f38e9f54beab20a48dc703b64c490275e159fe657c5390592da7cbd5c5b86",
+    "retrieved_at": "2026-09-14T16:23:29.093258+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/started-at.txt",
+    "local_path": "run-metadata/rank-15/started-at.txt",
+    "size_bytes": 21,
+    "sha256": "5715a0bdf6c06f9f63edc65d1d7adf3a554ea1d84d6c4f6e5e8f7784d87449d6",
+    "retrieved_at": "2026-09-14T16:23:33.957169+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/ended-at.txt",
+    "local_path": "run-metadata/rank-15/ended-at.txt",
+    "size_bytes": 21,
+    "sha256": "e54d8edf790647e12b922822658df07ff33b1606d9a173af74c9b9ace189e233",
+    "retrieved_at": "2026-09-14T16:23:38.743224+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/exit-code.txt",
+    "local_path": "run-metadata/rank-15/exit-code.txt",
+    "size_bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retrieved_at": "2026-09-14T16:23:43.466644+00:00"
+  },
+  {
+    "resource": "i-03cb49d3953ddf9d6",
+    "region": "sa-east-1",
+    "rank": 15,
+    "original_path": "/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/final-checkpoints/rank-15.safetensors",
+    "local_path": "checkpoints/rank-15.safetensors",
+    "size_bytes": 44701664,
+    "sha256": "3eccb7241f3831997db86df9e134a90b22c1d8f4c6619d2bcd0cdf539ed798d4",
+    "retrieved_at": "2026-09-14T16:24:11.394933+00:00"
+  }
+]

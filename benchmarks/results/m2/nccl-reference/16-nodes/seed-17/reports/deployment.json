@@ -1,0 +1,545 @@
+{
+  "cleanup": {
+    "lifecycle_records": {
+      "deleted_peering_records": 28,
+      "terminated_instance_records": 16
+    },
+    "pending": false,
+    "result": "clean",
+    "run_id": "noloco-nccl-w16-s17-20260909",
+    "schema_version": 1,
+    "task_owned_resource_queries": {
+      "instances": 0,
+      "internet_gateways": 0,
+      "key_pairs": 0,
+      "network_interfaces": 0,
+      "route_tables": 0,
+      "security_groups": 0,
+      "subnets": 0,
+      "volumes": 0,
+      "vpc_peerings": 0,
+      "vpcs": 0
+    },
+    "verification_path": "cleanup/final-state.json",
+    "verified_at_utc": "2026-09-09T11:43:18Z"
+  },
+  "cost_estimate": {
+    "notes": [
+      "Estimate excludes EBS, public IPv4, image pulls, and cross-region transfer.",
+      "Actual AWS bill was not queried."
+    ],
+    "on_demand_compute_usd_per_hour": 16.532,
+    "training_compute_usd_estimate": 17.143
+  },
+  "execution": {
+    "clean_exit_count": 16,
+    "completed_outer_steps": [
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500
+    ],
+    "duration_seconds": 3733,
+    "ended_at": "2026-09-09T11:03:49Z",
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "run_failure_count": 0,
+    "started_at": "2026-09-09T10:01:36Z"
+  },
+  "frozen": {
+    "accelerator": "NVIDIA-A10G",
+    "backend": "nccl",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "cuda": "13.0",
+    "cudnn": 92000,
+    "dromeus_runtime_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "inner_steps_per_round": 50,
+    "instance_type": "g5.xlarge",
+    "nccl": "2.29.7",
+    "python": "3.12.11",
+    "pytorch": "2.12.1+cu130",
+    "round_count": 500,
+    "total_inner_steps": 25000
+  },
+  "network": {
+    "cross_region_performance_eligible": false,
+    "ib_disabled": true,
+    "master_addr_private": "10.230.1.47",
+    "master_port": 29500,
+    "nccl_network": "Socket",
+    "nccl_port_range": "50000-50099",
+    "peering_count": 28,
+    "peerings": [
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-0000fec33e6fecebe",
+        "requester_region": "eu-central-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-central-1",
+        "id": "pcx-007cc77cace816516",
+        "requester_region": "us-east-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-central-1",
+        "id": "pcx-0163cc1fea6a5ac6f",
+        "requester_region": "us-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-0299febc10f2a654f",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-02a1e7bf512537a6c",
+        "requester_region": "us-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0391774b649baedb4",
+        "requester_region": "eu-west-3",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-3",
+        "id": "pcx-0400fa666a0b03037",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-041c61426e5831312",
+        "requester_region": "us-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-0440a8aa054f3f7f2",
+        "requester_region": "us-east-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "us-east-2",
+        "id": "pcx-04a9819373906ca26",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-2",
+        "id": "pcx-04dccfc43455d7ee0",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-3",
+        "id": "pcx-04f3702f3448ae023",
+        "requester_region": "eu-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0581979fc0d3e74d9",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-2",
+        "id": "pcx-060497b2108b836af",
+        "requester_region": "us-east-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-06a02290b5efe17b9",
+        "requester_region": "eu-west-3",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-3",
+        "id": "pcx-073d50946f50e2cab",
+        "requester_region": "us-east-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "us-east-2",
+        "id": "pcx-0960f3cc6ecc6df14",
+        "requester_region": "us-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-2",
+        "id": "pcx-0a1cf704e5b3e8657",
+        "requester_region": "eu-central-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0aca2fb4bcf630866",
+        "requester_region": "eu-central-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-3",
+        "id": "pcx-0b7b1c7b42a839b29",
+        "requester_region": "eu-central-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0c024566210fd2b66",
+        "requester_region": "eu-north-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-central-1",
+        "id": "pcx-0c98119f184a9c6c8",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0ca0beaf149d7c070",
+        "requester_region": "eu-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-2",
+        "id": "pcx-0cc122c4ba45ee604",
+        "requester_region": "us-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "us-west-2",
+        "id": "pcx-0d0d237df69809be4",
+        "requester_region": "us-east-1",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-north-1",
+        "id": "pcx-0f1315d5807569b1c",
+        "requester_region": "eu-west-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "sa-east-1",
+        "id": "pcx-0f6be5ea91aa8fbfb",
+        "requester_region": "us-east-2",
+        "status": "active"
+      },
+      {
+        "accepter_region": "eu-west-3",
+        "id": "pcx-0feabdf7e41241421",
+        "requester_region": "us-west-2",
+        "status": "active"
+      }
+    ],
+    "private_tcp_security_group": "task-VPC-CIDRs-only, TCP 1-65535",
+    "regions": [
+      "us-east-1",
+      "us-west-2",
+      "us-east-2",
+      "eu-central-1",
+      "eu-west-2",
+      "eu-west-3",
+      "eu-north-1",
+      "sa-east-1"
+    ],
+    "socket_family": "AF_INET",
+    "socket_interface": "ens5",
+    "topology": "private-full-mesh-cross-region-vpc-peering",
+    "workers_per_region": 2
+  },
+  "rank_map": [
+    {
+      "availability_zone": "us-east-1c",
+      "image_id": "ami-0eac3fc37325af5ae",
+      "instance_id": "i-0174bd387d9527b6e",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.230.1.47",
+      "public_ip": "52.23.201.244",
+      "rank": 0,
+      "region": "us-east-1",
+      "root_volume_id": "vol-095b5c0ac170dc951",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0becec8d98926bacc",
+      "subnet_id": "subnet-0b32d12a9073afb35",
+      "vpc_id": "vpc-03354a26a1b36b523"
+    },
+    {
+      "availability_zone": "us-east-1c",
+      "image_id": "ami-0eac3fc37325af5ae",
+      "instance_id": "i-00c6ca09225d666e1",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.230.1.180",
+      "public_ip": "54.226.205.87",
+      "rank": 1,
+      "region": "us-east-1",
+      "root_volume_id": "vol-0eb1eda760caa4abe",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0becec8d98926bacc",
+      "subnet_id": "subnet-0b32d12a9073afb35",
+      "vpc_id": "vpc-03354a26a1b36b523"
+    },
+    {
+      "availability_zone": "us-west-2c",
+      "image_id": "ami-0a4cc1ccbcec439f4",
+      "instance_id": "i-0989d2f88ee9b93a8",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.231.1.43",
+      "public_ip": "35.92.32.186",
+      "rank": 2,
+      "region": "us-west-2",
+      "root_volume_id": "vol-0bf616a2de95687a0",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-004cde2bfa79313e0",
+      "subnet_id": "subnet-07efaff96fd65ce36",
+      "vpc_id": "vpc-090668a25960bab00"
+    },
+    {
+      "availability_zone": "us-west-2c",
+      "image_id": "ami-0a4cc1ccbcec439f4",
+      "instance_id": "i-0cf4404f6cd888c70",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.231.1.201",
+      "public_ip": "44.249.74.254",
+      "rank": 3,
+      "region": "us-west-2",
+      "root_volume_id": "vol-00f8ca8e9cd7506cd",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-004cde2bfa79313e0",
+      "subnet_id": "subnet-07efaff96fd65ce36",
+      "vpc_id": "vpc-090668a25960bab00"
+    },
+    {
+      "availability_zone": "us-east-2a",
+      "image_id": "ami-0c897ab49061012e9",
+      "instance_id": "i-01f65564602b84eff",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.232.1.159",
+      "public_ip": "18.117.76.171",
+      "rank": 4,
+      "region": "us-east-2",
+      "root_volume_id": "vol-0099c30eb5738b055",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0daca29a1f59e9c42",
+      "subnet_id": "subnet-08fa1bb1a96d3f588",
+      "vpc_id": "vpc-08538add58c35ed8a"
+    },
+    {
+      "availability_zone": "us-east-2a",
+      "image_id": "ami-0c897ab49061012e9",
+      "instance_id": "i-07b7005d5d7ce2db8",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.232.1.152",
+      "public_ip": "18.117.168.230",
+      "rank": 5,
+      "region": "us-east-2",
+      "root_volume_id": "vol-07d88b010a3477799",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0daca29a1f59e9c42",
+      "subnet_id": "subnet-08fa1bb1a96d3f588",
+      "vpc_id": "vpc-08538add58c35ed8a"
+    },
+    {
+      "availability_zone": "eu-central-1b",
+      "image_id": "ami-0689d7d748b757b61",
+      "instance_id": "i-0dbfc6ba0f89f91b6",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.233.4.28",
+      "public_ip": "3.127.242.174",
+      "rank": 6,
+      "region": "eu-central-1",
+      "root_volume_id": "vol-060f392fa7f8d6956",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-04bdb0c23b76d6d40",
+      "subnet_id": "subnet-056a8069e47709836",
+      "vpc_id": "vpc-0391307411a929fd6"
+    },
+    {
+      "availability_zone": "eu-central-1b",
+      "image_id": "ami-0689d7d748b757b61",
+      "instance_id": "i-0719fc2b6cc6a1438",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.233.4.98",
+      "public_ip": "3.75.183.250",
+      "rank": 7,
+      "region": "eu-central-1",
+      "root_volume_id": "vol-01329d938a8f0ec7a",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-04bdb0c23b76d6d40",
+      "subnet_id": "subnet-056a8069e47709836",
+      "vpc_id": "vpc-0391307411a929fd6"
+    },
+    {
+      "availability_zone": "eu-west-2a",
+      "image_id": "ami-0a8f65d8be12e6e6c",
+      "instance_id": "i-066f6c50b817b9e16",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.238.1.86",
+      "public_ip": "52.56.138.138",
+      "rank": 8,
+      "region": "eu-west-2",
+      "root_volume_id": "vol-0361911189dab3dc0",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-05d9347ed8a0992cf",
+      "subnet_id": "subnet-04e1a1f06f81f8aef",
+      "vpc_id": "vpc-0da99e994850ce628"
+    },
+    {
+      "availability_zone": "eu-west-2a",
+      "image_id": "ami-0a8f65d8be12e6e6c",
+      "instance_id": "i-086721ef5454119c3",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.238.1.232",
+      "public_ip": "52.56.189.99",
+      "rank": 9,
+      "region": "eu-west-2",
+      "root_volume_id": "vol-0cc8ed2ae20b960d8",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-05d9347ed8a0992cf",
+      "subnet_id": "subnet-04e1a1f06f81f8aef",
+      "vpc_id": "vpc-0da99e994850ce628"
+    },
+    {
+      "availability_zone": "eu-west-3b",
+      "image_id": "ami-0ae05d9107c401f9e",
+      "instance_id": "i-0fd5f0b21bbf2affe",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.239.1.184",
+      "public_ip": "15.224.116.152",
+      "rank": 10,
+      "region": "eu-west-3",
+      "root_volume_id": "vol-062da4e215751d9f8",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0446c8a1ae7dcf6d1",
+      "subnet_id": "subnet-0033b719d4482a7b3",
+      "vpc_id": "vpc-0b25dccdf93d324e0"
+    },
+    {
+      "availability_zone": "eu-west-3c",
+      "image_id": "ami-0ae05d9107c401f9e",
+      "instance_id": "i-09ba94892f83c34ac",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.239.2.100",
+      "public_ip": "35.180.169.228",
+      "rank": 11,
+      "region": "eu-west-3",
+      "root_volume_id": "vol-0f26cde4886dc3845",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0446c8a1ae7dcf6d1",
+      "subnet_id": "subnet-073523936d32b86d6",
+      "vpc_id": "vpc-0b25dccdf93d324e0"
+    },
+    {
+      "availability_zone": "eu-north-1b",
+      "image_id": "ami-0a1a0eba60401b331",
+      "instance_id": "i-01977c154912d59af",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.235.1.137",
+      "public_ip": "13.60.247.207",
+      "rank": 12,
+      "region": "eu-north-1",
+      "root_volume_id": "vol-07d06ca407bead6d7",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-06d20092474bc58d6",
+      "subnet_id": "subnet-0ff9c41f8a520d7dd",
+      "vpc_id": "vpc-0bb064d6706d12324"
+    },
+    {
+      "availability_zone": "eu-north-1b",
+      "image_id": "ami-0a1a0eba60401b331",
+      "instance_id": "i-0fee99e77a017cdd0",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.235.1.29",
+      "public_ip": "16.171.34.52",
+      "rank": 13,
+      "region": "eu-north-1",
+      "root_volume_id": "vol-069a1d1c9a7dfc453",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-06d20092474bc58d6",
+      "subnet_id": "subnet-0ff9c41f8a520d7dd",
+      "vpc_id": "vpc-0bb064d6706d12324"
+    },
+    {
+      "availability_zone": "sa-east-1b",
+      "image_id": "ami-07e5bb21a945dfa48",
+      "instance_id": "i-0ad341324fc045f22",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.241.1.32",
+      "public_ip": "56.125.105.111",
+      "rank": 14,
+      "region": "sa-east-1",
+      "root_volume_id": "vol-0baa25a3b0e206309",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0cc884c25eb6629bc",
+      "subnet_id": "subnet-03ab8942e8225c5d3",
+      "vpc_id": "vpc-0c2ef0717b0e3db51"
+    },
+    {
+      "availability_zone": "sa-east-1a",
+      "image_id": "ami-07e5bb21a945dfa48",
+      "instance_id": "i-016ff7bb86a252dc2",
+      "instance_type": "g5.xlarge",
+      "private_ip": "10.241.2.117",
+      "public_ip": "56.124.74.94",
+      "rank": 15,
+      "region": "sa-east-1",
+      "root_volume_id": "vol-05e9456aeb4f85818",
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "security_group_id": "sg-0cc884c25eb6629bc",
+      "subnet_id": "subnet-068209dfdcbec3b8e",
+      "vpc_id": "vpc-0c2ef0717b0e3db51"
+    }
+  ],
+  "reference": {
+    "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+    "implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+    "run_script_sha256": "19959135dae245cdf307388898efa02015ce6c8527f600b53bdaae3635fe6977",
+    "source_mounted": false,
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
+  },
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 17,
+    "profile": "official",
+    "world_size": 16
+  },
+  "status": "completed"
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "status": "accepted-model-weight-evidence",
+  "run_id": "noloco-nccl-w8-remediate-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 8,
+    "benchmark_seed": 17
+  },
+  "gates": {
+    "all_ranks_complete": true,
+    "all_clean_exit": true,
+    "nccl_backend": true,
+    "frozen_runtime": true,
+    "private_network": true,
+    "preflight_capture_readback": true,
+    "final_model_weight_checkpoint_archive": true,
+    "optimizer_state_captured": false
+  },
+  "artifact": {
+    "summary_sha256": "6944280537b601560938c0a24971f2e3de789ae9afacd9cce260b2c7d876377a",
+        "deployment_sha256": "7583d4235c5d872f66b15af28b3eef1e80ccb26da5b2a1b64ef61e206b7b8e1a",
+    "checkpoint_manifest_sha256": "db5620757b469184df51e0b6b6f2990975599c4eecf39486d579619163512ba6",
+    "rank_log_sha256": [
+      "971b3b8ee2fe2c1cc1d5094ce1fd7bd1304445b5f9898f35c317826e244af123",
+      "b0a860604bcaae00b3452bf3ef84f06c73ce8c872919f07fd815d8d0275039a1",
+      "f60a473b3d6b38775e8baff4c37f4fae75181125875e58a25d3b1518b948c974",
+      "65d430e680a749a9dea9b79aba8b5ff8355cb87f50ab5c80a7d4e2a9715de6db",
+      "4c60f2c964d7c6f559852671ccb13c26f8cd493cae65743e7ee9fc700f989e58",
+      "e1296e30bda6a12d3650b6eb3aac70320575fcdfbb54719da78195fbef8125e7",
+      "7580d8bd324da7d9d8c084607fcd7cec35ce9b4fddf853c66b587c378d600193",
+      "097d9a4be1c7ac88c407fa1aabf42da550fd13e5c28502dc3b65c3c612a0893f"
+    ],
+    "capture_provenance_sha256": "c59a60426903ce56273c3927580e3b88e1cdb911fea7e5cbb239e7a6ebb8fe2b"
+  },
+  "checkpoint": {
+    "kind": "final-model-weight-safetensors",
+    "count": 8,
+    "size_bytes_each": 44701664,
+    "tensor_count_each": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "safetensors_readback_verified": true,
+    "finite_fp32_verified": true,
+    "sha256_verified": true,
+    "optimizer_state_captured": false,
+    "continuation_support_claimed": false
+  },
+  "limitations": [
+    "No cross-fabric speed equivalence claim.",
+    "These are model-weight checkpoints only; optimizer, outer-momentum, loader/RNG continuation state is not captured or claimed."
+  ],
+  "cleanup": {
+    "pending": false,
+    "verified_at_utc": "2026-09-09T07:15:18Z",
+    "verification_path": "cleanup/final-state.json"
+  },
+  "accuracy_comparison": {
+    "matching_w8_axl_seed17_mean": 0.9307875,
+    "nccl_mean": 0.9309125,
+    "delta_fractional": 0.000125,
+    "delta_percentage_points": 0.0125,
+    "within_3_point_gate": true,
+    "cross_fabric_speed_comparison_eligible": false
+  }
+}

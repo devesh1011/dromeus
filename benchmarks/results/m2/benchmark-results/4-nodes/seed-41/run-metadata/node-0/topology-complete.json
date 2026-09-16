@@ -1,0 +1,82 @@
+{
+  "our_ipv6": "208:6dc5:281e:4b74:db9e:d241:3e29:4445",
+  "our_public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+  "peers": [
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 2,
+      "public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.61.2.194:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 1,
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "root": "",
+      "up": true,
+      "uri": "tls://34.245.60.17:9300"
+    },
+    {
+      "coords": null,
+      "inbound": false,
+      "port": 3,
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "root": "",
+      "up": true,
+      "uri": "tls://34.242.40.103:9300"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 2,
+      "public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+      "root": "",
+      "up": true,
+      "uri": "tls://13.61.2.194:32798"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 3,
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "root": "",
+      "up": true,
+      "uri": "tls://34.242.40.103:48266"
+    },
+    {
+      "coords": null,
+      "inbound": true,
+      "port": 1,
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "root": "",
+      "up": true,
+      "uri": "tls://34.245.60.17:39672"
+    }
+  ],
+  "tree": [
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "sequence": 25
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "sequence": 26
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+      "sequence": 26
+    },
+    {
+      "parent": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "sequence": 26
+    }
+  ]
+}

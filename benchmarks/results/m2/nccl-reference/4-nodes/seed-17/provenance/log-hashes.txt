@@ -1,0 +1,4 @@
+a25076648a2ae1acd7d4d46a5cdbb7a600b4170ea57e9cf4f4789aa7809cb0d3  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/logs/node-0/host.log
+1a249bb15099aa983d2ed4b758684e43181046c7fb997edd902982b96141d7eb  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/logs/node-1/host.log
+9e126e2fae898f38b6a32f6fd09ffc927aa81227717434b7d872718ba98456c3  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/logs/node-2/host.log
+97e54a4207d51a81ef5130d8ec98da85727b0ee19934f3606540bc279575f569  benchmarks/results/m2/nccl-reference/4-nodes/seed-17/logs/node-3/host.log

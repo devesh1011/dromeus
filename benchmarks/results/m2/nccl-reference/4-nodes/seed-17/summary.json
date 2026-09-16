@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 4,
+    "benchmark_seed": 17
+  },
+  "reference": {
+    "backend": "nccl",
+    "acceptance_eligible": true,
+    "runner_module": "benchmarks.noloco_reference.runner",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd"
+  },
+  "aggregate": {
+    "schema_version": 1,
+    "ranks": [
+      {
+        "rank": 0,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5369086784362793,
+        "final_accuracy": 0.9278
+      },
+      {
+        "rank": 1,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5470958786010742,
+        "final_accuracy": 0.9256
+      },
+      {
+        "rank": 2,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5427265747070312,
+        "final_accuracy": 0.9266
+      },
+      {
+        "rank": 3,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5369488672256469,
+        "final_accuracy": 0.9284
+      }
+    ],
+    "mean_final_accuracy": 0.9270999999999999,
+    "stddev_final_accuracy": 0.0010816653826392008,
+    "minimum_final_accuracy": 0.9256,
+    "maximum_final_accuracy": 0.9284,
+    "mean_final_loss": 0.5409199997425079,
+    "stddev_final_loss": 0.004279771748189463
+  },
+  "artifact_pointers": {
+    "acceptance_report": "acceptance-report.json",
+    "acceptance_report_sha256": "747eb64f587a0256a32a7dc973b259d5ad70ae6cb6c03e779c94424eec964a28",
+    "aggregate_metrics": "provenance/aggregate-metrics.json",
+    "aggregate_metrics_sha256": "2a2e882f43a402cb44641d43016e8996616d429582889f0ef6ace67af46fad58",
+    "cleanup_state": "provenance/cleanup-state.json",
+    "cleanup_state_sha256": "619892fd6ae21889f10e036e79e11ca9fd13f01a7a7f4bfe7e6d89ce84d0d69d",
+    "pre_cleanup_archive": "archives/nccl-w4-s17-evidence.tar.gz",
+    "pre_cleanup_archive_sha256": "3d5b1b8ccda614cc1d8939b58ec7c519c46aec8fa885efe7d157d5aa6588a2e3",
+    "final_archive": "archives/nccl-w4-s17-final-evidence.tar.gz",
+    "checksums": "checksums.sha256"
+  },
+  "rank_map": [
+    {
+      "rank": 0,
+      "region": "eu-west-1",
+      "availability_zone": "eu-west-1a",
+      "instance_id": "i-0b01725ea54913fe3",
+      "private_ip": "10.240.1.84",
+      "public_ip": "34.242.74.176",
+      "vpc_id": "vpc-0e023549283913af4",
+      "security_group_id": "sg-0ba76d8a0c63905f0"
+    },
+    {
+      "rank": 1,
+      "region": "eu-west-1",
+      "availability_zone": "eu-west-1a",
+      "instance_id": "i-007b92138e93e5f56",
+      "private_ip": "10.240.1.251",
+      "public_ip": "108.130.83.111",
+      "vpc_id": "vpc-0e023549283913af4",
+      "security_group_id": "sg-0ba76d8a0c63905f0"
+    },
+    {
+      "rank": 2,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-0af6f0533eeb67d20",
+      "private_ip": "10.241.1.163",
+      "public_ip": "13.49.68.46",
+      "vpc_id": "vpc-0de1eee8a2d787b15",
+      "security_group_id": "sg-0b49fc0b82468c7ea"
+    },
+    {
+      "rank": 3,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-0573985263f81b9e4",
+      "private_ip": "10.241.1.231",
+      "public_ip": "13.60.181.44",
+      "vpc_id": "vpc-0de1eee8a2d787b15",
+      "security_group_id": "sg-0b49fc0b82468c7ea"
+    }
+  ],
+  "cleanup": {
+    "schema_version": 1,
+    "status": "cleanup-verified",
+    "run_id": "noloco-nccl-official-w4-s17-20260909",
+    "completed_at": "2026-09-08T19:57:17Z",
+    "run_resources": {
+      "instances": {
+        "terminated": 4,
+        "non_terminated": 0
+      },
+      "volumes": 0,
+      "network_interfaces": 0,
+      "vpcs": 0,
+      "subnets": 0,
+      "route_tables": 0,
+      "internet_gateways": 0,
+      "security_groups": 0,
+      "key_pairs": 0,
+      "peering_connections": {
+        "deleted": 1,
+        "active": 0
+      }
+    },
+    "preserved_unrelated": {
+      "stopped_g5xlarge_eu_west_1": 5,
+      "stopped_g5xlarge_eu_north_1": 2
+    },
+    "recoverability_note": "Compute and temporary network resources were intentionally deleted after artifact capture. Local logs, checkpoints, and archives remain."
+  },
+  "warnings": [
+    "Rank 2 torchrun logged a post-worker exit-barrier DistNetworkError after its worker wrote summary and checkpoint; run-script and worker exit codes were 0.",
+    "NCCL socket transport was forced with IB disabled; cross-fabric performance equivalence is not claimed."
+  ],
+  "gates": {
+    "w4_evidence_gate_independently_verified": true,
+    "frozen_input_identity": true,
+    "container_runtime_preflight": true,
+    "nccl_smoke": true,
+    "all_four_ranks_complete": true,
+    "all_four_worker_exit_codes_zero": true,
+    "full_500_rounds": true,
+    "full_25000_inner_steps": true,
+    "final_checkpoint_schema_and_hashes": true,
+    "accuracy_within_3_points_of_fresh_axl": true,
+    "raw_logs_and_provenance_captured": true,
+    "archives_verified": true,
+    "task_resources_cleaned": true
+  }
+}

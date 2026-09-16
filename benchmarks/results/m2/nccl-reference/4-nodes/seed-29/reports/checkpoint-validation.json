@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "validated",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "expected_size_bytes": 44701664,
+  "expected_tensor_count": 62,
+  "dtype": "float32",
+  "finite": true,
+  "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "continuation_state_claim": false,
+  "ranks": [
+    {"rank": 0, "path": "official/rank-0/final-checkpoints/rank-0.safetensors", "size_bytes": 44701664, "sha256": "c3ee4e821b42d6a7827cd6f7e59b9d81807de337d6c5c0048ed111cfd4c76fe0", "tensor_count": 62},
+    {"rank": 1, "path": "official/rank-1/final-checkpoints/rank-1.safetensors", "size_bytes": 44701664, "sha256": "4ce5bec1f2ca3ce1e50d8f395e3e36f8eb9bb489c5a62e554b254578283c8ec7", "tensor_count": 62},
+    {"rank": 2, "path": "official/rank-2/final-checkpoints/rank-2.safetensors", "size_bytes": 44701664, "sha256": "c845b096a66559882b40cb7e57818395db14d50298d97963e71aed2ddb280212", "tensor_count": 62},
+    {"rank": 3, "path": "official/rank-3/final-checkpoints/rank-3.safetensors", "size_bytes": 44701664, "sha256": "18e64a6d2a2b2f9b150bc4a0412635fb33243752506546fd97ed6ce6abe08c03", "tensor_count": 62}
+  ],
+  "aggregate": {
+    "mean_final_accuracy": 0.92955,
+    "matching_axl_mean_accuracy": 0.9285,
+    "delta_fractional": 0.00105,
+    "delta_percentage_points": 0.105,
+    "within_3_percentage_points": true
+  }
+}

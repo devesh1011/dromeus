@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "training_started": true,
+  "training_completed": true,
+  "completed_outer_steps": 500,
+  "clean_exit_count": 4,
+  "run_failure_count": 0,
+  "regions": ["eu-west-3", "sa-east-1"],
+  "private_peering": {"created": true, "connection_id": "pcx-06de69811fce970e8", "cleanup_deleted": true},
+  "cleanup": {"pending": false, "result": "clean", "verified_at_utc": "2026-09-09T19:46:42Z", "final_state_path": "cleanup/final-state-verified.json", "task_owned_resources_remaining": 0, "unrelated_resources_preserved": true},
+  "evidence": {"acceptance_report": "reports/acceptance-report.json", "checkpoint_manifest": "checkpoint-manifest.json", "validation_report": "reports/validation-report.json"}
+}

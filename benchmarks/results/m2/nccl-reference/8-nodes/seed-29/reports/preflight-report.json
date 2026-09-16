@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "selector": {"profile": "official", "world_size": 8, "benchmark_seed": 29},
+  "frozen_runtime": {"image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c", "python": "3.12.11", "pytorch": "2.12.1+cu130", "cuda": "13.0", "cudnn": 92000, "nccl": "2.29.7", "accelerator": "NVIDIA-A10G", "driver": "595.91.07"},
+  "private_route_probe": {"passed": true, "rank_count": 8, "peers_per_rank": 7, "transport": "private TCP through cross-region VPC peering"},
+  "nccl_smoke": {"passed": true, "rank_count": 8, "backend": "nccl", "network": "Socket", "socket_interface": "ens5", "ib_disabled": true, "all_reduce_value": 36.0, "all_rank_exit_codes_zero": true},
+  "capture_wiring": {"passed": true, "rank_count": 8, "wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524", "capture_before_evaluation": true, "model_only": true, "optimizer_state_captured": false},
+  "initial_checkpoint_readback": {"passed": true, "rank_count": 8, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "size_bytes": 44701664, "finite_fp32": true, "safetensors_readback": true},
+  "source_mounted": false,
+  "training_started_after_all_gates": true
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "status": "validated",
+  "purpose": "Frozen four-node AXL identity-codec ablation",
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 17},
+  "manifest_hash": "d9884d0bf5ce322319cf641c4bd66e33d2a21fe4eb6a71b8f015c5ed3732ce18",
+  "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+  "ablation": {
+    "outer_gradient_codec": "identity-v1",
+    "slow_weights_codec": "identity-v1",
+    "logical_artifact_bytes_per_update": 89402768,
+    "identity_wire_bytes_per_update": 89438360,
+    "compression_ratio": 1.0
+  },
+  "accuracy": {
+    "rank_accuracies": [0.9278, 0.9256, 0.9266, 0.9284],
+    "mean": 0.9271,
+    "stddev": 0.0010816653826392008,
+    "minimum": 0.9256,
+    "maximum": 0.9284
+  },
+  "execution": {
+    "round_count": 500,
+    "node_round_count": 2000,
+    "clean_exit_count": 4,
+    "run_failure_count": 0,
+    "node_start_timestamps": ["2026-09-10T09:16:10Z", "2026-09-10T09:17:04Z", "2026-09-10T09:17:06Z", "2026-09-10T09:17:09Z"],
+    "node_complete_timestamps": ["2026-09-10T13:04:27Z", "2026-09-10T13:04:26Z", "2026-09-10T13:04:26Z", "2026-09-10T13:04:26Z"],
+    "training_window": {"start": "2026-09-10T09:19:09.965397Z", "end": "2026-09-10T13:04:24.808037Z"}
+  },
+  "communication": {
+    "update_transport_retries": 0,
+    "metric_round_retries": 1,
+    "telemetry_retries": 0,
+    "maximum_observed_update_wire_bytes": 90490592,
+    "total_update_wire_bytes_all_nodes": 178877771794,
+    "total_telemetry_bytes_all_nodes": 98304000
+  },
+  "residual": {"maximum_l2_norm": 0.0, "maximum_to_signal_ratio": 0.0},
+  "divergence": {"passed": true, "trend_slope_per_inner_step": -0.0003987547976886879, "final_below_post_warmup_peak": true, "point_count": 10},
+  "runtime": {
+    "accelerator_class": "NVIDIA-A10G-g5.xlarge",
+    "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+    "dromeus_commit": "411daee",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "python_version": "3.12.11",
+    "pytorch_version": "2.12.1+cu130",
+    "cuda_version": "13.0",
+    "driver_version": "595.91.07"
+  },
+  "gates": {
+    "all_ranks_complete": true,
+    "accuracy_at_least_90_percent": true,
+    "strict_reconciliation": true,
+    "identity_codec_bound": true,
+    "zero_error_feedback_residual": true,
+    "divergence": true,
+    "final_model_weights_valid": true,
+    "runtime_identity_valid": true,
+    "cleanup_verified": true
+  }
+}

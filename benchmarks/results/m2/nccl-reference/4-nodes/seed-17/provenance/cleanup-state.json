@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "cleanup-verified",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "completed_at": "2026-09-08T19:57:17Z",
+  "run_resources": {
+    "instances": {
+      "terminated": 4,
+      "non_terminated": 0
+    },
+    "volumes": 0,
+    "network_interfaces": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "route_tables": 0,
+    "internet_gateways": 0,
+    "security_groups": 0,
+    "key_pairs": 0,
+    "peering_connections": {
+      "deleted": 1,
+      "active": 0
+    }
+  },
+  "preserved_unrelated": {
+    "stopped_g5xlarge_eu_west_1": 5,
+    "stopped_g5xlarge_eu_north_1": 2
+  },
+  "recoverability_note": "Compute and temporary network resources were intentionally deleted after artifact capture. Local logs, checkpoints, and archives remain."
+}

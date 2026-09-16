@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 4,
+    "benchmark_seed": 17
+  },
+  "frozen": {
+    "experiment_file": "frozen/experiment.yaml",
+    "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "container_image_size_bytes": 5823557237,
+    "dromeus_source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "model": "resnet18-groupnorm-cifar10-v1",
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "accelerator_class": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge",
+    "round_count": 500,
+    "inner_steps": 25000,
+    "inner_steps_per_round": 50,
+    "backend": "nccl"
+  },
+  "execution": {
+    "started_at": "2026-09-08T19:04:32Z",
+    "ended_at": "2026-09-08T19:38:54Z",
+    "duration_seconds": 2062,
+    "clean_exit_count": 4,
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "completed_outer_steps": [
+      500,
+      500,
+      500,
+      500
+    ],
+    "prelaunch_diagnostics": {
+      "failed_invocations": 2,
+      "training_started_in_those_attempts": false
+    }
+  },
+  "accuracy": {
+    "ranks": [
+      {
+        "rank": 0,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5369086784362793,
+        "final_accuracy": 0.9278
+      },
+      {
+        "rank": 1,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5470958786010742,
+        "final_accuracy": 0.9256
+      },
+      {
+        "rank": 2,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5427265747070312,
+        "final_accuracy": 0.9266
+      },
+      {
+        "rank": 3,
+        "backend": "nccl",
+        "acceptance_eligible": true,
+        "world_size": 4,
+        "completed_outer_steps": 500,
+        "final_loss": 0.5369488672256469,
+        "final_accuracy": 0.9284
+      }
+    ],
+    "mean": 0.9270999999999999,
+    "stddev": 0.0010816653826392008,
+    "min": 0.9256,
+    "max": 0.9284,
+    "axl_comparison": {
+      "source": "provenance/axl-w4-seed-17-fresh-acceptance-report.json",
+      "source_sha256": "e6a6995b259393501e4c65d8b7365ff28d9eefd19a7e4e8c9e022c63418c10f9",
+      "axl_mean": 0.930825,
+      "absolute_delta": -0.0037250000000000894,
+      "within_3_points": true
+    }
+  },
+  "communication": {
+    "model_raw_fp32_bytes": 44695848,
+    "artifacts_per_rank_round": 2,
+    "logical_tensor_bytes_per_rank_round": 89391696,
+    "logical_tensor_send_bytes_all_ranks": 178783392,
+    "wire_bytes_measured": false,
+    "compression": "none",
+    "cross_region_performance_eligible": false
+  },
+  "network": {
+    "regions": [
+      "eu-west-1",
+      "eu-north-1"
+    ],
+    "private_peering": true,
+    "rank0_private_ip": "10.240.1.84",
+    "socket_interface": "ens5",
+    "nccl_network": "Socket",
+    "cross_region_performance_eligible": false
+  },
+  "provenance": {
+    "runtime_lock_path": "provenance/runtime-lock.json",
+    "runtime_lock_sha256": "77fbf6f4a8d730280f482c9b5cb3f3fb015af540329107febe27c2ce12406019",
+    "ecr_image_metadata_path": "provenance/ecr-image.json",
+    "ecr_image_metadata_sha256": "cccd065960c564efe090db499b45e1b8e1433226c1171f7261e94bfe573ae937",
+    "wrapper_path": "capture_final.py",
+    "wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+    "run_script_path": "run-reference.sh",
+    "run_script_sha256": "66b84ef4e4be6c07f8b7c522aec3491f2dd4e3715c7f92bab1bf767e7ecd417a",
+    "smoke_script_path": "nccl_smoke.py",
+    "smoke_script_sha256": "2ae7f047f21042918948dde4947188db796b8560c1be0c48a2f203df41c6e88d",
+    "rank_map": [
+      {
+        "rank": 0,
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "instance_id": "i-0b01725ea54913fe3",
+        "private_ip": "10.240.1.84",
+        "public_ip": "34.242.74.176",
+        "vpc_id": "vpc-0e023549283913af4",
+        "security_group_id": "sg-0ba76d8a0c63905f0"
+      },
+      {
+        "rank": 1,
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "instance_id": "i-007b92138e93e5f56",
+        "private_ip": "10.240.1.251",
+        "public_ip": "108.130.83.111",
+        "vpc_id": "vpc-0e023549283913af4",
+        "security_group_id": "sg-0ba76d8a0c63905f0"
+      },
+      {
+        "rank": 2,
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "instance_id": "i-0af6f0533eeb67d20",
+        "private_ip": "10.241.1.163",
+        "public_ip": "13.49.68.46",
+        "vpc_id": "vpc-0de1eee8a2d787b15",
+        "security_group_id": "sg-0b49fc0b82468c7ea"
+      },
+      {
+        "rank": 3,
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "instance_id": "i-0573985263f81b9e4",
+        "private_ip": "10.241.1.231",
+        "public_ip": "13.60.181.44",
+        "vpc_id": "vpc-0de1eee8a2d787b15",
+        "security_group_id": "sg-0b49fc0b82468c7ea"
+      }
+    ],
+    "aws_resources": {
+      "run_id": "noloco-nccl-official-w4-s17-20260909",
+      "key_name": "dromeus-nccl-w4-s17-20260909",
+      "vpc_peering_connection_id": null,
+      "regions": {
+        "eu-west-1": {
+          "vpcs": [
+            "vpc-0e023549283913af4"
+          ],
+          "subnets": [
+            "subnet-0c68c8ff5ac2f896e",
+            "subnet-0d0ed629de79f72ec"
+          ],
+          "route_tables": [
+            "rtb-03d617aad7bf37925"
+          ],
+          "security_groups": [
+            "sg-0ba76d8a0c63905f0"
+          ],
+          "internet_gateways": [
+            "igw-02a4927791464631e"
+          ],
+          "instances": [
+            {
+              "id": "i-0b01725ea54913fe3",
+              "state": "running",
+              "az": "eu-west-1a",
+              "private": "10.240.1.84",
+              "public": "34.242.74.176",
+              "type": "g5.xlarge",
+              "volume_ids": [
+                "vol-02f75531f2e192843"
+              ]
+            },
+            {
+              "id": "i-007b92138e93e5f56",
+              "state": "running",
+              "az": "eu-west-1a",
+              "private": "10.240.1.251",
+              "public": "108.130.83.111",
+              "type": "g5.xlarge",
+              "volume_ids": [
+                "vol-05247f028436b89e5"
+              ]
+            }
+          ]
+        },
+        "eu-north-1": {
+          "vpcs": [
+            "vpc-0de1eee8a2d787b15"
+          ],
+          "subnets": [
+            "subnet-0b9e9b5f7c8931b1d",
+            "subnet-046029077efe44980"
+          ],
+          "route_tables": [
+            "rtb-080da30f0bc017765"
+          ],
+          "security_groups": [
+            "sg-0b49fc0b82468c7ea"
+          ],
+          "internet_gateways": [
+            "igw-0739bd91ac609f8bd"
+          ],
+          "instances": [
+            {
+              "id": "i-0af6f0533eeb67d20",
+              "state": "running",
+              "az": "eu-north-1b",
+              "private": "10.241.1.163",
+              "public": "13.49.68.46",
+              "type": "g5.xlarge",
+              "volume_ids": [
+                "vol-0a7377a160c3f026c"
+              ]
+            },
+            {
+              "id": "i-0573985263f81b9e4",
+              "state": "running",
+              "az": "eu-north-1b",
+              "private": "10.241.1.231",
+              "public": "13.60.181.44",
+              "type": "g5.xlarge",
+              "volume_ids": [
+                "vol-0734604f464457a66"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "logs": [
+      {
+        "rank": 0,
+        "path": "logs/node-0/host.log",
+        "sha256": "a25076648a2ae1acd7d4d46a5cdbb7a600b4170ea57e9cf4f4789aa7809cb0d3",
+        "size_bytes": 28190
+      },
+      {
+        "rank": 1,
+        "path": "logs/node-1/host.log",
+        "sha256": "1a249bb15099aa983d2ed4b758684e43181046c7fb997edd902982b96141d7eb",
+        "size_bytes": 29591
+      },
+      {
+        "rank": 2,
+        "path": "logs/node-2/host.log",
+        "sha256": "9e126e2fae898f38b6a32f6fd09ffc927aa81227717434b7d872718ba98456c3",
+        "size_bytes": 33305
+      },
+      {
+        "rank": 3,
+        "path": "logs/node-3/host.log",
+        "sha256": "97e54a4207d51a81ef5130d8ec98da85727b0ee19934f3606540bc279575f569",
+        "size_bytes": 27485
+      }
+    ],
+    "summaries": [
+      {
+        "rank": 0,
+        "path": "summaries/node-0.json",
+        "sha256": "f5346068f76c6736b018456f2d3aa202cb869963465ca2e6a2cbbbbea1bb01a6"
+      },
+      {
+        "rank": 1,
+        "path": "summaries/node-1.json",
+        "sha256": "d29c49731a97c1e76359bb874057c0c69d5f024f3438925c25308d4ba35a139b"
+      },
+      {
+        "rank": 2,
+        "path": "summaries/node-2.json",
+        "sha256": "73c5c0d3b614ccbcaff9f9548279a956e456172793d633729345a090a043bf0d"
+      },
+      {
+        "rank": 3,
+        "path": "summaries/node-3.json",
+        "sha256": "aadb8ccf4ab254aea61b60ea83991dfbe66608e844307c130dff8c49e61591fa"
+      }
+    ],
+    "final_checkpoints": [
+      {
+        "rank": 0,
+        "path": "final-checkpoints/node-0.safetensors",
+        "sha256": "06527de1fb56da01eef4769abc794f9b69ae1d5d0e102e1d805ee523e8ade44f",
+        "size_bytes": 44701664
+      },
+      {
+        "rank": 1,
+        "path": "final-checkpoints/node-1.safetensors",
+        "sha256": "3e02ba4c68a8e40320dc21b071b6ee70a31969aba124e9ee12af533305503ab6",
+        "size_bytes": 44701664
+      },
+      {
+        "rank": 2,
+        "path": "final-checkpoints/node-2.safetensors",
+        "sha256": "005f4f7d101e60fec42c67eee376ed9c1b7cb563ce1914dcdefb23b3e27f59fe",
+        "size_bytes": 44701664
+      },
+      {
+        "rank": 3,
+        "path": "final-checkpoints/node-3.safetensors",
+        "sha256": "7ef944e6a4337d11791ab69c2b9072a587aebe2729ed5b42bafbf3f5b03b1f8e",
+        "size_bytes": 44701664
+      }
+    ],
+    "dataset_cache_manifests": [
+      {
+        "rank": 0,
+        "path": "provenance/cache-manifests/rank-0.sha256",
+        "sha256": "6ce29e977108fb3b49ce9fd444aa779c6fa7c7cace135992dbea17fa47e48cbc",
+        "entry_count": 6
+      },
+      {
+        "rank": 1,
+        "path": "provenance/cache-manifests/rank-1.sha256",
+        "sha256": "7d1c7644b8c6954a3183c916bac1e7bae610adb3e2132ae2d4090d5d612995a7",
+        "entry_count": 6
+      },
+      {
+        "rank": 2,
+        "path": "provenance/cache-manifests/rank-2.sha256",
+        "sha256": "9c3f51c5e247acf95895a6fb9b98a33297b9e4eb2709c42459c0da4c21261411",
+        "entry_count": 6
+      },
+      {
+        "rank": 3,
+        "path": "provenance/cache-manifests/rank-3.sha256",
+        "sha256": "93e49ae428d17c9d91c1a9a56e7515376e66c151692aeee32255e54bd57cccd9",
+        "entry_count": 6
+      }
+    ],
+    "preflight_artifacts": [
+      "provisioning/host-preflight-rank-0.log",
+      "provisioning/host-preflight-rank-1.log",
+      "provisioning/host-preflight-rank-2.log",
+      "provisioning/host-preflight-rank-3.log",
+      "provisioning/container-preflight-rank-0.log",
+      "provisioning/container-preflight-rank-1.log",
+      "provisioning/container-preflight-rank-2.log",
+      "provisioning/container-preflight-rank-3.log",
+      "provisioning/nccl-smoke-rank-0.log",
+      "provisioning/nccl-smoke-rank-1.log",
+      "provisioning/nccl-smoke-rank-2.log",
+      "provisioning/nccl-smoke-rank-3.log"
+    ]
+  },
+  "archive": {
+    "path": "archives/nccl-w4-s17-evidence.tar.gz",
+    "sha256": "3d5b1b8ccda614cc1d8939b58ec7c519c46aec8fa885efe7d157d5aa6588a2e3",
+    "size_bytes": 290135370,
+    "listing": "archives/nccl-w4-s17-evidence.tar.list",
+    "entry_count": 145,
+    "final_archive_path": "archives/nccl-w4-s17-final-evidence.tar.gz"
+  },
+  "warnings": [
+    "One torchrun agent logged an exit-barrier DistNetworkError on rank 2 after the worker summary, final checkpoint, and run-script exit code 0 were written; no training failure occurred.",
+    "NCCL emitted expected IB-wrapper and deprecated-environment warnings while socket transport and IB disablement were configured."
+  ],
+  "gates": {
+    "frozen_inputs": true,
+    "host_runtime_preflight": true,
+    "container_runtime_preflight": true,
+    "nccl_communication_smoke": true,
+    "all_ranks_nccl": true,
+    "world_size_4": true,
+    "full_500_rounds": true,
+    "full_25000_inner_steps": true,
+    "all_worker_exit_codes_zero": true,
+    "final_checkpoint_count_4": true,
+    "final_checkpoint_schema_and_finite": true,
+    "accuracy_within_3_points_of_fresh_axl": true,
+    "raw_logs_captured": true,
+    "cache_provenance_captured": true,
+    "archive_created_and_listed": true,
+    "cross_region_speed_claim_suppressed": true,
+    "cleanup_complete": true
+  },
+  "report_type": "4-node NCCL frozen reference acceptance report",
+  "cleanup": {
+    "schema_version": 1,
+    "status": "cleanup-verified",
+    "run_id": "noloco-nccl-official-w4-s17-20260909",
+    "completed_at": "2026-09-08T19:57:17Z",
+    "run_resources": {
+      "instances": {
+        "terminated": 4,
+        "non_terminated": 0
+      },
+      "volumes": 0,
+      "network_interfaces": 0,
+      "vpcs": 0,
+      "subnets": 0,
+      "route_tables": 0,
+      "internet_gateways": 0,
+      "security_groups": 0,
+      "key_pairs": 0,
+      "peering_connections": {
+        "deleted": 1,
+        "active": 0
+      }
+    },
+    "preserved_unrelated": {
+      "stopped_g5xlarge_eu_west_1": 5,
+      "stopped_g5xlarge_eu_north_1": 2
+    },
+    "recoverability_note": "Compute and temporary network resources were intentionally deleted after artifact capture. Local logs, checkpoints, and archives remain."
+  },
+  "checksums_manifest_path": "checksums.sha256"
+}

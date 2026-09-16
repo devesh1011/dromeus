@@ -1,0 +1,175 @@
+{
+  "acceptance_eligible": true,
+  "aggregate": {
+    "all_clean_exit": true,
+    "maximum_final_accuracy": 0.9293,
+    "mean_final_accuracy": 0.9265125,
+    "mean_final_loss": 0.597483936816454,
+    "minimum_final_accuracy": 0.9234,
+    "stddev_final_accuracy": 0.001678866805318392
+  },
+  "backend": "nccl",
+  "checkpoint": {
+    "continuation_support_claimed": false,
+    "count": 16,
+    "kind": "final-model-weight-safetensors-v1",
+    "manifest": "reports/checkpoint-manifest.json",
+    "optimizer_state_captured": false
+  },
+  "completed_outer_steps": 500,
+  "per_rank": [
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9239,
+      "final_loss": 0.6160907453536987,
+      "rank": 0,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9282,
+      "final_loss": 0.5912612356185913,
+      "rank": 1,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9268,
+      "final_loss": 0.5931860339164734,
+      "rank": 2,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9261,
+      "final_loss": 0.6012972065925598,
+      "rank": 3,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9279,
+      "final_loss": 0.5892270948410034,
+      "rank": 4,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.929,
+      "final_loss": 0.5894338764190674,
+      "rank": 5,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9269,
+      "final_loss": 0.5903814829826355,
+      "rank": 6,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9251,
+      "final_loss": 0.5961933113098145,
+      "rank": 7,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9263,
+      "final_loss": 0.5972174390792847,
+      "rank": 8,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9273,
+      "final_loss": 0.5922346658706665,
+      "rank": 9,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9267,
+      "final_loss": 0.6011913516044617,
+      "rank": 10,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9276,
+      "final_loss": 0.5876120725631714,
+      "rank": 11,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9234,
+      "final_loss": 0.6049314583778381,
+      "rank": 12,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9247,
+      "final_loss": 0.6004836310386658,
+      "rank": 13,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.925,
+      "final_loss": 0.6133462447166443,
+      "rank": 14,
+      "world_size": 16
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 500,
+      "final_accuracy": 0.9293,
+      "final_loss": 0.5956551387786865,
+      "rank": 15,
+      "world_size": 16
+    }
+  ],
+  "rank_count": 16,
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 17,
+    "profile": "official",
+    "world_size": 16
+  },
+  "status": "completed-accepted-model-weight-evidence"
+}

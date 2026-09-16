@@ -1,22 +1,75 @@
 {
-  "schema_version": 1,
-  "status": "validated-fresh-reruns",
+  "aggregate_report": "summary.json",
+  "artifact": "../../experiment-config/experiment.yaml",
+  "axl_log_provenance": {
+    "17": "seed-17/axl-log-provenance.json",
+    "29": "seed-29/axl-log-provenance.json",
+    "41": "seed-41/axl-log-provenance.json"
+  },
+  "axl_logs": {
+    "17": [
+      "seed-17/logs/node-0/dromeus.jsonl",
+      "seed-17/logs/node-1/dromeus.jsonl",
+      "seed-17/logs/node-2/dromeus.jsonl",
+      "seed-17/logs/node-3/dromeus.jsonl"
+    ],
+    "29": [
+      "seed-29/logs/node-0/dromeus.jsonl",
+      "seed-29/logs/node-1/dromeus.jsonl",
+      "seed-29/logs/node-2/dromeus.jsonl",
+      "seed-29/logs/node-3/dromeus.jsonl"
+    ],
+    "41": [
+      "seed-41/logs/node-0/dromeus.jsonl",
+      "seed-41/logs/node-1/dromeus.jsonl",
+      "seed-41/logs/node-2/dromeus.jsonl",
+      "seed-41/logs/node-3/dromeus.jsonl"
+    ]
+  },
+  "axl_transport_logs": {
+    "17": [
+      "seed-17/logs/node-0/axl.log",
+      "seed-17/logs/node-1/axl.log",
+      "seed-17/logs/node-2/axl.log",
+      "seed-17/logs/node-3/axl.log"
+    ],
+    "29": [
+      "seed-29/logs/node-0/axl.log",
+      "seed-29/logs/node-1/axl.log",
+      "seed-29/logs/node-2/axl.log",
+      "seed-29/logs/node-3/axl.log"
+    ],
+    "41": [
+      "seed-41/logs/node-0/axl.log",
+      "seed-41/logs/node-1/axl.log",
+      "seed-41/logs/node-2/axl.log",
+      "seed-41/logs/node-3/axl.log"
+    ]
+  },
+  "checkpoint_archive_manifests": {
+    "17": "seed-17/checkpoint-checksums.sha256",
+    "29": "seed-29/checkpoint-checksums.sha256",
+    "41": "seed-41/checkpoint-checksums.sha256"
+  },
+  "milestone": "M2",
+  "note": "The report-ready W4 package uses three fresh deterministic AXL-log reruns. They are not recovered original logs; the original accepted AXL log source was unavailable.",
   "recovery_report": "recovery-report.json",
-  "seeds": {
-    "17": {
-      "validation_report": "seed-17/reports/validation-report.json",
-      "axl_log_provenance": "seed-17/axl-log-provenance.json",
-      "package_checksums": "seed-17/checksums.sha256"
-    },
-    "29": {
-      "validation_report": "seed-29/reports/validation-report.json",
-      "axl_log_provenance": "seed-29/axl-log-provenance.json",
-      "package_checksums": "seed-29/checksums.sha256"
-    },
-    "41": {
-      "validation_report": "seed-41/reports/validation-report.json",
-      "axl_log_provenance": "seed-41/axl-log-provenance.json",
-      "package_checksums": "seed-41/checksums.sha256"
-    }
-  }
+  "schema_version": 1,
+  "seed_reports": {
+    "17": "seed-17/reports/acceptance-report.json",
+    "29": "seed-29/reports/acceptance-report.json",
+    "41": "seed-41/reports/acceptance-report.json"
+  },
+  "seeds": [
+    17,
+    29,
+    41
+  ],
+  "status": "seeds-17-29-41-accepted-fresh-reruns",
+  "validation_reports": {
+    "17": "seed-17/reports/validation-report.json",
+    "29": "seed-29/reports/validation-report.json",
+    "41": "seed-41/reports/validation-report.json"
+  },
+  "world_size": 4
 }

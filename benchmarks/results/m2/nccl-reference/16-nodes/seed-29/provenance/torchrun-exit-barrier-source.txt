@@ -1,0 +1,39 @@
+    def _exit_barrier(self):
+        """
+        Define a barrier that keeps the agent process alive until all workers finish.
+
+        Wait for ``exit_barrier_timeout`` seconds for all agents to finish
+        executing their local workers (either successfully or not). This
+        acts as a safety guard against user scripts that terminate at different
+        times.
+        """
+        logger.info(
+            "Local worker group finished (%s). "
+            "Waiting %s seconds for other agents to finish",
+            self._worker_group.state,
+            self._exit_barrier_timeout,
+        )
+        start = time.time()
+        self._in_exit_barrier = True
+        try:
+            store_util.barrier(
+                store=self._store,
+                world_size=self._worker_group.group_world_size,
+                key_prefix=_TERMINAL_STATE_SYNC_ID,
+                barrier_timeout=self._exit_barrier_timeout,
+            )
+            logger.info(
+                "Done waiting for other agents. Elapsed: %s seconds",
+                time.time() - start,
+            )
+        except SignalException as e:
+            logger.warning("Got termination signal: %s", e.sigval)
+            raise
+        except Exception:
+            logger.exception(
+                "Error waiting on exit barrier. Elapsed: %s seconds",
+                time.time() - start,
+            )
+        finally:
+            self._in_exit_barrier = False
+

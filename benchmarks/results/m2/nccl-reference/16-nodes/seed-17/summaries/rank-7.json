@@ -1,0 +1,9 @@
+{
+  "acceptance_eligible": true,
+  "backend": "nccl",
+  "completed_outer_steps": 500,
+  "final_accuracy": 0.9251,
+  "final_loss": 0.5961933113098145,
+  "rank": 7,
+  "world_size": 16
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w8-remediate-20260909",
+  "verified_at_utc": "2026-09-09T07:15:18Z",
+  "regions": [
+    "us-east-1",
+    "us-west-2",
+    "us-east-2",
+    "eu-central-1"
+  ],
+  "task_owned_resource_queries": {
+    "instances": 0,
+    "volumes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "route_tables": 0,
+    "internet_gateways": 0,
+    "security_groups": 0,
+    "network_interfaces": 0,
+    "key_pairs": 0
+  },
+  "vpc_peerings": {
+    "deleted": [
+      "pcx-00e62f7f629668278",
+      "pcx-0a8f67c0ca6848416",
+      "pcx-0ac529f63f316e109",
+      "pcx-0286d9e82b622c9ae",
+      "pcx-0425b5d9c3b92a4d9",
+      "pcx-071c16721f4e981e8"
+    ],
+    "active_or_pending_remaining": 0,
+    "status_queries_observed": "deleted"
+  },
+  "historical_failed_peering": {
+    "id": "pcx-00e94139aa1067c10",
+    "remaining_state": "not-found",
+    "active_network": false
+  },
+  "result": "clean"
+}

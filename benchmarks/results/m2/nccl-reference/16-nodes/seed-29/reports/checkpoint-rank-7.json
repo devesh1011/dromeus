@@ -1,0 +1,11 @@
+{
+  "model_only": true,
+  "optimizer_state_captured": false,
+  "reload": "safetensors.numpy.load_file",
+  "sha256": "02ba08e3e65b38216067b187cc4a06798db4e65cfb1cef5ac4e638223b09199b",
+  "size_bytes": 44701664,
+  "status": "verified",
+  "tensor_count": 62,
+  "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "rank": 7
+}

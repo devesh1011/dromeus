@@ -1,0 +1,124 @@
+{
+  "accuracy": {
+    "maximum": 0.9304,
+    "mean": 0.92928125,
+    "minimum": 0.9284,
+    "stddev": 0.0004461204293685744
+  },
+  "artifact": {
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_sha256": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "path": "../../../../experiment-config/experiment.yaml"
+  },
+  "communication": {
+    "exchange_retries": 60,
+    "identity_complete_wire_bytes": 89499868,
+    "maximum_observed_update_payload_bytes_with_retries": 18735556,
+    "minimum_encoded_compression_ratio": 5.067911273833514,
+    "nominal_complete_wire_bytes": 17672081,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "telemetry_retries": 0,
+    "transport_event_labeled_retries": 60
+  },
+  "divergence": {
+    "final_below_post_warmup_peak": true,
+    "passed": true,
+    "point_count": 10,
+    "trend_slope_per_inner_step": -0.0006090161083201763
+  },
+  "evidence": {
+    "checkpoint_archive_count": 16,
+    "checkpoint_manifest_sha256": "51e6afd053c080062c6005c387c5219dacef90aefb04c3c8aa209c032fcfa815",
+    "divergence_report_sha256": "30eabce7d1d859382422837126e7ae47d4eae52fe08499779b1232fff6931d54",
+    "local_analysis_tensor_count_after_analysis": 0,
+    "rank_log_sha256": [
+      "51a5a8bc29b592eb081f37a47a518a792b7411b0b1f71f410c38e69d373312f0",
+      "15222ca0df5d5a97ef23269423c1ea73ea61b307133362dfbb955518fe8b3ffe",
+      "2c6891e3a8cab8545ffbf1ee96435c1ff30f35c481c5d9c97896f22b92b58214",
+      "55869d68cbef49310e803c90effea37bb9601103daacbef98724f30b070671e2",
+      "d8d7d86212ce941f90edb7cd8f8baffe23c7172088947ce05ba84d99942e4ca1",
+      "89296103719df7c029f13d6ee3d60e78c9c99bb3a2cc4ec26bb1be8cb7bd74cf",
+      "a30da7ccbcca766817650bd8c97ff03d34d55b69d4784138009f558fe720371c",
+      "1621d502a8aa39627dd2232aba1f82843aeaa33495af0145dee5a2198f86fa4b",
+      "4eb2761d077be23d67404eb9c7888e2c8b8250ad5ef63bcf3b2d2d334bc01921",
+      "149166731799b61331d411b5fc438e99c9e213babea9f81ece86507a4262589c",
+      "4ea03ca5c600a4bf39e9a1eda221cb35a17fa613a9f20d8ac8b836fac7060b24",
+      "4f9019ebcec5ff41c9e090c7ff16f058f43a36876da39652ce6540676e605659",
+      "1184ca293c6c3ed0395481741a91d1a94fb06ef456e8dc90aef05fe639aca493",
+      "66e0c0f8ddb320924de0348c421a9c751d54ea29475a95eae66bdc40b960fefe",
+      "bc18af9c315549d0dfa53b3dab8fd07b89f551e985dbcceb44bb22f11360d59a",
+      "f7c6cf928a7e563451d549b9fd56e9b46393eac3727bf34ae84b5e5bbfea8f6f"
+    ],
+    "reconciliation_sha256": "9eaa659fd9fffbf3906cdfbe87a5a1308a7064137ddfb0a5fb7da219e4a34167",
+    "remote_analysis_tensor_count_after_analysis": 0
+  },
+  "execution": {
+    "clean_exit_count": 16,
+    "node_complete_timestamps": [
+      "2026-09-05T16:52:46.406600+00:00",
+      "2026-09-05T16:52:39.836425+00:00",
+      "2026-09-05T16:52:39.612915+00:00",
+      "2026-09-05T16:52:49.750733+00:00",
+      "2026-09-05T16:52:26.948651+00:00",
+      "2026-09-05T16:52:26.322407+00:00",
+      "2026-09-05T16:52:38.681407+00:00",
+      "2026-09-05T16:52:38.428789+00:00",
+      "2026-09-05T16:52:49.794925+00:00",
+      "2026-09-05T16:52:26.389282+00:00",
+      "2026-09-05T16:52:54.652035+00:00",
+      "2026-09-05T16:52:26.710585+00:00",
+      "2026-09-05T16:52:38.113568+00:00",
+      "2026-09-05T16:52:38.042055+00:00",
+      "2026-09-05T16:52:51.178951+00:00",
+      "2026-09-05T16:52:54.240408+00:00"
+    ],
+    "node_start_timestamps": [
+      "2026-09-05T13:48:33.950582+00:00",
+      "2026-09-05T13:49:35.909463+00:00",
+      "2026-09-05T13:49:37.605979+00:00",
+      "2026-09-05T13:49:37.766638+00:00",
+      "2026-09-05T13:49:35.701437+00:00",
+      "2026-09-05T13:49:35.689898+00:00",
+      "2026-09-05T13:49:33.183537+00:00",
+      "2026-09-05T13:50:07.731502+00:00",
+      "2026-09-05T13:49:36.171492+00:00",
+      "2026-09-05T13:49:34.356770+00:00",
+      "2026-09-05T13:49:35.911420+00:00",
+      "2026-09-05T13:49:33.134568+00:00",
+      "2026-09-05T13:49:33.993306+00:00",
+      "2026-09-05T13:49:33.261402+00:00",
+      "2026-09-05T13:49:29.611347+00:00",
+      "2026-09-05T13:49:29.333087+00:00"
+    ],
+    "round_count": 500,
+    "run_failure_count": 0
+  },
+  "gates": {
+    "accuracy_at_least_90_percent": true,
+    "all_ranks_complete": true,
+    "checkpoint_archive_complete": true,
+    "divergence": true,
+    "nominal_complete_wire_at_least_5x": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "strict_reconciliation": true,
+    "temporary_tensors_deleted": true,
+    "topology_complete": true
+  },
+  "manifest_hash": "466714b8fa0dab896a42e5a305fde72635d6d62debf2cde4c1f705d6d16fa0cc",
+  "residual": {
+    "l2_bound": 6.0,
+    "maximum_l2_norm": 4.684382127916511,
+    "maximum_to_signal_ratio": 0.32629841810762467,
+    "ratio_bound": 0.35
+  },
+  "run_id": "noloco-topk45-official-w16-s17-20260829",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 17,
+    "profile": "official",
+    "world_size": 16
+  },
+  "status": "accepted"
+}

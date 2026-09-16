@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "run_id": "noloco-nccl-w8-remediate-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 8,
+    "benchmark_seed": 17
+  },
+  "reference": {
+    "implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "capture_wrapper_commit": "w4-byte-identical-capture_final.py",
+    "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+    "run_script_sha256": "05baa4834aa0d27d5a8738d3616f7f97e0feaab64bef651b8d5f9a8893cc128",
+    "validate_script_sha256": "c491f285c23f3c53f970c73b137b476195adb640c1690b2d3cf9b6384d26c5c6"
+  },
+  "frozen": {
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "dromeus_runtime_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "pytorch": "2.12.1+cu130",
+    "cuda": "13.0",
+    "cudnn": 92000,
+    "nccl": "2.29.7",
+    "accelerator": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge"
+  },
+  "execution": {
+    "backend": "nccl",
+    "acceptance_eligible": true,
+    "round_count": 500,
+    "completed_outer_steps": 500,
+    "clean_exit_count": 8,
+    "run_failure_count": 0,
+    "start_utc": "2026-09-09T04:19:48Z",
+    "end_utc": "2026-09-09T05:12:49Z"
+  },
+  "evidence": {
+    "summary_sha256": "6944280537b601560938c0a24971f2e3de789ae9afacd9cce260b2c7d876377a",
+    "checkpoint_manifest_sha256": "db5620757b469184df51e0b6b6f2990975599c4eecf39486d579619163512ba6",
+    "rank_log_sha256": [
+      "971b3b8ee2fe2c1cc1d5094ce1fd7bd1304445b5f9898f35c317826e244af123",
+      "b0a860604bcaae00b3452bf3ef84f06c73ce8c872919f07fd815d8d0275039a1",
+      "f60a473b3d6b38775e8baff4c37f4fae75181125875e58a25d3b1518b948c974",
+      "65d430e680a749a9dea9b79aba8b5ff8355cb87f50ab5c80a7d4e2a9715de6db",
+      "4c60f2c964d7c6f559852671ccb13c26f8cd493cae65743e7ee9fc700f989e58",
+      "e1296e30bda6a12d3650b6eb3aac70320575fcdfbb54719da78195fbef8125e7",
+      "7580d8bd324da7d9d8c084607fcd7cec35ce9b4fddf853c66b587c378d600193",
+      "097d9a4be1c7ac88c407fa1aabf42da550fd13e5c28502dc3b65c3c612a0893f"
+    ],
+    "preflight_report_sha256": "c20119e3436786a22826a0dc14593f7eea1800730ea4257c1dc97d220b5827cf",
+    "preflight_checksums_sha256": "735c7d97fb2914c6db2f935be564f35322fc0838b6221aeb4f9645f5088451fe",
+    "checkpoint_kind": "final-model-weight-safetensors",
+    "optimizer_state_captured": false
+  },
+  "accuracy_comparison": {
+    "matching_w8_axl_seed17_mean": 0.9307875,
+    "nccl_mean": 0.9309125,
+    "delta_fractional": 0.000125,
+    "delta_percentage_points": 0.0125,
+    "cross_fabric_speed_comparison_eligible": false
+  },
+  "network": {
+    "topology": "private-full-mesh-cross-region-vpc-peering",
+    "socket_interface": "ens5",
+    "socket_family": "AF_INET",
+    "ib_disabled": true,
+    "full_private_tcp_sg": true,
+    "master_addr_private": "10.211.1.164",
+    "master_port": 29500,
+    "regions": [
+      "us-east-1",
+      "us-west-2",
+      "us-east-2",
+      "eu-central-1"
+    ],
+    "placements": [
+      {
+        "rank": 0,
+        "region": "us-east-1",
+        "instance_id": "i-0ee350168ecf4c548",
+        "private_ip": "10.211.1.164",
+        "public_ip": "44.222.222.82"
+      },
+      {
+        "rank": 1,
+        "region": "us-east-1",
+        "instance_id": "i-0dcff20ba71a4ac62",
+        "private_ip": "10.211.2.45",
+        "public_ip": "54.210.251.218"
+      },
+      {
+        "rank": 2,
+        "region": "us-west-2",
+        "instance_id": "i-071c162868ebcfc96",
+        "private_ip": "10.212.1.127",
+        "public_ip": "35.165.160.57"
+      },
+      {
+        "rank": 3,
+        "region": "us-west-2",
+        "instance_id": "i-08607167d03bbcead",
+        "private_ip": "10.212.2.137",
+        "public_ip": "34.221.223.79"
+      },
+      {
+        "rank": 4,
+        "region": "us-east-2",
+        "instance_id": "i-0a45ceee44126e344",
+        "private_ip": "10.213.1.111",
+        "public_ip": "3.17.154.123"
+      },
+      {
+        "rank": 5,
+        "region": "us-east-2",
+        "instance_id": "i-0300ad1230cd13cf1",
+        "private_ip": "10.213.2.250",
+        "public_ip": "3.12.198.2"
+      },
+      {
+        "rank": 6,
+        "region": "eu-central-1",
+        "instance_id": "i-03daaa545fb0e8b4d",
+        "private_ip": "10.215.2.194",
+        "public_ip": "3.72.68.178"
+      },
+      {
+        "rank": 7,
+        "region": "eu-central-1",
+        "instance_id": "i-0c280d156c03516be",
+        "private_ip": "10.215.2.78",
+        "public_ip": "63.179.41.26"
+      }
+    ]
+  },
+  "cleanup": {
+    "pending": false,
+    "task_owned_tag": "noloco-nccl-w8-remediate-20260909",
+    "verification_path": "cleanup/final-state.json",
+    "verified_at_utc": "2026-09-09T07:15:18Z",
+    "task_owned_resource_queries_all_zero": true,
+    "active_or_pending_peerings_remaining": 0,
+    "historical_failed_peering_remaining": false
+  },
+  "cost_estimate": {
+    "on_demand_hourly_usd": 8.266,
+    "full_run_compute_usd_range": [
+      24.798,
+      33.064
+    ],
+    "preflight_additional_compute_variable": true
+  },
+  "preflight": {
+    "run_id": "noloco-nccl-w8-remediate-20260909",
+    "selector": {
+      "profile": "trajectory",
+      "world_size": 4,
+      "benchmark_seed": 17,
+      "outer_rounds": 2
+    },
+    "report_sha256": "c20119e3436786a22826a0dc14593f7eea1800730ea4257c1dc97d220b5827cf",
+    "checksums_sha256": "735c7d97fb2914c6db2f935be564f35322fc0838b6221aeb4f9645f5088451fe",
+    "checkpoint_kind": "final-model-weight-safetensors",
+    "tensor_count": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "size_bytes": 44701664,
+    "optimizer_state_captured": false
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "status": "accepted-identity-ablation-evidence",
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 17},
+  "comparison": {
+    "matching_compressed_axl_run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+    "compressed_axl_mean_accuracy": 0.930825,
+    "identity_mean_accuracy": 0.9271,
+    "identity_minus_compressed_percentage_points": -0.3725,
+    "interpretation": "The identity run isolates codec effects on the same frozen workload. It makes no claim of compression or cross-fabric speed equivalence."
+  },
+  "accuracy": {"mean": 0.9271, "stddev": 0.0010816653826392008, "minimum": 0.9256, "maximum": 0.9284},
+  "execution": {"round_count": 500, "clean_exit_count": 4, "run_failure_count": 0},
+  "codec": {"outer_gradient": "identity-v1", "slow_weights": "identity-v1", "logical_update_bytes": 89402768, "complete_wire_bytes": 89438360, "compression_ratio": 1.0},
+  "residual": {"maximum_l2_norm": 0.0, "maximum_to_signal_ratio": 0.0},
+  "divergence": {"passed": true, "trend_slope_per_inner_step": -0.0003987547976886879, "final_below_post_warmup_peak": true},
+  "evidence": {
+    "validation_report": "reports/validation-report.json",
+    "reconciliation_summary": "reports/reconciliation-summary.json",
+    "divergence_report": "reports/divergence-report.json",
+    "checkpoint_manifest": "reports/checkpoint-manifest.json",
+    "raw_evidence_root": null,
+    "per_rank_dromeus_logs": ["logs/node-0/dromeus.jsonl", "logs/node-1/dromeus.jsonl", "logs/node-2/dromeus.jsonl", "logs/node-3/dromeus.jsonl"],
+    "per_rank_axl_logs": ["logs/node-0/axl.log", "logs/node-1/axl.log", "logs/node-2/axl.log", "logs/node-3/axl.log"],
+    "raw_checksum_manifest": null,
+    "raw_checksum_manifest_sha256": "afc2588c08dda1a9c29bd75e7ee4e83f5871683a1d28008e2a373002c104da92",
+    "raw_capture_status": "pruned-after-validation",
+    "per_rank_dromeus_log_sha256": ["3d7fced62c76e64604b9423d4ee3a8baf2db1878f6bb35d6a6858e4f0371579a", "f6b241e8dff7d07ed5e2150889aec4e03f41c4b8245815827261da5299cfae04", "c7847a187e5207f6c209e65b53ec474c6f6338e37a7e71b833825bee7683ed95", "14a4fc12ab61954de32965f6041c04f7537624d61dcd0f01496ee2448892d73d"],
+    "per_rank_axl_log_sha256": ["5397d73ab2a17e11002be1fe6eb42ed343c0663a07dc7444e6fe0fd4fe1af504", "c450c3697aa9818e65f3983a12f0ddc61e7a72962e30e8ac43630ba978a15ecc", "89bf11d2a679a6e5d4b988a83c172d3950c23d1611094c7cef7e17a6fbfd6b0c", "512581d1a3a8b9be380381d81e89c83b43dd13fb53938aad6dbbb7ff5137eb76"]
+  },
+  "cleanup": {
+    "status": "verified-zero-task-owned-billable-resources",
+    "task_owned_resources": 4,
+    "terminated_instances": ["i-01e5548cf19ea9c7e", "i-083281dda74f472ec", "i-0de6449eb1077071e", "i-07ffd202554ad714d"],
+    "remaining_volumes": 0,
+    "remaining_network_interfaces": 0,
+    "remaining_security_groups": 0,
+    "remaining_temporary_key_pairs": 0,
+    "unrelated_resources_touched": false
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "accepted_seeds": [
+    17,
+    29,
+    41
+  ],
+  "aggregate": {
+    "all_divergence_slopes_negative": true,
+    "all_source_identities_match_frozen_runtime": true,
+    "all_temporary_tensors_deleted": true,
+    "fresh_axl_log_bytes": 20202819,
+    "maximum_node_accuracy": 0.9315,
+    "maximum_residual_l2_norm": 4.637983827467084,
+    "maximum_residual_to_signal_ratio": 0.29689973279651766,
+    "mean_of_seed_mean_accuracies": 0.9276749999999999,
+    "minimum_node_accuracy": 0.923,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "total_exchange_retries": 6,
+    "total_node_rounds": 6000,
+    "total_transport_event_labeled_retries": 4
+  },
+  "pending_seeds": [],
+  "per_seed": [
+    {
+      "acceptance_report": "seed-17/reports/acceptance-report.json",
+      "axl_log_bytes": 6733921,
+      "divergence_slope": -0.00030362690117287133,
+      "exchange_retries": 0,
+      "manifest_hash": "833ec4ad012a612fe81aec610e573fe08b5e8ba3feb07ac2febe56cf6922c4e5",
+      "maximum_accuracy": 0.9315,
+      "maximum_residual_l2_norm": 4.555979162298655,
+      "maximum_residual_to_signal_ratio": 0.2965785077320018,
+      "mean_accuracy": 0.930825,
+      "minimum_accuracy": 0.9302,
+      "original_accepted_run_id": "noloco-topk45-official-w4-s17-20260829",
+      "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+      "seed": 17,
+      "status": "accepted",
+      "transport_event_labeled_retries": 0
+    },
+    {
+      "acceptance_report": "seed-29/reports/acceptance-report.json",
+      "axl_log_bytes": 6734317,
+      "divergence_slope": -0.00032737777634851977,
+      "exchange_retries": 1,
+      "manifest_hash": "2c73dd74f24841451b0f16ff5501f338f7cf989531a5bb66e38e95cbf41fe976",
+      "maximum_accuracy": 0.9299,
+      "maximum_residual_l2_norm": 4.62675215669632,
+      "maximum_residual_to_signal_ratio": 0.29624926466362955,
+      "mean_accuracy": 0.9285,
+      "minimum_accuracy": 0.9275,
+      "original_accepted_run_id": "noloco-topk45-official-w4-s29-20260830",
+      "run_id": "noloco-topk45-official-w4-s29-axllog-rerun-20260907",
+      "seed": 29,
+      "status": "accepted",
+      "transport_event_labeled_retries": 0
+    },
+    {
+      "acceptance_report": "seed-41/reports/acceptance-report.json",
+      "axl_log_bytes": 6734581,
+      "divergence_slope": -0.0002945851087523378,
+      "exchange_retries": 5,
+      "manifest_hash": "d8c37090897c49d03ecb7ddcaecf425881cee9ce48a952e053912b6c5f9997b7",
+      "maximum_accuracy": 0.9242,
+      "maximum_residual_l2_norm": 4.637983827467084,
+      "maximum_residual_to_signal_ratio": 0.29689973279651766,
+      "mean_accuracy": 0.9237,
+      "minimum_accuracy": 0.923,
+      "original_accepted_run_id": "noloco-topk45-official-w4-s41-20260830",
+      "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+      "seed": 41,
+      "status": "accepted",
+      "transport_event_labeled_retries": 4
+    }
+  ],
+  "provenance": {
+    "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+    "checkpoint_policy": "retained prior accepted archive entries were reused after exact fresh-rerun hash match",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "evidence_kind": "fresh-axl-log-rerun",
+    "original_log_recovery_status": "unrecoverable-from-inspected-sources",
+    "source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61"
+  },
+  "schema_version": 1,
+  "status": "seeds-17-29-41-accepted-fresh-reruns",
+  "world_size": 4
+}

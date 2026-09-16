@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "status": "cleanup-verified",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "verified_at": "2026-09-09T19:46:42Z",
+  "run_resources": {
+    "instances": {
+      "terminated": 4,
+      "non_terminated": 0
+    },
+    "volumes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "route_tables": 0,
+    "internet_gateways": 0,
+    "security_groups": 0,
+    "network_interfaces": 0,
+    "peering_connections": 0,
+    "key_pairs": 0
+  },
+  "queries": {
+    "regions": [
+      "eu-west-3",
+      "eu-central-1",
+      "ca-central-1",
+      "sa-east-1"
+    ],
+    "filters": {
+      "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+      "nonterminated_instance_states": [
+        "pending",
+        "running",
+        "stopping",
+        "stopped",
+        "shutting-down"
+      ]
+    }
+  }
+}

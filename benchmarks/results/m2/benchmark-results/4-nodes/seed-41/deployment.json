@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "purpose": "AXL-log-complete fresh rerun; does not overwrite accepted evidence",
+  "seed": 41,
+  "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+  "workers": [
+    {
+      "rank": 0,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-0b7f8c0b3c92f600c",
+      "volume_id": "vol-040399d112199134a",
+      "public_ip": "51.21.162.149",
+      "private_ip": "172.31.44.231",
+      "security_group_id": "sg-05a874b7e5eecb4e8",
+      "subnet_id": "subnet-0cd937bd33f2e4f2c"
+    },
+    {
+      "rank": 1,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-033702575c94b8071",
+      "volume_id": "vol-00f3351306e66dcc0",
+      "public_ip": "13.61.2.194",
+      "private_ip": "172.31.40.174",
+      "security_group_id": "sg-05a874b7e5eecb4e8",
+      "subnet_id": "subnet-0cd937bd33f2e4f2c"
+    },
+    {
+      "rank": 2,
+      "region": "eu-west-1",
+      "availability_zone": "eu-west-1a",
+      "instance_id": "i-00fe58532618bcebc",
+      "volume_id": "vol-05ad9850c2654cd8a",
+      "public_ip": "34.245.60.17",
+      "private_ip": "172.31.31.247",
+      "security_group_id": "sg-01d5023f40e9524dc",
+      "subnet_id": "subnet-0c710eb308e66c783"
+    },
+    {
+      "rank": 3,
+      "region": "eu-west-1",
+      "availability_zone": "eu-west-1a",
+      "instance_id": "i-09d5a78f592828ea3",
+      "volume_id": "vol-03a0b8c227f783390",
+      "public_ip": "34.242.40.103",
+      "private_ip": "172.31.25.102",
+      "security_group_id": "sg-01d5023f40e9524dc",
+      "subnet_id": "subnet-0c710eb308e66c783"
+    }
+  ]
+}

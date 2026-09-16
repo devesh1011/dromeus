@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "milestone": "M2",
+  "backend": "nccl",
+  "world_size": 8,
+  "status": "accepted-seeds17-29",
+  "artifact": "../../experiment-config/experiment.yaml",
+  "aggregate_report": "summary.json",
+  "accepted_seed_reports": {
+    "17": "seed-17/reports/acceptance-report.json",
+    "29": "seed-29/reports/acceptance-report.json"
+  },
+  "checkpoint_manifests": {
+    "17": "seed-17/reports/checkpoint-manifest.json",
+    "29": "seed-29/reports/checkpoint-manifest.json"
+  },
+  "pending_seeds": [41],
+  "note": "Local binary checkpoints and evidence archives were pruned after validation. Per-rank logs, reports, compact runtime metadata, and checkpoint hashes remain."
+}

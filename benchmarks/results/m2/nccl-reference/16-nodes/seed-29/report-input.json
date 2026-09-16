@@ -1,0 +1,32 @@
+{
+  "artifact": "../../../experiment-config/experiment.yaml",
+  "backend": "nccl",
+  "checkpoint_manifests": {
+    "29": "reports/checkpoint-manifest.json"
+  },
+  "deployment_reports": {
+    "29": "reports/deployment.json"
+  },
+  "limitations": [
+    "Final checkpoints contain model weights only, not optimizer, outer-momentum, loader or RNG continuation state.",
+    "No cross-fabric speed equivalence claim; geographic placements differ.",
+    "Official NCCL runner emits final metrics and wrapper progress events, but no full official trajectory, residual or measured wire-byte telemetry.",
+    "NCCL deprecated environment, unbatched P2P, disabled IB and optional plugin warnings remain in original logs.",
+    "Rank9 logged a post-worker torchrun exit-barrier DistNetworkError after saving its final checkpoint and summary; the caught warning did not change launcher exit code 0. See reports/launcher-warnings.json.",
+    "Previous failed attempt is preserved separately under failed-seed-29/ and excluded from accepted metrics."
+  ],
+  "milestone": "M2",
+  "preflight": "reports/preflight-report.json",
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "schema_version": 1,
+  "seed_reports": {
+    "29": "reports/acceptance-report.json"
+  },
+  "seeds": [
+    29
+  ],
+  "status": "accepted-model-weight-evidence",
+  "summary": "reports/summary.json",
+  "validation": "reports/validation-report.json",
+  "world_size": 16
+}

@@ -1,0 +1,55 @@
+{
+  "recorded_at": "2026-09-14T15:17:51.276955+00:00",
+  "reason": "Controller public IPv4 changed; all 16 EC2 instance/system checks healthy.",
+  "changes": [
+    {
+      "region": "us-east-1",
+      "security_group": "sg-08d08af49321794d7",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "us-west-2",
+      "security_group": "sg-02db13163b9e739a8",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "us-east-2",
+      "security_group": "sg-077021aeaef862466",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "eu-central-1",
+      "security_group": "sg-06771976cea393f69",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "ap-south-1",
+      "security_group": "sg-0d6f4d8cb28ba705b",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "eu-west-3",
+      "security_group": "sg-09d4b4fa12cf06cf3",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "eu-north-1",
+      "security_group": "sg-0da8046f76b33ba06",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    },
+    {
+      "region": "sa-east-1",
+      "security_group": "sg-05d737e999db448d9",
+      "old_ssh_source": "103.77.3.169/32",
+      "new_ssh_source": "103.77.3.162/32"
+    }
+  ],
+  "training_untouched": true
+}

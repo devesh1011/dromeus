@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "status": "preflight-ready",
+  "run_id": "noloco-nccl-official-w4-s17-20260909",
+  "selector": {
+    "profile": "official",
+    "world_size": 4,
+    "benchmark_seed": 17
+  },
+  "experiment": {
+    "path": "frozen/experiment.yaml",
+    "sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127"
+  },
+  "runtime": {
+    "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "local_checkout_head": "1734c5d368af68130dd116b6b7d1667442680227",
+    "source_mounted": false,
+    "runner_module": "benchmarks.noloco_reference.runner",
+    "wrapper_path": "capture_final.py",
+    "wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524"
+  },
+  "backend": {
+    "name": "nccl",
+    "acceptance_eligible": true,
+    "torchrun": {
+      "nnodes": 4,
+      "nproc_per_node": 1,
+      "node_ranks": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "master_addr": "10.240.1.84",
+      "master_port": 29500
+    },
+    "environment": {
+      "NCCL_SOCKET_IFNAME": "ens5",
+      "NCCL_IB_DISABLE": "1",
+      "NCCL_P2P_DISABLE": "1",
+      "NCCL_NET": "Socket",
+      "NCCL_PORT": "29501",
+      "NCCL_DEBUG": "INFO",
+      "NCCL_DEBUG_SUBSYS": "INIT,NET,GRAPH",
+      "NCCL_ASYNC_ERROR_HANDLING": "1",
+      "NCCL_BLOCKING_WAIT": "1",
+      "NCCL_TIMEOUT": "1800",
+      "NCCL_SOCKET_NTHREADS": "4",
+      "NCCL_NSOCKS_PERTHREAD": "4",
+      "TORCH_DISTRIBUTED_DEBUG": "DETAIL"
+    }
+  },
+  "evidence": {
+    "final_checkpoint_capture": true,
+    "final_checkpoint_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+    "smoke_script_sha256": "2ae7f047f21042918948dde4947188db796b8560c1be0c48a2f203df41c6e88d",
+    "run_script_sha256": "8a60062bed60d8d8b33b00e0a30216548f6e7ebc54b43655d7bd8cf19bc7daf9"
+  },
+  "network": {
+    "cross_region_performance_eligible": false,
+    "private_peering": true,
+    "rank_map": [
+      {
+        "rank": 0,
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "instance_id": "i-0b01725ea54913fe3",
+        "private_ip": "10.240.1.84",
+        "public_ip": "34.242.74.176",
+        "vpc_id": "vpc-0e023549283913af4",
+        "security_group_id": "sg-0ba76d8a0c63905f0"
+      },
+      {
+        "rank": 1,
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "instance_id": "i-007b92138e93e5f56",
+        "private_ip": "10.240.1.251",
+        "public_ip": "108.130.83.111",
+        "vpc_id": "vpc-0e023549283913af4",
+        "security_group_id": "sg-0ba76d8a0c63905f0"
+      },
+      {
+        "rank": 2,
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "instance_id": "i-0af6f0533eeb67d20",
+        "private_ip": "10.241.1.163",
+        "public_ip": "13.49.68.46",
+        "vpc_id": "vpc-0de1eee8a2d787b15",
+        "security_group_id": "sg-0b49fc0b82468c7ea"
+      },
+      {
+        "rank": 3,
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "instance_id": "i-0573985263f81b9e4",
+        "private_ip": "10.241.1.231",
+        "public_ip": "13.60.181.44",
+        "vpc_id": "vpc-0de1eee8a2d787b15",
+        "security_group_id": "sg-0b49fc0b82468c7ea"
+      }
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "accuracy_comparison": {
+    "cross_fabric_speed_comparison_eligible": false,
+    "delta_fractional": -0.00010624999999997442,
+    "delta_percentage_points": -0.010624999999997442,
+    "matching_axl_mean_accuracy": 0.92491875,
+    "matching_axl_report_sha256": "af65a77a0a92606059cedec16f61e5af17c6a05d22a20cdcb0f4907f240d26d6",
+    "matching_axl_run_id": "noloco-topk45-official-w16-s29-20260829",
+    "nccl_mean_accuracy": 0.9248125,
+    "within_3_point_gate": true
+  },
+  "checkpoint": {
+    "continuation_support_claimed": false,
+    "count": 16,
+    "finite_fp32_verified": true,
+    "kind": "final-model-weight-safetensors-v1",
+    "local_bytes_retained": true,
+    "manifest": "reports/checkpoint-manifest.json",
+    "optimizer_state_captured": false,
+    "safetensors_readback_verified": true,
+    "sha256_verified": true,
+    "size_bytes_each": 44701664,
+    "tensor_count_each": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+  },
+  "execution": {
+    "clean_exit_count": 16,
+    "completed_outer_steps": [
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500
+    ],
+    "duration_seconds": 4475.0,
+    "ended_at": "2026-09-14T15:54:29Z",
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "launcher_exit_barrier_warning_count": 1,
+    "launcher_warnings": [
+      {
+        "checkpoint_written_at": "2026-09-14T15:54:21.272803581Z",
+        "error": "DistNetworkError: Failed to recv, got 0 bytes. Connection was likely closed.",
+        "outcome": "caught and logged by torchrun; launcher exit code 0; final checkpoint and summary existed before warning",
+        "phase": "torchrun post-worker exit barrier",
+        "rank": 9,
+        "source": "provenance/torchrun-exit-barrier-source.txt",
+        "summary_written_at": "2026-09-14T15:54:25.061605033Z",
+        "timestamp": "2026-09-14T15:54:27.802Z"
+      }
+    ],
+    "observed_outer_progress_events_per_rank": 21,
+    "run_failure_count": 0,
+    "started_at": "2026-09-14T14:39:54Z"
+  },
+  "gates": {
+    "all_clean_exit": true,
+    "all_ranks_complete": true,
+    "compression_gate": "not-applicable-to-uncompressed-reference",
+    "continuation_support_claimed": false,
+    "divergence_gate": "not-applicable-official-reference-emits-no-analysis-trajectory",
+    "final_model_weight_checkpoint_capture": true,
+    "frozen_runtime": true,
+    "matching_axl_within_3_points": true,
+    "nccl_backend": true,
+    "optimizer_state_captured": false,
+    "preflight_capture_readback": true,
+    "private_network": true,
+    "residual_gate": "not-applicable-to-uncompressed-reference",
+    "source_mounted": false
+  },
+  "limitations": [
+    "Final checkpoints contain model weights only, not optimizer, outer-momentum, loader or RNG continuation state.",
+    "No cross-fabric speed equivalence claim; geographic placements differ.",
+    "Official NCCL runner emits final metrics and wrapper progress events, but no full official trajectory, residual or measured wire-byte telemetry.",
+    "NCCL deprecated environment, unbatched P2P, disabled IB and optional plugin warnings remain in original logs.",
+    "Rank9 logged a post-worker torchrun exit-barrier DistNetworkError after saving its final checkpoint and summary; the caught warning did not change launcher exit code 0. See reports/launcher-warnings.json.",
+    "Previous failed attempt is preserved separately under failed-seed-29/ and excluded from accepted metrics."
+  ],
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "schema_version": 1,
+  "status": "verified"
+}

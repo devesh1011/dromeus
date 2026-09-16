@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "seed": 41,
+  "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+  "retrieval_time": "2026-09-06T20:46:28.482514+00:00",
+  "status": "verified-fresh-rerun",
+  "shared_original_log": false,
+  "logs": [
+    {
+      "rank": 0,
+      "worker_identity": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e",
+      "source": {
+        "instance_id": "i-0b7f8c0b3c92f600c",
+        "volume_id": "vol-040399d112199134a",
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "original_path": "/home/ubuntu/dromeus-official/runs/w4-s41-axllog-rerun-20260907/axl.log"
+      },
+      "retrieved_at": "2026-09-06T20:46:28.482514+00:00",
+      "sha256": "c547064a8d8be190ab4d072a46ffc280009d59daacc35d24c7a88dd3163760dc",
+      "size_bytes": 1687946,
+      "lifecycle": {
+        "axl_started_at": "2026-09-06T18:58:33Z",
+        "dromeus_node_start": "2026-09-06T18:59:58.530896+00:00",
+        "benchmark_node_ready": "2026-09-06T19:02:11.819777Z",
+        "dromeus_node_complete": "2026-09-06T20:38:16.336049+00:00",
+        "axl_ended_at": "2026-09-06T20:40:35Z"
+      },
+      "verification": {
+        "public_key_marker": true,
+        "peer_set_isolated": true,
+        "retrieved_before_axl_stop": true,
+        "final_bytes_retrieved_after_axl_stop": true
+      },
+      "time_range_note": "AXL stdout/stderr has no per-line timestamps; process lifecycle sidecars prove it began before Dromeus and ended after node_complete."
+    },
+    {
+      "rank": 1,
+      "worker_identity": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814",
+      "source": {
+        "instance_id": "i-033702575c94b8071",
+        "volume_id": "vol-00f3351306e66dcc0",
+        "region": "eu-north-1",
+        "availability_zone": "eu-north-1b",
+        "original_path": "/home/ubuntu/dromeus-official/runs/w4-s41-axllog-rerun-20260907/axl.log"
+      },
+      "retrieved_at": "2026-09-06T20:46:28.482514+00:00",
+      "sha256": "f9c0c211b82a6518413565f5dda01a291740364a28be3e522a0299a3134054d6",
+      "size_bytes": 1682373,
+      "lifecycle": {
+        "axl_started_at": "2026-09-06T18:58:32Z",
+        "dromeus_node_start": "2026-09-06T19:01:42.801988+00:00",
+        "benchmark_node_ready": "2026-09-06T19:02:11.822233Z",
+        "dromeus_node_complete": "2026-09-06T20:38:16.445578+00:00",
+        "axl_ended_at": "2026-09-06T20:40:34Z"
+      },
+      "verification": {
+        "public_key_marker": true,
+        "peer_set_isolated": true,
+        "retrieved_before_axl_stop": true,
+        "final_bytes_retrieved_after_axl_stop": true
+      },
+      "time_range_note": "AXL stdout/stderr has no per-line timestamps; process lifecycle sidecars prove it began before Dromeus and ended after node_complete."
+    },
+    {
+      "rank": 2,
+      "worker_identity": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9",
+      "source": {
+        "instance_id": "i-00fe58532618bcebc",
+        "volume_id": "vol-05ad9850c2654cd8a",
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "original_path": "/home/ubuntu/dromeus-official/runs/w4-s41-axllog-rerun-20260907/axl.log"
+      },
+      "retrieved_at": "2026-09-06T20:46:28.482514+00:00",
+      "sha256": "5af5c1c982d7b2a51eebffc25846a4ef68976d4153c2a7c62552261de9a96e1b",
+      "size_bytes": 1681774,
+      "lifecycle": {
+        "axl_started_at": "2026-09-06T18:58:32Z",
+        "dromeus_node_start": "2026-09-06T19:01:28.747998+00:00",
+        "benchmark_node_ready": "2026-09-06T19:02:05.186602Z",
+        "dromeus_node_complete": "2026-09-06T20:38:16.472240+00:00",
+        "axl_ended_at": "2026-09-06T20:40:34Z"
+      },
+      "verification": {
+        "public_key_marker": true,
+        "peer_set_isolated": true,
+        "retrieved_before_axl_stop": true,
+        "final_bytes_retrieved_after_axl_stop": true
+      },
+      "time_range_note": "AXL stdout/stderr has no per-line timestamps; process lifecycle sidecars prove it began before Dromeus and ended after node_complete."
+    },
+    {
+      "rank": 3,
+      "worker_identity": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0",
+      "source": {
+        "instance_id": "i-09d5a78f592828ea3",
+        "volume_id": "vol-03a0b8c227f783390",
+        "region": "eu-west-1",
+        "availability_zone": "eu-west-1a",
+        "original_path": "/home/ubuntu/dromeus-official/runs/w4-s41-axllog-rerun-20260907/axl.log"
+      },
+      "retrieved_at": "2026-09-06T20:46:28.482514+00:00",
+      "sha256": "a361cc3d7873c0a74112e9452a5159d6bff0686256a5f31ce089d690a2258527",
+      "size_bytes": 1682488,
+      "lifecycle": {
+        "axl_started_at": "2026-09-06T18:58:33Z",
+        "dromeus_node_start": "2026-09-06T19:01:29.096845+00:00",
+        "benchmark_node_ready": "2026-09-06T19:02:09.144479Z",
+        "dromeus_node_complete": "2026-09-06T20:38:16.381867+00:00",
+        "axl_ended_at": "2026-09-06T20:40:34Z"
+      },
+      "verification": {
+        "public_key_marker": true,
+        "peer_set_isolated": true,
+        "retrieved_before_axl_stop": true,
+        "final_bytes_retrieved_after_axl_stop": true
+      },
+      "time_range_note": "AXL stdout/stderr has no per-line timestamps; process lifecycle sidecars prove it began before Dromeus and ended after node_complete."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "status": "accepted-model-weight-evidence",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "kind": "final-model-weight-safetensors",
+  "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "tensor_count": 62,
+  "size_bytes": 44701664,
+  "dtype": "float32",
+  "finite": true,
+  "optimizer_state_captured": false,
+  "outer_momentum_captured": false,
+  "loader_state_captured": false,
+  "rng_state_captured": false,
+  "continuation_state_claim": false,
+  "checkpoints": [
+    {"rank": 0, "path": "official/rank-0/final-checkpoints/rank-0.safetensors", "sha256": "c3ee4e821b42d6a7827cd6f7e59b9d81807de337d6c5c0048ed111cfd4c76fe0"},
+    {"rank": 1, "path": "official/rank-1/final-checkpoints/rank-1.safetensors", "sha256": "4ce5bec1f2ca3ce1e50d8f395e3e36f8eb9bb489c5a62e554b254578283c8ec7"},
+    {"rank": 2, "path": "official/rank-2/final-checkpoints/rank-2.safetensors", "sha256": "c845b096a66559882b40cb7e57818395db14d50298d97963e71aed2ddb280212"},
+    {"rank": 3, "path": "official/rank-3/final-checkpoints/rank-3.safetensors", "sha256": "18e64a6d2a2b2f9b150bc4a0412635fb33243752506546fd97ed6ce6abe08c03"}
+  ]
+}

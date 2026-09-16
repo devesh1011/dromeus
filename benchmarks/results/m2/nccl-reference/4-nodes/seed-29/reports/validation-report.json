@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "frozen_inputs_verified": true,
+  "host_preflight_verified": true,
+  "nccl_smoke_verified": true,
+  "all_rank_summaries_verified": true,
+  "all_rank_lifecycle_markers_verified": true,
+  "all_rank_exit_codes_zero": true,
+  "full_500_rounds": true,
+  "full_25000_inner_steps": true,
+  "final_checkpoint_capture_verified": true,
+  "checkpoint_validation": "reports/checkpoint-validation.json",
+  "checkpoint_manifest": "checkpoint-manifest.json",
+  "accuracy_gate": {"mean": 0.92955, "matching_axl_mean": 0.9285, "delta_percentage_points": 0.105, "within_3_percentage_points": true},
+  "cleanup": "cleanup/final-state-verified.json"
+}

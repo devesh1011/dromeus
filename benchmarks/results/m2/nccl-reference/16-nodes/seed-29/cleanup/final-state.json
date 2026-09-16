@@ -1,0 +1,148 @@
+{
+  "all_task_owned_resources_removed": true,
+  "local_ephemeral_keys_removed": true,
+  "regions": {
+    "ap-south-1": {
+      "errors": [],
+      "region": "ap-south-1",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "eu-central-1": {
+      "errors": [],
+      "region": "eu-central-1",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "eu-north-1": {
+      "errors": [],
+      "region": "eu-north-1",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "eu-west-3": {
+      "errors": [],
+      "region": "eu-west-3",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "sa-east-1": {
+      "errors": [],
+      "region": "sa-east-1",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "us-east-1": {
+      "errors": [],
+      "region": "us-east-1",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "us-east-2": {
+      "errors": [],
+      "region": "us-east-2",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    },
+    "us-west-2": {
+      "errors": [],
+      "region": "us-west-2",
+      "remaining": {
+        "InternetGateways": 0,
+        "KeyPairs": 0,
+        "NetworkAcls": 0,
+        "NetworkInterfaces": 0,
+        "RouteTables": 0,
+        "SecurityGroups": 0,
+        "Subnets": 0,
+        "Volumes": 0,
+        "Vpcs": 0,
+        "instances": 0,
+        "peerings": 0
+      }
+    }
+  },
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "status": "verified-clean",
+  "temporary_local_input_archive_removed": true,
+  "temporary_s3_input_object": "deleted after all hosts obtained frozen inputs",
+  "unrelated_resources_preserved": true,
+  "verified_at": "2026-09-14T16:31:00.792804+00:00"
+}

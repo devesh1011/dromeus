@@ -1,0 +1,893 @@
+{
+  "cleanup": {
+    "all_task_owned_resources_removed": true,
+    "local_ephemeral_keys_removed": true,
+    "regions": {
+      "ap-south-1": {
+        "errors": [],
+        "region": "ap-south-1",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "eu-central-1": {
+        "errors": [],
+        "region": "eu-central-1",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "eu-north-1": {
+        "errors": [],
+        "region": "eu-north-1",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "eu-west-3": {
+        "errors": [],
+        "region": "eu-west-3",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "sa-east-1": {
+        "errors": [],
+        "region": "sa-east-1",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "us-east-1": {
+        "errors": [],
+        "region": "us-east-1",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "us-east-2": {
+        "errors": [],
+        "region": "us-east-2",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      },
+      "us-west-2": {
+        "errors": [],
+        "region": "us-west-2",
+        "remaining": {
+          "InternetGateways": 0,
+          "KeyPairs": 0,
+          "NetworkAcls": 0,
+          "NetworkInterfaces": 0,
+          "RouteTables": 0,
+          "SecurityGroups": 0,
+          "Subnets": 0,
+          "Volumes": 0,
+          "Vpcs": 0,
+          "instances": 0,
+          "peerings": 0
+        }
+      }
+    },
+    "run_id": "noloco-nccl-w16-s29-r2-20260914",
+    "status": "verified-clean",
+    "temporary_local_input_archive_removed": true,
+    "temporary_s3_input_object": "deleted after all hosts obtained frozen inputs",
+    "unrelated_resources_preserved": true,
+    "verified_at": "2026-09-14T16:31:00.792804+00:00"
+  },
+  "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "execution": {
+    "clean_exit_count": 16,
+    "completed_outer_steps": [
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500
+    ],
+    "duration_seconds": 4475.0,
+    "ended_at": "2026-09-14T15:54:29Z",
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "launcher_exit_barrier_warning_count": 1,
+    "launcher_warnings": [
+      {
+        "checkpoint_written_at": "2026-09-14T15:54:21.272803581Z",
+        "error": "DistNetworkError: Failed to recv, got 0 bytes. Connection was likely closed.",
+        "outcome": "caught and logged by torchrun; launcher exit code 0; final checkpoint and summary existed before warning",
+        "phase": "torchrun post-worker exit barrier",
+        "rank": 9,
+        "source": "provenance/torchrun-exit-barrier-source.txt",
+        "summary_written_at": "2026-09-14T15:54:25.061605033Z",
+        "timestamp": "2026-09-14T15:54:27.802Z"
+      }
+    ],
+    "observed_outer_progress_events_per_rank": 21,
+    "run_failure_count": 0,
+    "started_at": "2026-09-14T14:39:54Z"
+  },
+  "network": {
+    "ib_disabled": true,
+    "peering_count": 28,
+    "regions": [
+      "us-east-1",
+      "us-west-2",
+      "us-east-2",
+      "eu-central-1",
+      "ap-south-1",
+      "eu-west-3",
+      "eu-north-1",
+      "sa-east-1"
+    ],
+    "socket_interface": "ens5",
+    "topology": "private-full-mesh-vpc-peering"
+  },
+  "rank_map": [
+    {
+      "instance_id": "i-0ee5df56df7d0b231",
+      "private_ip": "10.180.1.50",
+      "public_ip": "44.202.211.177",
+      "rank": 0,
+      "region": "us-east-1",
+      "volume_ids": [
+        "vol-0c774b087572debfe"
+      ]
+    },
+    {
+      "instance_id": "i-04e26df28723aea05",
+      "private_ip": "10.180.1.243",
+      "public_ip": "44.202.234.105",
+      "rank": 1,
+      "region": "us-east-1",
+      "volume_ids": [
+        "vol-0ebc369d86546822e"
+      ]
+    },
+    {
+      "instance_id": "i-05fb166fc7d28c5fa",
+      "private_ip": "10.181.1.244",
+      "public_ip": "54.186.212.61",
+      "rank": 2,
+      "region": "us-west-2",
+      "volume_ids": [
+        "vol-0bb958dc00bb61091"
+      ]
+    },
+    {
+      "instance_id": "i-0fc86d5bf7622ce35",
+      "private_ip": "10.181.1.19",
+      "public_ip": "16.148.92.123",
+      "rank": 3,
+      "region": "us-west-2",
+      "volume_ids": [
+        "vol-0dac72ab8b567fd10"
+      ]
+    },
+    {
+      "instance_id": "i-0450fa888229ee829",
+      "private_ip": "10.182.1.33",
+      "public_ip": "3.142.195.110",
+      "rank": 4,
+      "region": "us-east-2",
+      "volume_ids": [
+        "vol-0bdbc85670f0e5bdf"
+      ]
+    },
+    {
+      "instance_id": "i-0854a2b1a7e42157e",
+      "private_ip": "10.182.1.155",
+      "public_ip": "3.148.205.247",
+      "rank": 5,
+      "region": "us-east-2",
+      "volume_ids": [
+        "vol-0ba7bf7437977510c"
+      ]
+    },
+    {
+      "instance_id": "i-03fdead368e297628",
+      "private_ip": "10.183.1.234",
+      "public_ip": "18.185.240.68",
+      "rank": 6,
+      "region": "eu-central-1",
+      "volume_ids": [
+        "vol-00fb12ba8a963c235"
+      ]
+    },
+    {
+      "instance_id": "i-0bd29b1671bdd600d",
+      "private_ip": "10.183.2.237",
+      "public_ip": "35.156.77.139",
+      "rank": 7,
+      "region": "eu-central-1",
+      "volume_ids": [
+        "vol-055086230acfe0793"
+      ]
+    },
+    {
+      "instance_id": "i-00c2d4baf0ed57d36",
+      "private_ip": "10.184.1.28",
+      "public_ip": "3.110.142.72",
+      "rank": 8,
+      "region": "ap-south-1",
+      "volume_ids": [
+        "vol-06e80e63e24b4fd9e"
+      ]
+    },
+    {
+      "instance_id": "i-0fb9cb4fd36ff7373",
+      "private_ip": "10.184.1.11",
+      "public_ip": "13.233.200.185",
+      "rank": 9,
+      "region": "ap-south-1",
+      "volume_ids": [
+        "vol-0dfb023a0dc21b257"
+      ]
+    },
+    {
+      "instance_id": "i-090089be7a5dee216",
+      "private_ip": "10.185.2.14",
+      "public_ip": "35.181.9.6",
+      "rank": 10,
+      "region": "eu-west-3",
+      "volume_ids": [
+        "vol-0da3bb28415380b5e"
+      ]
+    },
+    {
+      "instance_id": "i-0819b1ae59fbab106",
+      "private_ip": "10.185.2.125",
+      "public_ip": "35.181.61.168",
+      "rank": 11,
+      "region": "eu-west-3",
+      "volume_ids": [
+        "vol-0cea55b5694770cd7"
+      ]
+    },
+    {
+      "instance_id": "i-0f3d2aa052eedfb82",
+      "private_ip": "10.186.1.92",
+      "public_ip": "56.228.31.238",
+      "rank": 12,
+      "region": "eu-north-1",
+      "volume_ids": [
+        "vol-0bb197f5c7892ff58"
+      ]
+    },
+    {
+      "instance_id": "i-0f33004fa05e03094",
+      "private_ip": "10.186.1.195",
+      "public_ip": "16.171.22.171",
+      "rank": 13,
+      "region": "eu-north-1",
+      "volume_ids": [
+        "vol-0d2d67688a0156838"
+      ]
+    },
+    {
+      "instance_id": "i-0374c0c6477d31250",
+      "private_ip": "10.187.1.30",
+      "public_ip": "54.233.237.23",
+      "rank": 14,
+      "region": "sa-east-1",
+      "volume_ids": [
+        "vol-08e93460e204a72ca"
+      ]
+    },
+    {
+      "instance_id": "i-03cb49d3953ddf9d6",
+      "private_ip": "10.187.1.165",
+      "public_ip": "18.231.172.181",
+      "rank": 15,
+      "region": "sa-east-1",
+      "volume_ids": [
+        "vol-08a124a00794b34bc"
+      ]
+    }
+  ],
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "runtime_probes": {
+    "0": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "1": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "10": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "11": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "12": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "13": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "14": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "15": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "2": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "3": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "4": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "5": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "6": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "7": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "8": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    },
+    "9": {
+      "cuda": "13.0",
+      "cudnn": 92000,
+      "gpu": "NVIDIA A10G",
+      "initial_checkpoint_sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "nccl": [
+        2,
+        29,
+        7
+      ],
+      "pairing_digest": "8e461712cff5237d2584799a967670ea1bfba3fa82f105f7184d70623a2b8631",
+      "python": "3.12.11",
+      "reference_source_files": {
+        "benchmarks/noloco_reference/.___init__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/.___main__.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._distributed.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._optimizer.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._runner.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/._trajectory.py": "c7d994a0358f1e5fb79d5b2b4c6065e6bdd05a598e4886ad59f9c798b6f56382",
+        "benchmarks/noloco_reference/__init__.py": "ef7286c541c680e0c4bbf970e7ce01b38124adb63747a148e35a65604cec1bac",
+        "benchmarks/noloco_reference/__main__.py": "a3d7fd9ea3194874ee7ed08e27a296a13f4139712b0af1c514b3ad5c6cf83b03",
+        "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+        "benchmarks/noloco_reference/optimizer.py": "68d1173c34cddfaf7e806a7f275738116399d7c56ac0f66274a64a1fcd92716a",
+        "benchmarks/noloco_reference/runner.py": "1cae1e14c244dd4e088b4199e14159bc8035b3abe1d799d210e991c9cad02262",
+        "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+      },
+      "round_count": 500,
+      "run_config_sha256": "1a7c37472f45a5c0d94a964a5a974ff2beafc17dc6c53de43108b843bbe3d713",
+      "status": "verified",
+      "torch": "2.12.1+cu130"
+    }
+  },
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 29,
+    "profile": "official",
+    "world_size": 16
+  },
+  "source_mounted": false,
+  "status": "completed"
+}

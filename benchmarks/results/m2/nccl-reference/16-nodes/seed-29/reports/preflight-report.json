@@ -1,0 +1,175 @@
+{
+  "capture_checkpoints": [
+    {
+      "model_only": true,
+      "optimizer_state_captured": false,
+      "rank": 0,
+      "reload": "safetensors.numpy.load_file",
+      "sha256": "0d53a74df3eb690564d3e583774af30f6967cdddad826111ebd7e4310f82f7aa",
+      "size_bytes": 44701664,
+      "status": "verified",
+      "tensor_count": 62,
+      "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+    },
+    {
+      "model_only": true,
+      "optimizer_state_captured": false,
+      "rank": 1,
+      "reload": "safetensors.numpy.load_file",
+      "sha256": "8a15d02726ad77c68a10e9c6737fdea670da3c016cd9305fec04e4be17fcef13",
+      "size_bytes": 44701664,
+      "status": "verified",
+      "tensor_count": 62,
+      "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+    },
+    {
+      "model_only": true,
+      "optimizer_state_captured": false,
+      "rank": 2,
+      "reload": "safetensors.numpy.load_file",
+      "sha256": "0d53a74df3eb690564d3e583774af30f6967cdddad826111ebd7e4310f82f7aa",
+      "size_bytes": 44701664,
+      "status": "verified",
+      "tensor_count": 62,
+      "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+    },
+    {
+      "model_only": true,
+      "optimizer_state_captured": false,
+      "rank": 3,
+      "reload": "safetensors.numpy.load_file",
+      "sha256": "8a15d02726ad77c68a10e9c6737fdea670da3c016cd9305fec04e4be17fcef13",
+      "size_bytes": 44701664,
+      "status": "verified",
+      "tensor_count": 62,
+      "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+    }
+  ],
+  "capture_summaries": [
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 2,
+      "final_accuracy": 0.3286,
+      "final_loss": 1.8454965337753295,
+      "rank": 0,
+      "world_size": 4
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 2,
+      "final_accuracy": 0.3042,
+      "final_loss": 1.8683089782714843,
+      "rank": 1,
+      "world_size": 4
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 2,
+      "final_accuracy": 0.3286,
+      "final_loss": 1.8454965337753295,
+      "rank": 2,
+      "world_size": 4
+    },
+    {
+      "acceptance_eligible": true,
+      "backend": "nccl",
+      "completed_outer_steps": 2,
+      "final_accuracy": 0.3042,
+      "final_loss": 1.8683089782714843,
+      "rank": 3,
+      "world_size": 4
+    }
+  ],
+  "duplicate_start_and_log_guard_rank_count": 16,
+  "frozen_optimizer_and_configuration_changed": false,
+  "maintenance_exclusion_rank_count": 16,
+  "private_connectivity_rank_count": 16,
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "runtime_rank_count": 16,
+  "smoke": [
+    {
+      "exit": "0",
+      "latest": "rank=0 world_size=16 all_reduce=136.0",
+      "rank": 0
+    },
+    {
+      "exit": "0",
+      "latest": "rank=1 world_size=16 all_reduce=136.0",
+      "rank": 1
+    },
+    {
+      "exit": "0",
+      "latest": "rank=2 world_size=16 all_reduce=136.0",
+      "rank": 2
+    },
+    {
+      "exit": "0",
+      "latest": "rank=3 world_size=16 all_reduce=136.0",
+      "rank": 3
+    },
+    {
+      "exit": "0",
+      "latest": "rank=4 world_size=16 all_reduce=136.0",
+      "rank": 4
+    },
+    {
+      "exit": "0",
+      "latest": "rank=5 world_size=16 all_reduce=136.0",
+      "rank": 5
+    },
+    {
+      "exit": "0",
+      "latest": "rank=6 world_size=16 all_reduce=136.0",
+      "rank": 6
+    },
+    {
+      "exit": "0",
+      "latest": "rank=7 world_size=16 all_reduce=136.0",
+      "rank": 7
+    },
+    {
+      "exit": "0",
+      "latest": "rank=8 world_size=16 all_reduce=136.0",
+      "rank": 8
+    },
+    {
+      "exit": "0",
+      "latest": "rank=9 world_size=16 all_reduce=136.0",
+      "rank": 9
+    },
+    {
+      "exit": "0",
+      "latest": "rank=10 world_size=16 all_reduce=136.0",
+      "rank": 10
+    },
+    {
+      "exit": "0",
+      "latest": "rank=11 world_size=16 all_reduce=136.0",
+      "rank": 11
+    },
+    {
+      "exit": "0",
+      "latest": "rank=12 world_size=16 all_reduce=136.0",
+      "rank": 12
+    },
+    {
+      "exit": "0",
+      "latest": "rank=13 world_size=16 all_reduce=136.0",
+      "rank": 13
+    },
+    {
+      "exit": "0",
+      "latest": "rank=14 world_size=16 all_reduce=136.0",
+      "rank": 14
+    },
+    {
+      "exit": "0",
+      "latest": "rank=15 world_size=16 all_reduce=136.0",
+      "rank": 15
+    }
+  ],
+  "status": "verified"
+}

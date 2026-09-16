@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "manifest_hash": "d9884d0bf5ce322319cf641c4bd66e33d2a21fe4eb6a71b8f015c5ed3732ce18",
+  "world_size": 4,
+  "round_count": 500,
+  "node_round_count": 2000,
+  "logical_artifact_bytes_per_update": 89402768,
+  "identity_complete_wire_bytes_per_node_round": 89438360,
+  "maximum_observed_wire_bytes_per_node_round": 90490592,
+  "total_update_wire_bytes_all_nodes": 178877771794,
+  "total_telemetry_bytes_all_nodes": 98304000,
+  "minimum_logical_to_wire_ratio": 0.9996005631077555,
+  "update_transport_retries": 0,
+  "metric_round_retries": 1,
+  "telemetry_retries": 0,
+  "maximum_error_feedback_residual_l2": 0.0,
+  "maximum_error_feedback_residual_to_signal_ratio": 0.0,
+  "complete_node_round_evidence": true,
+  "strict_reconciliation": true
+}

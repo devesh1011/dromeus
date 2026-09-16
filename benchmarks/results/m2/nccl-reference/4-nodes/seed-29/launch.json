@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "status": "completed-accepted",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "experiment": {"path": "frozen/experiment.yaml", "sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd", "identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127"},
+  "runtime": {"container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c", "source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61", "reference_implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c", "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab", "source_mounted": false, "runner_module": "benchmarks.noloco_reference.runner", "wrapper_path": "capture_final.py", "wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524", "run_script": "run-reference.sh", "run_script_sha256": "7c73d60cad8b5b93de462cd66140f4f3110cd69f55526ae11d33bed032d1d677"},
+  "backend": {"name": "nccl", "acceptance_eligible": true, "torchrun": {"nnodes": 4, "nproc_per_node": 1, "node_ranks": [0, 1, 2, 3], "master_addr": "10.247.1.214", "master_port": 29500}, "environment": {"NCCL_SOCKET_IFNAME": "ens5", "NCCL_IB_DISABLE": "1", "NCCL_P2P_DISABLE": "1", "NCCL_NET": "Socket", "NCCL_PORT": "29501", "NCCL_DEBUG": "INFO", "NCCL_DEBUG_SUBSYS": "INIT,NET,GRAPH", "NCCL_ASYNC_ERROR_HANDLING": "1", "NCCL_BLOCKING_WAIT": "1", "NCCL_TIMEOUT": "1800", "NCCL_SOCKET_NTHREADS": "4", "NCCL_NSOCKS_PERTHREAD": "4", "TORCH_DISTRIBUTED_DEBUG": "DETAIL"}},
+  "network": {"topology": "dedicated-per-region-vpcs-with-cross-region-private-peering", "private_peering": true, "peering_connection_id": "pcx-06de69811fce970e8", "cross_region_performance_eligible": false, "rank_map": [
+    {"rank": 0, "region": "eu-west-3", "availability_zone": "eu-west-3a", "instance_id": "i-02169436499270e71", "private_ip": "10.247.1.214", "public_ip": "51.44.164.253", "vpc_id": "vpc-0352f5d9d55a710e1", "security_group_id": "sg-04701fd8cd2dbb5ab"},
+    {"rank": 1, "region": "eu-west-3", "availability_zone": "eu-west-3a", "instance_id": "i-03b927d83363135ed", "private_ip": "10.247.1.39", "public_ip": "13.38.46.144", "vpc_id": "vpc-0352f5d9d55a710e1", "security_group_id": "sg-04701fd8cd2dbb5ab"},
+    {"rank": 2, "region": "sa-east-1", "availability_zone": "sa-east-1a", "instance_id": "i-0108f84d27f9d19a8", "private_ip": "10.244.1.20", "public_ip": "18.230.78.249", "vpc_id": "vpc-0cac5899eae6897e0", "security_group_id": "sg-0c97fa206de587e07"},
+    {"rank": 3, "region": "sa-east-1", "availability_zone": "sa-east-1a", "instance_id": "i-071bae89ddd703998", "private_ip": "10.244.1.82", "public_ip": "54.20.54.242", "vpc_id": "vpc-0cac5899eae6897e0", "security_group_id": "sg-0c97fa206de587e07"}
+  ]},
+  "evidence": {"host_preflight": "provisioning/host-preflight-rank-{0,1,2,3}.log", "nccl_smoke": "provisioning/smoke3-rank{0,1,2,3}.log", "final_checkpoint_capture": true, "checkpoint_manifest": "checkpoint-manifest.json", "validation_report": "reports/validation-report.json", "raw_logs": "official/launch/", "raw_lifecycle_markers": "official/rank-*/"}
+}

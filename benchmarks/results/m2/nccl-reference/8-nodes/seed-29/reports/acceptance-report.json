@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "status": "accepted-model-weight-evidence",
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "selector": {"profile": "official", "world_size": 8, "benchmark_seed": 29},
+  "backend": "nccl",
+  "acceptance_eligible": true,
+  "gates": {
+    "all_ranks_complete": true,
+    "all_clean_exit": true,
+    "nccl_backend": true,
+    "frozen_runtime": true,
+    "private_network": true,
+    "private_route_probe": true,
+    "all_rank_nccl_smoke": true,
+    "capture_wiring_verified": true,
+    "initial_checkpoint_readback": true,
+    "final_model_weight_checkpoint_archive": true,
+    "matching_axl_within_3_points": true,
+    "source_mounted": false,
+    "compression_gate": "not-applicable-to-identity-reference",
+    "residual_gate": "not-applicable-to-identity-reference",
+    "divergence_gate": "not-applicable-official-reference-emits-no-analysis-trajectory"
+  },
+  "artifact": {
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "summary_sha256": "e857710b283113d51c54a65f6544aab7f704bfc287349cf7bed827c2e7ee5656",
+    "deployment_sha256": "e80e628a586a0eeecd18c9c33d61dde6421df6366f024a222b025feb81e30684",
+    "checkpoint_manifest_sha256": "7ef4c06b73c5c67ef4502791bfb7982b2eaedfa2389fc24d37fe85edfa75b3a2",
+    "preflight_report_sha256": "24a84d8d0928c7c52a90d6c76d606f78fd7161cc664c47638e4a329e6c56830d",
+    "validation_report_sha256": "75da77121d015e448e2c37774e00d5a3f2bca285b0eced4cb820f79960a46d3c"
+  },
+  "execution": {
+    "start_utc": "2026-09-09T15:48:44Z",
+    "end_utc": "2026-09-09T16:33:20Z",
+    "duration_seconds": 2676,
+    "round_count": 500,
+    "completed_outer_steps": 500,
+    "clean_exit_count": 8,
+    "run_failure_count": 0
+  },
+  "accuracy": {
+    "ranks": [0.9303, 0.9293, 0.9269, 0.9271, 0.9288, 0.9282, 0.9287, 0.9288],
+    "mean": 0.9285125,
+    "stddev": 0.0010433569619262672,
+    "minimum": 0.9269,
+    "maximum": 0.9303,
+    "mean_loss": 0.5620745761990548
+  },
+  "accuracy_comparison": {
+    "matching_axl_run_id": "noloco-topk45-official-w8-s29-20260829",
+    "matching_axl_report_sha256": "664e7959d3962c03427d801338f49aae749a069a5b99bb33027219413af32016",
+    "matching_axl_mean_accuracy": 0.926525,
+    "nccl_mean_accuracy": 0.9285125,
+    "delta_fractional": 0.0019875,
+    "delta_percentage_points": 0.19875,
+    "within_3_point_gate": true,
+    "cross_fabric_speed_comparison_eligible": false
+  },
+  "checkpoint": {
+    "kind": "final-model-weight-safetensors",
+    "count": 8,
+    "size_bytes_each": 44701664,
+    "tensor_count_each": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+    "safetensors_readback_verified": true,
+    "finite_fp32_verified": true,
+    "sha256_verified": true,
+    "model_only": true,
+    "optimizer_state_captured": false,
+    "continuation_support_claimed": false
+  },
+  "limitations": [
+    "No cross-fabric speed equivalence claim.",
+    "Final artifacts are model-weight safetensors only; optimizer, outer-momentum, loader, and RNG continuation state is not captured or claimed.",
+    "The official reference runner emits final summaries but no official per-round trajectory, residual, or compression telemetry."
+  ],
+  "cleanup": {
+    "pending": false,
+    "result": "clean",
+    "verified_at_utc": "2026-09-09T18:38:22Z",
+    "final_state_sha256": "fb43ad93774e1ba2e236fab5a56ac8ae610a5db4461147ef8f8f83f0c237b564",
+    "independent_summary_sha256": "f9d7ccd983d999ce5598d1eae47f2fe005a414fdbf67cff17f3f001b1e5cb472",
+    "task_owned_resources_remaining": 0,
+    "unrelated_resources_preserved": true
+  }
+}

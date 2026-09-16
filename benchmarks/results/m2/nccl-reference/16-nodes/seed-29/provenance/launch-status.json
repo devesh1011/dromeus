@@ -1,0 +1,162 @@
+[
+  {
+    "rank": 0,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 0, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:40.612867+00:00\"}",
+    "tail": "",
+    "bytes": 21472,
+    "unit": "Restart=no\nMainPID=5260\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:00 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 1,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 1, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:41.286602+00:00\"}",
+    "tail": "",
+    "bytes": 22893,
+    "unit": "Restart=no\nMainPID=5144\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:00 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 2,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 2, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:56.527907+00:00\"}",
+    "tail": "",
+    "bytes": 22895,
+    "unit": "Restart=no\nMainPID=5233\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:04 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 3,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 3, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:44.557822+00:00\"}",
+    "tail": "",
+    "bytes": 22492,
+    "unit": "Restart=no\nMainPID=5130\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:04 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 4,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 4, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:04.908172+00:00\"}",
+    "tail": "",
+    "bytes": 23022,
+    "unit": "Restart=no\nMainPID=3425\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:01 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 5,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 5, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:29.856608+00:00\"}",
+    "tail": "",
+    "bytes": 23427,
+    "unit": "Restart=no\nMainPID=3452\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:01 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 6,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 6, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:40.089585+00:00\"}",
+    "tail": "",
+    "bytes": 23251,
+    "unit": "Restart=no\nMainPID=3435\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:58 UTC\nActiveState=active\nSubState=running",
+    "gpu": "0 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 7,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 7, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:40.943712+00:00\"}",
+    "tail": "",
+    "bytes": 23081,
+    "unit": "Restart=no\nMainPID=3418\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:58 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 8,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 8, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:04.348841+00:00\"}",
+    "tail": "",
+    "bytes": 23032,
+    "unit": "Restart=no\nMainPID=3417\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:54 UTC\nActiveState=active\nSubState=running",
+    "gpu": "0 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 9,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 9, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:29.205784+00:00\"}",
+    "tail": "",
+    "bytes": 23040,
+    "unit": "Restart=no\nMainPID=3462\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:55 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 10,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 10, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:32.777425+00:00\"}",
+    "tail": "",
+    "bytes": 23059,
+    "unit": "Restart=no\nMainPID=3424\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:58 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 11,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 11, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:44.089894+00:00\"}",
+    "tail": "",
+    "bytes": 23290,
+    "unit": "Restart=no\nMainPID=3418\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:58 UTC\nActiveState=active\nSubState=running",
+    "gpu": "0 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 12,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 12, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:32.677254+00:00\"}",
+    "tail": "",
+    "bytes": 22892,
+    "unit": "Restart=no\nMainPID=3427\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:59 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 13,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 13, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:02.532458+00:00\"}",
+    "tail": "",
+    "bytes": 23299,
+    "unit": "Restart=no\nMainPID=3431\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:39:59 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 14,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 14, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:41:01.725484+00:00\"}",
+    "tail": "",
+    "bytes": 22896,
+    "unit": "Restart=no\nMainPID=3427\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:08 UTC\nActiveState=active\nSubState=running",
+    "gpu": "100 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  },
+  {
+    "rank": 15,
+    "exit": null,
+    "latest": "{\"event\": \"outer_step_completed\", \"rank\": 15, \"completed_outer_steps\": 1, \"timestamp\": \"2026-09-14T14:40:54.718517+00:00\"}",
+    "tail": "",
+    "bytes": 21352,
+    "unit": "Restart=no\nMainPID=3427\nNRestarts=0\nExecMainStartTimestamp=Mon 2026-09-14 14:40:07 UTC\nActiveState=active\nSubState=running",
+    "gpu": "45 %, 1891 MiB, NVIDIA A10G",
+    "failure_events": []
+  }
+]

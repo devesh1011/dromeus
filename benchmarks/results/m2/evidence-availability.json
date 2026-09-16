@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-09-16",
+  "local_model_files_excluded_from_git": [
+    {
+      "path": "experiment-config/checkpoint-29.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "experiment-config/checkpoint-17.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "experiment-config/checkpoint-41.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "5370fb8db9d438a99ee8f57c702e520a3e540adf25cda287ba147fa763c81c26",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "identity-ablation/4-nodes/final-checkpoints/node-0.safetensors",
+      "size_bytes": 44701384,
+      "sha256": "c81ab80442c4e871b82d13bfeaae69c099f2d33914bafcf0f520259c54b99e88",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "identity-ablation/4-nodes/final-checkpoints/node-3.safetensors",
+      "size_bytes": 44701384,
+      "sha256": "1fbe04a27a2f230a2b3ad706e0cd19b2417bbe23ac55fd2a38ffe56068e795bb",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "identity-ablation/4-nodes/final-checkpoints/node-1.safetensors",
+      "size_bytes": 44701384,
+      "sha256": "273da0de17c36a9061a2fa73a4296597ee8c6e641cedecec223b6e8bad1e174d",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "identity-ablation/4-nodes/final-checkpoints/node-2.safetensors",
+      "size_bytes": 44701384,
+      "sha256": "43f34bf0883b47f62c9864ceb979da4238d7de17e02adde14cda0f7783c2fc41",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-1.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "180dd84526905b3d1404d4e2300c682d179a4605b6f70c7cc8edea2d4385bbb7",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-8.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "083eb575723116aa43f3d7d5023d683e83bb691f5557832eb4b36f8096d9cada",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-4.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "9adfc611e098bb0bff2e00df95292beeff72c57d021c3ba1cca1b5909dd38911",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-13.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "fbeeed81cf589967b6d1dd1353f22172e51fca955795893dd952831e34a92322",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-10.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "ef644dacc8487ca7d5df4f8c28cefbef568e3a110dbe1ff2fd65f335a5abff25",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-7.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "02ba08e3e65b38216067b187cc4a06798db4e65cfb1cef5ac4e638223b09199b",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-15.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "3eccb7241f3831997db86df9e134a90b22c1d8f4c6619d2bcd0cdf539ed798d4",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-2.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "087081cb3663f6c64453f825d9c6654ab6e82e978b328afac9905c48d591a0f9",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-12.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "b5b763e0c59f48d5c7b9d0eecc3df72045ba2cf2eb25c72e9b47125fa919a5c9",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-5.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "13f80c31b1f802bcd9140996302e2cdd668baa4020fe9533b373bc404cd9c940",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-9.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "3186aa9ce72ac47ee97ee3981ccd59d220eb57b98f34474d5f843390affb3fad",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-0.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "0053094047e5aeb19d52f3f5d143c0b69b9b478339fc0076fcdf75b8cb70ba14",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-3.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "916a083f9f78df06c20f072ec917cd35b363e2bf8c86b7e7864d5b78768944e1",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-14.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "2656b3fc6cfba24f19cb7ba42f852e45e2203780e9c4209bb660c80fd180f367",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-6.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "378741e10414f3030467810d655524cf77a4fd662bd356e2b169447861765655",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    },
+    {
+      "path": "nccl-reference/16-nodes/seed-29/checkpoints/rank-11.safetensors",
+      "size_bytes": 44701664,
+      "sha256": "f0cc083a67ec9e42e5c59a4c7ff6ddfe52bd89f6ef3c55310f208c63793e1b79",
+      "availability": "retained in original local evidence checkout; not included in Git",
+      "download_url": null
+    }
+  ],
+  "other_artifacts": [
+    {
+      "kind": "AXL final optimizer checkpoints",
+      "references": "benchmark-results/*-nodes/seed-*/final-checkpoints/node-*.json",
+      "availability": "versioned private S3 object references retained; remote bytes/access not reverified during commit preparation"
+    },
+    {
+      "kind": "earlier NCCL checkpoints and raw archives",
+      "availability": "pruned locally as documented in nccl-reference/PRUNED-ARTIFACTS.md; hashes are not downloads"
+    },
+    {
+      "kind": "failed W16 NCCL seed-29 attempt",
+      "path": "nccl-reference/16-nodes/failed-seed-29/",
+      "availability": "historically recorded; directory absent in original local checkout at commit preparation; raw evidence not supplied"
+    },
+    {
+      "kind": "identity full-state checkpoints and staging capture",
+      "availability": "pruned locally after validation; final model weights listed separately above"
+    }
+  ]
+}

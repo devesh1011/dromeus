@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "milestone": "M2",
+  "backend": "nccl",
+  "world_size": 4,
+  "benchmark_seed": 29,
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "acceptance_report": "reports/acceptance-report.json",
+  "validation_report": "reports/validation-report.json",
+  "deployment_report": "reports/deployment.json",
+  "summary": "reports/summary.json",
+  "checkpoint_manifest": "reports/checkpoint-manifest.json",
+  "checksums": "checksums.sha256",
+  "note": "Compact report-facing evidence only. Final checkpoint and archive bytes remain in the active task worktree and are represented here by SHA-256 hashes."
+}

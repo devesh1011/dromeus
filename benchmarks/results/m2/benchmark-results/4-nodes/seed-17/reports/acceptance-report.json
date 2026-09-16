@@ -1,0 +1,114 @@
+{
+  "accuracy": {
+    "maximum": 0.9315,
+    "mean": 0.930825,
+    "minimum": 0.9302,
+    "stddev": 0.0005068283733178285
+  },
+  "artifact": {
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_sha256": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "path": "../../../../experiment-config/experiment.yaml"
+  },
+  "communication": {
+    "exchange_retries": 0,
+    "identity_complete_wire_bytes": 89499868,
+    "maximum_observed_update_payload_bytes_with_retries": 17672091,
+    "minimum_encoded_compression_ratio": 5.067911273833514,
+    "nominal_complete_wire_bytes": 17672081,
+    "nominal_complete_wire_compression_ratio": 5.064478144933808,
+    "telemetry_retries": 0,
+    "transport_event_labeled_retries": 0
+  },
+  "divergence": {
+    "final_below_post_warmup_peak": true,
+    "passed": true,
+    "point_count": 10,
+    "trend_slope_per_inner_step": -0.00030362690117287133
+  },
+  "evidence": {
+    "axl_log_provenance_sha256": "1043d7efb53c99bce927c5c7df3c94be76764b1583d4931f8acffef5d8b91de4",
+    "checkpoint_archive_count": 4,
+    "checkpoint_manifest_sha256": "239a38f7275caf54f528d1cfd611eca3a538a8af0dfb83969115c29c3b07f591",
+    "divergence_report_sha256": "a458ca2f7741188ec27b597018848a1aa3f3bbdeb51bad86b22b0c58b262a4d9",
+    "local_analysis_tensor_count_after_analysis": 0,
+    "rank_log_sha256": [
+      "c9efba65867d5d74b485277796763f5ce44e0465f579b4ee6c769e305f098fe5",
+      "c8a3a56c543b7aaadc53a926c1e5688046e7795a3141fd7fe1e43e98a9ffbe8d",
+      "ff439dd80ddb119b0a2b880023d020e6b656501eb7e69d84fd259ebeb2180e34",
+      "20a9225c9dd0dc9a5dd8444abaf77e967fd2010d7afd86e4fd062a786ac1b297"
+    ],
+    "reconciliation_sha256": "cc541cf3a7b9914d97876f84dfc0cd65e7915b31bdd5778cdf71d326e4bd8b74",
+    "remote_analysis_tensor_count_after_analysis": 0
+  },
+  "execution": {
+    "clean_exit_count": 4,
+    "node_complete_timestamps": [
+      "2026-09-06T20:57:38.049672+00:00",
+      "2026-09-06T20:57:37.986233+00:00",
+      "2026-09-06T20:57:37.900305+00:00",
+      "2026-09-06T20:57:37.956305+00:00"
+    ],
+    "node_start_timestamps": [
+      "2026-09-06T18:59:51.111048+00:00",
+      "2026-09-06T19:01:39.174638+00:00",
+      "2026-09-06T19:01:32.733986+00:00",
+      "2026-09-06T19:01:36.890690+00:00"
+    ],
+    "round_count": 500,
+    "run_failure_count": 0
+  },
+  "gates": {
+    "accuracy_at_least_90_percent": true,
+    "all_ranks_complete": true,
+    "axl_logs_complete": true,
+    "checkpoint_archive_complete": true,
+    "divergence": true,
+    "nominal_complete_wire_at_least_5x": true,
+    "residual_l2_at_most_6": true,
+    "residual_ratio_at_most_0_35": true,
+    "strict_reconciliation": true,
+    "temporary_tensors_deleted": true,
+    "topology_complete": true
+  },
+  "manifest_hash": "833ec4ad012a612fe81aec610e573fe08b5e8ba3feb07ac2febe56cf6922c4e5",
+  "provenance": {
+    "checkpoint_validation": "Fresh rerun final checkpoint hashes match the retained prior accepted archive entries; no checkpoint bytes are duplicated locally.",
+    "evidence_kind": "fresh-axl-log-rerun",
+    "fresh_raw_axl_logs_retained": true,
+    "original_accepted_run_id": "noloco-topk45-official-w4-s17-20260829",
+    "original_log_recovery_status": "unrecoverable-from-inspected-sources",
+    "runtime": {
+      "accelerator_class": "NVIDIA A10G",
+      "axl_commit": "628e28ace077f26dfe8d0259009b357216a9d8d4",
+      "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+      "cuda_version": "13.0",
+      "cudnn_version": 92000,
+      "driver_version": "595.91.07",
+      "dromeus_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+      "dromeus_commit_recorded_by_run": "411daee",
+      "instance_type": "g5.xlarge",
+      "nccl_version": "2.29.7",
+      "python_version": "3.12.11",
+      "pytorch_version": "2.12.1+cu130",
+      "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+      "upstream_noloco_source": "src/noloco/sparse_optimizer_c.py"
+    },
+    "validation_worktree_commit": "1734c5d368af68130dd116b6b7d1667442680227"
+  },
+  "residual": {
+    "l2_bound": 6.0,
+    "maximum_l2_norm": 4.555979162298655,
+    "maximum_to_signal_ratio": 0.2965785077320018,
+    "ratio_bound": 0.35
+  },
+  "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 17,
+    "profile": "official",
+    "world_size": 4
+  },
+  "status": "accepted"
+}

@@ -1,0 +1,85 @@
+{
+  "capture_readback": {
+    "all_rank_exit_codes_zero": true,
+    "checkpoint_count": 4,
+    "checkpoint_kind": "final-model-weight-safetensors",
+    "finite_fp32_verified": true,
+    "inner_steps": 100,
+    "optimizer_state_captured": false,
+    "outer_rounds": 2,
+    "rank_count": 4,
+    "safetensors_readback_verified": true,
+    "selector": {
+      "benchmark_seed": 17,
+      "profile": "trajectory",
+      "world_size": 4
+    },
+    "size_bytes": [
+      44701664
+    ],
+    "summaries": [
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 2,
+        "final_accuracy": 0.3286,
+        "final_loss": 1.8454965337753295,
+        "rank": 0,
+        "world_size": 4
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 2,
+        "final_accuracy": 0.3042,
+        "final_loss": 1.8683089782714843,
+        "rank": 1,
+        "world_size": 4
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 2,
+        "final_accuracy": 0.3286,
+        "final_loss": 1.8454965337753295,
+        "rank": 2,
+        "world_size": 4
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 2,
+        "final_accuracy": 0.3042,
+        "final_loss": 1.8683089782714843,
+        "rank": 3,
+        "world_size": 4
+      }
+    ],
+    "tensor_count": [
+      62
+    ],
+    "tensor_schema_hashes": [
+      "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+    ]
+  },
+  "frozen": {
+    "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_loaded_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "run_script_sha256": "19959135dae245cdf307388898efa02015ce6c8527f600b53bdaae3635fe6977",
+    "source_mounted": false
+  },
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "schema_version": 1,
+  "smoke": {
+    "all_rank_exit_codes_zero": true,
+    "all_reduce_value": 136.0,
+    "backend": "nccl",
+    "private_network": true,
+    "rank_count": 16,
+    "socket_transport": true,
+    "world_size": 16
+  },
+  "status": "verified"
+}

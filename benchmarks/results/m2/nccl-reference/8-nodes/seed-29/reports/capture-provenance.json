@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "capture_wrapper_sha256": "8cceac7f09a262ce0144ec3033bac2b2c7af757cd593b9276f345f06065d4524",
+  "capture_phase": "immediately-before-frozen-final-evaluation",
+  "preflight_wrapper_check_all_ranks": true,
+  "checkpoint_kind": "final-model-weight-safetensors",
+  "optimizer_state_captured": false,
+  "outer_momentum_captured": false,
+  "loader_state_captured": false,
+  "rng_continuation_state_captured": false,
+  "continuation_support_claimed": false,
+  "training_semantics_changed": false
+}

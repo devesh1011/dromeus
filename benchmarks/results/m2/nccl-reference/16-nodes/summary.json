@@ -1,0 +1,66 @@
+{
+  "accepted_seeds": [
+    17,
+    29
+  ],
+  "aggregate": {
+    "accepted_seed_count": 2,
+    "matching_axl_mean_for_same_seeds": 0.9271,
+    "mean_of_seed_mean_accuracies": 0.9256625,
+    "nccl_minus_axl_delta_percentage_points": -0.14374999999999805,
+    "population_stddev_of_seed_means": 0.0008499999999999619
+  },
+  "backend": "nccl",
+  "curation": {
+    "checkpoint_binaries_retained": "seed29 retained; seed17 pruned",
+    "checkpoint_manifests_retained": true,
+    "checkpoint_retention_by_seed": {
+      "17": false,
+      "29": true
+    },
+    "local_archives_retained": false,
+    "per_rank_logs_retained": true,
+    "pruned_on": "2026-09-10"
+  },
+  "failed_attempts": [
+    {
+      "included_in_accuracy_aggregate": false,
+      "report": "failed-seed-29/reports/failure-report.json",
+      "run_id": "noloco-nccl-w16-s29-20260914",
+      "seed": 29,
+      "status": "failed-host-maintenance"
+    }
+  ],
+  "pending_seeds": [
+    41
+  ],
+  "per_seed": [
+    {
+      "acceptance_report": "seed-17/reports/acceptance-report.json",
+      "accuracy_delta_percentage_points": -0.276875,
+      "checkpoint_manifest": "seed-17/reports/checkpoint-manifest.json",
+      "logs": "seed-17/logs/",
+      "matching_axl_mean_accuracy": 0.92928125,
+      "mean_accuracy": 0.9265125,
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "seed": 17,
+      "status": "accepted-model-weight-evidence",
+      "summary": "seed-17/reports/summary.json"
+    },
+    {
+      "acceptance_report": "seed-29/reports/acceptance-report.json",
+      "accuracy_delta_percentage_points": -0.010624999999997442,
+      "checkpoint_manifest": "seed-29/reports/checkpoint-manifest.json",
+      "logs": "seed-29/logs/",
+      "matching_axl_mean_accuracy": 0.92491875,
+      "mean_accuracy": 0.9248125,
+      "run_id": "noloco-nccl-w16-s29-r2-20260914",
+      "seed": 29,
+      "status": "accepted-model-weight-evidence",
+      "summary": "seed-29/reports/summary.json"
+    }
+  ],
+  "schema_version": 2,
+  "status": "accepted-seeds17-and29",
+  "world_size": 16
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+  "verified_at_utc": "2026-09-09T18:38:22Z",
+  "task_owned_resource_queries": {
+    "instances": 0,
+    "volumes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "route_tables": 0,
+    "internet_gateways": 0,
+    "security_groups": 0,
+    "vpc_peerings": 0,
+    "key_pairs": 0
+  },
+  "result": "clean"
+}

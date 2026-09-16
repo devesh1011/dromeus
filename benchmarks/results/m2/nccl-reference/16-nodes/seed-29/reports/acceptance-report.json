@@ -1,0 +1,297 @@
+{
+  "accuracy": {
+    "max": 0.9268,
+    "mean": 0.9248125,
+    "mean_loss": 0.5867525240674615,
+    "min": 0.9229,
+    "ranks": [
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9259,
+        "final_loss": 0.583588773727417,
+        "rank": 0,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.923,
+        "final_loss": 0.5918027265787125,
+        "rank": 1,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9268,
+        "final_loss": 0.5778413624286651,
+        "rank": 2,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9254,
+        "final_loss": 0.5839894313812256,
+        "rank": 3,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9253,
+        "final_loss": 0.5799222246170044,
+        "rank": 4,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9235,
+        "final_loss": 0.5945850293159485,
+        "rank": 5,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9242,
+        "final_loss": 0.5837978017807007,
+        "rank": 6,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9257,
+        "final_loss": 0.5871229875564575,
+        "rank": 7,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9233,
+        "final_loss": 0.5997600063323975,
+        "rank": 8,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9261,
+        "final_loss": 0.5811314586639404,
+        "rank": 9,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9262,
+        "final_loss": 0.5829159470558166,
+        "rank": 10,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9256,
+        "final_loss": 0.5807946285247803,
+        "rank": 11,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9245,
+        "final_loss": 0.5871858703613281,
+        "rank": 12,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9229,
+        "final_loss": 0.6024031674385071,
+        "rank": 13,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.9246,
+        "final_loss": 0.5853888296604156,
+        "rank": 14,
+        "world_size": 16
+      },
+      {
+        "acceptance_eligible": true,
+        "backend": "nccl",
+        "completed_outer_steps": 500,
+        "final_accuracy": 0.924,
+        "final_loss": 0.5858101396560669,
+        "rank": 15,
+        "world_size": 16
+      }
+    ],
+    "stddev": 0.0011947149241555322
+  },
+  "accuracy_comparison": {
+    "cross_fabric_speed_comparison_eligible": false,
+    "delta_fractional": -0.00010624999999997442,
+    "delta_percentage_points": -0.010624999999997442,
+    "matching_axl_mean_accuracy": 0.92491875,
+    "matching_axl_report_sha256": "af65a77a0a92606059cedec16f61e5af17c6a05d22a20cdcb0f4907f240d26d6",
+    "matching_axl_run_id": "noloco-topk45-official-w16-s29-20260829",
+    "nccl_mean_accuracy": 0.9248125,
+    "within_3_point_gate": true
+  },
+  "archive": {
+    "created": false,
+    "reason": "Original files retained directly without duplicate archive"
+  },
+  "artifact": {
+    "checkpoint_manifest_sha256": "f7e524624853dfba48dc60ba01d90e632a32faaf46a0e1e87b0a11be4b0d641a",
+    "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "deployment_sha256": "4a63e7f96541f81b9cce4b43909c2c4d275f9ea0f7d194f384bd6199b7f5c19c",
+    "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "summary_sha256": "9a124baea9403d8d7be1964ba0297edbf0cbd34be933ae0167be39d037c52043"
+  },
+  "checkpoint": {
+    "continuation_support_claimed": false,
+    "count": 16,
+    "finite_fp32_verified": true,
+    "kind": "final-model-weight-safetensors-v1",
+    "local_bytes_retained": true,
+    "manifest": "reports/checkpoint-manifest.json",
+    "optimizer_state_captured": false,
+    "safetensors_readback_verified": true,
+    "sha256_verified": true,
+    "size_bytes_each": 44701664,
+    "tensor_count_each": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+  },
+  "cleanup": {
+    "report": "cleanup/final-state.json",
+    "sha256": "8474d65af746bbabf93dbc84c73751072398f34976fe20bbb5c3b4408b42a4c5",
+    "verified": true
+  },
+  "communication": {
+    "compression": "none, uncompressed reference",
+    "cross_region_performance_eligible": false,
+    "logical_update_bundle_bytes_per_rank_round": 89391696,
+    "model_raw_fp32_bytes": 44695848,
+    "wire_bytes_measured": false
+  },
+  "execution": {
+    "clean_exit_count": 16,
+    "completed_outer_steps": [
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500,
+      500
+    ],
+    "duration_seconds": 4475.0,
+    "ended_at": "2026-09-14T15:54:29Z",
+    "exit_codes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "launcher_exit_barrier_warning_count": 1,
+    "launcher_warnings": [
+      {
+        "checkpoint_written_at": "2026-09-14T15:54:21.272803581Z",
+        "error": "DistNetworkError: Failed to recv, got 0 bytes. Connection was likely closed.",
+        "outcome": "caught and logged by torchrun; launcher exit code 0; final checkpoint and summary existed before warning",
+        "phase": "torchrun post-worker exit barrier",
+        "rank": 9,
+        "source": "provenance/torchrun-exit-barrier-source.txt",
+        "summary_written_at": "2026-09-14T15:54:25.061605033Z",
+        "timestamp": "2026-09-14T15:54:27.802Z"
+      }
+    ],
+    "observed_outer_progress_events_per_rank": 21,
+    "run_failure_count": 0,
+    "started_at": "2026-09-14T14:39:54Z"
+  },
+  "gates": {
+    "all_clean_exit": true,
+    "all_ranks_complete": true,
+    "compression_gate": "not-applicable-to-uncompressed-reference",
+    "continuation_support_claimed": false,
+    "divergence_gate": "not-applicable-official-reference-emits-no-analysis-trajectory",
+    "final_model_weight_checkpoint_capture": true,
+    "frozen_runtime": true,
+    "matching_axl_within_3_points": true,
+    "nccl_backend": true,
+    "optimizer_state_captured": false,
+    "preflight_capture_readback": true,
+    "private_network": true,
+    "residual_gate": "not-applicable-to-uncompressed-reference",
+    "source_mounted": false
+  },
+  "limitations": [
+    "Final checkpoints contain model weights only, not optimizer, outer-momentum, loader or RNG continuation state.",
+    "No cross-fabric speed equivalence claim; geographic placements differ.",
+    "Official NCCL runner emits final metrics and wrapper progress events, but no full official trajectory, residual or measured wire-byte telemetry.",
+    "NCCL deprecated environment, unbatched P2P, disabled IB and optional plugin warnings remain in original logs.",
+    "Rank9 logged a post-worker torchrun exit-barrier DistNetworkError after saving its final checkpoint and summary; the caught warning did not change launcher exit code 0. See reports/launcher-warnings.json.",
+    "Previous failed attempt is preserved separately under failed-seed-29/ and excluded from accepted metrics."
+  ],
+  "provenance": {
+    "retrieval": "provenance/retrieval.json",
+    "runtime_source": "provenance/runtime-source/",
+    "runtime_source_identity": "frozen image; source files individually SHA-256 bound by probes",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
+  },
+  "run_id": "noloco-nccl-w16-s29-r2-20260914",
+  "schema_version": 1,
+  "selector": {
+    "benchmark_seed": 29,
+    "profile": "official",
+    "world_size": 16
+  },
+  "status": "accepted-model-weight-evidence"
+}

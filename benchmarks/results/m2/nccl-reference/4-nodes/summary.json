@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "status": "accepted-seed17-seed29",
+  "backend": "nccl",
+  "world_size": 4,
+  "accepted_seeds": [17, 29],
+  "in_progress_seeds": [],
+  "pending_seeds": [41],
+  "curation": {
+    "per_rank_logs_retained": true,
+    "checkpoint_manifests_retained": true,
+    "checkpoint_binaries_retained": false,
+    "local_archives_retained": false,
+    "raw_aws_and_provisioning_retained": false,
+    "pruned_on": "2026-09-10"
+  },
+  "per_seed": [
+    {
+      "seed": 17,
+      "run_id": "noloco-nccl-official-w4-s17-20260909",
+      "status": "accepted",
+      "mean_accuracy": 0.9271,
+      "matching_axl_mean_accuracy": 0.930825,
+      "accuracy_delta_percentage_points": -0.3725,
+      "acceptance_report": "seed-17/acceptance-report.json",
+      "checkpoint_hashes": "seed-17/provenance/checkpoint-hashes.txt",
+      "logs": "seed-17/logs/",
+      "summary": "seed-17/summary.json",
+      "network_regions": ["eu-west-1", "eu-north-1"]
+    },
+    {
+      "seed": 29,
+      "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+      "status": "accepted",
+      "mean_accuracy": 0.92955,
+      "matching_axl_mean_accuracy": 0.9285,
+      "accuracy_delta_percentage_points": 0.105,
+      "acceptance_report": "seed-29/reports/acceptance-report.json",
+      "checkpoint_hashes": "seed-29/provenance/checkpoint-hashes.txt",
+      "logs": "seed-29/logs/",
+      "summary": "seed-29/reports/summary.json",
+      "validation_report": "seed-29/reports/validation-report.json",
+      "cleanup": "seed-29/cleanup/final-state.json",
+      "final_archive_sha256": "9526466052ca8c33ec5740af36ea34265690de1270a16b714a1ff2434164ef26",
+      "final_checkpoint_count": 4,
+      "network_regions": ["eu-west-3", "sa-east-1"]
+    }
+  ],
+  "provenance": {
+    "experiment_file": "../../experiment-config/experiment.yaml",
+    "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+    "experiment_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+    "container_image": "150911080841.dkr.ecr.us-east-1.amazonaws.com/dromeus-m2-benchmark@sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+    "dromeus_source_commit": "411daee79fffb4c6dbeab9d65dfe0280d0492a61",
+    "reference_implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+    "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+    "accelerator_class": "NVIDIA-A10G",
+    "instance_type": "g5.xlarge",
+    "cross_fabric_performance_eligible": false
+  }
+}

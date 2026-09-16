@@ -1,0 +1,18 @@
+{
+  "apt_periodic_enabled": false,
+  "automatic_reboot": false,
+  "config_sha256": {
+    "/etc/apt/apt.conf.d/99-benchmark-maintenance": "e9b73016d6257adc33c30cbb2e2684f326c4e9702c5b30a285d4f36ba552259e",
+    "/etc/needrestart/conf.d/99-benchmark.conf": "5db34fa7b700bc03b444b85b9a9480c6e14bf51dc60f78e1954a6f08c771c563"
+  },
+  "in_flight_package_operations": false,
+  "masked_units": {
+    "apt-daily-upgrade.service": "masked",
+    "apt-daily-upgrade.timer": "masked",
+    "apt-daily.service": "masked",
+    "apt-daily.timer": "masked",
+    "unattended-upgrades.service": "masked"
+  },
+  "needrestart_effective": "list-only; benchmark/docker/network service overrides all zero",
+  "status": "verified"
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "world_size": 4,
+  "seed": 29,
+  "backend": "nccl",
+  "round_count": 500,
+  "inner_steps_per_round": 50,
+  "total_inner_steps_per_rank": 25000,
+  "rank_accuracies": [0.9304, 0.9291, 0.9295, 0.9292],
+  "mean_accuracy": 0.92955,
+  "stddev_accuracy": 0.0005123475382979696,
+  "matching_axl_mean_accuracy": 0.9285,
+  "delta_percentage_points": 0.105,
+  "all_clean_exit": true,
+  "all_acceptance_gates": true,
+  "cross_fabric_performance_eligible": false
+}

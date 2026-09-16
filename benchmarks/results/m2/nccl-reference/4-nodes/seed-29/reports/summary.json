@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "reference": {"backend": "nccl", "acceptance_eligible": true, "runner_module": "benchmarks.noloco_reference.runner", "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c", "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd"},
+  "aggregate": {"mean_final_accuracy": 0.92955, "stddev_final_accuracy": 0.0005123475382979696, "minimum_final_accuracy": 0.9291, "maximum_final_accuracy": 0.9304, "mean_final_loss": 0.5464317511320114, "stddev_final_loss": 0.0030315157304996268, "all_clean_exit": true, "completed_outer_steps": 500, "total_inner_steps_per_rank": 25000},
+  "matching_axl": {"source": "provenance/axl-seed-29-acceptance-report.json", "source_sha256": "b8c33d89adcd0126038d873bc7a9a01ba446fae0af48e9bb25f4433e3719b33a", "mean_final_accuracy": 0.9285, "delta_percentage_points": 0.105},
+  "artifact_pointers": {"acceptance_report": "reports/acceptance-report.json", "checkpoint_manifest": "checkpoint-manifest.json", "validation_report": "reports/validation-report.json", "deployment_report": "reports/deployment.json", "cleanup_state": "cleanup/final-state-verified.json", "checksums": "checksums.sha256", "final_archive": "archives/nccl-w4-s29-retry3-final-evidence.tar.gz", "final_archive_sha256": "9526466052ca8c33ec5740af36ea34265690de1270a16b714a1ff2434164ef26", "final_archive_size_bytes": 621909083},
+  "cleanup": {"status": "cleanup-verified", "verification": "cleanup/final-state-verified.json"},
+  "cross_fabric_performance_eligible": false,
+  "continuation_state_claim": false
+}

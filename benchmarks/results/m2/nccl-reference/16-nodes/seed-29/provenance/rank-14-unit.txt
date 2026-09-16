@@ -1,0 +1,14 @@
+# /run/systemd/transient/nccl-official.service
+# This is a transient unit file, created programmatically via the systemd API. Do not edit.
+[Unit]
+Description=/bin/bash -c "bash /home/ubuntu/noloco-nccl-w16-s29-r2-20260914/wrapper/run-reference.sh /home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official 14 10.180.1.50 16 29 official >>/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log 2>&1"
+
+[Service]
+Restart=no
+RuntimeMaxSec=6h
+ExecStart=
+ExecStart="/bin/bash" "-c" "bash /home/ubuntu/noloco-nccl-w16-s29-r2-20260914/wrapper/run-reference.sh /home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official 14 10.180.1.50 16 29 official >>/home/ubuntu/noloco-nccl-w16-s29-r2-20260914/official/host.log 2>&1"
+Restart=no
+RuntimeMaxUSec=6h
+ExecMainStartTimestamp=Mon 2026-09-14 14:40:08 UTC
+ActiveState=active

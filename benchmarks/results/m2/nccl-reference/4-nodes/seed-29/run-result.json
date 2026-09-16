@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "accepted": true,
+  "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+  "task_key": "w4-s29-retry3",
+  "selector": {"profile": "official", "world_size": 4, "benchmark_seed": 29},
+  "training": {"started": true, "backend": "nccl", "completed_outer_steps": [500, 500, 500, 500], "total_inner_steps_per_rank": 25000, "exit_codes": [0, 0, 0, 0], "run_failure_count": 0},
+  "accuracy": {"rank_values": [0.9304, 0.9291, 0.9295, 0.9292], "mean": 0.92955, "matching_axl_mean": 0.9285, "delta_percentage_points": 0.105, "within_3_percentage_points": true},
+  "checkpoint": {"status": "validated", "kind": "final-model-weight-safetensors", "manifest": "checkpoint-manifest.json", "validation": "reports/checkpoint-validation.json", "tensor_count": 62, "size_bytes": 44701664, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "continuation_state_claim": false},
+  "archive": {"path": "archives/nccl-w4-s29-retry3-final-evidence.tar.gz", "sha256": "9526466052ca8c33ec5740af36ea34265690de1270a16b714a1ff2434164ef26", "size_bytes": 621909083, "entries": 488},
+  "placement": {"regions": ["eu-west-3", "sa-east-1"], "private_peering": "pcx-06de69811fce970e8", "cross_region_performance_eligible": false},
+  "cleanup": {"status": "cleanup-verified", "verification": "cleanup/final-state-verified.json", "task_owned_resources_remaining": 0},
+  "reports": {"acceptance": "reports/acceptance-report.json", "deployment": "reports/deployment.json", "validation": "reports/validation-report.json", "summary": "reports/summary.json"}
+}

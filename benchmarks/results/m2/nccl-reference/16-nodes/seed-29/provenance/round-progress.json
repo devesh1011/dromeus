@@ -1,0 +1,2050 @@
+{
+  "0": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T14:40:40.612867+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T14:52:14.463401+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T14:59:20.661624+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:03:14.183857+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:06:33.498617+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:09:31.596736+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:12:30.301452+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:15:34.117656+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:18:40.447621+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:21:48.268576+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:24:49.657411+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:27:45.307830+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:30:37.150429+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:33:30.475168+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:36:37.629309+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:39:36.810440+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:42:39.264662+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:45:39.959821+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:48:26.656372+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:51:24.475644+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 0,
+      "timestamp": "2026-09-14T15:54:18.998497+00:00"
+    }
+  ],
+  "1": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T14:40:41.286602+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T14:52:40.245989+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T14:59:20.650289+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:03:15.248958+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:06:33.630428+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:09:33.141908+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:12:30.569707+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:15:30.273708+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:18:38.062842+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:21:48.251463+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:24:52.948351+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:27:45.426350+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:30:38.197079+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:33:31.090605+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:36:32.239386+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:39:36.404877+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:42:39.736562+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:45:39.944363+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:48:29.708262+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:51:26.532054+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 1,
+      "timestamp": "2026-09-14T15:54:18.975481+00:00"
+    }
+  ],
+  "10": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T14:40:32.777425+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T14:52:28.321168+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T14:59:21.186318+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:03:14.476808+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:06:33.168888+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:09:31.070953+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:12:30.882424+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:15:30.265960+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:18:37.850947+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:21:50.493354+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:24:50.103660+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:27:46.561926+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:30:36.582819+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:33:30.345489+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:36:32.119040+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:39:36.675617+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:42:39.463955+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:45:41.194768+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:48:25.823734+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:51:24.332452+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 10,
+      "timestamp": "2026-09-14T15:54:18.851970+00:00"
+    }
+  ],
+  "11": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T14:40:44.089894+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T14:52:14.517504+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T14:59:20.691205+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:03:14.523954+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:06:34.925444+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:09:31.056603+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:12:29.919174+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:15:30.077251+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:18:38.037985+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:21:49.520320+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:24:49.162365+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:27:47.550123+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:30:37.023290+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:33:29.934178+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:36:32.951127+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:39:36.263261+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:42:39.415913+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:45:40.661562+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:48:26.957330+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:51:25.169314+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 11,
+      "timestamp": "2026-09-14T15:54:19.367530+00:00"
+    }
+  ],
+  "12": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T14:40:32.677254+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T14:52:29.049164+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T14:59:21.086823+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:03:16.487929+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:06:34.058567+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:09:32.268161+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:12:29.817111+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:15:30.392855+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:18:39.826903+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:21:48.344336+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:24:51.368933+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:27:46.606175+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:30:36.745223+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:33:32.446618+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:36:34.598794+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:39:37.378700+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:42:40.169404+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:45:42.441432+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:48:25.718573+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:51:24.942041+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 12,
+      "timestamp": "2026-09-14T15:54:18.830273+00:00"
+    }
+  ],
+  "13": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T14:41:02.532458+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T14:52:16.858317+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T14:59:49.085458+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:03:14.834051+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:06:33.861356+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:09:31.326440+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:12:30.851897+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:15:30.633814+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:18:38.604980+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:21:49.497481+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:24:49.048607+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:27:46.841643+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:30:36.734024+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:33:30.945383+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:36:33.633597+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:39:37.645285+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:42:39.884300+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:45:40.069582+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:48:26.496340+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:51:25.182003+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 13,
+      "timestamp": "2026-09-14T15:54:19.371210+00:00"
+    }
+  ],
+  "14": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T14:41:01.725484+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T14:52:16.293491+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T14:59:24.064032+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:03:15.949810+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:06:35.807437+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:09:32.870277+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:12:29.741235+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:15:31.430384+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:18:39.501587+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:21:49.988404+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:24:49.903469+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:27:47.237591+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:30:37.665789+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:33:32.120897+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:36:34.148065+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:39:38.287591+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:42:39.737035+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:45:43.054605+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:48:28.587741+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:51:25.974772+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 14,
+      "timestamp": "2026-09-14T15:54:18.221433+00:00"
+    }
+  ],
+  "15": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T14:40:54.718517+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T14:52:48.605014+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T14:59:48.197281+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:03:15.608931+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:06:34.473473+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:09:33.960005+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:12:29.729042+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:15:31.388099+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:18:39.213143+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:21:50.138589+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:24:51.045501+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:27:47.070370+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:30:38.348799+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:33:31.665398+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:36:34.274451+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:39:37.979067+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:42:39.572508+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:45:42.118989+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:48:26.714913+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:51:25.957742+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 15,
+      "timestamp": "2026-09-14T15:54:18.200667+00:00"
+    }
+  ],
+  "2": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T14:40:56.527907+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T14:52:29.454124+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T14:59:23.261322+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:03:16.939832+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:06:34.120469+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:09:34.056593+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:12:32.418303+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:15:29.419927+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:18:37.177699+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:21:49.719093+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:24:49.541299+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:27:46.754927+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:30:37.605036+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:33:30.667304+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:36:33.877887+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:39:38.954057+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:42:40.088752+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:45:41.394577+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:48:27.184257+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:51:25.361463+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 2,
+      "timestamp": "2026-09-14T15:54:20.776906+00:00"
+    }
+  ],
+  "3": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T14:40:44.557822+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T14:52:15.472068+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T14:59:21.666603+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:03:14.071749+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:06:33.368834+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:09:31.489810+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:12:31.075975+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:15:29.405795+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:18:37.166636+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:21:50.257860+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:24:50.304879+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:27:47.340836+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:30:38.600274+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:33:31.924652+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:36:34.845391+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:39:38.232428+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:42:40.399835+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:45:41.520206+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:48:27.157641+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:51:24.710343+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 3,
+      "timestamp": "2026-09-14T15:54:19.563553+00:00"
+    }
+  ],
+  "4": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T14:41:04.908172+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T14:52:14.884535+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T14:59:21.472876+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:03:14.789868+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:06:33.170487+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:09:33.660399+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:12:29.655773+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:15:30.581797+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:18:37.987562+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:21:52.951546+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:24:50.086604+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:27:45.249263+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:30:37.850489+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:33:31.127041+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:36:32.165786+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:39:36.352791+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:42:39.913648+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:45:40.806967+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:48:26.892494+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:51:25.122288+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 4,
+      "timestamp": "2026-09-14T15:54:19.003409+00:00"
+    }
+  ],
+  "5": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T14:41:29.856608+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T14:52:29.370224+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T14:59:25.304583+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:03:14.844563+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:06:34.158621+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:09:32.442148+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:12:29.637658+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:15:30.477018+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:18:38.242896+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:21:49.841472+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:24:49.147029+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:27:45.384375+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:30:37.712301+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:33:32.453484+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:36:33.079271+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:39:37.555734+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:42:39.561389+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:45:42.936300+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:48:27.058573+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:51:24.451497+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 5,
+      "timestamp": "2026-09-14T15:54:19.153478+00:00"
+    }
+  ],
+  "6": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T14:40:40.089585+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T14:52:14.256893+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T14:59:20.733449+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:03:16.103489+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:06:33.905201+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:09:31.409220+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:12:30.173695+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:15:31.751084+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:18:37.931195+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:21:49.509149+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:24:50.226893+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:27:45.390335+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:30:36.627629+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:33:29.978168+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:36:34.442965+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:39:38.583291+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:42:39.137776+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:45:41.313608+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:48:26.517050+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:51:26.266313+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 6,
+      "timestamp": "2026-09-14T15:54:18.843839+00:00"
+    }
+  ],
+  "7": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T14:40:40.943712+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T14:52:15.139406+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T14:59:22.621138+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:03:14.971187+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:06:33.417161+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:09:34.425733+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:12:30.425759+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:15:31.745580+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:18:39.509874+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:21:48.428029+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:24:49.460958+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:27:45.372239+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:30:37.452560+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:33:31.313886+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:36:32.155774+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:39:36.306198+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:42:39.881398+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:45:40.172114+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:48:26.971472+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:51:26.257952+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 7,
+      "timestamp": "2026-09-14T15:54:18.934747+00:00"
+    }
+  ],
+  "8": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T14:41:04.348841+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T14:52:50.468232+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T14:59:23.913398+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:03:15.158234+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:06:36.529363+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:09:33.359008+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:12:31.073406+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:15:30.857454+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:18:39.132966+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:21:49.719378+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:24:50.027199+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:27:46.819765+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:30:36.600750+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:33:31.122980+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:36:34.507887+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:39:38.599466+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:42:40.108559+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:45:42.305860+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:48:29.021745+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:51:25.413485+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 8,
+      "timestamp": "2026-09-14T15:54:19.598839+00:00"
+    }
+  ],
+  "9": [
+    {
+      "completed_outer_steps": 1,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T14:41:29.205784+00:00"
+    },
+    {
+      "completed_outer_steps": 25,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T14:52:39.654498+00:00"
+    },
+    {
+      "completed_outer_steps": 50,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T14:59:24.793680+00:00"
+    },
+    {
+      "completed_outer_steps": 75,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:03:16.358973+00:00"
+    },
+    {
+      "completed_outer_steps": 100,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:06:34.403668+00:00"
+    },
+    {
+      "completed_outer_steps": 125,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:09:33.648790+00:00"
+    },
+    {
+      "completed_outer_steps": 150,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:12:32.015035+00:00"
+    },
+    {
+      "completed_outer_steps": 175,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:15:31.105094+00:00"
+    },
+    {
+      "completed_outer_steps": 200,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:18:38.952431+00:00"
+    },
+    {
+      "completed_outer_steps": 225,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:21:51.595965+00:00"
+    },
+    {
+      "completed_outer_steps": 250,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:24:51.025884+00:00"
+    },
+    {
+      "completed_outer_steps": 275,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:27:47.076194+00:00"
+    },
+    {
+      "completed_outer_steps": 300,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:30:36.587913+00:00"
+    },
+    {
+      "completed_outer_steps": 325,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:33:32.145037+00:00"
+    },
+    {
+      "completed_outer_steps": 350,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:36:35.706840+00:00"
+    },
+    {
+      "completed_outer_steps": 375,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:39:37.871256+00:00"
+    },
+    {
+      "completed_outer_steps": 400,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:42:39.612101+00:00"
+    },
+    {
+      "completed_outer_steps": 425,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:45:43.489464+00:00"
+    },
+    {
+      "completed_outer_steps": 450,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:48:29.418329+00:00"
+    },
+    {
+      "completed_outer_steps": 475,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:51:26.242581+00:00"
+    },
+    {
+      "completed_outer_steps": 500,
+      "event": "outer_step_completed",
+      "rank": 9,
+      "timestamp": "2026-09-14T15:54:20.420147+00:00"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "status": "verified",
+  "selector": {
+    "profile": "official",
+    "world_size": 16,
+    "benchmark_seed": 17
+  },
+  "experiment_file_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+  "loaded_experiment_identity": "9f3ea5e9008216b509458866f39bf5e5e4f8578f7fbd20a6f4b7de4a30886127",
+  "run_config_sha256": "bc94a56090fc5309463d65e16af697f23e44b659e5838f5ac7bc05b819b046d0",
+  "initial_checkpoint_sha256": "3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d",
+  "pilot_sha256": "8789163afe2abe469edf06fb47c5a89a78e134cf095bae5a5251ec0921f51ff2",
+  "pairing_digest": "158228385494bac0ddffaae1b5308b9a5c6e0265b4d1a49f689bb331b0f84040",
+  "model_tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "round_count": 500,
+  "inner_steps_per_round": 50,
+  "total_inner_steps": 25000,
+  "backend": "nccl",
+  "source_mounted": false,
+  "loaded_from": "frozen/experiment.yaml"
+}

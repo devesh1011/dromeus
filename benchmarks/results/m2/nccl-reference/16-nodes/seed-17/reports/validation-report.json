@@ -1,0 +1,28 @@
+{
+  "all_logs_present": true,
+  "all_summary_selectors_match": true,
+  "checkpoint_count": 16,
+  "checkpoint_manifest_sha256": "0424c41d2836a87b4583bce9a43ec5af00ca823bd9b4869f36ab12715fa61e39",
+  "communicator_init_complete_log_count": 16,
+  "model_schema": {
+    "all_finite_fp32": true,
+    "all_safetensors_readback_verified": true,
+    "size_bytes": 44701664,
+    "tensor_count": 62,
+    "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706"
+  },
+  "nccl_version_log_count": 16,
+  "rank_count": 16,
+  "real_failure_marker_count": 0,
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "schema_version": 1,
+  "socket_transport_log_count": 16,
+  "status": "verified",
+  "summary_count": 16,
+  "warnings": {
+    "hf_unauthenticated_download_warnings": 16,
+    "ib_wrapper_warnings": 16,
+    "known_deprecated_env_warnings": 16,
+    "unbatched_p2p_warnings": 16
+  }
+}

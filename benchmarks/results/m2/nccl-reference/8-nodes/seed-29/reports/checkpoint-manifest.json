@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "final-model-weight-safetensors-v1",
+  "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706",
+  "expected_tensor_count": 62,
+  "expected_size_bytes": 44701664,
+  "model_only": true,
+  "optimizer_state_captured": false,
+  "continuation_support_claimed": false,
+  "entries": [
+    {"rank": 0, "path": "checkpoints/rank-0.safetensors", "sha256": "b23ad4d96f44c62a6a8fa6b2d5a7c8fb31f1a5100e366ec76270eaec001b1522", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 1, "path": "checkpoints/rank-1.safetensors", "sha256": "4502822b8619c80a0720f84c5787e093b3c4dca34bce34d140bfe723c8a5639f", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 2, "path": "checkpoints/rank-2.safetensors", "sha256": "751e6711643af79225235d7b1889e605c3faef4495e93e272a91849aca7cc1a4", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 3, "path": "checkpoints/rank-3.safetensors", "sha256": "85ee5ff518368bbff54ef41011a01316d0084da61dac40e7b4c15a50ae52b536", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 4, "path": "checkpoints/rank-4.safetensors", "sha256": "20bfc4bd7ebb95bb40451b02f91086073f2925732240da42512ac16af7134b0a", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 5, "path": "checkpoints/rank-5.safetensors", "sha256": "02b17549e07767a88830281d5f7b49ed61b60ee5d5c7881ecc9fcffdce14b6c5", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 6, "path": "checkpoints/rank-6.safetensors", "sha256": "cd279a86a740a4824b80dc8d89b4b35c0495260fca7fe5f8a4f23bff572261b6", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true},
+    {"rank": 7, "path": "checkpoints/rank-7.safetensors", "sha256": "1742d484813dcd842eb64e0df6951000fdd75a723fabcf1d886caab9f790ace8", "size_bytes": 44701664, "tensor_count": 62, "tensor_schema_hash": "2c0b3aacfde1526af9458f8804895d442ad32be5cddd982b1d27185c07480706", "finite_fp32_verified": true, "safetensors_readback_verified": true, "remote_hash_verified": true}
+  ]
+}

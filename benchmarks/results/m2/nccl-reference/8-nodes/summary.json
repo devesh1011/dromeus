@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "status": "accepted-seeds17-29",
+  "backend": "nccl",
+  "world_size": 8,
+  "accepted_seeds": [17, 29],
+  "pending_seeds": [41],
+  "aggregate": {
+    "accepted_run_count": 2,
+    "mean_of_seed_mean_accuracies": 0.9297125,
+    "mean_matching_axl_accuracy": 0.92865625,
+    "mean_accuracy_delta_percentage_points": 0.105625,
+    "all_clean_exit": true,
+    "cross_fabric_performance_eligible": false
+  },
+  "curation": {
+    "per_rank_logs_retained": true,
+    "checkpoint_manifests_retained": true,
+    "checkpoint_binaries_retained": false,
+    "local_archives_retained": false,
+    "pruned_on": "2026-09-10"
+  },
+  "per_seed": [
+    {
+      "seed": 17,
+      "run_id": "noloco-nccl-w8-remediate-20260909",
+      "status": "accepted-model-weight-evidence",
+      "mean_accuracy": 0.9309125,
+      "matching_axl_mean_accuracy": 0.9307875,
+      "accuracy_delta_percentage_points": 0.0125,
+      "acceptance_report": "seed-17/reports/acceptance-report.json",
+      "checkpoint_manifest": "seed-17/reports/checkpoint-manifest.json",
+      "logs": "seed-17/logs/",
+      "summary": "seed-17/reports/summary.json"
+    },
+    {
+      "seed": 29,
+      "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+      "status": "accepted-model-weight-evidence",
+      "mean_accuracy": 0.9285125,
+      "matching_axl_mean_accuracy": 0.926525,
+      "accuracy_delta_percentage_points": 0.19875,
+      "acceptance_report": "seed-29/reports/acceptance-report.json",
+      "checkpoint_manifest": "seed-29/reports/checkpoint-manifest.json",
+      "logs": "seed-29/logs/",
+      "summary": "seed-29/reports/summary.json"
+    }
+  ]
+}

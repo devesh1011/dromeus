@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "609b218ce3512789ef99ca4b3de5e6456222c16c",
+  "upstream_noloco_commit": "a1b4a425bdc4050a356cf9f4bae7c383419703ab",
+  "source_path": "benchmarks/noloco_reference",
+  "files": {
+    "benchmarks/noloco_reference/distributed.py": "ff5f89149013f1d6de6f7cf49f679bd843b211537473d640fb5ae24c8267b25b",
+    "benchmarks/noloco_reference/optimizer.py": "20ff963f7a59db505f6ce66b0a34ffffacc02776e552831d33e83e9b2c5ef1b6",
+    "benchmarks/noloco_reference/runner.py": "1e4812b5ca58e6e246b3d1de7ee888e617ce1f25eabc18435ecb4a89902c8537",
+    "benchmarks/noloco_reference/trajectory.py": "9faa1a6526c841684cfdf9117bcc022fa8b00acd86c05ca572288a933f617d81"
+  },
+  "frozen_against_current_tree": true,
+  "upstream_source_path": "src/noloco/sparse_optimizer_c.py",
+  "outer_gradient_convention": "phi-minus-theta-v1"
+}

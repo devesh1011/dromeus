@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "run_id": "noloco-nccl-w16-s17-20260909",
+  "verified_at_utc": "2026-09-09T11:43:18Z",
+  "task_owned_resource_queries": {
+    "instances": 0,
+    "volumes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "route_tables": 0,
+    "internet_gateways": 0,
+    "security_groups": 0,
+    "network_interfaces": 0,
+    "vpc_peerings": 0,
+    "key_pairs": 0
+  },
+  "lifecycle_records": {
+    "terminated_instance_records": 16,
+    "deleted_peering_records": 28
+  },
+  "result": "clean"
+}

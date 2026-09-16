@@ -1,0 +1,12 @@
+{
+  "status": "accepted-identity-ablation-evidence",
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "world_size": 4,
+  "benchmark_seed": 17,
+  "mean_accuracy": 0.9271,
+  "rank_accuracies": [0.9278, 0.9256, 0.9266, 0.9284],
+  "round_count": 500,
+  "identity_bundle_bytes": 89402768,
+  "compressed_axl_comparison_mean": 0.930825,
+  "difference_percentage_points": -0.3725
+}

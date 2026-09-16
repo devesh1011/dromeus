@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "purpose": "M2 four-node AXL identity-codec ablation retry",
+  "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+  "seed": 17,
+  "ablation_id": "identity",
+  "instance_type": "g5.xlarge",
+  "accelerator": "NVIDIA A10G",
+  "container_image_digest": "sha256:1b40d3774dc864f1f4450720f91243f2e379de8ec7d12805d120ec1ef1419a3c",
+  "axl_binary_sha256": "7d3d09bc01a9008d40d6a84d4c09183200af30b053366dd7706610357f18542c",
+  "experiment_sha256": "c588c5b389bf0b506723786b351f4bd816608230b29628bc9596021fa57ea5cd",
+  "draft_sha256": "161cc72d9e953c9dc77ae3d220b85d84eac8782cd67496f7040555bde5b7ffc8",
+  "draft_hash": "11b849d03befc759f09cabe64f49040ce1635a142a1c2f143f2efb0a79e3a84a",
+  "initial_checkpoint_sha256": "3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d",
+  "manifest_hash": "d9884d0bf5ce322319cf641c4bd66e33d2a21fe4eb6a71b8f015c5ed3732ce18",
+  "workers": [
+    {
+      "rank": 0,
+      "region": "us-east-1",
+      "availability_zone": "us-east-1c",
+      "instance_id": "i-01e5548cf19ea9c7e",
+      "volume_id": "vol-0260f7fff1b44c3ed",
+      "public_ip": "3.85.237.193",
+      "private_ip": "172.31.17.222",
+      "security_group_id": "sg-07d4d1d3961a1bdf8",
+      "subnet_id": "subnet-00707097df163186e",
+      "public_key": "00c91d6bf0da45923096df60eb5ddd18d18efcfe63c3dc3e455b04c3dbe8709e"
+    },
+    {
+      "rank": 1,
+      "region": "us-east-1",
+      "availability_zone": "us-east-1c",
+      "instance_id": "i-083281dda74f472ec",
+      "volume_id": "vol-056717cca51125983",
+      "public_ip": "34.228.54.56",
+      "private_ip": "172.31.17.94",
+      "security_group_id": "sg-07d4d1d3961a1bdf8",
+      "subnet_id": "subnet-00707097df163186e",
+      "public_key": "07975d47cf35db7e4c84dbc159b297dd1d9dba340402d826e589550357e91814"
+    },
+    {
+      "rank": 2,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-0de6449eb1077071e",
+      "volume_id": "vol-03d12fa291f85eae1",
+      "public_ip": "13.51.72.232",
+      "private_ip": "172.31.37.89",
+      "security_group_id": "sg-0f34d6b0f64d49b7f",
+      "subnet_id": "subnet-0cd937bd33f2e4f2c",
+      "public_key": "0a27727b8daa6e84f4f6b1860bfd78aed7eeb5db852e5bc3ee6bff1735e751f9"
+    },
+    {
+      "rank": 3,
+      "region": "eu-north-1",
+      "availability_zone": "eu-north-1b",
+      "instance_id": "i-07ffd202554ad714d",
+      "volume_id": "vol-00f4c39c09171c3d4",
+      "public_ip": "13.60.105.24",
+      "private_ip": "172.31.46.121",
+      "security_group_id": "sg-0f34d6b0f64d49b7f",
+      "subnet_id": "subnet-0cd937bd33f2e4f2c",
+      "public_key": "2df107104425c5e92def8a37615089fd0fa9a053fc6972a52d16010a8d4081e0"
+    }
+  ]
+}
