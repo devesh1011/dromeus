@@ -1,0 +1,541 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Generating train split:   0%|          | 0/50000 [00:00<?, ? examples/s]Generating train split:  36%|███▌      | 18100/50000 [00:00<00:00, 179310.23 examples/s]Generating train split:  77%|███████▋  | 38500/50000 [00:00<00:00, 124735.49 examples/s]Generating train split: 100%|██████████| 50000/50000 [00:00<00:00, 145135.84 examples/s]
+Generating test split:   0%|          | 0/10000 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 10000/10000 [00:00<00:00, 246839.92 examples/s]
+[W909 04:20:37.386163766 Utils.hpp:166] Warning: Environment variable NCCL_BLOCKING_WAIT is deprecated; use TORCH_NCCL_BLOCKING_WAIT instead (function operator())
+[W909 04:20:37.386187328 Utils.hpp:137] Warning: Environment variable NCCL_ASYNC_ERROR_HANDLING is deprecated; use TORCH_NCCL_ASYNC_ERROR_HANDLING instead (function operator())
+[rank2]:[W909 04:20:41.193438602 ProcessGroupNCCL.cpp:4215] Warning: An unbatched P2P op (send/recv) was called on this ProcessGroup with size 8.  In lazy initialization mode, this will result in a new 2-rank NCCL communicator to be created. (function operator())
+ip-10-212-1-127:55:55 [0] NCCL INFO ENV/Plugin: Could not find: libnccl-env.so
+ip-10-212-1-127:55:55 [0] NCCL INFO cudaDriverVersion 13020
+ip-10-212-1-127:55:55 [0] NCCL INFO NCCL_SOCKET_IFNAME set to ens5
+ip-10-212-1-127:55:55 [0] NCCL INFO NCCL version 2.29.7+cuda13.2
+ip-10-212-1-127:55:55 [0] NCCL INFO NCCL git version stable b81d6a5a3
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Plugin: Could not find: libnccl-net.so
+ip-10-212-1-127:55:55 [0] NCCL INFO transport/net_ib/init.cc:396 -> 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize NET plugin IB
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : Using [0]ens5:10.212.1.127<0>
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO GIN/Plugin: Could not find: libnccl-gin.so
+
+[2026-09-09 04:20:41] ip-10-212-1-127:55:55 [0] misc/ibvwrap.cc:173 NCCL WARN lib wrapper not initialized.
+ip-10-212-1-127:55:55 [0] NCCL INFO transport/net_ib/gdr.cc:56 -> 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Unable to use GIN: Peermem is not supported, nor DMA-BUF.
+ip-10-212-1-127:55:55 [0] NCCL INFO Unable to use GIN: Peermem is not supported, nor DMA-BUF.
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 1] ncclCommInitRankConfig comm 0x5622448f4570 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xba3c4cdb18dc251d - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO RAS client listening socket at 127.0.0.1<28028>
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x5622448f4570 rank 1 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : 0 -> 1 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : -1 -> 1 -> 0/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 0 -> 1 -> 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 0 -> 1 -> 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] 0/-1/-1->1->-1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO PROFILER/Plugin: Could not find: libnccl-profiler.so
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:100 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 0
+ip-10-212-1-127:55:99 [0] NCCL INFO [Proxy Service] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO TUNER/Plugin: Could not find: libnccl-tuner.so
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x5622448f4570 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xba3c4cdb18dc251d - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 1 nranks 2 total 0.57 (kernels 0.15, alloc 0.02, bootstrap 0.28, allgathers 0.11, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:99 [0] NCCL INFO New proxy recv connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:101 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc288004fa0
+ip-10-212-1-127:55:99 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:99 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [receive] via NET/Socket/0/Shared
+[rank2]:[W909 04:20:45.566275050 ProcessGroupNCCL.cpp:4215] Warning: An unbatched P2P op (send/recv) was called on this ProcessGroup with size 8.  In lazy initialization mode, this will result in a new 2-rank NCCL communicator to be created. (function operator())
+ip-10-212-1-127:55:99 [0] NCCL INFO New proxy send connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc288005028
+ip-10-212-1-127:55:99 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 2] ncclCommInitRankConfig comm 0x562248a6b8f0 rank 2 nranks 8 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x9113e4c799b5e980 - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (2)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248a6b8f0 rank 2 nRanks 8 nNodes 8 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : 4 -> 2 -> 1/3/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 2 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 2 -> 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 2 -> 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/3/-1->2->4 [1] -1/-1/-1->2->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:106 [0] NCCL INFO [Proxy Service] Device 0 CPU core 0
+ip-10-212-1-127:55:107 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 64/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x562248a6b8f0 rank 2 nranks 8 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x9113e4c799b5e980 - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 2 nranks 8 total 596.42 (kernels 0.00, alloc 0.00, bootstrap 595.77, allgathers 0.65, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy recv connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:108 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254004f70
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:106 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 1[0] -> 2[0] [receive] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254004ff8
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:106 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/0 : 1[0] -> 2[0] [receive] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy send connection 2 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254005080
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 2[0] -> 3[0] [send] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy send connection 3 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254005108
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 2[0] -> 4[0] [send] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy recv connection 4 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254005190
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:106 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 4[0] -> 2[0] [receive] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy recv connection 5 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254005218
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:106 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 3[0] -> 2[0] [receive] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy send connection 6 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc2540052a0
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/0 : 2[0] -> 1[0] [send] via NET/Socket/0
+ip-10-212-1-127:55:106 [0] NCCL INFO New proxy send connection 7 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc254005328
+ip-10-212-1-127:55:106 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/0 : 2[0] -> 1[0] [send] via NET/Socket/0
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected all trees
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 0] ncclCommInitRankConfig comm 0x562248cdb8e0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x19e3d9f7ab9f1b84 - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (0)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248cdb8e0 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : -1 -> 0 -> 1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 0 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:110 [0] NCCL INFO [Proxy Service] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:111 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 1
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO CC Off, workFifoBytes 1048576
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x562248cdb8e0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x19e3d9f7ab9f1b84 - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 0.44 (kernels 0.00, alloc 0.00, bootstrap 0.34, allgathers 0.09, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:110 [0] NCCL INFO New proxy send connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:112 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc22c004f70
+ip-10-212-1-127:55:110 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:110 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc22c004ff8
+ip-10-212-1-127:55:110 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:110 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 0] ncclCommInitRankConfig comm 0x562248fe08a0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x4f6ba6c3e8f11803 - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (0)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248fe08a0 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : -1 -> 0 -> 1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 0 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:118 [0] NCCL INFO [Proxy Service] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:119 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO CC Off, workFifoBytes 1048576
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x562248fe08a0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0x4f6ba6c3e8f11803 - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 0.43 (kernels 0.00, alloc 0.00, bootstrap 0.32, allgathers 0.10, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:118 [0] NCCL INFO New proxy send connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:120 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc214004f70
+ip-10-212-1-127:55:118 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:118 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc214004ff8
+ip-10-212-1-127:55:118 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:118 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 1] ncclCommInitRankConfig comm 0x562249264410 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xa1405cb67b85bc95 - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562249264410 rank 1 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : 0 -> 1 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : -1 -> 1 -> 0/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 0 -> 1 -> 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 0 -> 1 -> 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] -1/-1/-1->1->0 [1] 0/-1/-1->1->-1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:125 [0] NCCL INFO [Proxy Service] Device 0 CPU core 2
+ip-10-212-1-127:55:126 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x562249264410 rank 1 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xa1405cb67b85bc95 - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 1 nranks 2 total 0.41 (kernels 0.00, alloc 0.00, bootstrap 0.29, allgathers 0.12, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:125 [0] NCCL INFO New proxy recv connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:127 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x56224917c4a0
+ip-10-212-1-127:55:125 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:125 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:125 [0] NCCL INFO New proxy send connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x56224917c528
+ip-10-212-1-127:55:125 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 0] ncclCommInitRankConfig comm 0x562249489210 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xccd1dac002faa54a - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (0)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562249489210 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : -1 -> 0 -> 1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 0 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:133 [0] NCCL INFO [Proxy Service] Device 0 CPU core 2
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:134 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO CC Off, workFifoBytes 1048576
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x562249489210 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xccd1dac002faa54a - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 0.15 (kernels 0.00, alloc 0.00, bootstrap 0.14, allgathers 0.01, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:133 [0] NCCL INFO New proxy send connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:135 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc2200164b0
+ip-10-212-1-127:55:133 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:133 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc220016538
+ip-10-212-1-127:55:133 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:133 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 0] ncclCommInitRankConfig comm 0x56224c61d540 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xab4243995fc9d4fd - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (0)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x56224c61d540 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : -1 -> 0 -> 1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 0 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:141 [0] NCCL INFO [Proxy Service] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:142 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO CC Off, workFifoBytes 1048576
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x56224c61d540 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xab4243995fc9d4fd - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 1.33 (kernels 0.00, alloc 0.00, bootstrap 1.02, allgathers 0.30, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:141 [0] NCCL INFO New proxy send connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:143 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 3
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc24c009560
+ip-10-212-1-127:55:141 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:141 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc24c0095e8
+ip-10-212-1-127:55:141 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:141 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO Initialized NET plugin Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Assigned NET plugin Socket to comm
+ip-10-212-1-127:55:55 [0] NCCL INFO Failed to initialize any GIN plugin
+ip-10-212-1-127:55:55 [0] NCCL INFO Using network Socket
+ip-10-212-1-127:55:55 [0] NCCL INFO [Rank 0] ncclCommInitRankConfig comm 0x56224f17f1f0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xe8e5d4c1c0bdd755 - Init START
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:1e.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO TOPO/NET : Importing network plugins to topology
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_speed, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/pci0000:00/0000:00:05.0/../max_link_width, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO Topology detection : could not read /sys/devices/system/node/node-1/cpumap, ignoring
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/Socket : GPU Direct RDMA Disabled for HCA 0 'ens5'
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoPopulateNics : Filled ens5 in topo with pciPath=/sys/devices/pci0000:00/0000:00:05.0 net=1 gin=(null) keep=1 coll=(null)
+ip-10-212-1-127:55:55 [0] NCCL INFO KV Convert to int : could not find value of 'Unknown' in dictionary, falling back to 60
+ip-10-212-1-127:55:55 [0] NCCL INFO === System : maxBw 1.2 totalBw 24.0 ===
+ip-10-212-1-127:55:55 [0] NCCL INFO CPU/0-ffffffffffffff (1/2/-1)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[24.0] - GPU/0-1e0 (0)
+ip-10-212-1-127:55:55 [0] NCCL INFO + PCI[12.0] - NIC/0-50
+ip-10-212-1-127:55:55 [0] NCCL INFO               + NET[1.2] - NET/0-0 (0/0/0/1.250000)
+ip-10-212-1-127:55:55 [0] NCCL INFO ==========================================
+ip-10-212-1-127:55:55 [0] NCCL INFO GPU/0-1e0 :GPU/0-1e0 (0/5000.0/LOC) CPU/0-ffffffffffffff (1/24.0/PHB) NET/0-0 (3/1.2/PHB) 
+ip-10-212-1-127:55:55 [0] NCCL INFO NET/0-0 :GPU/0-1e0 (3/1.2/PHB) CPU/0-ffffffffffffff (2/1.2/PHB) NET/0-0 (0/5000.0/LOC) 
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclTopoGetCpuAffinity: Affinity for GPU 0 is empty, ignoring. (GPU affinity =  ; CPU affinity = 0-3).
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 1, bw 1.200000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Pattern 3, crossNic 0, nChannels 1, bw 2.400000/1.200000, type LOC/PHB, sameChannels 1
+ip-10-212-1-127:55:55 [0] NCCL INFO  0 : NET/0-0 GPU/0-1e0 NET/0-0
+ip-10-212-1-127:55:55 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x56224f17f1f0 rank 0 nRanks 2 nNodes 2 localRanks 1 localRank 0 MNNVL 0
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 0 : -1 -> 0 -> 1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Tree 1 : 1 -> 0 -> -1/-1/-1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 00/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/02 : 0 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 00 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Ring 01 : 1 -> 0 -> 1
+ip-10-212-1-127:55:55 [0] NCCL INFO Trees [0] 1/-1/-1->0->-1 [1] -1/-1/-1->0->1
+ip-10-212-1-127:55:55 [0] NCCL INFO P2P Chunksize set to 131072
+ip-10-212-1-127:55:55 [0] NCCL INFO Check P2P Type isAllDirectP2p 1 directMode 0 isAllCudaP2p 1
+ip-10-212-1-127:55:149 [0] NCCL INFO [Proxy Service] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclP2pSchedule: group size used is 1
+ip-10-212-1-127:55:150 [0] NCCL INFO [Proxy Service UDS] Device 0 CPU core 0
+ip-10-212-1-127:55:55 [0] NCCL INFO threadThresholds 8/8/64 | 16/8/64 | 512 | 512
+ip-10-212-1-127:55:55 [0] NCCL INFO 2 coll channels, 2 collnet channels, 0 nvls channels, 2 p2p channels, 1 p2p channels per peer
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric VA size=24GB
+ip-10-212-1-127:55:55 [0] NCCL INFO Symmetric memory is not supported. cuMemEnable 1, globalGinSupport 0, globalNicFused 0 cuMemGdrSupport 1
+ip-10-212-1-127:55:55 [0] NCCL INFO CC Off, workFifoBytes 1048576
+ip-10-212-1-127:55:55 [0] NCCL INFO ncclCommInitRankConfig comm 0x56224f17f1f0 rank 0 nranks 2 cudaDev 0 nvmlDev 0 busId 1e0 commId 0xe8e5d4c1c0bdd755 - Init COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO Init timings - ncclCommInitRankConfig: rank 0 nranks 2 total 1.39 (kernels 0.00, alloc 0.00, bootstrap 1.09, allgathers 0.30, topo 0.00, graphs 0.00, connections 0.00, rest 0.00)
+ip-10-212-1-127:55:149 [0] NCCL INFO New proxy send connection 0 from local rank 0, transport 2
+ip-10-212-1-127:55:151 [0] NCCL INFO [Proxy Progress] Device 0 CPU core 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc288020fd0
+ip-10-212-1-127:55:149 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 0[0] -> 1[0] [send] via NET/Socket/0/Shared
+ip-10-212-1-127:55:149 [0] NCCL INFO New proxy recv connection 1 from local rank 0, transport 2
+ip-10-212-1-127:55:55 [0] NCCL INFO Connected to proxy localRank 0 -> connection 0x7bc288021058
+ip-10-212-1-127:55:149 [0] NCCL INFO Could not get speed from /sys/class/net/ens5/speed. Defaulting to 10 Gbps.
+ip-10-212-1-127:55:149 [0] NCCL INFO NET/Socket: Using 2 threads and 8 sockets per thread
+ip-10-212-1-127:55:55 [0] NCCL INFO Channel 01/1 : 1[0] -> 0[0] [receive] via NET/Socket/0/Shared
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x56224f17f1f0 rank 0 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562249489210 rank 0 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x56224c61d540 rank 0 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562249264410 rank 1 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248fe08a0 rank 0 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248cdb8e0 rank 0 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x562248a6b8f0 rank 2 nranks 8 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO comm 0x5622448f4570 rank 1 nranks 2 cudaDev 0 busId 1e0 - Destroy COMPLETE
+ip-10-212-1-127:55:55 [0] NCCL INFO ENV/Plugin: Closing env plugin ncclEnvDefault
