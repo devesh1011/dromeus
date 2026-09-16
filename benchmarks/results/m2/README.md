@@ -60,13 +60,12 @@ Earlier NCCL checkpoint binaries and some raw archives were pruned locally;
 see the [pruning ledger](nccl-reference/PRUNED-ARTIFACTS.md). The earlier failed
 W16 NCCL seed-29 attempt remains excluded from metrics, but its separate failure
 capture was absent during this commit preparation. Historical retention claims
-in the PDF and original reports do not establish current availability. Accepted
+in original reports do not establish current availability. Accepted
 W16 seed-29 logs retain the post-worker warning and its analysis.
 
-The PDF is the reviewed 16 September revision. Its Appendix B describes the
-public evidence state before these evidence commits; the current repository
-index and availability inventory describe this package. No run metric or
-historical acceptance report was rewritten to hide a failure or missing artifact.
+The PDF is the reviewed 17 September revision. Appendix B links the published
+review package and distinguishes external and missing artifacts. No run metric
+or historical acceptance report was rewritten to hide a failure or missing artifact.
 
 ## Verify and reproduce
 

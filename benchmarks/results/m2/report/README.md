@@ -4,13 +4,15 @@ Start with [the reviewed report](M2_Gensyn_Submission_Report.pdf), then
 [per-run accuracy](metrics.csv), [full metrics and paired deltas](metrics.json),
 and the [evidence index](../README.md).
 
-The PDF is the 14-page revision saved from Google Docs on 2026-09-16. It retains
-all four figures, adds worker/seed statistics and reviewer links, and preserves
-the existing NCCL-origin and repetition wording at the user's instruction.
+The PDF is revision 3, saved from Google Docs on 2026-09-17. Its 14 pages retain
+all four figures and the worker/seed statistics. The NCCL-origin explanation and
+repetition decision are unchanged at the user's instruction. Appendix B links
+the complete published evidence package and the external-artifact inventory.
+The missing historical W16 failure capture is disclosed; private checkpoint
+access and final release publication remain separate delivery steps.
 The [working Google Doc](https://docs.google.com/document/d/10zjwEh-Yp9df0_d9XhJQrnXjkPerIIuq9dKUAuXVBCM/edit)
-remains the editable document. Appendix B's public-access statements are a
-snapshot from before the current evidence commits; [availability](../evidence-availability.json)
-and the repository index describe the files now packaged for review.
+remains editable. [Artifact availability](../evidence-availability.json) records
+which bytes are retained locally, external, or missing.
 
 ## Regenerate metrics
 
