@@ -25,3 +25,31 @@ tmp
 
 # Local AWS instance credentials and connection state
 aws
+
+# Local credentials and machine configuration
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+
+# Keep logs and compact benchmark evidence in Git; keep model binaries external.
+benchmarks/results/m2/**/*.safetensors
+benchmarks/results/m2/**/*.pt
+benchmarks/results/m2/**/*.pth
+benchmarks/results/m2/**/*.npz
+benchmarks/results/m2/**/*.tar.gz
+benchmarks/results/m2/**/*.zip
+benchmarks/results/m2/**/archives/
+benchmarks/results/m2/**/provisioning/
+benchmarks/results/m2/**/cifar-cache/
+benchmarks/results/m2/nccl-reference/**/preflight/
+benchmarks/results/m2/nccl-reference/**/aws/
+benchmarks/results/m2/nccl-reference/**/cleanup/*
+!benchmarks/results/m2/nccl-reference/**/cleanup/final-state.json
+benchmarks/results/m2/nccl-reference/remediation-preflight-*/
+benchmarks/results/m2/nccl-reference/campaign-*/
+
+# Generated application-development runs are separate from the M2 submission.
+benchmarks/results/local-data-validation/

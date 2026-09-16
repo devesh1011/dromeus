@@ -5,11 +5,11 @@ CPU experiments are separate from the frozen M2 CIFAR-10/GPU benchmarks in
 [`benchmarks/results/m2`](../results/m2/README.md). Manifest v3 and the accepted M2
 experiment identities remain unchanged.
 
-The [2026-09-07 real-local-AXL report](../results/local-data-validation/20260907-axl/report.md)
-retains the completed five-profile experiment, configuration, provenance, logs,
-and results. Every predeclared gate passed, and all identity/reference trajectories
-matched exactly. These are synthetic CPU development results, not official M2
-GPU/WAN or NCCL acceptance evidence.
+The [historical 2026-09-07 real-local-AXL report](https://github.com/devesh1011/dromeus/blob/1734c5d368af68130dd116b6b7d1667442680227/benchmarks/results/local-data-validation/20260907-axl/report.md)
+records the completed five-profile experiment. Its generated result package is
+excluded from the current tree; the benchmark code and configuration remain here.
+These synthetic CPU development results are separate from official M2 GPU/WAN and
+NCCL acceptance evidence.
 
 ## Shared task and private data
 
