@@ -143,7 +143,6 @@ benchmarks/workloads/cifar10/  CIFAR loaders, ResNet models, benchmark registry
 benchmarks/cifar10/  D-PSGD/FedAvg runners, reports, plots, and AXL baselines
 examples/            custom regression model, local factory, and configuration
 benchmarks/results/  archived local and AWS artifacts
-demo/                Docker workers, AXL setup, CLI, and dashboard
 tests/               module-grouped unit tests, benchmark checks, real AXL integration
 scripts/             bootstrap, architecture checks, and verification gate
 ```
@@ -182,51 +181,6 @@ To run local real-AXL integration tests, provide a local AXL setup and opt in:
 ```bash
 DROMEUS_RUN_AXL_TESTS=1 uv run pytest tests/integration/test_local_axl_formation.py -q
 ```
-
-## Reproduce the M1 demo with Docker
-
-The demo starts four independent Dromeus workers, each with its own AXL identity,
-plus a dashboard.
-
-This historical CIFAR/D-PSGD demo runs four workers and four AXL nodes on one
-machine. For custom NoLoCo training, use the [application guide](examples/README.md).
-The demo checks formation, real AXL messaging, local
-training, pairwise mixing, persistence, and telemetry without requiring AWS.
-
-```bash
-docker compose -f demo/compose.yaml up --build -d
-docker compose -f demo/compose.yaml ps
-```
-
-Open `http://127.0.0.1:8765` in a browser.
-
-The Compose file targets `linux/amd64`. Docker Desktop runs it through emulation
-on Apple Silicon, so the first build and training run may be slower.
-
-Form the group and start a short run from the demo CLI:
-
-```bash
-uv run python -m demo.formation.cli form --rounds 5 --wait
-uv run python -m demo.formation.cli train --follow
-```
-
-Or use the dashboard API:
-
-```bash
-curl -X POST http://127.0.0.1:8765/api/start \
-  -H 'Content-Type: application/json' \
-  -d '{"round_count": 5}'
-curl http://127.0.0.1:8765/api/state
-docker compose -f demo/compose.yaml logs -f node-0 node-1 node-2 node-3
-```
-
-Stop the demo and remove its identities and artifacts:
-
-```bash
-docker compose -f demo/compose.yaml down -v
-```
-
-See [`demo/README.md`](demo/README.md) for more commands.
 
 ## M2 benchmark evidence
 

@@ -22,7 +22,6 @@ benchmark checks with `uv run pytest tests/benchmarks -q`.
 | `unit/persistence` | Durable run state, archives and checkpoint validation |
 | `unit/telemetry` | Events, metrics, evidence and consensus sketches |
 | `benchmarks` | Workload models/data, reference implementations, experiment preparation and reporting |
-| `demo` | Demo-specific behavior |
 | `integration` | Opt-in tests using real local AXL processes |
 | `support` | Shared fakes, small input builders and stable repository/fixture paths |
 | `golden` | Retained manifest/protocol bytes and independent NoLoCo reference outputs |
