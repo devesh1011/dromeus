@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w4-s17-axllog-rerun-20260907",
+      "acceptance_report": "benchmark-results/4-nodes/seed-17/reports/acceptance-report.json",
+      "mean_accuracy_percent": 93.0825,
+      "worker_population_sd_pp": 0.05068283733178285,
+      "minimum_accuracy_percent": 93.02,
+      "maximum_accuracy_percent": 93.15
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w4-s29-axllog-rerun-20260907",
+      "acceptance_report": "benchmark-results/4-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.85,
+      "worker_population_sd_pp": 0.08831760866327629,
+      "minimum_accuracy_percent": 92.75,
+      "maximum_accuracy_percent": 92.99
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w4-s41-axllog-rerun-20260907",
+      "acceptance_report": "benchmark-results/4-nodes/seed-41/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.36999999999999,
+      "worker_population_sd_pp": 0.044158804331638775,
+      "minimum_accuracy_percent": 92.30000000000001,
+      "maximum_accuracy_percent": 92.42
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w8-s17-20260829",
+      "acceptance_report": "benchmark-results/8-nodes/seed-17/reports/acceptance-report.json",
+      "mean_accuracy_percent": 93.07875,
+      "worker_population_sd_pp": 0.08358192089202196,
+      "minimum_accuracy_percent": 92.96,
+      "maximum_accuracy_percent": 93.22
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w8-s29-20260829",
+      "acceptance_report": "benchmark-results/8-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.6525,
+      "worker_population_sd_pp": 0.08452070752188533,
+      "minimum_accuracy_percent": 92.47,
+      "maximum_accuracy_percent": 92.75
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w8-s41-20260829",
+      "acceptance_report": "benchmark-results/8-nodes/seed-41/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.7675,
+      "worker_population_sd_pp": 0.067221648298744,
+      "minimum_accuracy_percent": 92.7,
+      "maximum_accuracy_percent": 92.9
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 17,
+      "run_id": "noloco-topk45-official-w16-s17-20260829",
+      "acceptance_report": "benchmark-results/16-nodes/seed-17/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.928125,
+      "worker_population_sd_pp": 0.044612042936857436,
+      "minimum_accuracy_percent": 92.84,
+      "maximum_accuracy_percent": 93.04
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 29,
+      "run_id": "noloco-topk45-official-w16-s29-20260829",
+      "acceptance_report": "benchmark-results/16-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.49187500000001,
+      "worker_population_sd_pp": 0.057251501072024265,
+      "minimum_accuracy_percent": 92.35,
+      "maximum_accuracy_percent": 92.58
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seed": 41,
+      "run_id": "noloco-topk45-official-w16-s41-20260829",
+      "acceptance_report": "benchmark-results/16-nodes/seed-41/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.434375,
+      "worker_population_sd_pp": 0.1541496330680031,
+      "minimum_accuracy_percent": 92.08,
+      "maximum_accuracy_percent": 92.69
+    },
+    {
+      "method": "nccl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-nccl-official-w4-s17-20260909",
+      "acceptance_report": "nccl-reference/4-nodes/seed-17/acceptance-report.json",
+      "mean_accuracy_percent": 92.71,
+      "worker_population_sd_pp": 0.10816653826392009,
+      "minimum_accuracy_percent": 92.56,
+      "maximum_accuracy_percent": 92.84
+    },
+    {
+      "method": "nccl",
+      "workers": 4,
+      "seed": 29,
+      "run_id": "noloco-nccl-w4-s29-retry3-20260909",
+      "acceptance_report": "nccl-reference/4-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.955,
+      "worker_population_sd_pp": 0.05123475382979696,
+      "minimum_accuracy_percent": 92.91,
+      "maximum_accuracy_percent": 93.04
+    },
+    {
+      "method": "nccl",
+      "workers": 8,
+      "seed": 17,
+      "run_id": "noloco-nccl-w8-remediate-20260909",
+      "acceptance_report": "nccl-reference/8-nodes/seed-17/reports/acceptance-report.json",
+      "mean_accuracy_percent": 93.09124999999999,
+      "worker_population_sd_pp": 0.0908896996364279,
+      "minimum_accuracy_percent": 92.93,
+      "maximum_accuracy_percent": 93.2
+    },
+    {
+      "method": "nccl",
+      "workers": 8,
+      "seed": 29,
+      "run_id": "noloco-nccl-w8-s29-retry2-20260909",
+      "acceptance_report": "nccl-reference/8-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.85125,
+      "worker_population_sd_pp": 0.10433569619262673,
+      "minimum_accuracy_percent": 92.69,
+      "maximum_accuracy_percent": 93.03
+    },
+    {
+      "method": "nccl",
+      "workers": 16,
+      "seed": 17,
+      "run_id": "noloco-nccl-w16-s17-20260909",
+      "acceptance_report": "nccl-reference/16-nodes/seed-17/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.65124999999999,
+      "worker_population_sd_pp": 0.1678866805318392,
+      "minimum_accuracy_percent": 92.34,
+      "maximum_accuracy_percent": 92.93
+    },
+    {
+      "method": "nccl",
+      "workers": 16,
+      "seed": 29,
+      "run_id": "noloco-nccl-w16-s29-r2-20260914",
+      "acceptance_report": "nccl-reference/16-nodes/seed-29/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.48125,
+      "worker_population_sd_pp": 0.11947149241555322,
+      "minimum_accuracy_percent": 92.29,
+      "maximum_accuracy_percent": 92.67999999999999
+    },
+    {
+      "method": "identity_axl",
+      "workers": 4,
+      "seed": 17,
+      "run_id": "noloco-identity-official-w4-s17-retry2-20260910",
+      "acceptance_report": "identity-ablation/4-nodes/reports/acceptance-report.json",
+      "mean_accuracy_percent": 92.71000000000001,
+      "worker_population_sd_pp": 0.10816653826392009,
+      "minimum_accuracy_percent": 92.56,
+      "maximum_accuracy_percent": 92.84
+    }
+  ],
+  "matched_comparisons": [
+    {
+      "workers": 4,
+      "seed": 17,
+      "axl_minus_nccl_pp": 0.3725000000000023
+    },
+    {
+      "workers": 4,
+      "seed": 29,
+      "axl_minus_nccl_pp": -0.10500000000000398
+    },
+    {
+      "workers": 8,
+      "seed": 17,
+      "axl_minus_nccl_pp": -0.012499999999988631
+    },
+    {
+      "workers": 8,
+      "seed": 29,
+      "axl_minus_nccl_pp": -0.19874999999998977
+    },
+    {
+      "workers": 16,
+      "seed": 17,
+      "axl_minus_nccl_pp": 0.276875000000004
+    },
+    {
+      "workers": 16,
+      "seed": 29,
+      "axl_minus_nccl_pp": 0.010625000000004547
+    }
+  ],
+  "across_seed_summaries": [
+    {
+      "method": "compressed_axl",
+      "workers": 4,
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "mean_accuracy_percent": 92.7675,
+      "seed_sample_sd_pp": 0.36334384541368264,
+      "minimum_seed_mean_percent": 92.36999999999999,
+      "maximum_seed_mean_percent": 93.0825
+    },
+    {
+      "method": "nccl",
+      "workers": 4,
+      "seeds": [
+        17,
+        29
+      ],
+      "mean_accuracy_percent": 92.8325,
+      "seed_sample_sd_pp": 0.17324116139070736,
+      "minimum_seed_mean_percent": 92.71,
+      "maximum_seed_mean_percent": 92.955
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 8,
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "mean_accuracy_percent": 92.83291666666666,
+      "seed_sample_sd_pp": 0.2205261227912301,
+      "minimum_seed_mean_percent": 92.6525,
+      "maximum_seed_mean_percent": 93.07875
+    },
+    {
+      "method": "nccl",
+      "workers": 8,
+      "seeds": [
+        17,
+        29
+      ],
+      "mean_accuracy_percent": 92.97125,
+      "seed_sample_sd_pp": 0.16970562748476778,
+      "minimum_seed_mean_percent": 92.85125,
+      "maximum_seed_mean_percent": 93.09124999999999
+    },
+    {
+      "method": "compressed_axl",
+      "workers": 16,
+      "seeds": [
+        17,
+        29,
+        41
+      ],
+      "mean_accuracy_percent": 92.618125,
+      "seed_sample_sd_pp": 0.2700028935030082,
+      "minimum_seed_mean_percent": 92.434375,
+      "maximum_seed_mean_percent": 92.928125
+    },
+    {
+      "method": "nccl",
+      "workers": 16,
+      "seeds": [
+        17,
+        29
+      ],
+      "mean_accuracy_percent": 92.56625,
+      "seed_sample_sd_pp": 0.12020815280170423,
+      "minimum_seed_mean_percent": 92.48125,
+      "maximum_seed_mean_percent": 92.65124999999999
+    }
+  ],
+  "sources_sha256": {
+    "run-matrix.json": "98588440bb34f4fc7c3a85b05ad60d661bbac8358386320702aff2c93842b593",
+    "benchmark-results/4-nodes/seed-17/reports/acceptance-report.json": "e6a6995b259393501e4c65d8b7365ff28d9eefd19a7e4e8c9e022c63418c10f9",
+    "benchmark-results/4-nodes/seed-29/reports/acceptance-report.json": "b8c33d89adcd0126038d873bc7a9a01ba446fae0af48e9bb25f4433e3719b33a",
+    "benchmark-results/4-nodes/seed-41/reports/acceptance-report.json": "6171a347a1d167dacc9ee1c3c05f1a62a3a2526e56fd1098c8343a401168cba0",
+    "benchmark-results/8-nodes/seed-17/reports/acceptance-report.json": "9e39264be53473fc3a8f61438b2e1a07da899861b667d211af192f06668ce41f",
+    "benchmark-results/8-nodes/seed-29/reports/acceptance-report.json": "664e7959d3962c03427d801338f49aae749a069a5b99bb33027219413af32016",
+    "benchmark-results/8-nodes/seed-41/reports/acceptance-report.json": "642258fb91cdb2658b36a5381eed61244beea29982085508da8f54dc0f7656aa",
+    "benchmark-results/16-nodes/seed-17/reports/acceptance-report.json": "a8e7e73918c03faa00797f3b3a0a62bb82800c883f23a67b9cb5170cdab41db1",
+    "benchmark-results/16-nodes/seed-29/reports/acceptance-report.json": "af65a77a0a92606059cedec16f61e5af17c6a05d22a20cdcb0f4907f240d26d6",
+    "benchmark-results/16-nodes/seed-41/reports/acceptance-report.json": "809ab07953202f68860b8ba9ac22b58aaefccce8722f317d67abac55e03cf2fd",
+    "nccl-reference/4-nodes/seed-17/acceptance-report.json": "747eb64f587a0256a32a7dc973b259d5ad70ae6cb6c03e779c94424eec964a28",
+    "nccl-reference/4-nodes/seed-29/reports/acceptance-report.json": "38420c573ba9b06178870cab3cb870b2bf1993d9ef59cdde00a07adb07b262e7",
+    "nccl-reference/8-nodes/seed-17/reports/acceptance-report.json": "ae88f5ef40d40cd3d14abe7e56d9bde642ef835ba331e69359fbff8d4afe1869",
+    "nccl-reference/8-nodes/seed-17/reports/summary.json": "6944280537b601560938c0a24971f2e3de789ae9afacd9cce260b2c7d876377a",
+    "nccl-reference/8-nodes/seed-29/reports/acceptance-report.json": "de03a2121f7b3fc103d5f7ba4eb51cf115191d77e31f2d28518e233679073291",
+    "nccl-reference/16-nodes/seed-17/reports/acceptance-report.json": "7b93044128a81370033b33c9eccf581a3d5d6a6ea5c892a1d7264af1f198036c",
+    "nccl-reference/16-nodes/seed-29/reports/acceptance-report.json": "cb7d5cda8a68edfa79a4852dbe997643793d3780ba385a6d13d70e5a6d1f6524",
+    "identity-ablation/4-nodes/reports/acceptance-report.json": "f3888540c379bcb50fcc574b30af190c38f1cd8de61923b9b114f65b2464173d"
+  },
+  "notes": [
+    "Per-run SD is population SD across workers; workers are not independent repetitions.",
+    "Across-seed SD is sample SD of worker means (n-1 denominator).",
+    "AXL uses seeds 17/29/41; NCCL uses 17/29. No missing result is imputed.",
+    "The identity ablation has one seed; no across-seed SD is estimated."
+  ]
+}

@@ -9,7 +9,27 @@ The M1 release runs decentralized parallel SGD (D-PSGD) on four fixed nodes. Eac
 node trains on its own CIFAR-10 partition and exchanges model updates with one random
 peer.
 
-## M1 release status
+## Current project status
+
+As of 2026-09-16, the M2 implementation and measured benchmark report are ready
+for review. The `v0.2.0` release remains unpublished.
+
+- NoLoCo is the default algorithm; explicit D-PSGD compatibility remains available.
+- Nine compressed AXL runs cover 4, 8, and 16 workers with seeds 17, 29, and 41.
+  Each completed 500 outer rounds and 25,000 local Adam steps per worker.
+- Six NCCL references cover seeds 17 and 29 at every scale, and the four-worker
+  seed-17 identity-codec ablation is accepted.
+- The report includes accuracy, nominal compression, residual/divergence checks,
+  timing, reliability limitations, and evidence availability. Different regional
+  topologies prevent a normalized cross-fabric speed claim.
+
+Start with the [M2 report](benchmarks/results/m2/report/M2_Gensyn_Submission_Report.pdf),
+[metrics table](benchmarks/results/m2/report/metrics.csv), and
+[evidence index](benchmarks/results/m2/README.md). Logs and compact provenance are
+committed; model binaries remain external. Reviewer access to private checkpoints
+and final submission/release publication remain delivery tasks.
+
+### M1 baseline
 
 The M1 implementation is complete and published as
 [`v0.1.0`](https://github.com/devesh1011/dromeus/releases/tag/v0.1.0). External
@@ -207,6 +227,19 @@ docker compose -f demo/compose.yaml down -v
 ```
 
 See [`demo/README.md`](demo/README.md) for more commands.
+
+## M2 benchmark evidence
+
+The [M2 evidence index](benchmarks/results/m2/README.md) links the reviewed report,
+all 16 accepted runs, per-node AXL/Dromeus and NCCL logs, frozen configuration,
+validation reports, and checksum records. The [availability inventory](benchmarks/results/m2/evidence-availability.json)
+distinguishes committed files, retained external model weights, private S3
+checkpoint references, and missing/pruned artifacts.
+
+The frozen workload is CIFAR-10 with GroupNorm ResNet-18, Adam inner steps,
+45% bitmap top-k/int8 outer gradients, dense-int8 slow weights, and local error
+feedback on NVIDIA A10G workers. Application-owned training code is separate from
+this pinned benchmark recipe.
 
 ## M1 release artifacts
 

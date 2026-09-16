@@ -1,0 +1,17 @@
+method,workers,seed,run_id,acceptance_report,mean_accuracy_percent,worker_population_sd_pp,minimum_accuracy_percent,maximum_accuracy_percent
+compressed_axl,4,17,noloco-topk45-official-w4-s17-axllog-rerun-20260907,benchmark-results/4-nodes/seed-17/reports/acceptance-report.json,93.0825,0.05068283733178285,93.02,93.15
+compressed_axl,4,29,noloco-topk45-official-w4-s29-axllog-rerun-20260907,benchmark-results/4-nodes/seed-29/reports/acceptance-report.json,92.85,0.08831760866327629,92.75,92.99
+compressed_axl,4,41,noloco-topk45-official-w4-s41-axllog-rerun-20260907,benchmark-results/4-nodes/seed-41/reports/acceptance-report.json,92.36999999999999,0.044158804331638775,92.30000000000001,92.42
+compressed_axl,8,17,noloco-topk45-official-w8-s17-20260829,benchmark-results/8-nodes/seed-17/reports/acceptance-report.json,93.07875,0.08358192089202196,92.96,93.22
+compressed_axl,8,29,noloco-topk45-official-w8-s29-20260829,benchmark-results/8-nodes/seed-29/reports/acceptance-report.json,92.6525,0.08452070752188533,92.47,92.75
+compressed_axl,8,41,noloco-topk45-official-w8-s41-20260829,benchmark-results/8-nodes/seed-41/reports/acceptance-report.json,92.7675,0.067221648298744,92.7,92.9
+compressed_axl,16,17,noloco-topk45-official-w16-s17-20260829,benchmark-results/16-nodes/seed-17/reports/acceptance-report.json,92.928125,0.044612042936857436,92.84,93.04
+compressed_axl,16,29,noloco-topk45-official-w16-s29-20260829,benchmark-results/16-nodes/seed-29/reports/acceptance-report.json,92.49187500000001,0.057251501072024265,92.35,92.58
+compressed_axl,16,41,noloco-topk45-official-w16-s41-20260829,benchmark-results/16-nodes/seed-41/reports/acceptance-report.json,92.434375,0.1541496330680031,92.08,92.69
+nccl,4,17,noloco-nccl-official-w4-s17-20260909,nccl-reference/4-nodes/seed-17/acceptance-report.json,92.71,0.10816653826392009,92.56,92.84
+nccl,4,29,noloco-nccl-w4-s29-retry3-20260909,nccl-reference/4-nodes/seed-29/reports/acceptance-report.json,92.955,0.05123475382979696,92.91,93.04
+nccl,8,17,noloco-nccl-w8-remediate-20260909,nccl-reference/8-nodes/seed-17/reports/acceptance-report.json,93.09124999999999,0.0908896996364279,92.93,93.2
+nccl,8,29,noloco-nccl-w8-s29-retry2-20260909,nccl-reference/8-nodes/seed-29/reports/acceptance-report.json,92.85125,0.10433569619262673,92.69,93.03
+nccl,16,17,noloco-nccl-w16-s17-20260909,nccl-reference/16-nodes/seed-17/reports/acceptance-report.json,92.65124999999999,0.1678866805318392,92.34,92.93
+nccl,16,29,noloco-nccl-w16-s29-r2-20260914,nccl-reference/16-nodes/seed-29/reports/acceptance-report.json,92.48125,0.11947149241555322,92.29,92.67999999999999
+identity_axl,4,17,noloco-identity-official-w4-s17-retry2-20260910,identity-ablation/4-nodes/reports/acceptance-report.json,92.71000000000001,0.10816653826392009,92.56,92.84
