@@ -1,205 +1,104 @@
 # Dromeus
 
-Dromeus is a Python 3.12 library for **federated learning with NoLoCo over
-[AXL](https://github.com/gensyn-ai/axl)**. NoLoCo is the default decentralized
-algorithm; developers supply their own models, local data, and local optimizer
-steps. Dromeus handles NoLoCo peer updates and communication.
+Dromeus is a Python library for training models across machines that each hold
+their own data. Each participant trains locally and exchanges model updates with
+a peer over [Gensyn's AXL network](https://github.com/gensyn-ai/axl).
 
-The M1 release runs decentralized parallel SGD (D-PSGD) on four fixed nodes. Each
-node trains on its own CIFAR-10 partition and exchanges model updates with one random
-peer.
+You bring the model, data loader, loss, and local optimizer. Dromeus coordinates
+the group and applies [NoLoCo](https://github.com/gensyn-ai/noloco) updates between
+peers. It is built for developers experimenting with decentralized training on
+independently operated machines.
 
-## Current project status
+## How training works
 
-As of 2026-09-16, the M2 implementation and measured benchmark report are ready
-for review. The `v0.2.0` release remains unpublished.
+Participants agree on a model, training policy, and fixed membership before the
+run starts. They then repeat the same loop:
 
-- NoLoCo is the default algorithm; explicit D-PSGD compatibility remains available.
-- Nine compressed AXL runs cover 4, 8, and 16 workers with seeds 17, 29, and 41.
-  Each completed 500 outer rounds and 25,000 local Adam steps per worker.
-- Six NCCL references cover seeds 17 and 29 at every scale, and the four-worker
-  seed-17 identity-codec ablation is accepted.
-- The report includes accuracy, nominal compression, residual/divergence checks,
-  timing, reliability limitations, and evidence availability. Different regional
-  topologies prevent a normalized cross-fabric speed claim.
+1. Train on local data for the configured number of steps.
+2. Exchange outer gradients and slow weights with the scheduled peer.
+3. Apply NoLoCo's outer momentum update and save the committed round.
 
-Start with the [M2 report](benchmarks/results/m2/report/M2_Gensyn_Submission_Report.pdf),
-[metrics table](benchmarks/results/m2/report/metrics.csv), and
-[evidence index](benchmarks/results/m2/README.md). Logs and compact provenance are
-committed; model binaries remain external. Reviewer access to private checkpoints
-and final submission/release publication remain delivery tasks.
+The peer schedule changes each round. Pairs make progress independently, subject
+to readiness and timeout limits. One node coordinates group setup; training
+updates happen between peers without a global all-reduce.
 
-### M1 baseline
+AXL runs beside each application and handles encrypted network routing. Dromeus
+adds chunk acknowledgments, bounded retries, and checks on the sender, round,
+and tensor contents. Top-k sparsification and 8-bit quantization reduce update
+traffic, while error feedback carries outer-gradient compression error into
+later rounds. An identity codec is also available.
 
-The M1 implementation is complete and published as
-[`v0.1.0`](https://github.com/devesh1011/dromeus/releases/tag/v0.1.0). External
-milestone acceptance is pending. The repository and release include the runtime,
-benchmark report, charts, manifests, FedAvg controls, final checkpoints, and the
-Gensyn submission brief. Public per-node logs are published separately.
+Each worker keeps its own model, and final weights can differ. Per-node logs
+record evaluation metrics, timing, and transfer behavior.
 
-### M1 benchmark summary
+## Get started
 
-The official benchmark used four AWS training nodes and three frozen seeds, `17`,
-`29`, and `41`. Each run completed 400 D-PSGD training rounds and two final
-consensus rounds. All 12 D-PSGD workers completed successfully.
-
-D-PSGD reached a mean accuracy of `91.5767%`, compared with `91.4967%` for
-matched FedAvg. The `0.0800` percentage-point benchmark comparison passed.
-
-The all-pairs AXL baseline completed 300 transfers across 12 directed paths. Every
-artifact passed checksum validation, and checkpoint transfers had zero retries.
-
-Detailed per-seed metrics, charts, logs, and benchmark evidence are in the
-[GitHub release](https://github.com/devesh1011/dromeus/releases/tag/v0.1.0) and the
-archived artifacts at
-[`benchmarks/results/dromeus-m1-20260731/`](benchmarks/results/dromeus-m1-20260731/).
-
-## System model
-
-AXL runs as a separate process. Each Dromeus process talks to its local AXL HTTP
-bridge. AXL handles encrypted routing through the mesh.
-
-```text
-Node A                                      Node B
-┌──────────────────────┐                    ┌──────────────────────┐
-│ Dromeus              │                    │ Dromeus              │
-│ train → exchange     │                    │ train → exchange     │
-│ validate → mix       │                    │ validate → mix       │
-└──────────┬───────────┘                    └──────────┬───────────┘
-           │ localhost HTTP                            │ localhost HTTP
-     ┌─────▼─────┐                                ┌────▼──────┐
-     │ AXL node  │◄──── encrypted AXL mesh ─────► │ AXL node  │
-     └───────────┘                                └───────────┘
-```
-
-## Run lifecycle
-
-1. The initiator publishes a draft run specification and invitation.
-2. Participants join the initiator, forming a fixed even group of 4–16 nodes
-   with stable node indices.
-3. The initiator seals a canonical manifest with the membership, model, dataset,
-   optimizer, schedule, transport limits, and hashes.
-4. Every node checks the manifest, environment, dataset, and initial checkpoint.
-5. Once all nodes are ready, the initiator broadcasts `START`.
-
-For every training round, all nodes derive the same seeded random matching. Each
-pair then:
-
-1. starts from its NoLoCo slow weights and runs the application's local steps;
-2. forms the outer gradient and exchanges it with the slow weights over AXL,
-   using the declared codecs and error feedback for lossy outer gradients;
-3. checks the peer, round, schema, size, checksum, and tensor values;
-4. applies NoLoCo's outer momentum and slow-weight correction;
-5. saves the next algorithm state and completes the pair commit handshake.
-
-Drafts default to `algorithm_id: noloco`. The sealed manifest records that
-selection explicitly. D-PSGD remains available through an explicit
-`algorithm_id: dpsgd` selection for compatibility and controls. Local optimizers
-such as Adam or RMSprop operate inside NoLoCo's inner steps.
-
-Pairs do not wait for the whole group. A pair that finishes can start its next round
-while another pair is still working. A lost, invalid, or timed-out peer causes a
-bounded failure. Dromeus does not silently rematch peers, shrink the group, or use
-stale updates.
-
-## Source modules
-
-Each module owns one part of the system. Training does not depend on transport, and
-transport does not know membership or model mathematics.
-
-| Module | Purpose |
-| --- | --- |
-| `protocol` | Versioned wire models and bounded MessagePack encoding and decoding. |
-| `manifests` | Run models, canonical JSON, validation, and hashing. |
-| `membership` | Fixed 4–16-node formation, invitations, joins, sealed manifests, and readiness. |
-| `transport` | AXL adapter, transport interface, receiver, outbound scheduler, retries, and artifact transfer. |
-| `training` | Application-owned training interface, tensor state, named evaluation metrics, and checkpoints. |
-| `application` / `adapters` | Custom workload composition and the optional classification recipe. |
-| `algorithms` | NoLoCo outer optimization, explicit D-PSGD compatibility, and update codecs. |
-| `gossip` | Peer matching, event-driven rounds, bundle exchange, validation, and pair commit. |
-| `runtime` / `node` | Lifecycle composition and the non-interactive node entry point. |
-| `persistence` | Atomic `RunStore`, validated `RunArchive`, checkpoint references, and terminal state. |
-| `telemetry` | JSONL diagnostics, typed evidence, metrics, CountSketch, and consensus reporting. |
-
-## Repository layout
-
-```text
-src/dromeus/
-  protocol/         wire models, protocol version, bounded MessagePack codec
-  manifests/        domain models and canonical encoding
-  membership/       fixed-group formation
-  transport/        AXL adapter, receiver, scheduler, and transfers
-  training/         custom training interface, tensor state, checkpoints
-  adapters/         optional classification training and data validation
-  application.py    developer-owned workload composition
-  algorithms/       NoLoCo, D-PSGD compatibility, and codecs
-  gossip/           peer scheduler and gossip engine
-  persistence/      run store and archive reader
-  telemetry/        events, evidence, metrics, and consensus
-  runtime.py        lifecycle composition
-  node.py           non-interactive AXL-backed node
-
-benchmarks/workloads/cifar10/  CIFAR loaders, ResNet models, benchmark registry
-benchmarks/cifar10/  D-PSGD/FedAvg runners, reports, plots, and AXL baselines
-examples/            custom regression model, local factory, and configuration
-benchmarks/results/  archived local and AWS artifacts
-tests/               module-grouped unit tests, benchmark checks, real AXL integration
-scripts/             bootstrap, architecture checks, and verification gate
-```
-
-## Train your own model
-
-Supply your own local Python factory to `dromeus.node.run_node`, or launch it with
-`python -m dromeus.node --config node.yaml --factory your_package:prepare_training`.
-The factory owns the model, optimizer, loss, data loading, and optional evaluation.
-Each participant uses its own local data under the group's shared task and tensor
-contract. See the [custom regression example and migration guide](examples/README.md).
-
-CIFAR-10 and ResNet recipes live in `benchmarks/workloads/cifar10` and are excluded
-from the installed wheel. The benchmark runners explicitly select those workloads.
-`datasets` and Pillow are benchmark dependencies, available via the `benchmark`
-extra and included in the repository development environment.
-
-## Setup and verification
-
-Use `uv`. Do not use `pip` or `conda`.
+Use Python 3.12 and `uv`. Install from the source checkout:
 
 ```bash
+git clone https://github.com/devesh1011/dromeus.git
+cd dromeus
 ./scripts/bootstrap
-./scripts/verify
 ```
 
-See [the test layout](tests/README.md) for focused commands and test ownership.
+The [application guide](examples/README.md) walks through a custom PyTorch
+regression model using Huber loss and RMSprop. Each participant supplies its own
+local data file. You can replace that training code with your own workload.
 
-The verification gate checks the lockfile, dependency direction, production
-isolation, the single-receiver and transfer-opacity rules, cycle freedom, Ruff,
-strict Pyright, and pytest. Environment-gated tests report their prerequisites
-in the skip reason; canonical milestone status is maintained in Obsidian.
+Before launching, configure an AXL node on each machine and connect the group's
+peers. Adapt [the node configuration](examples/node.yaml) for each participant,
+fill in the shared settings in [the run draft](examples/custom-regression-draft.yaml),
+and prepare the local data described in the guide. One participant initiates
+group formation; share its invitation file with the other participants.
 
-To run local real-AXL integration tests, provide a local AXL setup and opt in:
+Once those inputs are ready, launch each participant:
 
 ```bash
-DROMEUS_RUN_AXL_TESTS=1 uv run pytest tests/integration/test_local_axl_formation.py -q
+DROMEUS_LOCAL_DATA=/absolute/path/to/this-nodes-data.npz \
+  uv run python -m dromeus.node \
+  --config examples/node.yaml \
+  --factory examples.custom_training:prepare_training
 ```
 
-## M2 benchmark evidence
+The factory connects your local training code to the shared run. The guide
+covers optional evaluation and the state callbacks needed to restore your
+optimizer and data loader.
 
-The [M2 evidence index](benchmarks/results/m2/README.md) links the reviewed report,
-all 16 accepted runs, per-node AXL/Dromeus and NCCL logs, frozen configuration,
-validation reports, and checksum records. The [availability inventory](benchmarks/results/m2/evidence-availability.json)
-distinguishes committed files, retained external model weights, private S3
-checkpoint references, and missing/pruned artifacts.
+## Working assumptions
 
-The frozen workload is CIFAR-10 with GroupNorm ResNet-18, Adam inner steps,
-45% bitmap top-k/int8 outer gradients, dense-int8 slow weights, and local error
-feedback on NVIDIA A10G workers. Application-owned training code is separate from
-this pinned benchmark recipe.
+Dromeus supports fixed, even-sized groups of 4 to 16 participants. Nodes must
+agree on model structure and parameter meaning; the PyTorch integration exchanges
+compatible FP32 model state. Participants may hold different amounts of data,
+but each node has equal weight in the outer update.
 
-## M1 release artifacts
+Membership stays fixed for the run. A peer failure or missed deadline can end
+training; automatic distributed restart is not implemented. Checkpoint restore
+requires compatible application state.
 
-- [GitHub Release v0.1.0](https://github.com/devesh1011/dromeus/releases/tag/v0.1.0)
-  contains the public benchmark ZIP and the standalone Gensyn submission DOCX.
-- The benchmark package contains the final report, charts, manifests, FedAvg
-  controls, and 12 final `safetensors` checkpoints.
-- Public per-node logs contain the 12 D-PSGD `dromeus.jsonl` files. The repository
-  includes the downloaded seed-17 logs under `official/logs/seed-17/`.
+Keeping datasets local does not make model updates private. Dromeus does not
+currently provide differential privacy, secure aggregation, or Byzantine fault
+tolerance. The application guide describes the supported tensor layouts and
+other integration constraints.
+
+## Benchmarks
+
+The [technical report](benchmarks/results/m2/report/M2_Gensyn_Submission_Report.pdf)
+compares NoLoCo over AXL with an independent NCCL reference at 4, 8, and 16 GPU
+workers using GroupNorm ResNet-18 on IID CIFAR-10 partitions. It includes codec
+comparisons, learning curves, communication measurements, and deployment limits.
+These results describe that workload; they do not establish convergence for
+arbitrary models or data distributions.
+
+See the [accuracy table](benchmarks/results/m2/report/metrics.csv) and
+[evidence index](benchmarks/results/m2/README.md) for per-run results, logs,
+configuration, and artifact availability.
+
+## Development
+
+Run `./scripts/verify` before contributing. It checks architecture boundaries,
+lint, types, and tests. The [test guide](tests/README.md) lists focused commands
+and the prerequisites for real-AXL integration tests.
+
+## License
+
+[MIT](LICENSE).
