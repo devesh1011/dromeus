@@ -1,8 +1,9 @@
 # Dromeus
 
-Dromeus is a Python library for training models across machines that each hold
-their own data. Each participant trains locally and exchanges model updates with
-a peer over [Gensyn's AXL network](https://github.com/gensyn-ai/axl).
+Dromeus is a Python library for **decentralized federated learning**. Each
+participant trains on its own local dataset and exchanges model updates with
+peers over [Gensyn's AXL network](https://github.com/gensyn-ai/axl), without a
+central server aggregating those updates.
 
 You bring the model, data loader, loss, and local optimizer. Dromeus coordinates
 the group and applies [NoLoCo](https://github.com/gensyn-ai/noloco) updates between
