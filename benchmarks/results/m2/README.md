@@ -9,8 +9,9 @@
 - [Accepted-run index](run-matrix.json) and [artifact availability](evidence-availability.json)
 
 Nine compressed AXL runs, six NCCL references, and one identity-codec AXL ablation
-are accepted as retained benchmark evidence. This records internal validation,
-not final Gensyn acceptance. The `v0.2.0` release remains unpublished.
+are accepted as retained benchmark evidence. The
+[v0.2.0 release](https://github.com/devesh1011/dromeus/releases/tag/v0.2.0)
+contains the runtime distributions, technical report, and review assets.
 
 ## Accepted runs
 
@@ -52,9 +53,10 @@ are historical deployment provenance, not current endpoints.
 Model/checkpoint binaries, dataset caches, raw provisioning captures, and
 credentials are excluded from Git. The [availability inventory](evidence-availability.json)
 records sizes and SHA-256 values for 23 model files retained in the original
-local evidence checkout. No public download URL is claimed for those files.
+local evidence checkout. The three untrained initial checkpoints are supplied in the release's
+initial-checkpoints ZIP. Other model files have separate access requirements.
 AXL final-optimizer references are under each run's `final-checkpoints/node-*.json`;
-private S3 access must be arranged and the bytes verified separately.
+those private S3 objects require authorized access.
 
 Earlier NCCL checkpoint binaries and some raw archives were pruned locally;
 see the [pruning ledger](nccl-reference/PRUNED-ARTIFACTS.md). The earlier failed

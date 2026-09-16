@@ -4,12 +4,12 @@ Start with [the reviewed report](M2_Gensyn_Submission_Report.pdf), then
 [per-run accuracy](metrics.csv), [full metrics and paired deltas](metrics.json),
 and the [evidence index](../README.md).
 
-The PDF is revision 3, saved from Google Docs on 2026-09-17. Its 14 pages retain
+The PDF is revision 4, saved from Google Docs on 2026-09-17. Its 14 pages retain
 all four figures and the worker/seed statistics. The NCCL-origin explanation and
-repetition decision are unchanged at the user's instruction. Appendix B links
+repetition decision are unchanged. Appendix B links
 the complete published evidence package and the external-artifact inventory.
-The missing historical W16 failure capture is disclosed; private checkpoint
-access and final release publication remain separate delivery steps.
+The report describes shipped release assets and records access requirements
+for external checkpoints, including the missing historical W16 failure capture.
 The [working Google Doc](https://docs.google.com/document/d/10zjwEh-Yp9df0_d9XhJQrnXjkPerIIuq9dKUAuXVBCM/edit)
 remains editable. [Artifact availability](../evidence-availability.json) records
 which bytes are retained locally, external, or missing.
@@ -48,8 +48,8 @@ and divergence points, so plot values can also be inspected without parsing logs
 - `timing.png`: per-node timing means, not synchronized global wall-clock durations.
 
 The 40% pilot timing result in the PDF is historical and does not establish a
-controlled timing reduction for the final 45% profile. No normalized cross-fabric
-speed, new release publication, or final grant acceptance is claimed.
+controlled timing reduction for the final 45% profile. The report documents
+regional differences and the measured scope of the comparison.
 
 ## Maintenance boundary
 

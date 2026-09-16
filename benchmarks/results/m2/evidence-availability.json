@@ -1,27 +1,33 @@
 {
   "schema_version": 1,
-  "as_of": "2026-09-16",
+  "as_of": "2026-09-17",
   "local_model_files_excluded_from_git": [
     {
       "path": "experiment-config/checkpoint-29.safetensors",
       "size_bytes": 44701664,
       "sha256": "1b838fe02f6c2de2b0f54cb6aae51a4c0effcda0edc2c34dd423dd3a784e4353",
-      "availability": "retained in original local evidence checkout; not included in Git",
-      "download_url": null
+      "availability": "included in the v0.2.0 initial-checkpoints release archive; excluded from Git",
+      "download_url": "https://github.com/devesh1011/dromeus/releases/download/v0.2.0/dromeus-v0.2.0-initial-checkpoints.zip",
+      "archive_member": "experiment-config/checkpoint-29.safetensors",
+      "archive_sha256": "146ac14e06b66993060b8637cddaf80a2fac5fa810411a39a3c08387f62ff2bd"
     },
     {
       "path": "experiment-config/checkpoint-17.safetensors",
       "size_bytes": 44701664,
       "sha256": "3c8b74e2b5d539536700a3006fc06e35929b3b53a7a2cd3c7d630208d88f341d",
-      "availability": "retained in original local evidence checkout; not included in Git",
-      "download_url": null
+      "availability": "included in the v0.2.0 initial-checkpoints release archive; excluded from Git",
+      "download_url": "https://github.com/devesh1011/dromeus/releases/download/v0.2.0/dromeus-v0.2.0-initial-checkpoints.zip",
+      "archive_member": "experiment-config/checkpoint-17.safetensors",
+      "archive_sha256": "146ac14e06b66993060b8637cddaf80a2fac5fa810411a39a3c08387f62ff2bd"
     },
     {
       "path": "experiment-config/checkpoint-41.safetensors",
       "size_bytes": 44701664,
       "sha256": "5370fb8db9d438a99ee8f57c702e520a3e540adf25cda287ba147fa763c81c26",
-      "availability": "retained in original local evidence checkout; not included in Git",
-      "download_url": null
+      "availability": "included in the v0.2.0 initial-checkpoints release archive; excluded from Git",
+      "download_url": "https://github.com/devesh1011/dromeus/releases/download/v0.2.0/dromeus-v0.2.0-initial-checkpoints.zip",
+      "archive_member": "experiment-config/checkpoint-41.safetensors",
+      "archive_sha256": "146ac14e06b66993060b8637cddaf80a2fac5fa810411a39a3c08387f62ff2bd"
     },
     {
       "path": "identity-ablation/4-nodes/final-checkpoints/node-0.safetensors",
@@ -168,7 +174,7 @@
     {
       "kind": "AXL final optimizer checkpoints",
       "references": "benchmark-results/*-nodes/seed-*/final-checkpoints/node-*.json",
-      "availability": "versioned private S3 object references retained; remote bytes/access not reverified during commit preparation"
+      "availability": "versioned private S3 references recorded per node; objects require authorized access and are outside the public release"
     },
     {
       "kind": "earlier NCCL checkpoints and raw archives",
