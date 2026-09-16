@@ -51,6 +51,9 @@ packages = ["src/dromeus"]
 
 [tool.pyright]
 include = ["src", "tests", "benchmarks", "examples"]
+# Captured run source is immutable evidence, not maintained benchmark code.
+# The reference harness and report builders remain under strict checks.
+exclude = ["benchmarks/results/m2/nccl-reference"]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
@@ -58,6 +61,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
+# Preserve the source bytes bound by the archived runs' provenance hashes.
+extend-exclude = ["benchmarks/results/m2/nccl-reference"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

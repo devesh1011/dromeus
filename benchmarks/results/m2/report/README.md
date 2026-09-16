@@ -48,3 +48,11 @@ and divergence points, so plot values can also be inspected without parsing logs
 The 40% pilot timing result in the PDF is historical and does not establish a
 controlled timing reduction for the final 45% profile. No normalized cross-fabric
 speed, new release publication, or final grant acceptance is claimed.
+
+## Maintenance boundary
+
+These report builders and the maintained reference harness under
+`benchmarks/noloco_reference/` remain included in repository lint and strict type
+checks. Only `benchmarks/results/m2/nccl-reference/` is excluded: its Python files
+are captured run wrappers and runtime-source snapshots whose exact bytes are
+bound by evidence hashes. Do not reformat or repair those archived files in place.
