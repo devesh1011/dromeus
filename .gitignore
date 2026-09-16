@@ -4,6 +4,7 @@
 .ruff_cache
 .venv/
 __pycache__/
+/dist/
 
 # Local documentation
 docs/

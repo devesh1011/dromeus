@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dromeus"
-version = "0.1.0"
+version = "0.2.0"
 description = "Decentralized federated learning over AXL"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -48,6 +48,10 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dromeus"]
+
+[tool.hatch.build.targets.sdist]
+# Runtime source only. Benchmark evidence is distributed separately.
+only-include = ["src", "pyproject.toml", "README.md", "LICENSE"]
 
 [tool.pyright]
 include = ["src", "tests", "benchmarks", "examples"]
