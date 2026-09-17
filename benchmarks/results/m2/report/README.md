@@ -4,16 +4,14 @@ Start with [the reviewed report](M2_Gensyn_Submission_Report.pdf), then
 [per-run accuracy](metrics.csv), [full metrics and paired deltas](metrics.json),
 and the [evidence index](../README.md).
 
-The PDF is revision 5, saved from Google Docs on 2026-09-17. Its 14 pages retain
-all four figures and the worker/seed statistics. The NCCL-origin explanation and
-repetition decision are unchanged. Appendix B provides readable links to the release, metrics, training logs,
+The report presents the NoLoCo implementation, benchmark methodology, figures,
+and worker/seed statistics. Appendix B links the release, metrics, training logs,
 configuration, software environment, source projects, and artifact availability.
-Exact source identifiers remain in the evidence records rather than the PDF.
-The report describes shipped release assets and records access requirements
-for external checkpoints, including the missing historical W16 failure capture.
-The [working Google Doc](https://docs.google.com/document/d/10zjwEh-Yp9df0_d9XhJQrnXjkPerIIuq9dKUAuXVBCM/edit)
-remains editable. [Artifact availability](../evidence-availability.json) records
-which bytes are retained locally, external, or missing.
+Exact technical identifiers remain in the supporting evidence records.
+
+The [Google Doc](https://docs.google.com/document/d/10zjwEh-Yp9df0_d9XhJQrnXjkPerIIuq9dKUAuXVBCM/edit)
+is the editable source. [Artifact availability](../evidence-availability.json)
+records which bytes are included, retained separately, or unavailable.
 
 ## Regenerate metrics
 
