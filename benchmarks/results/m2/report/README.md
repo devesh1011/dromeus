@@ -46,9 +46,8 @@ and divergence points, so plot values can also be inspected without parsing logs
 - `divergence.png`: measured weight standard deviation at the frozen cadence.
 - `timing.png`: per-node timing means, not synchronized global wall-clock durations.
 
-The 40% pilot timing result in the PDF is historical and does not establish a
-controlled timing reduction for the final 45% profile. The report documents
-regional differences and the measured scope of the comparison.
+The report documents regional differences and the measured scope of the
+benchmark comparison.
 
 ## Maintenance boundary
 

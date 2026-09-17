@@ -65,8 +65,8 @@ capture was absent during this commit preparation. Historical retention claims
 in original reports do not establish current availability. Accepted
 W16 seed-29 logs retain the post-worker warning and its analysis.
 
-The PDF is the reviewed 17 September revision. Appendix B links the published
-review package and distinguishes external and missing artifacts. No run metric
+Appendix B of the report links the published review package and distinguishes
+external and missing artifacts. No run metric
 or historical acceptance report was rewritten to hide a failure or missing artifact.
 
 ## Verify and reproduce
