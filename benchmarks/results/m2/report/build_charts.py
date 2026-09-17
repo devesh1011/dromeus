@@ -160,7 +160,7 @@ identity_wire = runs["4-17"]["communication"]["identity_complete_wire_bytes"] / 
 compressed_wire = runs["4-17"]["communication"]["nominal_complete_wire_bytes"] / 1e6
 fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
 axes[0].bar(
-    ["Identity", "Compressed"],
+    ["Uncompressed", "Compressed"],
     [identity_wire, compressed_wire],
     color=[COLORS[0], COLORS[2]],
 )
@@ -170,13 +170,13 @@ for i, v in enumerate([identity_wire, compressed_wire]):
     axes[0].text(i, v + 2, f"{v:.2f}", ha="center")
 axes[0].set_ylim(0, 105)
 axes[1].bar(
-    ["Identity", "Compressed"],
+    ["Uncompressed", "Compressed"],
     [identity_accuracy, compressed_accuracy],
     color=[COLORS[0], COLORS[2]],
 )
 axes[1].set_ylim(0, 100)
 axes[1].set_ylabel("Final mean test accuracy (%)")
-axes[1].set_title("W4 seed 17 ablation")
+axes[1].set_title("Uncompressed AXL comparison")
 for i, v in enumerate([identity_accuracy, compressed_accuracy]):
     axes[1].text(i, v + 1, f"{v:.2f}%", ha="center", fontsize=8)
 fig.tight_layout()

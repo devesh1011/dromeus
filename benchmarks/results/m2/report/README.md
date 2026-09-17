@@ -36,7 +36,7 @@ python3 benchmarks/results/m2/report/build_charts.py
 
 The builder reads the committed AXL logs and reports without changing them,
 validates exactly 500 metrics per worker (42,000 node-rounds), and writes four
-figures plus `chart-data.json`. It reads the identity accuracy and nominal byte
+figures plus `chart-data.json`. It reads the uncompressed AXL accuracy and nominal byte
 baseline from acceptance reports. The JSON retains source hashes, evaluation
 rounds and mean accuracies, all 500 mean local-batch losses per run, timing means,
 and divergence points, so plot values can also be inspected without parsing logs.

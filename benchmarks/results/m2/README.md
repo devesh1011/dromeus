@@ -8,7 +8,7 @@
 - [Four figures](report/charts/) and [compact chart data](report/chart-data.json)
 - [Accepted-run index](run-matrix.json) and [artifact availability](evidence-availability.json)
 
-Nine compressed AXL runs, six NCCL references, and one identity-codec AXL ablation
+Nine compressed AXL runs, six NCCL references, and one uncompressed AXL comparison
 are accepted as retained benchmark evidence. The
 [v0.2.0 release](https://github.com/devesh1011/dromeus/releases/tag/v0.2.0)
 contains the runtime distributions, technical report, and review assets.
@@ -26,7 +26,7 @@ regional topology and timing boundaries differ.
 | 8 | [17](benchmark-results/8-nodes/seed-17/reports/acceptance-report.json) | [29](benchmark-results/8-nodes/seed-29/reports/acceptance-report.json) | [41](benchmark-results/8-nodes/seed-41/reports/acceptance-report.json) | [17](nccl-reference/8-nodes/seed-17/reports/acceptance-report.json) | [29](nccl-reference/8-nodes/seed-29/reports/acceptance-report.json) |
 | 16 | [17](benchmark-results/16-nodes/seed-17/reports/acceptance-report.json) | [29](benchmark-results/16-nodes/seed-29/reports/acceptance-report.json) | [41](benchmark-results/16-nodes/seed-41/reports/acceptance-report.json) | [17](nccl-reference/16-nodes/seed-17/reports/acceptance-report.json) | [29](nccl-reference/16-nodes/seed-29/reports/acceptance-report.json) |
 
-The [four-worker seed-17 identity ablation](identity-ablation/4-nodes/reports/acceptance-report.json)
+The [four-worker seed-17 uncompressed AXL comparison](identity-ablation/4-nodes/reports/acceptance-report.json)
 provides the uncompressed quality control. No NCCL seed-41 result is imputed.
 Per-worker population SD and across-seed sample SD are kept separate in the
 report and machine-readable metrics.
@@ -38,7 +38,7 @@ report and machine-readable metrics.
   summaries, and versioned checkpoint references.
 - [NCCL packages](nccl-reference/): per-rank logs and summaries, acceptance and
   validation reports, runtime/source provenance, capture wrappers, and checksums.
-- [Identity package](identity-ablation/4-nodes/): AXL/Dromeus logs, manifests,
+- [Uncompressed AXL package](identity-ablation/4-nodes/): AXL/Dromeus logs, manifests,
   summaries, validation, divergence, and checkpoint hash records.
 - [Frozen experiment](experiment-config/experiment.yaml) and hash-bound pilot
   report. [Compression calibration](compression-calibration/) retains the
