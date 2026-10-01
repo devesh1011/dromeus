@@ -101,6 +101,16 @@ def test_v4_task_and_explicit_membership_round_trip(participant_count: int) -> N
         draft.require_iid_dataset()
 
 
+def test_v4_canonical_identity_remains_frozen() -> None:
+    """Catch added defaults or encoding changes before extending M3 manifests."""
+    assert canonical_hash(_draft()) == (
+        "3731e8b6fa0d405e9a13853c2b644f1975d2dc2fe13b0e7eaab7236b6d47c816"
+    )
+    assert canonical_hash(_manifest()) == (
+        "a42b456aee87af4affd4eea70ba5ccce47fcaa0ed081c404053dc6d4106a82d3"
+    )
+
+
 @pytest.mark.parametrize("participant_count", [1, 2, 3, 5, 7, 15, 17, 32])
 def test_v4_rejects_invalid_fixed_group_sizes(participant_count: int) -> None:
     with pytest.raises(ValidationError):

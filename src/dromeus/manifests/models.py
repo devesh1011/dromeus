@@ -411,8 +411,106 @@ class UpdateCodecBinding(DomainModel):
     logical_schema: TensorSchema
 
 
+class PrivacyPolicy(DomainModel):
+    """Fixed record-level Poisson Gaussian mechanism and release policy."""
+
+    version: Literal[1] = 1
+    mode: Literal["record_dp"] = "record_dp"
+    adjacency: Literal["add_remove"] = "add_remove"
+    sampling: Literal["poisson"] = "poisson"
+    clipping: Literal["flat"] = "flat"
+    max_grad_norm: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    noise_multiplier: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    accountant: Literal["prv"] = "prv"
+    delta: Annotated[float, Field(gt=0, lt=1, allow_inf_nan=False)]
+    max_logical_steps: Annotated[int, Field(gt=0)]
+    epsilon_limit: Annotated[float, Field(gt=0, allow_inf_nan=False)] | None = None
+    randomness_profile: Literal["secure", "reproducible_public_benchmark"]
+    metric_policy: Literal["public_eval_only"] = "public_eval_only"
+    prv_epsilon_error: Annotated[float, Field(gt=0, allow_inf_nan=False)] = 0.01
+    prv_delta_error_ratio: Annotated[float, Field(gt=0, lt=1)] = 0.001
+
+
+class DivergencePolicy(DomainModel):
+    """Explicit pilot thresholds; no universal detector defaults."""
+
+    version: Literal[1] = 1
+    mode: Literal["warn"] = "warn"
+    threshold_set_id: Identifier
+    warmup_rounds: Annotated[int, Field(ge=0)]
+    window_rounds: Annotated[int, Field(ge=4)]
+    patience_windows: Annotated[int, Field(gt=0)]
+    distance_floor: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    growth_ratio: Annotated[float, Field(gt=1, allow_inf_nan=False)]
+    min_log_slope: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    severe_distance: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    severe_patience: Annotated[int, Field(gt=0)]
+    recovery_windows: Annotated[int, Field(gt=0)]
+    recovery_distance: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    max_lag_rounds: Annotated[int, Field(ge=0)]
+
+    @model_validator(mode="after")
+    def ordered_thresholds(self) -> Self:
+        if self.recovery_distance >= self.severe_distance:
+            raise ValueError("recovery threshold must be below severe threshold")
+        return self
+
+
+class PrivateOptimizerSpec(DomainModel):
+    """One complete named group, ordinary dense FP32 PyTorch execution."""
+
+    name: Literal["sgd", "adam", "adamw"]
+    torch_version: PackageVersion
+    parameter_names: tuple[Identifier, ...] = Field(min_length=1)
+    learning_rate: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    weight_decay: Annotated[float, Field(ge=0, allow_inf_nan=False)] = 0
+    momentum: Annotated[float, Field(ge=0, lt=1)] = 0
+    dampening: Annotated[float, Field(ge=0)] = 0
+    nesterov: bool = False
+    betas: tuple[
+        Annotated[float, Field(ge=0, lt=1)], Annotated[float, Field(ge=0, lt=1)]
+    ] = (0.9, 0.999)
+    numerical_epsilon: Annotated[float, Field(gt=0, allow_inf_nan=False)] = 1e-8
+    amsgrad: Literal[False] = False
+    foreach: Literal[False] = False
+    fused: Literal[False] = False
+    capturable: Literal[False] = False
+    differentiable: Literal[False] = False
+    maximize: Literal[False] = False
+
+    @model_validator(mode="after")
+    def valid_options(self) -> Self:
+        if len(set(self.parameter_names)) != len(self.parameter_names):
+            raise ValueError("parameter names must be unique and ordered")
+        if self.name != "sgd" and (self.momentum or self.dampening or self.nesterov):
+            raise ValueError("momentum options require SGD")
+        if self.nesterov and (not self.momentum or self.dampening):
+            raise ValueError("Nesterov requires momentum and zero dampening")
+        return self
+
+
+class PrivateTrainingSpec(DomainModel):
+    version: Literal[1] = 1
+    optimizer: PrivateOptimizerSpec
+    loss: Literal["mse", "cross_entropy"]
+    batch_size: Annotated[int, Field(gt=0)]
+    schedule: Literal["constant", "linear_decay"] = "constant"
+    initialization: Literal["public_untrained"] = "public_untrained"
+    evaluation_provenance: Literal["public_fixed_holdout", "disabled"] = "disabled"
+
+
+class PrivacyReservation(DomainModel):
+    version: Literal[1] = 1
+    run_id: RunId
+    policy_hash: Sha256
+    sample_rate: Annotated[float, Field(gt=0, le=1, allow_inf_nan=False)]
+    noise_multiplier: Annotated[float, Field(gt=0, allow_inf_nan=False)]
+    logical_steps: Annotated[int, Field(gt=0)]
+    accountant_version: Literal["opacus-1.6.0-prv"] = "opacus-1.6.0-prv"
+
+
 class DraftRunSpec(DomainModel):
-    manifest_version: Literal[3, 4] = MANIFEST_VERSION
+    manifest_version: Literal[3, 4, 5] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION
     run_id: RunId
     algorithm_id: AlgorithmId = NOLOCO_ALGORITHM_ID
@@ -436,6 +534,10 @@ class DraftRunSpec(DomainModel):
     algorithm_config: NoLoCoConfig | None = None
     artifact_codecs: tuple[ArtifactCodec, ...] | None = None
 
+    privacy: PrivacyPolicy | None = None
+    private_training: PrivateTrainingSpec | None = None
+    divergence_detection: DivergencePolicy | None = None
+
     @property
     def participant_count(self) -> int:
         """Resolve fixed membership without relying on private dataset sizes."""
@@ -457,7 +559,23 @@ class DraftRunSpec(DomainModel):
 
     @model_validator(mode="after")
     def valid_manifest(self) -> Self:
-        if self.manifest_version == MANIFEST_VERSION:
+        if self.manifest_version != 5 and (
+            self.privacy is not None
+            or self.private_training is not None
+            or self.divergence_detection is not None
+        ):
+            raise ValueError("M3 policies require manifest version 5")
+        if self.privacy is None and self.private_training is not None:
+            raise ValueError("private training requires privacy policy")
+        if self.privacy is not None:
+            if self.privacy.max_logical_steps != self.local_steps * self.round_count:
+                raise ValueError("privacy horizon must match local steps and rounds")
+            if self.algorithm_id != NOLOCO_ALGORITHM_ID:
+                raise ValueError("private training initially requires NoLoCo")
+        if self.manifest_version == 5 and isinstance(self.dataset, DatasetContract):
+            if self.expected_participant_count is not None:
+                raise ValueError("CIFAR membership is derived from partitions")
+        elif self.manifest_version == MANIFEST_VERSION:
             if self.environment.container_image_digest is None:
                 raise ValueError("manifest v3 requires a container image digest")
             if not isinstance(self.dataset, DatasetContract):

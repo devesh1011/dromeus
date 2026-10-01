@@ -578,7 +578,7 @@ def test_environment_accepts_cpu_wheel_version() -> None:
 
 @pytest.mark.parametrize(
     ("field", "version"),
-    [("protocol_version", 2), ("manifest_version", 5)],
+    [("protocol_version", 2), ("manifest_version", 6)],
 )
 def test_unknown_versions_are_rejected(field: str, version: int) -> None:
     data = manifest_data()
