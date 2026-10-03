@@ -38,6 +38,7 @@ class RunStore:
     """Persist audit state with one crash-safe committed checkpoint."""
 
     def __init__(self, root: Path) -> None:
+        self._restricted = False
         self._root = root
         self._checkpoint_root = root / "checkpoints"
         self._root.mkdir(parents=True, exist_ok=True)
@@ -49,6 +50,14 @@ class RunStore:
     def initialize(self, manifest: SealedManifest) -> Sha256:
         """Write the sealed manifest once and initialize current archive state."""
         with self._lock:
+            if manifest.privacy is not None:
+                if self._root.is_symlink() or self._checkpoint_root.is_symlink():
+                    raise RunStoreError(
+                        "private checkpoint directories must not be symlinks"
+                    )
+                self._restricted = True
+                self._root.chmod(0o700)
+                self._checkpoint_root.chmod(0o700)
             manifest_bytes = canonical_json(manifest)
             manifest_hash = canonical_hash(manifest)
             if self._manifest_path.exists():
@@ -134,7 +143,9 @@ class RunStore:
 
             committed_name = f"committed-round-{committed_round:06d}.safetensors"
             committed_hash = _atomic_save_tensors(
-                self._checkpoint_root / committed_name, algorithm_state
+                self._checkpoint_root / committed_name,
+                algorithm_state,
+                restricted=self._restricted,
             )
 
             next_state = state.as_json()
@@ -185,9 +196,7 @@ class RunStore:
 
             previous_checkpoint = state.algorithm_state
             next_state = state.as_json()
-            prepared_json = cast(
-                dict[str, object], next_state["prepared_commit"]
-            )
+            prepared_json = cast(dict[str, object], next_state["prepared_commit"])
             next_state.update(
                 {
                     "committed_round": committed_round,
@@ -285,9 +294,7 @@ class RunStore:
         return state
 
     def _remove_unreferenced_checkpoints(self, state: ArchiveState) -> None:
-        referenced = {
-            record.relative_path for record in state.checkpoint_records()
-        }
+        referenced = {record.relative_path for record in state.checkpoint_records()}
         for path in self._checkpoint_root.glob("*.safetensors"):
             relative_path = path.relative_to(self._root).as_posix()
             if relative_path not in referenced:
@@ -314,7 +321,9 @@ def _checkpoint_json(name: str, digest: Sha256) -> dict[str, str]:
     return {"path": f"checkpoints/{name}", "sha256": digest}
 
 
-def _atomic_save_tensors(path: Path, tensors: Mapping[str, np.ndarray]) -> Sha256:
+def _atomic_save_tensors(
+    path: Path, tensors: Mapping[str, np.ndarray], *, restricted: bool = False
+) -> Sha256:
     if not tensors:
         raise ValueError("checkpoint must contain at least one tensor")
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
@@ -323,6 +332,8 @@ def _atomic_save_tensors(path: Path, tensors: Mapping[str, np.ndarray]) -> Sha25
             {name: value.copy(order="C") for name, value in tensors.items()},
             str(temporary),
         )
+        if restricted:
+            temporary.chmod(0o600)
         _fsync_file(temporary)
         os.replace(temporary, path)
         _fsync_directory(path.parent)
