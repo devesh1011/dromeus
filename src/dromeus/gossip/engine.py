@@ -52,6 +52,7 @@ class GossipEngine:
         evaluation_interval: int = 5,
         evaluation_callback: EvaluationCallback | None = None,
         metrics_publisher: MetricsPublisher | None = None,
+        redact_failures: bool = False,
     ) -> None:
         if round_count <= 0:
             raise ValueError("round_count must be positive")
@@ -61,6 +62,7 @@ class GossipEngine:
             raise ValueError("pass timeout_seconds or transport_limits, not both")
         if evaluation_interval <= 0:
             raise ValueError("evaluation_interval must be positive")
+        self._redact_failures = redact_failures
         self._local_public_key = local_public_key
         self._round_count = round_count
         self._scheduler = scheduler
@@ -128,6 +130,8 @@ class GossipEngine:
             raise failure from error
         except Exception as error:
             await self._record_failure(round_id, error)
+            if self._redact_failures:
+                raise PairCommitError("private run failed") from None
             raise
 
     async def _run_round(self, round_id: RoundId) -> RoundCommit:
@@ -337,7 +341,11 @@ class GossipEngine:
         failure = RunFailure(
             round_id=round_id,
             error_type=type(error).__name__,
-            reason=str(error)[:1024] or "pair round failed",
+            reason=(
+                "private run failed"
+                if self._redact_failures
+                else str(error)[:1024] or "pair round failed"
+            ),
         )
         self._failure = failure
         if self._failure_callback is not None:

@@ -35,6 +35,7 @@ from dromeus.runtime import (
     ParticipantFormation,
     TrainingConfig,
     WorkloadFactory,
+    private_preparation_for_node,
 )
 from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
@@ -100,6 +101,7 @@ async def run_node(
     )
     prepared_training = await asyncio.to_thread(prepare_training, draft)
     prepared_training.validate_draft(draft)
+    private_trainer = private_preparation_for_node(draft, prepared_training)
     local_tensor_schema = prepared_training.tensor_schema
     transport = AXLTransport(AXLBridgeConfig(base_url=config.axl_bridge_url))
     local_key = await transport.local_public_key()
@@ -112,6 +114,7 @@ async def run_node(
         event_sink=event_sink,
         failure=FailureConfig.for_run_root(config.run_root),
         local_tensor_schema=local_tensor_schema,
+        private_trainer=private_trainer,
     )
     if config.role is NodeRole.INITIATOR:
         checkpoint = await asyncio.to_thread(

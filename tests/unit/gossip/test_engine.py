@@ -562,3 +562,32 @@ def test_tensor_checksum_is_stable() -> None:
         checksum_tensors(tensors)
         == "fd734a524f800f74e9b9ac0d0134f90237a95dbc2854a847382d01fed960bfb4"
     )
+
+
+def test_private_failures_redact_exception_before_broadcast(tmp_path: Path) -> None:
+    failures: list[RunFailure] = []
+
+    class FailedTrainer(LinearTrainer):
+        def train_local_steps(self, step_count: int) -> None:
+            raise RuntimeError("/private/data/example-sensitive-id")
+
+    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
+    engine = GossipEngine(
+        local_public_key="peer-0",
+        round_count=1,
+        scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
+        algorithm=DPSGDAdapter(
+            trainer=FailedTrainer(1), tensor_schema=schema, local_steps=1
+        ),
+        transport=HangingPairTransport("peer-0", SharedPairChannel.create()),
+        commit_callback=lambda _: None,
+        failure_callback=failures.append,
+        redact_failures=True,
+    )
+
+    async def run() -> None:
+        with pytest.raises(PairCommitError, match="^private run failed$"):
+            await engine.run_round(0)
+
+    asyncio.run(run())
+    assert len(failures) == 1 and failures[0].reason == "private run failed"

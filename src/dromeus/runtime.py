@@ -61,6 +61,7 @@ from dromeus.telemetry.evidence import (
 )
 from dromeus.telemetry.metrics import MetricsPublisher
 from dromeus.training.base import WeightTrainer
+from dromeus.training.private_trainer import PrivateTrainer
 from dromeus.training.state import InitialCheckpoint
 from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
@@ -178,10 +179,38 @@ class PreparedTraining(Protocol):
 type WorkloadFactory = Callable[[DraftRunSpec], PreparedTraining]
 
 
+def private_preparation_for_node(
+    draft: DraftRunSpec,
+    prepared: PreparedTraining,
+) -> PrivateTrainer | None:
+    """Check the optional owned private preflight before a node opens AXL."""
+    trainer = getattr(prepared, "private_trainer", None)
+    if draft.privacy is None:
+        return None
+    if (
+        not isinstance(trainer, PrivateTrainer)
+        or trainer.policy != draft.privacy
+        or trainer.specification != draft.private_training
+    ):
+        raise ValueError("private node requires owned preparation before AXL startup")
+    trainer.weights()
+    return trainer
+
+
 def build_algorithm(
     *, manifest: SealedManifest, trainer: WeightTrainer
 ) -> GossipAlgorithm:
     """Construct the manifest-selected algorithm behind one runtime seam."""
+    if manifest.privacy is not None:
+        if (
+            not isinstance(trainer, PrivateTrainer)
+            or trainer.policy != manifest.privacy
+            or trainer.specification != manifest.private_training
+        ):
+            raise ValueError(
+                "private manifest requires matching prepared private trainer"
+            )
+        trainer.weights()
     if manifest.algorithm_id == DPSGD_ALGORITHM_ID:
         return DPSGDAdapter(
             trainer=trainer,
@@ -248,7 +277,20 @@ class NodeRuntime:
         training: TrainingConfig | None = None,
         failure: FailureConfig | None = None,
         local_tensor_schema: TensorSchema | None = None,
+        private_trainer: PrivateTrainer | None = None,
     ) -> None:
+        if draft.privacy is not None:
+            if (
+                private_trainer is None
+                or private_trainer.policy != draft.privacy
+                or private_trainer.specification != draft.private_training
+            ):
+                raise ValueError(
+                    "private runtime requires owned preflight before formation"
+                )
+            private_trainer.weights()
+        self._private_trainer = private_trainer
+        self._draft = draft
         self._transport = transport
         self._formation = FormationProtocol(
             transport=transport,
@@ -262,6 +304,9 @@ class NodeRuntime:
         )
         self._state = NodeState.CREATED
         self._result: FormationResult | None = None
+        if draft.privacy is not None and training is not None:
+            if getattr(training.algorithm, "trainer", None) is not private_trainer:
+                raise ValueError("private runtime configuration changed its trainer")
         self._training = training
         self._failure = failure
         self._engine: GossipEngine | None = None
@@ -273,6 +318,13 @@ class NodeRuntime:
         self._control_task: asyncio.Task[None] | None = None
         self._remote_failure: PeerRunFailureError | None = None
         self._terminal_lock = asyncio.Lock()
+
+    def _failure_message(self, error: BaseException) -> str:
+        return (
+            "private run failed"
+            if self._draft.privacy is not None
+            else str(error)[:1024]
+        )
 
     @property
     def state(self) -> NodeState:
@@ -294,6 +346,14 @@ class NodeRuntime:
             raise NodeRuntimeError(f"cannot configure training from {self._state}")
         if self._training is not None:
             raise NodeRuntimeError("training is already configured")
+        if self._draft.privacy is not None:
+            if (
+                getattr(training.algorithm, "trainer", None)
+                is not self._private_trainer
+            ):
+                raise ValueError("private runtime configuration changed its trainer")
+            assert self._private_trainer is not None
+            self._private_trainer.weights()
         self._training = training
 
     async def run_to_completion(
@@ -366,7 +426,7 @@ class NodeRuntime:
                         "failed",
                         {
                             "error_type": type(error).__name__,
-                            "error": str(error)[:1024],
+                            "error": self._failure_message(error),
                         },
                     )
                 except Exception as failure:
@@ -379,7 +439,11 @@ class NodeRuntime:
                     RunFailure(
                         round_id=0,
                         error_type=type(error).__name__,
-                        reason=str(error)[:1024] or "node failed before training",
+                        reason=(
+                            "private run failed"
+                            if self._draft.privacy is not None
+                            else str(error)[:1024] or "node failed before training"
+                        ),
                     )
                 )
             except Exception:
@@ -396,7 +460,11 @@ class NodeRuntime:
                             message_id="run-failed-0",
                             round_id=0,
                             error_type=type(error).__name__,
-                            error=(str(error)[:1024] or "node failed before training"),
+                            error=(
+                                "private run failed"
+                                if self._draft.privacy is not None
+                                else str(error)[:1024] or "node failed before training"
+                            ),
                         ),
                     )
             except Exception:
@@ -546,6 +614,7 @@ class NodeRuntime:
                     final_consensus_rounds=final_consensus_rounds,
                 ),
                 algorithm=self._training.algorithm,
+                redact_failures=self._result.manifest.privacy is not None,
                 transport=pair_transport,
                 commit_callback=self._prepare_commit,
                 confirm_callback=self._confirm_commit,
@@ -714,7 +783,7 @@ class NodeRuntime:
                         "failed",
                         {
                             "error_type": type(error).__name__,
-                            "error": str(error)[:1024],
+                            "error": self._failure_message(error),
                         },
                     )
                 finally:
@@ -767,7 +836,7 @@ class NodeRuntime:
                     result,
                     {
                         "error_type": type(error).__name__,
-                        "error": str(error)[:1024],
+                        "error": self._failure_message(error),
                     },
                 )
             except Exception:

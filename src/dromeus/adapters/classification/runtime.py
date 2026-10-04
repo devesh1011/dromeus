@@ -70,6 +70,8 @@ def prepare_local_training(
     device: str = "cpu",
 ) -> PreparedLocalTraining:
     """Validate independent local data before the runtime enters formation."""
+    if draft.privacy is not None:
+        raise ValueError("private policy requires prepare_private_application")
     return PreparedLocalTraining(
         prepare_training_local(
             draft=draft,
