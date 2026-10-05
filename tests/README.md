@@ -38,3 +38,27 @@ Put new cases with their owning module. Share substantial reusable fakes through
 `support`; keep one-off helpers close to their tests. Use `support.paths` for
 repository and golden-fixture paths so moving tests does not break references.
 Generated `__pycache__` files are disposable and already ignored by Git.
+
+## M3 private training
+
+Install the optional profile with `uv sync --frozen --extra privacy`. Run the local
+contract and conformance checks with:
+
+```bash
+uv run --frozen --no-sync pytest tests/unit/training/test_private_trainer.py tests/unit/runtime/test_private_application.py tests/unit/persistence/test_privacy_ledger.py tests/unit/manifests/test_privacy_policy.py -q
+```
+
+The secure tests additionally require the pinned W0 source-built `torchcsprng`.
+The privacy CI job covers public synthetic data and explicitly skips secure RNG
+when the source-built dependency is unavailable; that skip does not certify secure
+mode. Ordinary CI remains independent of Opacus.
+
+Run the real four-process local AXL gate for SGD/Nesterov, Adam and AdamW with:
+
+```bash
+DROMEUS_PRIVATE_AXL_BINARY=/absolute/path/to/axl-node uv run --frozen --no-sync pytest tests/integration/test_private_training_axl.py -q
+```
+
+Set `DROMEUS_W1_EVIDENCE_ROOT` to retain compact summaries. The smoke factory uses
+public synthetic data only and creates new synthetic ledgers. It is not a recipe
+for recreating a missing private-data ledger. See [private training usage](../examples/private-training.md).
