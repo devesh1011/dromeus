@@ -438,7 +438,7 @@ class DivergencePolicy(DomainModel):
     mode: Literal["warn"] = "warn"
     threshold_set_id: Identifier
     warmup_rounds: Annotated[int, Field(ge=0)]
-    window_rounds: Annotated[int, Field(ge=4)]
+    window_rounds: Annotated[int, Field(ge=4, le=4096)]
     patience_windows: Annotated[int, Field(gt=0)]
     distance_floor: Annotated[float, Field(gt=0, allow_inf_nan=False)]
     growth_ratio: Annotated[float, Field(gt=1, allow_inf_nan=False)]
@@ -447,12 +447,35 @@ class DivergencePolicy(DomainModel):
     severe_patience: Annotated[int, Field(gt=0)]
     recovery_windows: Annotated[int, Field(gt=0)]
     recovery_distance: Annotated[float, Field(gt=0, allow_inf_nan=False)]
-    max_lag_rounds: Annotated[int, Field(ge=0)]
+    max_lag_rounds: Annotated[int, Field(ge=0, le=4096)]
+    absolute_distance_floor: (
+        Annotated[float, Field(gt=0, allow_inf_nan=False)] | None
+    ) = None
+    absolute_severe_distance: (
+        Annotated[float, Field(gt=0, allow_inf_nan=False)] | None
+    ) = None
+    absolute_recovery_distance: (
+        Annotated[float, Field(gt=0, allow_inf_nan=False)] | None
+    ) = None
 
     @model_validator(mode="after")
     def ordered_thresholds(self) -> Self:
         if self.recovery_distance >= self.severe_distance:
             raise ValueError("recovery threshold must be below severe threshold")
+        absolute = (
+            self.absolute_distance_floor,
+            self.absolute_severe_distance,
+            self.absolute_recovery_distance,
+        )
+        if any(x is not None for x in absolute):
+            if any(x is None for x in absolute):
+                raise ValueError("absolute scale thresholds must be provided together")
+            assert (
+                self.absolute_severe_distance is not None
+                and self.absolute_recovery_distance is not None
+            )
+            if self.absolute_recovery_distance >= self.absolute_severe_distance:
+                raise ValueError("absolute recovery must be below severe threshold")
         return self
 
 
