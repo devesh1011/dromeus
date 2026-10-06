@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal, Self, cast
 
 from pydantic import (
     BaseModel,
@@ -15,6 +15,7 @@ from pydantic import (
     TypeAdapter,
     ValidationError,
     field_validator,
+    model_validator,
 )
 
 from dromeus.manifests.models import (
@@ -26,6 +27,7 @@ from dromeus.manifests.models import (
     Sha256,
     TransferId,
 )
+from dromeus.telemetry.consensus import ConsensusObservation
 from dromeus.telemetry.events import EventSink
 
 EVIDENCE_VERSION = 1
@@ -127,6 +129,98 @@ class ConsensusDistanceEvidence(_EvidenceModel):
     sketch_count: int = Field(ge=1)
 
 
+class ConsensusObservationEvidence(_EvidenceBase):
+    """Scale-aware observation; never reinterpret legacy consensus_distance."""
+
+    evidence_version: Literal[2] = 2
+    event: Literal["consensus_observation"] = "consensus_observation"
+    message_id: MessageId
+    round_id: RoundId
+    normalized_rms: float = Field(ge=0)
+    absolute_rms_spread: float = Field(ge=0)
+    mean_sketch_norm: float = Field(ge=0)
+    denominator_degenerate: bool
+    sketch_count: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def valid_scale(self) -> Self:
+        ConsensusObservation(
+            round_id=self.round_id,
+            normalized_rms=self.normalized_rms,
+            absolute_rms_spread=self.absolute_rms_spread,
+            mean_sketch_norm=self.mean_sketch_norm,
+            denominator_degenerate=self.denominator_degenerate,
+            sketch_count=self.sketch_count,
+        )
+        return self
+
+
+DetectorStateName = Literal[
+    "warming_up", "healthy", "suspect", "diverging", "insufficient_data"
+]
+
+
+class DivergenceStatusEvidence(_EvidenceBase):
+    evidence_version: Literal[2] = 2
+    event: Literal["divergence_status"] = "divergence_status"
+    policy_hash: Sha256
+    threshold_set_id: Identifier
+    transition_id: int = Field(gt=0)
+    previous_state: DetectorStateName
+    state: DetectorStateName
+    warning_active: bool
+    scale_warning: bool
+    reason: Literal[
+        "warmup",
+        "missing_rounds",
+        "denominator_degenerate",
+        "severe_distance",
+        "sustained_growth",
+        "recovered",
+        "awaiting_recovery",
+        "growth",
+        "stable_window",
+        "collecting_window",
+    ]
+    source_round: int | None = Field(default=None, ge=0)
+    detection_round: int = Field(ge=0)
+    window_start: int | None = Field(default=None, ge=0)
+    window_end: int | None = Field(default=None, ge=0)
+    window_count: int = Field(ge=0, le=4096)
+    expected_participants: int = Field(ge=2)
+    observed_participants: int = Field(ge=0)
+    age_rounds: int = Field(ge=0)
+    missing_rounds: int = Field(ge=0)
+    measurement_channel: Literal["normalized", "absolute"]
+    earlier_median: float | None = Field(default=None, ge=0)
+    later_median: float | None = Field(default=None, ge=0)
+    log_slope: float | None = None
+    normalized_rms: float | None = Field(default=None, ge=0)
+    absolute_rms_spread: float | None = Field(default=None, ge=0)
+    mean_sketch_norm: float | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def valid_window(self) -> Self:
+        if self.observed_participants not in (0, self.expected_participants):
+            raise ValueError("detector evidence must have complete or missing coverage")
+        if self.source_round is not None and self.source_round > self.detection_round:
+            raise ValueError("source round cannot follow detection round")
+        if self.window_count:
+            if (
+                self.window_start is None
+                or self.window_end is None
+                or self.window_end - self.window_start + 1 != self.window_count
+            ):
+                raise ValueError("detector window must be consecutive")
+            if self.source_round != self.window_end:
+                raise ValueError("detector window must end at source round")
+        elif self.window_start is not None or self.window_end is not None:
+            raise ValueError("empty detector window cannot have endpoints")
+        if self.state == "diverging" and not self.warning_active:
+            raise ValueError("diverging state needs an active warning")
+        return self
+
+
 class ConsensusSketchSentEvidence(_EvidenceModel):
     event: Literal["consensus_sketch_sent"] = "consensus_sketch_sent"
     message_id: MessageId
@@ -164,6 +258,8 @@ type EvidenceRecord = (
     | RoundMetricsEvidence
     | TaskRoundMetricsEvidence
     | ConsensusDistanceEvidence
+    | ConsensusObservationEvidence
+    | DivergenceStatusEvidence
     | ConsensusSketchSentEvidence
     | TransferMessageSentEvidence
     | RunFailedEvidence
@@ -175,6 +271,8 @@ _EVIDENCE_EVENTS = frozenset(
         "round_metrics",
         "task_round_metrics",
         "consensus_distance",
+        "consensus_observation",
+        "divergence_status",
         "consensus_sketch_sent",
         "transfer_message_sent",
         "run_failed",
@@ -226,12 +324,27 @@ class EvidenceLog:
             if record.manifest_hash != manifest_hash:
                 raise EvidenceError(f"evidence manifest hash mismatch in {path}")
             records.append(record)
+        transition_ids = [
+            r.transition_id for r in records if isinstance(r, DivergenceStatusEvidence)
+        ]
+        if len(transition_ids) != len(set(transition_ids)) or transition_ids != sorted(
+            transition_ids
+        ):
+            raise EvidenceError("duplicate or unordered detector transition IDs")
+        policy_ids = {
+            (r.policy_hash, r.threshold_set_id)
+            for r in records
+            if isinstance(r, DivergenceStatusEvidence)
+        }
+        if len(policy_ids) > 1:
+            raise EvidenceError("detector evidence policy changed")
         node_ids = {record.node_id for record in records}
         if len(node_ids) > 1:
             raise EvidenceError(f"evidence node id mismatch in {path}")
         for record_type in (
             (RoundMetricsEvidence, TaskRoundMetricsEvidence),
             ConsensusDistanceEvidence,
+            ConsensusObservationEvidence,
             ConsensusSketchSentEvidence,
             RunFailedEvidence,
         ):

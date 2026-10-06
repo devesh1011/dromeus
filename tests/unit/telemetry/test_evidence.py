@@ -172,3 +172,67 @@ def test_evidence_log_rejects_duplicate_round_identity(tmp_path: Path) -> None:
 def test_best_effort_evidence_write_contains_sink_failure() -> None:
     assert not append_evidence(_FailingSink(), _round_metrics())
     assert not append_evidence(None, _round_metrics())
+
+
+def test_detector_evidence_round_trips_and_rejects_unknown_fields() -> None:
+    from dromeus.telemetry.evidence import DivergenceStatusEvidence
+
+    record = DivergenceStatusEvidence(
+        run_id="test",
+        manifest_hash="a" * 64,
+        node_id="node",
+        policy_hash="b" * 64,
+        threshold_set_id="test-v1",
+        transition_id=1,
+        previous_state="warming_up",
+        state="suspect",
+        warning_active=False,
+        scale_warning=False,
+        reason="growth",
+        source_round=3,
+        detection_round=3,
+        window_start=0,
+        window_end=3,
+        window_count=4,
+        expected_participants=4,
+        observed_participants=4,
+        age_rounds=0,
+        missing_rounds=0,
+        measurement_channel="normalized",
+        earlier_median=0.15,
+        later_median=0.6,
+        log_slope=0.69,
+        normalized_rms=0.8,
+        absolute_rms_spread=0.8,
+        mean_sketch_norm=1,
+    )
+    assert decode_evidence(encode_evidence(record)) == record
+    value = record.model_dump(mode="json")
+    value["unaccounted_loss"] = 1
+    with pytest.raises(EvidenceError):
+        decode_evidence(json.dumps(value))
+
+
+def test_v2_scale_evidence_rejects_inconsistent_values() -> None:
+    from dromeus.telemetry.evidence import ConsensusObservationEvidence
+
+    value = dict(
+        run_id="test",
+        manifest_hash="a" * 64,
+        node_id="node",
+        message_id="m",
+        round_id=0,
+        normalized_rms=0.2,
+        absolute_rms_spread=0.2 * (1 + 1e-12),
+        mean_sketch_norm=1,
+        denominator_degenerate=False,
+        sketch_count=4,
+    )
+    record = ConsensusObservationEvidence.model_validate(value)
+    assert decode_evidence(encode_evidence(record)) == record
+    with pytest.raises(ValueError):
+        ConsensusObservationEvidence.model_validate(
+            dict(value, denominator_degenerate=True)
+        )
+    with pytest.raises(ValueError):
+        ConsensusObservationEvidence.model_validate(dict(value, absolute_rms_spread=5))

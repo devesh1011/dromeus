@@ -8,7 +8,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from threading import Lock
+from queue import Empty, Full, Queue
+from threading import Event, Lock, Thread
 from typing import Protocol
 
 
@@ -112,3 +113,97 @@ def event_record(
 
 
 __all__ = ["EventSink", "JsonlEventSink", "emit_event", "event_record"]
+
+
+class BoundedEventSink:
+    """Nonblocking facade over a possibly blocking sink, with bounded shutdown.
+
+    A timed-out in-flight write may complete later; no further writes are started.
+    All users sharing the target sink must share this facade to avoid lock contention.
+    """
+
+    def __init__(self, sink: EventSink | None, *, capacity: int = 64) -> None:
+        if capacity <= 0:
+            raise ValueError("event capacity must be positive")
+        self._sink = sink
+        self._queue: Queue[Mapping[str, object]] = Queue(maxsize=capacity)
+        self._count_lock = Lock()
+        self._stop = Event()
+        self._abort = Event()
+        self._thread: Thread | None = None
+        self._in_flight = False
+        self._dropped = 0
+
+    @property
+    def dropped(self) -> int:
+        with self._count_lock:
+            return self._dropped
+
+    def start(self) -> None:
+        with self._count_lock:
+            if self._thread is not None or self._stop.is_set():
+                return
+            self._thread = Thread(
+                target=self._run, name="dromeus-event-delivery", daemon=True
+            )
+            self._thread.start()
+
+    def append(self, record: Mapping[str, object]) -> None:
+        with self._count_lock:
+            if self._stop.is_set():
+                self._dropped += 1
+                return
+            try:
+                self._queue.put_nowait(dict(record))
+            except Full:
+                self._dropped += 1
+
+    def _run(self) -> None:
+        while not self._abort.is_set():
+            if self._stop.is_set() and self._queue.empty():
+                return
+            try:
+                record = self._queue.get(timeout=0.05)
+            except Empty:
+                continue
+            with self._count_lock:
+                if self._abort.is_set():
+                    self._dropped += 1
+                    self._queue.task_done()
+                    return
+                self._in_flight = True
+            success = False
+            try:
+                if self._sink is not None:
+                    self._sink.append(record)
+                    success = True
+            except Exception:
+                pass
+            with self._count_lock:
+                if not success and not self._abort.is_set():
+                    self._dropped += 1
+                self._in_flight = False
+            self._queue.task_done()
+
+    def stop(self, *, timeout_seconds: float = 0.2) -> bool:
+        if timeout_seconds <= 0:
+            raise ValueError("event stop timeout must be positive")
+        with self._count_lock:
+            self._stop.set()
+            thread = self._thread
+        if thread is not None:
+            thread.join(timeout_seconds)
+            if not thread.is_alive():
+                return True
+        with self._count_lock:
+            if not self._abort.is_set():
+                self._abort.set()
+                self._dropped += int(self._in_flight)
+            while True:
+                try:
+                    self._queue.get_nowait()
+                    self._queue.task_done()
+                    self._dropped += 1
+                except Empty:
+                    break
+        return thread is None or not thread.is_alive()
