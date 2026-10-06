@@ -116,6 +116,8 @@ async def run_node(
         local_tensor_schema=local_tensor_schema,
         private_trainer=private_trainer,
     )
+    event_sink = runtime.event_sink or event_sink
+
     if config.role is NodeRole.INITIATOR:
         checkpoint = await asyncio.to_thread(
             prepared_training.create_initial_checkpoint,

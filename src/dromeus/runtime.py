@@ -50,9 +50,12 @@ from dromeus.persistence.run_store import RunStore
 from dromeus.protocol.models import MessageType
 from dromeus.telemetry.consensus import (
     ConsensusDistance,
+    ConsensusObservation,
     LiveConsensusTelemetry,
 )
-from dromeus.telemetry.events import EventSink, emit_event
+from dromeus.telemetry.divergence import DetectorSnapshot
+from dromeus.telemetry.divergence_monitor import DivergenceMonitor
+from dromeus.telemetry.events import BoundedEventSink, EventSink, emit_event
 from dromeus.telemetry.evidence import (
     ConsensusDistanceEvidence,
     ConsensusSketchSentEvidence,
@@ -292,6 +295,16 @@ class NodeRuntime:
         self._private_trainer = private_trainer
         self._draft = draft
         self._transport = transport
+        self._event_delivery = (
+            BoundedEventSink(event_sink, capacity=256)
+            if draft.divergence_detection is not None
+            else None
+        )
+        self._event_sink = (
+            self._event_delivery if self._event_delivery is not None else event_sink
+        )
+        if self._event_delivery is not None:
+            self._event_delivery.start()
         self._formation = FormationProtocol(
             transport=transport,
             draft=draft,
@@ -299,7 +312,7 @@ class NodeRuntime:
             dataset=dataset,
             transport_limits=draft.transport,
             artifact_root=artifact_root,
-            event_sink=event_sink,
+            event_sink=self._event_sink,
             local_tensor_schema=local_tensor_schema,
         )
         self._state = NodeState.CREATED
@@ -311,13 +324,27 @@ class NodeRuntime:
         self._failure = failure
         self._engine: GossipEngine | None = None
         self._consensus_telemetry: LiveConsensusTelemetry | None = None
-        self._event_sink = event_sink
+        self._divergence_monitor: DivergenceMonitor | None = None
         self._local_public_key: str | None = None
         self._commits: tuple[RoundCommit, ...] = ()
         self._run_task: asyncio.Task[tuple[RoundCommit, ...]] | None = None
         self._control_task: asyncio.Task[None] | None = None
         self._remote_failure: PeerRunFailureError | None = None
         self._terminal_lock = asyncio.Lock()
+
+    @property
+    def event_sink(self) -> EventSink | None:
+        """Runtime event facade shared by node metrics and warning producers."""
+        return self._event_sink
+
+    @property
+    def divergence_status(self) -> DetectorSnapshot | None:
+        """Latest local detector state, independent of warning delivery."""
+        return self._divergence_monitor.snapshot if self._divergence_monitor else None
+
+    @property
+    def divergence_dropped(self) -> int:
+        return self._divergence_monitor.dropped if self._divergence_monitor else 0
 
     def _failure_message(self, error: BaseException) -> str:
         return (
@@ -589,6 +616,17 @@ class NodeRuntime:
                     ),
                 )
 
+            detector_policy = self._result.manifest.divergence_detection
+            if detector_policy is not None:
+                self._divergence_monitor = DivergenceMonitor(
+                    policy=detector_policy,
+                    participant_count=len(participants),
+                    run_id=self._result.manifest.run_id,
+                    manifest_hash=self._result.manifest_hash,
+                    node_id=local_key,
+                    sink=self._event_sink,
+                )
+                self._divergence_monitor.start()
             self._consensus_telemetry = LiveConsensusTelemetry(
                 local_public_key=local_key,
                 participant_keys=tuple(sorted(participants)),
@@ -678,10 +716,13 @@ class NodeRuntime:
                 await task
             except BaseException:
                 pass
-        await self._stop_control_monitor()
-        if self._state is not NodeState.CREATED:
-            await self._formation.stop()
-        self._state = NodeState.STOPPED
+        try:
+            await self._stop_control_monitor()
+            if self._state is not NodeState.CREATED:
+                await self._formation.stop()
+        finally:
+            await self._stop_event_delivery()
+            self._state = NodeState.STOPPED
 
     async def _start_formation(self) -> None:
         if self._state is not NodeState.CREATED:
@@ -846,6 +887,7 @@ class NodeRuntime:
         for cleanup in (
             self._stop_control_monitor,
             self._stop_consensus,
+            self._stop_divergence,
             self._stop_metrics,
             self._formation.stop,
         ):
@@ -854,6 +896,15 @@ class NodeRuntime:
             except BaseException:
                 pass
 
+    async def _stop_event_delivery(self) -> None:
+        if self._event_delivery is not None:
+            await asyncio.to_thread(self._event_delivery.stop)
+
+    async def _stop_divergence(self) -> None:
+        monitor = self._divergence_monitor
+        if monitor is not None:
+            await asyncio.to_thread(monitor.stop)
+
     async def _record_consensus(self, distance: ConsensusDistance) -> None:
         if (
             self._training is None
@@ -861,6 +912,10 @@ class NodeRuntime:
             or self._local_public_key is None
         ):
             return
+        if self._divergence_monitor is not None and isinstance(
+            distance, ConsensusObservation
+        ):
+            self._divergence_monitor.observe(distance)
         await asyncio.to_thread(
             self._training.run_store.record_consensus,
             round_id=distance.round_id,
@@ -920,6 +975,8 @@ class NodeRuntime:
             committed_round=commit.round_id,
             state_checksum=commit.state_checksum,
         )
+        if self._divergence_monitor is not None:
+            self._divergence_monitor.advance(commit.round_id)
 
     def _ready(self, result: FormationResult) -> FormationResult:
         self._result = result

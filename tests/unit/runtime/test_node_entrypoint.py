@@ -101,6 +101,7 @@ def test_run_node_uses_deep_runtime_lifecycle(
     class FakeRuntime:
         def __init__(self, **kwargs: object) -> None:
             captured["runtime_init"] = kwargs
+            self.event_sink = kwargs["event_sink"]
 
         async def run_to_completion(self, **kwargs: object) -> None:
             captured["lifecycle"] = kwargs
