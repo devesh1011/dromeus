@@ -259,3 +259,18 @@ def test_live_consensus_waits_for_inflight_remote_sketches_on_stop() -> None:
         assert [distance.round_id for distance in distances] == [0]
 
     asyncio.run(run())
+
+
+def test_v2_observation_separates_spread_from_denominator_collapse() -> None:
+    from dromeus.telemetry.consensus import (
+        consensus_observation,
+        exact_consensus_observation,
+    )
+
+    sketches = [np.array([1, 0], dtype=np.float32), np.array([-1, 0], dtype=np.float32)]
+    measured = consensus_observation(sketches, round_id=3)
+    exact = exact_consensus_observation([{"weight": x} for x in sketches], round_id=3)
+    assert measured == exact
+    assert measured.absolute_rms_spread == 1 and measured.mean_sketch_norm == 0
+    assert measured.denominator_degenerate
+    assert measured.normalized_rms == normalized_rms_consensus_distance(sketches)

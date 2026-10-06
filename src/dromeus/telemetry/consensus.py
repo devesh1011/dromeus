@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import inspect
+import math
 from collections import deque
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -26,6 +27,84 @@ class ConsensusDistance:
     round_id: RoundId
     normalized_rms: float
     sketch_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class ConsensusObservation(ConsensusDistance):
+    """Version 2 scale diagnostics; legacy distance records remain unchanged."""
+
+    absolute_rms_spread: float
+    mean_sketch_norm: float
+    denominator_degenerate: bool
+    observation_version: int = 2
+
+    def __post_init__(self) -> None:
+        if (
+            self.observation_version != 2
+            or self.round_id < 0
+            or self.sketch_count < 1
+            or any(
+                not math.isfinite(v) or v < 0
+                for v in (
+                    self.normalized_rms,
+                    self.absolute_rms_spread,
+                    self.mean_sketch_norm,
+                )
+            )
+        ):
+            raise ConsensusSketchError("invalid consensus observation")
+        if self.denominator_degenerate != (self.mean_sketch_norm <= 1e-12):
+            raise ConsensusSketchError("inconsistent denominator scale flag")
+        if not math.isclose(
+            self.normalized_rms,
+            self.absolute_rms_spread / (self.mean_sketch_norm + 1e-12),
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            raise ConsensusSketchError("inconsistent consensus scale measurements")
+
+
+def consensus_observation(
+    sketches: Sequence[np.ndarray], *, round_id: int
+) -> ConsensusObservation:
+    """Measure spread and mean norm with the legacy stabilizer unchanged."""
+    if not sketches:
+        raise ConsensusSketchError("at least one sketch is required")
+    first = np.asarray(sketches[0])
+    if first.ndim != 1 or not first.size:
+        raise ConsensusSketchError("sketch must be a nonempty vector")
+    values = np.stack([_validate_sketch(x, size=first.size) for x in sketches]).astype(
+        np.float64
+    )
+    return _measure_consensus(values, round_id=round_id)
+
+
+def exact_consensus_observation(
+    models: Sequence[Mapping[str, np.ndarray]], *, round_id: int
+) -> ConsensusObservation:
+    """Use the same scale definitions for exact public model snapshots."""
+    if not models or any(model.keys() != models[0].keys() for model in models):
+        raise ValueError("exact models must share their named schema")
+    if any(
+        model[name].shape != models[0][name].shape for model in models for name in model
+    ):
+        raise ValueError("exact model shapes differ")
+    values = np.stack([_flatten_weights(model) for model in models]).astype(np.float64)
+    return _measure_consensus(values, round_id=round_id)
+
+
+def _measure_consensus(values: np.ndarray, *, round_id: int) -> ConsensusObservation:
+    mean = values.mean(axis=0)
+    spread = float(np.sqrt(np.mean(np.sum((values - mean) ** 2, axis=1))))
+    norm = float(np.linalg.norm(mean))
+    return ConsensusObservation(
+        round_id=round_id,
+        normalized_rms=spread / (norm + 1e-12),
+        sketch_count=len(values),
+        absolute_rms_spread=spread,
+        mean_sketch_norm=norm,
+        denominator_degenerate=norm <= 1e-12,
+    )
 
 
 SketchReceiver = Callable[[float], Awaitable[ConsensusSketchMessage]]
@@ -162,12 +241,9 @@ class ConsensusSketchBuffer:
                 round_sketches[sender_public_key] = value
             if len(round_sketches) != len(self._participant_keys):
                 return None
-            result = ConsensusDistance(
+            result = consensus_observation(
+                [round_sketches[key] for key in sorted(round_sketches)],
                 round_id=round_id,
-                normalized_rms=normalized_rms_consensus_distance(
-                    [round_sketches[key] for key in sorted(round_sketches)]
-                ),
-                sketch_count=len(round_sketches),
             )
             self._results[round_id] = result
             completed_rounds = sorted(self._results)
@@ -222,9 +298,7 @@ class ConsensusSketchPublisher:
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
 
-    def submit(
-        self, *, round_id: RoundId, weights: Mapping[str, np.ndarray]
-    ) -> bool:
+    def submit(self, *, round_id: RoundId, weights: Mapping[str, np.ndarray]) -> bool:
         """Queue a model snapshot, returning false when telemetry is full."""
         if self._queue.full():
             self._dropped += 1
@@ -491,9 +565,7 @@ class LiveConsensusTelemetry:
 
 
 def _copy_weights(weights: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
-    return {
-        name: np.ascontiguousarray(value).copy() for name, value in weights.items()
-    }
+    return {name: np.ascontiguousarray(value).copy() for name, value in weights.items()}
 
 
 def _flatten_weights(weights: Mapping[str, np.ndarray]) -> np.ndarray:
