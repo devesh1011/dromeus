@@ -274,3 +274,64 @@ def test_v2_observation_separates_spread_from_denominator_collapse() -> None:
     assert measured.absolute_rms_spread == 1 and measured.mean_sketch_norm == 0
     assert measured.denominator_degenerate
     assert measured.normalized_rms == normalized_rms_consensus_distance(sketches)
+
+
+def test_individual_distances_bind_members_not_arrival_order() -> None:
+    buffer = ConsensusSketchBuffer(participant_keys=("d", "b", "a", "c"), size=1)
+    for member, value in (("c", 4.0), ("a", 0.0), ("d", 8.0)):
+        assert (
+            buffer.add(
+                round_id=0,
+                sender_public_key=member,
+                sketch=np.array([value], dtype=np.float32),
+            )
+            is None
+        )
+    result = buffer.add(
+        round_id=0, sender_public_key="b", sketch=np.array([0.0], dtype=np.float32)
+    )
+    from dromeus.telemetry.consensus import ConsensusObservation
+
+    assert isinstance(result, ConsensusObservation)
+    # Mean=3; distances by member: a=3, b=3, c=1, d=5.
+    assert [(m.public_key, m.absolute_distance) for m in result.member_distances] == [
+        ("a", 3),
+        ("b", 3),
+        ("c", 1),
+        ("d", 5),
+    ]
+    assert [m.normalized_distance for m in result.member_distances] == pytest.approx(
+        [1, 1, 1 / 3, 5 / 3]
+    )
+    assert result.absolute_rms_spread == pytest.approx(np.sqrt(11))
+    assert (
+        buffer.add(
+            round_id=0, sender_public_key="a", sketch=np.array([0.0], dtype=np.float32)
+        )
+        == result
+    )
+
+
+@pytest.mark.parametrize("keys", [("a",), ("a", "a"), ("", "b")])
+def test_member_measurements_reject_ambiguous_identity(keys: tuple[str, ...]) -> None:
+    from dromeus.telemetry.consensus import consensus_observation
+
+    with pytest.raises(ConsensusSketchError, match="participant keys"):
+        consensus_observation(
+            [np.array([1], dtype=np.float32), np.array([-1], dtype=np.float32)],
+            round_id=0,
+            participant_keys=keys,
+        )
+
+
+def test_individual_distances_expose_degenerate_mean() -> None:
+    from dromeus.telemetry.consensus import consensus_observation
+
+    result = consensus_observation(
+        [np.array([1], dtype=np.float32), np.array([-1], dtype=np.float32)],
+        round_id=0,
+        participant_keys=("a", "b"),
+    )
+    assert result.denominator_degenerate
+    assert [m.absolute_distance for m in result.member_distances] == [1, 1]
+    assert [m.normalized_distance for m in result.member_distances] == [1e12, 1e12]

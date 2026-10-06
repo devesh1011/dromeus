@@ -30,6 +30,22 @@ class ConsensusDistance:
 
 
 @dataclass(frozen=True, slots=True)
+class MemberDistance:
+    """A sealed member's distance from the complete group's mean sketch."""
+
+    public_key: PublicKey
+    absolute_distance: float
+    normalized_distance: float
+
+    def __post_init__(self) -> None:
+        if not self.public_key or any(
+            not math.isfinite(value) or value < 0
+            for value in (self.absolute_distance, self.normalized_distance)
+        ):
+            raise ConsensusSketchError("invalid member distance")
+
+
+@dataclass(frozen=True, slots=True)
 class ConsensusObservation(ConsensusDistance):
     """Version 2 scale diagnostics; legacy distance records remain unchanged."""
 
@@ -37,6 +53,7 @@ class ConsensusObservation(ConsensusDistance):
     mean_sketch_norm: float
     denominator_degenerate: bool
     observation_version: int = 2
+    member_distances: tuple[MemberDistance, ...] = ()
 
     def __post_init__(self) -> None:
         if (
@@ -62,10 +79,36 @@ class ConsensusObservation(ConsensusDistance):
             abs_tol=1e-12,
         ):
             raise ConsensusSketchError("inconsistent consensus scale measurements")
+        if self.member_distances:
+            if (
+                len(self.member_distances) != self.sketch_count
+                or len({m.public_key for m in self.member_distances})
+                != self.sketch_count
+                or any(
+                    not math.isclose(
+                        m.normalized_distance,
+                        m.absolute_distance / (self.mean_sketch_norm + 1e-12),
+                        rel_tol=1e-9,
+                        abs_tol=1e-12,
+                    )
+                    for m in self.member_distances
+                )
+                or not math.isclose(
+                    math.hypot(*(m.absolute_distance for m in self.member_distances))
+                    / math.sqrt(self.sketch_count),
+                    self.absolute_rms_spread,
+                    rel_tol=1e-9,
+                    abs_tol=1e-12,
+                )
+            ):
+                raise ConsensusSketchError("inconsistent member distances")
 
 
 def consensus_observation(
-    sketches: Sequence[np.ndarray], *, round_id: int
+    sketches: Sequence[np.ndarray],
+    *,
+    round_id: int,
+    participant_keys: Sequence[PublicKey] | None = None,
 ) -> ConsensusObservation:
     """Measure spread and mean norm with the legacy stabilizer unchanged."""
     if not sketches:
@@ -76,7 +119,9 @@ def consensus_observation(
     values = np.stack([_validate_sketch(x, size=first.size) for x in sketches]).astype(
         np.float64
     )
-    return _measure_consensus(values, round_id=round_id)
+    return _measure_consensus(
+        values, round_id=round_id, participant_keys=participant_keys
+    )
 
 
 def exact_consensus_observation(
@@ -93,10 +138,39 @@ def exact_consensus_observation(
     return _measure_consensus(values, round_id=round_id)
 
 
-def _measure_consensus(values: np.ndarray, *, round_id: int) -> ConsensusObservation:
+def _measure_consensus(
+    values: np.ndarray,
+    *,
+    round_id: int,
+    participant_keys: Sequence[PublicKey] | None = None,
+) -> ConsensusObservation:
+    if participant_keys is not None and (
+        len(participant_keys) != len(values)
+        or len(set(participant_keys)) != len(values)
+        or any(not key for key in participant_keys)
+    ):
+        raise ConsensusSketchError("participant keys must match sketches and be unique")
     mean = values.mean(axis=0)
-    spread = float(np.sqrt(np.mean(np.sum((values - mean) ** 2, axis=1))))
+    squared_distances = np.sum((values - mean) ** 2, axis=1)
+    spread = float(np.sqrt(np.mean(squared_distances)))
     norm = float(np.linalg.norm(mean))
+    members = (
+        tuple(
+            sorted(
+                (
+                    MemberDistance(
+                        key, float(distance), float(distance) / (norm + 1e-12)
+                    )
+                    for key, distance in zip(
+                        participant_keys, np.sqrt(squared_distances), strict=True
+                    )
+                ),
+                key=lambda member: member.public_key,
+            )
+        )
+        if participant_keys is not None
+        else ()
+    )
     return ConsensusObservation(
         round_id=round_id,
         normalized_rms=spread / (norm + 1e-12),
@@ -104,6 +178,7 @@ def _measure_consensus(values: np.ndarray, *, round_id: int) -> ConsensusObserva
         absolute_rms_spread=spread,
         mean_sketch_norm=norm,
         denominator_degenerate=norm <= 1e-12,
+        member_distances=members,
     )
 
 
@@ -244,6 +319,7 @@ class ConsensusSketchBuffer:
             result = consensus_observation(
                 [round_sketches[key] for key in sorted(round_sketches)],
                 round_id=round_id,
+                participant_keys=sorted(round_sketches),
             )
             self._results[round_id] = result
             completed_rounds = sorted(self._results)
@@ -606,6 +682,7 @@ __all__ = [
     "ConsensusSketchMessage",
     "ConsensusSketchPublisher",
     "LiveConsensusTelemetry",
+    "MemberDistance",
     "count_sketch",
     "decode_sketch",
     "encode_sketch",
