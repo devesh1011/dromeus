@@ -236,3 +236,43 @@ def test_v2_scale_evidence_rejects_inconsistent_values() -> None:
         )
     with pytest.raises(ValueError):
         ConsensusObservationEvidence.model_validate(dict(value, absolute_rms_spread=5))
+
+
+def test_individual_distance_evidence_roundtrip_and_duplicate_rejection(
+    tmp_path: Path,
+) -> None:
+    from dromeus.telemetry.evidence import NodeConsensusDistanceEvidence
+
+    record = NodeConsensusDistanceEvidence(
+        run_id="run-1",
+        manifest_hash="a" * 64,
+        node_id="peer-0",
+        message_id="node-distance-0",
+        round_id=0,
+        absolute_distance=3,
+        normalized_distance=3 / (3 + 1e-12),
+        group_normalized_rms=1.2,
+        mean_sketch_norm=3,
+        denominator_degenerate=False,
+        sketch_count=4,
+    )
+    assert decode_evidence(encode_evidence(record)) == record
+    for update in (
+        {"normalized_distance": 2},
+        {"mean_sketch_norm": 0},
+        {"denominator_degenerate": True},
+        {"sketch_count": 0},
+        {"group_normalized_rms": 0.1},
+        {"absolute_distance": float("nan")},
+    ):
+        with pytest.raises(EvidenceError):
+            decode_evidence(json.dumps({**evidence_record(record), **update}))
+    path = tmp_path / "individual.jsonl"
+    sink = JsonlEventSink(path)
+    assert append_evidence(sink, record)
+    assert EvidenceLog.open(path, run_id="run-1", manifest_hash="a" * 64).records == (
+        record,
+    )
+    assert append_evidence(sink, record)
+    with pytest.raises(EvidenceError, match="duplicate evidence round"):
+        EvidenceLog.open(path, run_id="run-1", manifest_hash="a" * 64)

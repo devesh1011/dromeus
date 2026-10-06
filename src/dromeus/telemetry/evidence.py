@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -155,6 +156,40 @@ class ConsensusObservationEvidence(_EvidenceBase):
         return self
 
 
+class NodeConsensusDistanceEvidence(_EvidenceBase):
+    """Local node-to-mean CountSketch distance, independent of detector policy."""
+
+    evidence_version: Literal[2] = 2
+    event: Literal["node_consensus_distance"] = "node_consensus_distance"
+    measurement_kind: Literal["countsketch"] = "countsketch"
+    message_id: MessageId
+    round_id: RoundId
+    absolute_distance: float = Field(ge=0)
+    normalized_distance: float = Field(ge=0)
+    group_normalized_rms: float = Field(ge=0)
+    mean_sketch_norm: float = Field(ge=0)
+    denominator_degenerate: bool
+    sketch_count: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def valid_scale(self) -> Self:
+        if self.denominator_degenerate != (self.mean_sketch_norm <= 1e-12):
+            raise ValueError("inconsistent denominator scale flag")
+        if not math.isclose(
+            self.normalized_distance,
+            self.absolute_distance / (self.mean_sketch_norm + 1e-12),
+            rel_tol=1e-9,
+            abs_tol=1e-12,
+        ):
+            raise ValueError("inconsistent node distance normalization")
+        minimum_rms = self.normalized_distance / math.sqrt(self.sketch_count)
+        if self.group_normalized_rms < minimum_rms and not math.isclose(
+            self.group_normalized_rms, minimum_rms, rel_tol=1e-9, abs_tol=1e-12
+        ):
+            raise ValueError("node distance exceeds group RMS bound")
+        return self
+
+
 DetectorStateName = Literal[
     "warming_up", "healthy", "suspect", "diverging", "insufficient_data"
 ]
@@ -259,6 +294,7 @@ type EvidenceRecord = (
     | TaskRoundMetricsEvidence
     | ConsensusDistanceEvidence
     | ConsensusObservationEvidence
+    | NodeConsensusDistanceEvidence
     | DivergenceStatusEvidence
     | ConsensusSketchSentEvidence
     | TransferMessageSentEvidence
@@ -272,6 +308,7 @@ _EVIDENCE_EVENTS = frozenset(
         "task_round_metrics",
         "consensus_distance",
         "consensus_observation",
+        "node_consensus_distance",
         "divergence_status",
         "consensus_sketch_sent",
         "transfer_message_sent",
@@ -345,6 +382,7 @@ class EvidenceLog:
             (RoundMetricsEvidence, TaskRoundMetricsEvidence),
             ConsensusDistanceEvidence,
             ConsensusObservationEvidence,
+            NodeConsensusDistanceEvidence,
             ConsensusSketchSentEvidence,
             RunFailedEvidence,
         ):
@@ -435,6 +473,7 @@ __all__ = [
     "EvidenceError",
     "EvidenceLog",
     "EvidenceRecord",
+    "NodeConsensusDistanceEvidence",
     "RoundMetricsEvidence",
     "RunFailedEvidence",
     "TransferMessageSentEvidence",
