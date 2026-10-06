@@ -62,3 +62,21 @@ DROMEUS_PRIVATE_AXL_BINARY=/absolute/path/to/axl-node uv run --frozen --no-sync 
 Set `DROMEUS_W1_EVIDENCE_ROOT` to retain compact summaries. The smoke factory uses
 public synthetic data only and creates new synthetic ledgers. It is not a recipe
 for recreating a missing private-data ledger. See [private training usage](../examples/private-training.md).
+
+## M3 divergence monitoring
+
+The W2 detector and runtime seams are covered by:
+
+```bash
+uv run --no-sync pytest tests/unit/telemetry tests/unit/runtime/test_divergence_runtime.py -q
+```
+
+The suite checks plateau/growth/severity, warm-up, patience, recovery, scale collapse,
+reordering/duplicates/gaps, bounded state, strict v2 evidence and four runtime nodes
+with normal, missing, blocked and failed telemetry. The blocked sink holds its lock
+during warning I/O to exercise contention with other event producers.
+
+`benchmarks/m3/replay_divergence.py` replays accepted M2 normalized observations
+without rewriting them. Its explicit candidate thresholds are uncalibrated and the
+report records false warnings and unavailable absolute-scale diagnostics. W3 owns
+threshold calibration; see `examples/divergence-monitoring.md` for policy semantics.
