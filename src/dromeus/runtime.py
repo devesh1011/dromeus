@@ -59,6 +59,7 @@ from dromeus.telemetry.events import BoundedEventSink, EventSink, emit_event
 from dromeus.telemetry.evidence import (
     ConsensusDistanceEvidence,
     ConsensusSketchSentEvidence,
+    NodeConsensusDistanceEvidence,
     RunFailedEvidence,
     append_evidence,
 )
@@ -297,7 +298,7 @@ class NodeRuntime:
         self._transport = transport
         self._event_delivery = (
             BoundedEventSink(event_sink, capacity=256)
-            if draft.divergence_detection is not None
+            if draft.manifest_version == 5
             else None
         )
         self._event_sink = (
@@ -345,6 +346,11 @@ class NodeRuntime:
     @property
     def divergence_dropped(self) -> int:
         return self._divergence_monitor.dropped if self._divergence_monitor else 0
+
+    @property
+    def telemetry_delivery_dropped(self) -> int:
+        """Dropped/failed event deliveries, including runs without a detector."""
+        return self._event_delivery.dropped if self._event_delivery else 0
 
     def _failure_message(self, error: BaseException) -> str:
         return (
@@ -916,6 +922,28 @@ class NodeRuntime:
             distance, ConsensusObservation
         ):
             self._divergence_monitor.observe(distance)
+        if self._draft.manifest_version == 5 and isinstance(
+            distance, ConsensusObservation
+        ):
+            for member in distance.member_distances:
+                if member.public_key == self._local_public_key:
+                    append_evidence(
+                        self._event_sink,
+                        NodeConsensusDistanceEvidence(
+                            run_id=self._result.manifest.run_id,
+                            manifest_hash=self._result.manifest_hash,
+                            node_id=member.public_key,
+                            message_id=f"node-consensus-distance-{distance.round_id}",
+                            round_id=distance.round_id,
+                            absolute_distance=member.absolute_distance,
+                            normalized_distance=member.normalized_distance,
+                            group_normalized_rms=distance.normalized_rms,
+                            mean_sketch_norm=distance.mean_sketch_norm,
+                            denominator_degenerate=distance.denominator_degenerate,
+                            sketch_count=distance.sketch_count,
+                        ),
+                    )
+                    break
         await asyncio.to_thread(
             self._training.run_store.record_consensus,
             round_id=distance.round_id,

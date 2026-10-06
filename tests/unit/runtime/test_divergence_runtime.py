@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import threading
 from collections.abc import Mapping
 from pathlib import Path
@@ -32,15 +33,39 @@ from dromeus.telemetry.evidence import (
     ConsensusObservationEvidence,
     DivergenceStatusEvidence,
     EvidenceLog,
+    NodeConsensusDistanceEvidence,
 )
 
 
-@pytest.mark.parametrize("delivery", ["normal", "missing", "blocked", "failed"])
+class VaryingTrainer(RuntimeTrainer):
+    def __init__(self, multiplier: int) -> None:
+        super().__init__()
+        self.multiplier = multiplier
+
+    def train_local_steps(self, step_count: int) -> None:
+        super().train_local_steps(step_count * self.multiplier)
+
+
+@pytest.mark.parametrize(
+    "delivery,detect",
+    [
+        ("normal", True),
+        ("missing", True),
+        ("blocked", True),
+        ("failed", True),
+        ("normal", False),
+        ("missing", False),
+        ("blocked", False),
+        ("failed", False),
+        ("heterogeneous", False),
+    ],
+)
 def test_warning_delivery_never_stops_four_runtime_nodes(
-    tmp_path: Path, delivery: str
+    tmp_path: Path, delivery: str, detect: bool
 ) -> None:
     release = threading.Event()
     sinks: list[JsonlEventSink] = []
+    measured: list[list[NodeConsensusDistanceEvidence]] = [[] for _ in range(4)]
 
     async def run() -> None:
         manifest = SealedManifest.model_validate(manifest_data())
@@ -66,6 +91,8 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
                 max_lag_rounds=16 if delivery != "missing" else 1,
             ),
         )
+        if not detect:
+            values["divergence_detection"] = None
         draft = DraftRunSpec.model_validate(values)
         network = InMemoryNetwork()
 
@@ -91,6 +118,7 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
             def append(self, record: Mapping[str, object]) -> None:
                 with self.lock:
                     if record.get("event") in {
+                        "node_consensus_distance",
                         "consensus_observation",
                         "divergence_status",
                     }:
@@ -105,7 +133,11 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
         nodes: list[NodeRuntime] = []
         configs: list[TrainingConfig] = []
         for rank in range(4):
-            trainer = RuntimeTrainer()
+            trainer = (
+                VaryingTrainer(rank + 1)
+                if delivery == "heterogeneous"
+                else RuntimeTrainer()
+            )
             transport = Transport(network=network, public_key=f"peer-{rank}")
             sink = JsonlEventSink(tmp_path / f"node-{rank}.jsonl")
             sinks.append(sink)
@@ -156,15 +188,18 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
             )
             assert len(outcome.commits) == 8
             state = nodes[rank].divergence_status
-            assert state is not None and state.detection_round == 7
-            if delivery == "missing":
+            if not detect:
+                assert state is None
+            elif delivery == "missing":
+                assert state is not None and state.detection_round == 7
                 assert state.state == DetectorState.INSUFFICIENT_DATA
                 assert state.missing_rounds > 0
             else:
+                assert state is not None and state.detection_round == 7
                 assert state.state == DetectorState.HEALTHY
             if delivery in {"blocked", "failed"}:
-                assert nodes[rank].divergence_dropped > 0
-            if delivery == "normal":
+                assert nodes[rank].telemetry_delivery_dropped > 0
+            if delivery in {"normal", "heterogeneous", "missing"}:
                 assert any(
                     json.loads(line)["event"] == "node_complete"
                     for line in sinks[rank].path.read_text().splitlines()
@@ -174,23 +209,60 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
                     run_id=draft.run_id,
                     manifest_hash=outcome.formation.manifest_hash,
                 )
-                assert (
-                    len(
-                        [
-                            x
-                            for x in log.records
-                            if isinstance(x, ConsensusObservationEvidence)
-                        ]
+                if delivery == "missing":
+                    assert not any(
+                        isinstance(r, NodeConsensusDistanceEvidence)
+                        for r in log.records
                     )
-                    == 8
-                )
+                    return
+                assert len(
+                    [
+                        x
+                        for x in log.records
+                        if isinstance(x, ConsensusObservationEvidence)
+                    ]
+                ) == (8 if detect else 0)
                 changes = [
                     x for x in log.records if isinstance(x, DivergenceStatusEvidence)
                 ]
-                assert len(changes) == 1 and changes[0].state == "healthy"
+                if detect:
+                    assert len(changes) == 1 and changes[0].state == "healthy"
+                else:
+                    assert not changes
+                distances = [
+                    r
+                    for r in log.records
+                    if isinstance(r, NodeConsensusDistanceEvidence)
+                ]
+                assert {r.round_id for r in distances} == set(range(8))
+                assert all(
+                    r.node_id == f"peer-{rank}" and r.sketch_count == 4
+                    for r in distances
+                )
+                measured[rank] = distances
+                if delivery == "normal":
+                    assert all(
+                        r.absolute_distance == 0 and r.normalized_distance == 0
+                        for r in distances
+                    )
 
         started = asyncio.get_running_loop().time()
         await asyncio.wait_for(asyncio.gather(*(node(i) for i in range(4))), timeout=12)
+
+        if delivery == "heterogeneous":
+            assert any(r.absolute_distance > 0 for records in measured for r in records)
+            for round_id in range(8):
+                points = [
+                    next(r for r in records if r.round_id == round_id)
+                    for records in measured
+                ]
+                assert math.sqrt(
+                    sum(r.normalized_distance**2 for r in points) / 4
+                ) == pytest.approx(points[0].group_normalized_rms)
+                assert all(
+                    r.group_normalized_rms == points[0].group_normalized_rms
+                    for r in points
+                )
 
         if delivery == "blocked":
             assert asyncio.get_running_loop().time() - started < 6
