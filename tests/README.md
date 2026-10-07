@@ -80,3 +80,17 @@ during warning I/O to exercise contention with other event producers.
 without rewriting them. Its explicit candidate thresholds are uncalibrated and the
 report records false warnings and unavailable absolute-scale diagnostics. W3 owns
 threshold calibration; see `examples/divergence-monitoring.md` for policy semantics.
+
+## M3 matched non-private baseline
+
+```bash
+uv run --no-sync pytest tests/benchmarks/test_matched_baseline.py -q
+```
+
+The benchmark seam checks unclipped expected-batch-normalized gradients against
+analytic and direct Opacus references, MSE/cross-entropy, Poisson rounding and
+empty draws, physical splitting, group optimizer state/restore, paired draft
+identity and four in-memory NoLoCo nodes. It exercises RMSprop as an optimizer
+factory outside the private adapter's currently tested allowlist. The digit
+runner's public summary labels epsilon unavailable, not zero. Real AXL/GPU
+execution is a separate gate. See [baseline usage](../benchmarks/m3/README.md).
