@@ -16,6 +16,7 @@ from dromeus.manifests.models import ApplicationTaskContract, DraftRunSpec, Tens
 from dromeus.membership.formation import FormationResult
 from dromeus.persistence.run_store import RunStore
 from dromeus.runtime import MetricsService, TrainingConfig, build_algorithm
+from dromeus.training.optimizer_factory import PrivateOptimizerFactory
 from dromeus.training.privacy import ReservationStore
 from dromeus.training.private_trainer import PrivateTrainer, private_training_definition
 from dromeus.training.state import InitialCheckpoint
@@ -190,6 +191,7 @@ def prepare_private_application(
     research_seed: int | None = None,
     public_evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None,
     optimizer_factory: Callable[[nn.Module], torch.optim.Optimizer] | None = None,
+    optimizer_registration: PrivateOptimizerFactory | None = None,
     evaluation_interval: int = 1,
 ) -> PreparedApplication:
     """Construct the sole supported private workload before formation/output."""
@@ -220,6 +222,7 @@ def prepare_private_application(
         research_seed=research_seed,
         evaluate=public_evaluate,
         optimizer_factory=optimizer_factory,
+        optimizer_registration=optimizer_registration,
     )
     return prepare_application(
         draft=draft,

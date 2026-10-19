@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import math
 from datetime import datetime
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Self, cast
 
 from pydantic import (
     Field,
+    JsonValue,
     StringConstraints,
+    field_validator,
     model_validator,
 )
 
@@ -512,9 +515,93 @@ class PrivateOptimizerSpec(DomainModel):
         return self
 
 
+class OptimizerParameterGroup(DomainModel):
+    """Ordered parameter membership and resolved JSON optimizer options."""
+
+    parameter_names: tuple[Identifier, ...] = Field(min_length=1, max_length=65536)
+    options: dict[str, JsonValue]
+
+    @field_validator("options", mode="before")
+    @classmethod
+    def bounded_json_options(cls, value: object) -> object:
+        """Bound untrusted metadata before Pydantic's recursive JSON parsing."""
+        pending: list[tuple[object, int]] = [(value, 0)]
+        remaining = 4096
+        while pending:
+            item, depth = pending.pop()
+            remaining -= 1
+            if depth > 8 or remaining < 0:
+                raise ValueError(
+                    "optimizer options exceed metadata depth or size limit"
+                )
+            if isinstance(item, dict):
+                mapping = cast(dict[object, object], item)
+                if len(mapping) > remaining:
+                    raise ValueError("optimizer options exceed metadata size limit")
+                for key, child in mapping.items():
+                    if not isinstance(key, str) or not key:
+                        raise ValueError(
+                            "optimizer option keys must be nonempty strings"
+                        )
+                    pending.append((child, depth + 1))
+            elif isinstance(item, list):
+                sequence = cast(list[object], item)
+                if len(sequence) > remaining:
+                    raise ValueError("optimizer options exceed metadata size limit")
+                pending.extend((child, depth + 1) for child in sequence)
+            elif item is not None and type(item) not in (str, bool, int, float):
+                raise ValueError("optimizer options require JSON values")
+            elif isinstance(item, float) and not math.isfinite(item):
+                raise ValueError("optimizer options must contain finite numbers")
+        if len(json.dumps(value, allow_nan=False).encode()) > 65536:
+            raise ValueError("optimizer options exceed metadata size limit")
+        return value
+
+    @model_validator(mode="after")
+    def valid_options(self) -> Self:
+        if len(set(self.parameter_names)) != len(self.parameter_names):
+            raise ValueError("parameter names must be unique and ordered")
+        if "params" in self.options:
+            raise ValueError("parameter membership belongs in parameter_names")
+        learning_rate = self.options.get("lr")
+        if (
+            isinstance(learning_rate, bool)
+            or not isinstance(learning_rate, (int, float))
+            or learning_rate <= 0
+        ):
+            raise ValueError("optimizer lr must be a positive finite scalar")
+        for flag in ("foreach", "fused", "capturable", "differentiable", "maximize"):
+            if flag in self.options and self.options[flag] is not False:
+                raise ValueError(f"optimizer {flag} must be explicitly false")
+        return self
+
+
+class FactoryOptimizerSpec(DomainModel):
+    """Group-agreed implementation and state-validator identity for a factory."""
+
+    kind: Literal["factory-v1"] = "factory-v1"
+    implementation_id: Annotated[
+        str, StringConstraints(min_length=1, max_length=256, pattern=r"^\S+$")
+    ]
+    implementation_hash: Sha256
+    torch_version: PackageVersion
+    groups: tuple[OptimizerParameterGroup, ...] = Field(min_length=1, max_length=32)
+
+    @property
+    def parameter_names(self) -> tuple[str, ...]:
+        return tuple(name for group in self.groups for name in group.parameter_names)
+
+    @model_validator(mode="after")
+    def unique_parameters(self) -> Self:
+        names = self.parameter_names
+        if len(set(names)) != len(names):
+            raise ValueError("optimizer parameter groups must not overlap")
+        return self
+
+
 class PrivateTrainingSpec(DomainModel):
     version: Literal[1] = 1
-    optimizer: PrivateOptimizerSpec
+    optimizer: PrivateOptimizerSpec | FactoryOptimizerSpec
     loss: Literal["mse", "cross_entropy"]
     batch_size: Annotated[int, Field(gt=0)]
     schedule: Literal["constant", "linear_decay"] = "constant"

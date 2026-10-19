@@ -1,7 +1,8 @@
 """Owned Opacus trainer for fixed local tensor datasets and public evaluation.
 
-Application factories and model code are trusted. Only the allowlisted dense FP32
-profile is supported. Raw losses never leave this adapter, including research mode.
+Application factories and model code are trusted. Dense FP32 optimizers use
+legacy presets or a group-bound trusted factory contract. Raw losses never leave
+this adapter, including research mode.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from dromeus.manifests.canonical import canonical_hash, canonical_json, save_safetensors
 from dromeus.manifests.models import (
+    FactoryOptimizerSpec,
     PrivacyPolicy,
     PrivacyReservation,
     PrivateOptimizerSpec,
@@ -25,6 +27,10 @@ from dromeus.manifests.models import (
 )
 from dromeus.training.base import EvaluationResult
 from dromeus.training.model_state import model_state_alias_groups
+from dromeus.training.optimizer_factory import (
+    PrivateOptimizerFactory,
+    SanitizedOptimizer,
+)
 from dromeus.training.privacy import (
     ReservationStore,
     opacus_module,
@@ -40,8 +46,10 @@ def private_training_definition(specification: PrivateTrainingSpec) -> str:
 
 
 def build_private_optimizer(
-    model: nn.Module, spec: PrivateOptimizerSpec
+    model: nn.Module, spec: PrivateOptimizerSpec | FactoryOptimizerSpec
 ) -> torch.optim.Optimizer:
+    if isinstance(spec, FactoryOptimizerSpec):
+        raise ValueError("factory optimizer requires a local optimizer registration")
     parameters = list(model.parameters())
     common: dict[str, Any] = dict(
         lr=spec.learning_rate,
@@ -88,6 +96,7 @@ class PrivateTrainer(PyTorchTrainer):
         research_seed: int | None = None,
         evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None,
         optimizer_factory: Callable[[nn.Module], torch.optim.Optimizer] | None = None,
+        optimizer_registration: PrivateOptimizerFactory | None = None,
     ) -> None:
         if specification.optimizer.torch_version != torch.__version__:
             raise ValueError("private optimizer Torch version mismatch")
@@ -124,6 +133,7 @@ class PrivateTrainer(PyTorchTrainer):
             raise ValueError("cross entropy requires integer class targets")
         self.policy = policy
         self.specification = specification
+        self._specification_hash = canonical_hash(specification)
         self._physical_limit = max_physical_batch_size
         self._failed = False
         self._physical_steps = 0
@@ -132,12 +142,27 @@ class PrivateTrainer(PyTorchTrainer):
         self._raw_model = model_factory()
         self._validate_model()
         spec = specification.optimizer
-        self._base_optimizer = (
-            optimizer_factory(self._raw_model)
-            if optimizer_factory
-            else build_private_optimizer(self._raw_model, spec)
-        )
+        self._optimizer_registration = optimizer_registration
+        if isinstance(spec, FactoryOptimizerSpec):
+            if optimizer_registration is None or optimizer_factory is not None:
+                raise ValueError(
+                    "factory optimizer requires exactly one local registration"
+                )
+            self._base_optimizer = optimizer_registration.build(self._raw_model, spec)
+        else:
+            if optimizer_registration is not None:
+                raise ValueError(
+                    "optimizer registration requires a factory specification"
+                )
+            self._base_optimizer = (
+                optimizer_factory(self._raw_model)
+                if optimizer_factory
+                else build_private_optimizer(self._raw_model, spec)
+            )
         self._validate_optimizer()
+        self._initial_learning_rates = tuple(
+            float(g["lr"]) for g in self._base_optimizer.param_groups
+        )
         self._sampling_generator = (
             None if secure else torch.Generator().manual_seed(int(research_seed or 0))
         )
@@ -160,7 +185,11 @@ class PrivateTrainer(PyTorchTrainer):
             self._private_model, self._optimizer, self._loader = (
                 self._engine.make_private(
                     module=self._raw_model,
-                    optimizer=self._base_optimizer,
+                    optimizer=(
+                        SanitizedOptimizer(self._base_optimizer)
+                        if optimizer_registration
+                        else self._base_optimizer
+                    ),
                     data_loader=loader,
                     noise_multiplier=policy.noise_multiplier,
                     max_grad_norm=policy.max_grad_norm,
@@ -231,9 +260,11 @@ class PrivateTrainer(PyTorchTrainer):
             ):
                 raise ValueError("unsupported private model leaf module")
         named = tuple(model.named_parameters())
+        spec = self.specification.optimizer
         if (
-            tuple(name for name, _ in named)
-            != self.specification.optimizer.parameter_names
+            (set(name for name, _ in named) != set(spec.parameter_names))
+            if isinstance(spec, FactoryOptimizerSpec)
+            else tuple(name for name, _ in named) != spec.parameter_names
         ):
             raise ValueError("private parameter names or order mismatch")
         if any(
@@ -248,6 +279,18 @@ class PrivateTrainer(PyTorchTrainer):
     def _validate_optimizer(self) -> None:
         spec = self.specification.optimizer
         actual = self._base_optimizer
+        if isinstance(spec, FactoryOptimizerSpec):
+            assert self._optimizer_registration is not None
+            self._optimizer_registration.check(
+                actual,
+                self._raw_model,
+                spec,
+                logical_steps=0,
+                horizon=self.policy.max_logical_steps,
+                schedule=self.specification.schedule,
+            )
+            self._parameter_ids = tuple(id(p) for p in self._raw_model.parameters())
+            return
         expected = build_private_optimizer(self._raw_model, spec)
         if type(actual) is not type(expected) or len(actual.param_groups) != 1:
             raise ValueError("unsupported private optimizer class or groups")
@@ -276,21 +319,37 @@ class PrivateTrainer(PyTorchTrainer):
         self._reservation_store.check(self._reservation)
         if self._failed:
             raise ValueError("private trainer failed; start a new accounted run")
+        if canonical_hash(self.specification) != self._specification_hash:
+            raise ValueError("private optimizer specification changed")
         group = self._base_optimizer.param_groups
-        if (
+        spec = self.specification.optimizer
+        if isinstance(spec, FactoryOptimizerSpec):
+            assert self._optimizer_registration is not None
+            self._optimizer_registration.check(
+                self._base_optimizer,
+                self._raw_model,
+                spec,
+                logical_steps=self._logical_steps,
+                horizon=self.policy.max_logical_steps,
+                schedule=self.specification.schedule,
+            )
+        elif (
             len(group) != 1
             or tuple(id(p) for p in group[0]["params"]) != self._parameter_ids
         ):
             raise ValueError("private optimizer parameter groups changed")
-        if {
-            k: v for k, v in group[0].items() if k not in {"params", "lr"}
-        } != self._optimizer_options:
+        if (
+            isinstance(spec, PrivateOptimizerSpec)
+            and {k: v for k, v in group[0].items() if k not in {"params", "lr"}}
+            != self._optimizer_options
+        ):
             raise ValueError("private optimizer options changed")
-        expected_lr = self.specification.optimizer.learning_rate
-        if self.specification.schedule == "linear_decay":
-            expected_lr *= 1 - self._logical_steps / self.policy.max_logical_steps
-        if group[0]["lr"] != expected_lr:
-            raise ValueError("private optimizer learning rate changed")
+        for current, initial in zip(group, self._initial_learning_rates, strict=True):
+            expected_lr = initial
+            if self.specification.schedule == "linear_decay":
+                expected_lr *= 1 - self._logical_steps / self.policy.max_logical_steps
+            if current["lr"] != expected_lr:
+                raise ValueError("private optimizer learning rate changed")
         if (
             self._optimizer.noise_multiplier != self.policy.noise_multiplier
             or self._optimizer.max_grad_norm != self.policy.max_grad_norm
@@ -404,10 +463,14 @@ class PrivateTrainer(PyTorchTrainer):
                 if completed == self._logical_steps + 1:
                     self._logical_steps = completed
                     if self.specification.schedule == "linear_decay":
-                        self._base_optimizer.param_groups[0]["lr"] = (
-                            self.specification.optimizer.learning_rate
-                            * (1 - completed / self.policy.max_logical_steps)
-                        )
+                        for group, initial in zip(
+                            self._base_optimizer.param_groups,
+                            self._initial_learning_rates,
+                            strict=True,
+                        ):
+                            group["lr"] = initial * (
+                                1 - completed / self.policy.max_logical_steps
+                            )
                     self._optimizer.zero_grad()
                     break
                 if completed != self._logical_steps:
@@ -453,7 +516,8 @@ class PrivateTrainer(PyTorchTrainer):
     def _load_private_state(self, arrays: dict[str, np.ndarray]) -> None:
         state = decode_state(arrays)
         self._validate_restore(state)
-        self._base_optimizer.load_state_dict(state["optimizer"])
+        # Restore through Opacus so a factory delegate rebinds replacement groups.
+        self._optimizer.load_state_dict(state["optimizer"])
         self._engine.accountant.history = list(state["accountant"])
         self._logical_steps = state["logical_steps"]
         self._physical_steps = state["physical_steps"]
@@ -511,6 +575,37 @@ class PrivateTrainer(PyTorchTrainer):
             or sum(n for _, _, n in history) != steps
         ):
             raise ValueError("research checkpoint accountant history mismatch")
+        spec = self.specification.optimizer
+        if isinstance(spec, FactoryOptimizerSpec):
+            assert self._optimizer_registration is not None
+            self._optimizer_registration.validate_checkpoint(
+                self._base_optimizer,
+                self._raw_model,
+                spec,
+                state["optimizer"],
+                logical_steps=steps,
+                horizon=self.policy.max_logical_steps,
+                schedule=self.specification.schedule,
+            )
+        else:
+            self._validate_legacy_optimizer_state(state, steps)
+        for key, generator in (
+            ("sampling_rng", self._sampling_generator),
+            ("noise_rng", self._noise_generator),
+        ):
+            if (
+                generator is None
+                or not isinstance(state[key], torch.Tensor)
+                or state[key].dtype != torch.uint8
+                or state[key].shape != generator.get_state().shape
+            ):
+                raise ValueError("research checkpoint RNG mismatch")
+            probe = torch.Generator(device=generator.device)
+            probe.set_state(state[key])
+
+    def _validate_legacy_optimizer_state(
+        self, state: dict[str, Any], steps: int
+    ) -> None:
         optimizer = state["optimizer"]
         if (
             set(optimizer) != {"state", "param_groups"}
@@ -523,12 +618,14 @@ class PrivateTrainer(PyTorchTrainer):
             group[k] != reference[k] for k in reference if k != "lr"
         ):
             raise ValueError("optimizer checkpoint group mismatch")
+        assert isinstance(self.specification.optimizer, PrivateOptimizerSpec)
         learning_rate = self.specification.optimizer.learning_rate
         if self.specification.schedule == "linear_decay":
             learning_rate *= 1 - steps / self.policy.max_logical_steps
         if group["lr"] != learning_rate:
             raise ValueError("checkpoint scheduler mismatch")
         spec = self.specification.optimizer
+        assert isinstance(spec, PrivateOptimizerSpec)
         keys: set[str] = (
             ({"momentum_buffer"} if spec.momentum else set())
             if spec.name == "sgd"
@@ -552,19 +649,6 @@ class PrivateTrainer(PyTorchTrainer):
                     raise ValueError("optimizer checkpoint tensor mismatch")
                 if key == "step" and float(tensor) != steps:
                     raise ValueError("optimizer checkpoint step mismatch")
-        for key, generator in (
-            ("sampling_rng", self._sampling_generator),
-            ("noise_rng", self._noise_generator),
-        ):
-            if (
-                generator is None
-                or not isinstance(state[key], torch.Tensor)
-                or state[key].dtype != torch.uint8
-                or state[key].shape != generator.get_state().shape
-            ):
-                raise ValueError("research checkpoint RNG mismatch")
-            probe = torch.Generator(device=generator.device)
-            probe.set_state(state[key])
 
     def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
         self._check_execution()
