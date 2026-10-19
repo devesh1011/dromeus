@@ -91,6 +91,34 @@ The benchmark seam checks unclipped expected-batch-normalized gradients against
 analytic and direct Opacus references, MSE/cross-entropy, Poisson rounding and
 empty draws, physical splitting, group optimizer state/restore, paired draft
 identity and four in-memory NoLoCo nodes. It exercises RMSprop as an optimizer
-factory outside the private adapter's currently tested allowlist. The digit
+factory alongside the private adapter's explicit registration path. The digit
 runner's public summary labels epsilon unavailable, not zero. Real AXL/GPU
 execution is a separate gate. See [baseline usage](../benchmarks/m3/README.md).
+
+### Group-selected private optimizers
+
+```bash
+uv run --no-sync pytest tests/unit/manifests/test_factory_optimizer_manifest.py tests/unit/training/test_factory_optimizer.py tests/unit/runtime/test_factory_private_application.py -q
+```
+
+Factory profiles bind implementation/state-validator identity and complete named
+parameter groups/options. Coverage includes RMSprop, eager Adagrad, a custom
+multi-group optimizer, direct Opacus trajectories, raw-gradient attribute
+shielding, logical/physical steps, malformed restore, closure and identity
+rejection, failed-step reservations, local secure mode (when CSPRNG is installed)
+and four in-memory NoLoCo nodes. Existing private presets retain their conformance
+and canonical representation. See [optimizer registration](../examples/private-training.md).
+
+### Calibration and final evidence
+
+```bash
+uv run --frozen --no-sync pytest tests/benchmarks/test_freeze_data.py tests/benchmarks/test_final_runner.py tests/benchmarks/test_calibrate_detector.py tests/benchmarks/test_final_report.py tests/benchmarks/test_final_export_audit.py -q
+```
+
+These seams cover split separation and capacity, immutable input contracts,
+private/fault/baseline execution, actual local sampling under unequal sizes,
+calibration versus held-out seed separation, fault/configuration binding,
+complete-node/round reconciliation, matched compression, label-skew provenance,
+reservation chains and independent export evaluation. Synthetic report fixtures
+verify the tools; actual campaign artifacts establish the measured results.
+See [the campaign guide](../benchmarks/m3/final-campaign.md).
