@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "nodes": [
+    {"node_id": "mnist", "sample_count": 3000, "prior_history": []},
+    {"node_id": "usps", "sample_count": 3000, "prior_history": []},
+    {"node_id": "svhn", "sample_count": 3000, "prior_history": []},
+    {"node_id": "optdigits", "sample_count": 3000, "prior_history": []}
+  ],
+  "batch_size": 64,
+  "noise_multipliers": [0.5, 1.0, 2.0, 4.0],
+  "logical_step_horizons": [250, 750, 1500],
+  "repetitions": 3,
+  "delta": 0.00001,
+  "delta_rationale": "Illustrative public-digit pilot, not a final freeze. With N=3000 per node, delta*N=0.03 and delta<1/N. Empty histories model prospective DP experiments in isolation; they do not cover previous non-private releases or establish privacy of the already public datasets.",
+  "randomness_profile": "reproducible_public_benchmark",
+  "epsilon_limit": null,
+  "prv_epsilon_error": 0.01,
+  "prv_delta_error_ratio": 0.001
+}
