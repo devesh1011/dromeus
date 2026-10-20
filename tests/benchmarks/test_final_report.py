@@ -932,3 +932,31 @@ def test_rdp_roundoff_and_exact_mechanism_checks_remain_strict() -> None:
     result["accounting_history"][0][1] += 1e-12
     with pytest.raises(ValueError, match="sampling or mechanism history"):
         reconcile_accounting(result, manifest, spec)
+
+
+def test_readable_report_handles_undefined_detector_precision(tmp_path: Path) -> None:
+    from benchmarks.m3.final_report import write_readme
+
+    report: dict[str, Any] = {
+        "utility_settings": [],
+        "limitations": [],
+        "export_audit": {"status": "unverified"},
+        "detector": {
+            "status": "verified_evidence",
+            "assessment": {
+                "live_metrics": {
+                    "false_alerts": 0,
+                    "healthy_runs_with_false_alerts": [],
+                    "healthy_runs": 2,
+                    "detected_fault_nodes": 0,
+                    "fault_nodes": 0,
+                    "alert_precision": None,
+                    "fault_node_recall": None,
+                }
+            },
+        },
+    }
+    write_readme(tmp_path, report)
+    text = (tmp_path / "README.md").read_text()
+    assert "Alert precision N/A; fault-monitor recall N/A" in text
+    assert "does not certify warning quality" in text
