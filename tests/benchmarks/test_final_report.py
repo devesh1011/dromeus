@@ -839,3 +839,96 @@ def test_runtime_workers_must_be_distinct(field: str) -> None:
     nodes[1]["runtime_provenance"][field] = nodes[0]["runtime_provenance"][field]
     with pytest.raises(ValueError, match="distinct"):
         verify_worker_identities(nodes)
+
+
+def _private_accounting_fixture() -> tuple[dict[str, Any], Any, Any]:
+    from benchmarks.m3.final_report import expected_drafts
+    from dromeus.manifests.canonical import canonical_hash
+    from dromeus.manifests.models import PrivacyReservation, SealedManifest
+    from dromeus.training.privacy import privacy_epsilon
+
+    spec = _spec()
+    _, draft = expected_drafts(spec)
+    manifest = SealedManifest.model_validate(
+        {
+            **draft.model_dump(),
+            "draft_hash": canonical_hash(draft),
+            "participants": [
+                {"public_key": f"peer-{i}", "node_index": i} for i in range(4)
+            ],
+            "initial_checkpoint_hash": "d" * 64,
+            "tensor_schema": {
+                "tensors": [{"name": "weight", "dtype": "float32", "shape": [1]}]
+            },
+        }
+    )
+    policy = manifest.privacy
+    assert policy is not None
+    q = 1 / 47
+    history = ((1.0, q, 750),)
+    prv = privacy_epsilon(history, policy)
+    rdp = privacy_epsilon(history, policy, accountant="rdp")
+    reservation = PrivacyReservation(
+        run_id=spec.run_id,
+        policy_hash=canonical_hash(policy),
+        sample_rate=q,
+        noise_multiplier=1.0,
+        logical_steps=750,
+    )
+    result = {
+        "rank": 0,
+        "training_records": 3000,
+        "sample_rate": q,
+        "expected_batch_size": 63,
+        "physical_steps": 1500,
+        "accounting_history": [[1.0, q, 750]],
+        "accounting": {
+            "privacy_epsilon": prv,
+            "rdp_epsilon": rdp,
+            "logical_steps": 750,
+            "reserved_steps": 750,
+            "delta": policy.delta,
+            "randomness_profile": policy.randomness_profile,
+        },
+        "prior_reservations": [],
+        "reservations": [reservation.model_dump(mode="json")],
+        "cumulative_reserved_prv_epsilon": prv,
+        "cumulative_reserved_rdp_epsilon": rdp,
+    }
+    return result, manifest, spec
+
+
+def test_prv_reporting_roundoff_is_explicit_and_preserves_recorded_values() -> None:
+    from benchmarks.m3.final_report import reconcile_accounting
+
+    result, manifest, spec = _private_accounting_fixture()
+    computed = result["cumulative_reserved_prv_epsilon"]
+    result["cumulative_reserved_prv_epsilon"] += 1.5e-7
+    actual = reconcile_accounting(result, manifest, spec)
+    assert (
+        actual["cumulative_reserved_prv_epsilon"]
+        == result["cumulative_reserved_prv_epsilon"]
+    )
+    check = actual["accounting_reconciliation"]["cumulative_reserved_prv_epsilon"]
+    assert check["recorded"] == result["cumulative_reserved_prv_epsilon"]
+    assert check["recomputed"] == computed
+    assert check["absolute_difference"] == pytest.approx(1.5e-7)
+    assert check["absolute_tolerance"] == 1e-6
+    assert check["relative_tolerance"] == 1e-9
+    assert len(actual["accounting_reconciliation"]) == 4
+    result["cumulative_reserved_prv_epsilon"] = computed + 2e-6
+    with pytest.raises(ValueError, match="recomputed cumulative_reserved_prv_epsilon"):
+        reconcile_accounting(result, manifest, spec)
+
+
+def test_rdp_roundoff_and_exact_mechanism_checks_remain_strict() -> None:
+    from benchmarks.m3.final_report import reconcile_accounting
+
+    result, manifest, spec = _private_accounting_fixture()
+    result["cumulative_reserved_rdp_epsilon"] += 1.5e-7
+    with pytest.raises(ValueError, match="recomputed cumulative_reserved_rdp_epsilon"):
+        reconcile_accounting(result, manifest, spec)
+    result, manifest, spec = _private_accounting_fixture()
+    result["accounting_history"][0][1] += 1e-12
+    with pytest.raises(ValueError, match="sampling or mechanism history"):
+        reconcile_accounting(result, manifest, spec)
