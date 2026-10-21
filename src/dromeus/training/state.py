@@ -40,20 +40,21 @@ def create_initial_checkpoint(
     *,
     model: nn.Module,
     model_definition: str,
+    exchange_names: tuple[str, ...] | None = None,
 ) -> InitialCheckpoint:
     """Write and describe the canonical checkpoint before formation."""
     path.parent.mkdir(parents=True, exist_ok=True)
     _save_checkpoint(
         {
             name: value.detach().cpu().contiguous().clone()
-            for name, value in floating_model_state(model).items()
+            for name, value in floating_model_state(model, exchange_names).items()
         },
         str(path),
         metadata={"model_definition": model_definition},
     )
     return InitialCheckpoint(
         path=path,
-        tensor_schema=tensor_schema_for_model(model),
+        tensor_schema=tensor_schema_for_model(model, exchange_names),
         sha256=checkpoint_hash(path),
     )
 

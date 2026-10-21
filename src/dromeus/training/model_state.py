@@ -20,19 +20,30 @@ _TORCH_TO_SCHEMA_DTYPE: dict[
 }
 
 
-def floating_model_state(model: nn.Module) -> dict[str, Tensor]:
+def floating_model_state(
+    model: nn.Module, names: tuple[str, ...] | None = None
+) -> dict[str, Tensor]:
     """Return exchangeable floating parameters and model buffers."""
-    return {
-        name: value
-        for name, value in model.state_dict().items()
-        if value.is_floating_point()
-    }
+    if names is None:
+        return {
+            name: value
+            for name, value in model.state_dict().items()
+            if value.is_floating_point()
+        }
+    # The v6 exchange inventory is registered parameters, never an application
+    # override's serialization output or mutable auxiliary model state.
+    state = dict(model.named_parameters(remove_duplicate=False))
+    if not names or len(set(names)) != len(names) or not set(names) <= state.keys():
+        raise ValueError("invalid declared exchange state")
+    return {name: state[name] for name in names}
 
 
-def tensor_schema_for_model(model: nn.Module) -> TensorSchema:
+def tensor_schema_for_model(
+    model: nn.Module, names: tuple[str, ...] | None = None
+) -> TensorSchema:
     """Derive the canonical wire schema from exchangeable model state."""
     tensors: list[TensorSpec] = []
-    for name, value in floating_model_state(model).items():
+    for name, value in floating_model_state(model, names).items():
         dtype = _TORCH_TO_SCHEMA_DTYPE.get(value.dtype)
         if dtype is None:
             raise ValueError(f"unsupported model state dtype: {value.dtype}")
