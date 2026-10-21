@@ -57,7 +57,7 @@ class _ActualGroup:
 def _groups(
     optimizer: torch.optim.Optimizer, model: nn.Module
 ) -> tuple[_ActualGroup, ...]:
-    named = tuple(model.named_parameters())
+    named = tuple((name, p) for name, p in model.named_parameters() if p.requires_grad)
     names = {id(parameter): name for name, parameter in named}
     seen: set[int] = set()
     result: list[_ActualGroup] = []

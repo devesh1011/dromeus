@@ -24,6 +24,7 @@ from dromeus.manifests.models import (
     PrivacyReservation,
     PrivateOptimizerSpec,
     PrivateTrainingSpec,
+    TaskTrainingSpec,
 )
 from dromeus.training.base import EvaluationResult
 from dromeus.training.model_state import model_state_alias_groups
@@ -37,11 +38,22 @@ from dromeus.training.privacy import (
     privacy_epsilon,
     reserve_horizon,
 )
+from dromeus.training.private_data import make_task_loader
+from dromeus.training.private_model import (
+    ModelStateGuard,
+    ensure_grad_samples,
+    registered_model_state,
+    tensor_digest,
+    validate_private_model,
+)
 from dromeus.training.private_state import decode_state, encode_state
+from dromeus.training.task import TrainingTask, validate_record_losses
 from dromeus.training.trainer import PyTorchTrainer
 
 
-def private_training_definition(specification: PrivateTrainingSpec) -> str:
+def private_training_definition(
+    specification: PrivateTrainingSpec | TaskTrainingSpec,
+) -> str:
     return canonical_json(specification).decode()
 
 
@@ -50,7 +62,7 @@ def build_private_optimizer(
 ) -> torch.optim.Optimizer:
     if isinstance(spec, FactoryOptimizerSpec):
         raise ValueError("factory optimizer requires a local optimizer registration")
-    parameters = list(model.parameters())
+    parameters = [p for p in model.parameters() if p.requires_grad]
     common: dict[str, Any] = dict(
         lr=spec.learning_rate,
         weight_decay=spec.weight_decay,
@@ -84,11 +96,12 @@ class PrivateTrainer(PyTorchTrainer):
     def __init__(
         self,
         *,
-        model_factory: Callable[[], nn.Module],
-        inputs: torch.Tensor,
-        targets: torch.Tensor,
+        model_factory: Callable[[], nn.Module] | None = None,
+        inputs: torch.Tensor | None = None,
+        targets: torch.Tensor | None = None,
+        task: TrainingTask | None = None,
         policy: PrivacyPolicy,
-        specification: PrivateTrainingSpec,
+        specification: PrivateTrainingSpec | TaskTrainingSpec,
         run_id: str,
         local_data_identity: str,
         reservation_store: ReservationStore,
@@ -114,23 +127,37 @@ class PrivateTrainer(PyTorchTrainer):
             and specification.evaluation_provenance != "public_fixed_holdout"
         ):
             raise ValueError("evaluation requires public fixed holdout provenance")
-        if (
-            inputs.ndim < 2
-            or inputs.dtype != torch.float32
-            or len(inputs) != len(targets)
-            or not len(inputs)
-        ):
-            raise ValueError("fixed FP32 tensor dataset required")
-        if not torch.isfinite(inputs).all() or not torch.isfinite(targets).all():
-            raise ValueError("invalid local data")
-        if specification.loss == "mse" and (
-            targets.dtype != torch.float32 or targets.ndim < 2
-        ):
-            raise ValueError("MSE requires FP32 targets with batch and feature axes")
-        if specification.loss == "cross_entropy" and (
-            targets.dtype != torch.int64 or targets.ndim != 1
-        ):
-            raise ValueError("cross entropy requires integer class targets")
+        self._task = task
+        self._model_guard: ModelStateGuard | None = None
+        if isinstance(specification, TaskTrainingSpec):
+            if (
+                task is None
+                or model_factory is not None
+                or inputs is not None
+                or targets is not None
+            ):
+                raise ValueError(
+                    "generic private preparation requires exactly one task"
+                )
+            if specification.sampling != "poisson":
+                raise ValueError("private tasks require Poisson sampling")
+            task.check_definition(specification)
+            model_factory = task.model_factory
+            optimizer_registration = task.optimizer_registration
+            evaluate = task.public_evaluate
+            if (
+                evaluate is not None
+                and specification.evaluation_provenance != "public_fixed_holdout"
+            ):
+                raise ValueError("evaluation requires public fixed holdout provenance")
+        elif task is not None:
+            raise ValueError("generic task requires version 2 training specification")
+        else:
+            if model_factory is None or inputs is None or targets is None:
+                raise ValueError(
+                    "legacy private preparation requires tensor inputs and model"
+                )
+            self._validate_tensor_data(inputs, targets, specification)
         self.policy = policy
         self.specification = specification
         self._specification_hash = canonical_hash(specification)
@@ -139,6 +166,7 @@ class PrivateTrainer(PyTorchTrainer):
         self._physical_steps = 0
         self._logical_steps = 0
         self._reservation_store = reservation_store
+        assert model_factory is not None
         self._raw_model = model_factory()
         self._validate_model()
         spec = specification.optimizer
@@ -172,12 +200,22 @@ class PrivateTrainer(PyTorchTrainer):
             if secure
             else torch.Generator(device=device).manual_seed(int(research_seed or 0) + 1)
         )
-        loader = DataLoader(
-            TensorDataset(inputs.detach().clone(), targets.detach().clone()),
-            batch_size=specification.batch_size,
-            num_workers=0,
-            generator=self._sampling_generator,
-        )
+        if task is None:
+            assert inputs is not None and targets is not None
+            loader = DataLoader(
+                TensorDataset(inputs.detach().clone(), targets.detach().clone()),
+                batch_size=specification.batch_size,
+                num_workers=0,
+                generator=self._sampling_generator,
+            )
+        else:
+            loader = make_task_loader(
+                task.dataset,
+                task.batch_adapter,
+                batch_size=specification.batch_size,
+                generator=self._sampling_generator,
+            )
+        self._population_size = len(cast(Any, loader.dataset))
         try:
             self._engine = opacus_module().PrivacyEngine(
                 accountant="prv", secure_mode=secure
@@ -185,20 +223,20 @@ class PrivateTrainer(PyTorchTrainer):
             self._private_model, self._optimizer, self._loader = (
                 self._engine.make_private(
                     module=self._raw_model,
-                    optimizer=(
-                        SanitizedOptimizer(self._base_optimizer)
-                        if optimizer_registration
-                        else self._base_optimizer
-                    ),
+                    optimizer=SanitizedOptimizer(self._base_optimizer)
+                    if optimizer_registration
+                    else self._base_optimizer,
                     data_loader=loader,
                     noise_multiplier=policy.noise_multiplier,
                     max_grad_norm=policy.max_grad_norm,
-                    poisson_sampling=True,
+                    poisson_sampling=task is None,
                     clipping="flat",
                     grad_sample_mode="hooks",
                     noise_generator=self._noise_generator,
                 )
             )
+            if task is not None:
+                self._private_model.forbid_grad_accumulation()
         except Exception:
             raise ValueError(
                 "private preparation failed; verify model and secure RNG installation"
@@ -206,7 +244,7 @@ class PrivateTrainer(PyTorchTrainer):
         self._accountant_hook = self._optimizer.step_hook
         self._noise_stream = self._optimizer.generator
         self._sampling_stream = self._loader.batch_sampler.generator
-        self._sample_rate = float(self._loader.sample_rate)
+        self._sample_rate = 1 / len(self._loader)
         self._reservation = PrivacyReservation(
             run_id=run_id,
             policy_hash=canonical_hash(policy),
@@ -219,7 +257,9 @@ class PrivateTrainer(PyTorchTrainer):
             canonical_json(policy)
             + canonical_json(specification)
             + local_data_identity.encode()
-            + str((len(inputs), self._sample_rate, max_physical_batch_size)).encode()
+            + str(
+                (self._population_size, self._sample_rate, max_physical_batch_size)
+            ).encode()
         ).hexdigest()
         super().__init__(
             model=self._raw_model,
@@ -228,10 +268,56 @@ class PrivateTrainer(PyTorchTrainer):
             load_state=self._load_private_state,
             state_identity=identity,
             evaluate=evaluate,
+            exchange_names=specification.trainable_parameter_names
+            if isinstance(specification, TaskTrainingSpec)
+            else None,
         )
+
+    @staticmethod
+    def _validate_tensor_data(
+        inputs: torch.Tensor, targets: torch.Tensor, specification: PrivateTrainingSpec
+    ) -> None:
+        if (
+            inputs.ndim < 2
+            or inputs.dtype != torch.float32
+            or len(inputs) != len(targets)
+            or not len(inputs)
+        ):
+            raise ValueError("fixed FP32 tensor dataset required")
+        if not torch.isfinite(inputs).all() or not torch.isfinite(targets).all():
+            raise ValueError("invalid local data")
+        if specification.loss == "mse" and (
+            targets.dtype != torch.float32 or targets.ndim < 2
+        ):
+            raise ValueError("MSE requires FP32 targets with batch and feature axes")
+        if specification.loss == "cross_entropy" and (
+            targets.dtype != torch.int64 or targets.ndim != 1
+        ):
+            raise ValueError("cross entropy requires integer class targets")
 
     def _validate_model(self) -> None:
         model = self._raw_model
+        if isinstance(self.specification, TaskTrainingSpec):
+            assert self._task is not None
+            report = validate_private_model(
+                model,
+                self._task.loss_per_record,
+                self._task.batch_adapter,
+                self._task.batch_adapter.example,
+            )
+            for name in (
+                "trainable_parameter_names",
+                "parameter_aliases",
+                "public_buffer_hashes",
+                "frozen_parameter_hashes",
+                "gradient_backend",
+            ):
+                if getattr(report, name) != getattr(self.specification, name):
+                    raise ValueError(
+                        f"model {name} differs from shared task specification"
+                    )
+            self._model_guard = ModelStateGuard(model, report)
+            return
         # Buffers and aliases may carry unaudited statistics or alter clipping.
         if list(model.buffers()) or model_state_alias_groups(model):
             raise ValueError("private model buffers and aliases are unsupported")
@@ -305,7 +391,7 @@ class PrivateTrainer(PyTorchTrainer):
                 "private optimizer options differ from shared specification"
             )
         if [id(p) for p in group["params"]] != [
-            id(p) for p in self._raw_model.parameters()
+            id(p) for p in self._raw_model.parameters() if p.requires_grad
         ]:
             raise ValueError(
                 "private optimizer must cover the complete ordered parameter group"
@@ -333,9 +419,8 @@ class PrivateTrainer(PyTorchTrainer):
                 horizon=self.policy.max_logical_steps,
                 schedule=self.specification.schedule,
             )
-        elif (
-            len(group) != 1
-            or tuple(id(p) for p in group[0]["params"]) != self._parameter_ids
+        elif len(group) != 1 or tuple(id(p) for p in group[0]["params"]) != tuple(
+            id(p) for p in self._raw_model.parameters() if p.requires_grad
         ):
             raise ValueError("private optimizer parameter groups changed")
         if (
@@ -356,7 +441,8 @@ class PrivateTrainer(PyTorchTrainer):
         ):
             raise ValueError("private mechanism changed")
         if (
-            self._loader.sample_rate != self._sample_rate
+            1 / len(self._loader) != self._sample_rate
+            or len(self._loader.dataset) != self._population_size
             or self._optimizer.expected_batch_size
             != int(len(self._loader.dataset) * self._sample_rate)
         ):
@@ -374,6 +460,12 @@ class PrivateTrainer(PyTorchTrainer):
             raise ValueError("private randomness, sampling or accountant hook changed")
         if tuple(id(p) for p in self._raw_model.parameters()) != self._parameter_ids:
             raise ValueError("private model parameters changed")
+        if self._model_guard is not None:
+            self._model_guard.check()
+            assert self._task is not None and isinstance(
+                self.specification, TaskTrainingSpec
+            )
+            self._task.check_definition(self.specification)
         if any(
             s != self.policy.noise_multiplier or q != self._sample_rate
             for s, q, _ in self.accounting_history
@@ -432,32 +524,94 @@ class PrivateTrainer(PyTorchTrainer):
         # Each logical call consumes one independent Poisson draw. No partially
         # consumed loader iterator survives a boundary or research checkpoint.
         before = self._logical_steps
+        cpu_rng = torch.get_rng_state() if self._task is not None else None
+        device = next(self._raw_model.parameters()).device
+        cuda_rng = (
+            torch.cuda.get_rng_state(device)
+            if self._task is not None and device.type == "cuda"
+            else None
+        )
+        expected_parameters = (
+            {
+                name: p.detach().clone()
+                for name, p in self._raw_model.named_parameters()
+                if p.requires_grad
+            }
+            if self._task is not None
+            else {}
+        )
         with manager(
             data_loader=self._loader,
             max_physical_batch_size=self._physical_limit,
             optimizer=self._optimizer,
         ) as physical_loader:
-            for inputs, targets in physical_loader:
+            for batch in physical_loader:
                 self._optimizer.zero_grad()
                 device = next(self._raw_model.parameters()).device
-                prediction = self._private_model(inputs.to(device))
-                targets = targets.to(device)
-                if self.specification.loss == "mse":
-                    loss = (
-                        (prediction - targets).square().reshape(len(inputs), -1).mean()
-                        if len(inputs)
-                        else prediction.sum()
-                    )
+                if self._task is not None:
+                    if any(
+                        not torch.equal(p.detach(), expected_parameters[name])
+                        for name, p in self._raw_model.named_parameters()
+                        if p.requires_grad
+                    ):
+                        raise ValueError("task data callback mutated model parameters")
+                    batch = self._task.batch_adapter.to_device(batch, device)
+                    count = self._task.batch_adapter.size(batch)
+                    if count:
+                        losses = self._task.loss_per_record(self._private_model, batch)
+                        validate_record_losses(losses, count)
+                        cast(Any, losses.mean()).backward()
+                        if any(
+                            not torch.equal(p.detach(), expected_parameters[name])
+                            for name, p in self._raw_model.named_parameters()
+                            if p.requires_grad
+                        ):
+                            raise ValueError(
+                                "task forward/backward mutated model parameters"
+                            )
+                    ensure_grad_samples(self._raw_model, count)
+                    assert self._model_guard is not None
+                    self._model_guard.check()
                 else:
-                    loss = (
-                        nn.functional.cross_entropy(
-                            prediction, targets, reduction="mean"
+                    assert isinstance(self.specification, PrivateTrainingSpec)
+                    inputs, targets = batch
+                    prediction = self._private_model(inputs.to(device))
+                    targets = targets.to(device)
+                    if self.specification.loss == "mse":
+                        loss = (
+                            (prediction - targets)
+                            .square()
+                            .reshape(len(inputs), -1)
+                            .mean()
+                            if len(inputs)
+                            else prediction.sum()
                         )
-                        if len(inputs)
-                        else prediction.sum()
-                    )
-                cast(Any, loss).backward()
+                    else:
+                        loss = (
+                            nn.functional.cross_entropy(
+                                prediction, targets, reduction="mean"
+                            )
+                            if len(inputs)
+                            else prediction.sum()
+                        )
+                    cast(Any, loss).backward()
                 self._optimizer.step()
+                if self._task is not None:
+                    expected_parameters = {
+                        name: p.detach().clone()
+                        for name, p in self._raw_model.named_parameters()
+                        if p.requires_grad
+                    }
+                if (
+                    cpu_rng is not None
+                    and not torch.equal(cpu_rng, torch.get_rng_state())
+                ) or (
+                    cuda_rng is not None
+                    and not torch.equal(cuda_rng, torch.cuda.get_rng_state(device))
+                ):
+                    raise ValueError(
+                        "task data/model callbacks consumed undeclared RNG"
+                    )
                 self._physical_steps += 1
                 completed = sum(n for _, _, n in self.accounting_history)
                 if completed == self._logical_steps + 1:
@@ -492,6 +646,16 @@ class PrivateTrainer(PyTorchTrainer):
 
     def export_model(self, path: Path) -> None:
         """Release only sanitized model tensors; no training state or metadata."""
+        if self._task is not None:
+            self._check_execution()
+            save_safetensors(
+                {
+                    name: value.detach().cpu().numpy().copy()
+                    for name, value in registered_model_state(self._raw_model).items()
+                },
+                str(path),
+            )
+            return
         save_safetensors(self.weights(), str(path))
 
     def _save_private_state(self) -> dict[str, np.ndarray]:
@@ -631,12 +795,11 @@ class PrivateTrainer(PyTorchTrainer):
             if spec.name == "sgd"
             else {"step", "exp_avg", "exp_avg_sq"}
         )
-        ids: set[int] = (
-            set(range(len(self._parameter_ids))) if steps and keys else set()
-        )
+        trainable = [p for p in self._raw_model.parameters() if p.requires_grad]
+        ids: set[int] = set(range(len(trainable))) if steps and keys else set()
         if set(optimizer["state"]) != ids:
             raise ValueError("optimizer checkpoint state coverage mismatch")
-        for index, parameter in enumerate(self._raw_model.parameters()):
+        for index, parameter in enumerate(trainable):
             values = optimizer["state"].get(index, {})
             if set(values) != keys and index in ids:
                 raise ValueError("optimizer checkpoint state fields mismatch")
@@ -668,4 +831,19 @@ class PrivateTrainer(PyTorchTrainer):
             raise ValueError("checkpoint counters disagree")
         if "meta.loss" not in state or state["meta.loss"].size:
             raise ValueError("private checkpoint contains raw loss")
+        if isinstance(self.specification, TaskTrainingSpec):
+            immutable = {
+                **self.specification.public_buffer_hashes,
+                **self.specification.frozen_parameter_hashes,
+            }
+            persistent = registered_model_state(self._raw_model)
+            for name, expected in immutable.items():
+                if name not in persistent:
+                    continue
+                value = state.get(f"model.{name}")
+                if (
+                    value is None
+                    or tensor_digest(torch.tensor(value.copy())) != expected
+                ):
+                    raise ValueError("checkpoint changed immutable public model state")
         super().load_checkpoint_tensors(state)

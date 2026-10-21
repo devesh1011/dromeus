@@ -61,12 +61,14 @@ class PyTorchTrainer:
         load_state: LoadState,
         state_identity: str,
         evaluate: Evaluate | None = None,
+        exchange_names: tuple[str, ...] | None = None,
     ) -> None:
         if not state_identity.strip():
             raise ValueError(
                 "state identity must bind local data and training configuration"
             )
         self._model = model
+        self._exchange_names = exchange_names
         self._train_step = train_step
         self._evaluate = evaluate
         self._save_state = save_state
@@ -75,7 +77,7 @@ class PyTorchTrainer:
             hashlib.sha256(state_identity.encode()).digest(), dtype=np.uint8
         ).copy()
         self._contract_identity: str | None = None
-        values = floating_model_state(model)
+        values = floating_model_state(model, exchange_names)
         if not values:
             raise ValueError("model must expose floating exchangeable state")
         if any(
@@ -84,7 +86,7 @@ class PyTorchTrainer:
             raise ValueError(
                 "exchange requires non-scalar FP32 state; use shape [1] for scalars"
             )
-        self._schema = tensor_schema_for_model(model)
+        self._schema = tensor_schema_for_model(model, exchange_names)
         self._aliases = model_state_alias_groups(model)
         self._steps = 0
         self._local_loss: float | None = None
@@ -119,12 +121,14 @@ class PyTorchTrainer:
 
     def weights(self) -> dict[str, np.ndarray]:
         self._validate_alias_layout()
-        if tensor_schema_for_model(self._model) != self._schema:
+        if tensor_schema_for_model(self._model, self._exchange_names) != self._schema:
             raise ValueError("application changed its model tensor schema")
         return _copy_state(
             {
                 name: value.detach().cpu().numpy()
-                for name, value in floating_model_state(self._model).items()
+                for name, value in floating_model_state(
+                    self._model, self._exchange_names
+                ).items()
             }
         )
 
@@ -133,7 +137,9 @@ class PyTorchTrainer:
         candidate = self._validate_like(weights, current)
         self._validate_alias_values(candidate)
         with torch.no_grad():
-            for name, target in floating_model_state(self._model).items():
+            for name, target in floating_model_state(
+                self._model, self._exchange_names
+            ).items():
                 target.copy_(_from_numpy(candidate[name]).to(target.device))
 
     def train_local_steps(self, step_count: int) -> None:
@@ -164,7 +170,10 @@ class PyTorchTrainer:
     ) -> InitialCheckpoint:
         self.weights()
         return create_initial_checkpoint(
-            path, model=self._model, model_definition=model_definition
+            path,
+            model=self._model,
+            model_definition=model_definition,
+            exchange_names=self._exchange_names,
         )
 
     def load_checkpoint(self, path: Path) -> None:
@@ -262,12 +271,10 @@ class PyTorchTrainer:
 
     def _validate_alias_values(self, values: Mapping[str, np.ndarray]) -> None:
         for group in self._aliases:
-            if (
-                group[0] not in values
-            ):  # Integer buffers do not participate in exchange.
-                continue
-            if any(
-                not np.array_equal(values[group[0]], values[name]) for name in group[1:]
+            present = [name for name in group if name in values]
+            if present and any(
+                not np.array_equal(values[present[0]], values[name])
+                for name in present[1:]
             ):
                 raise ValueError(f"conflicting values for tied model aliases: {group}")
 
