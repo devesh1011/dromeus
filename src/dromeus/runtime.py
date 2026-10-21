@@ -298,7 +298,7 @@ class NodeRuntime:
         self._transport = transport
         self._event_delivery = (
             BoundedEventSink(event_sink, capacity=256)
-            if draft.manifest_version == 5
+            if draft.manifest_version in (5, 6)
             else None
         )
         self._event_sink = (
@@ -922,7 +922,7 @@ class NodeRuntime:
             distance, ConsensusObservation
         ):
             self._divergence_monitor.observe(distance)
-        if self._draft.manifest_version == 5 and isinstance(
+        if self._draft.manifest_version in (5, 6) and isinstance(
             distance, ConsensusObservation
         ):
             for member in distance.member_distances:

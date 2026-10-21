@@ -609,6 +609,71 @@ class PrivateTrainingSpec(DomainModel):
     evaluation_provenance: Literal["public_fixed_holdout", "disabled"] = "disabled"
 
 
+class TaskTrainingSpec(DomainModel):
+    """Shared semantics for an application-defined finite-record training task."""
+
+    version: Literal[2] = 2
+    optimizer: PrivateOptimizerSpec | FactoryOptimizerSpec
+    batch_size: Annotated[int, Field(gt=0)]
+    sampling: Literal["poisson", "shuffle"] = "poisson"
+    schedule: Literal["constant", "linear_decay"] = "constant"
+    initialization: Literal["public_untrained", "public_pretrained"] = (
+        "public_untrained"
+    )
+    evaluation_provenance: Literal["public_fixed_holdout", "disabled"] = "disabled"
+    task_definition_hash: Sha256
+    implementation_hash: Sha256
+    batch_definition_hash: Sha256
+    loss_definition_hash: Sha256
+    record_unit: Annotated[
+        str, StringConstraints(min_length=1, max_length=256, pattern=r"\S")
+    ]
+    gradient_backend: Literal["opacus_hooks_v1"] = "opacus_hooks_v1"
+    trainable_parameter_names: tuple[Identifier, ...] = Field(
+        min_length=1, max_length=65536
+    )
+    parameter_aliases: tuple[tuple[Identifier, ...], ...] = Field(
+        default=(), max_length=65536
+    )
+    public_buffer_hashes: dict[Identifier, Sha256] = Field(
+        default_factory=dict, max_length=65536
+    )
+    frozen_parameter_hashes: dict[Identifier, Sha256] = Field(
+        default_factory=dict, max_length=65536
+    )
+
+    @model_validator(mode="after")
+    def parameter_state_is_unambiguous(self) -> Self:
+        trainable = set(self.trainable_parameter_names)
+        if len(trainable) != len(self.trainable_parameter_names):
+            raise ValueError("trainable parameter names must be unique")
+        if trainable != set(self.optimizer.parameter_names):
+            raise ValueError(
+                "optimizer parameter names must match trainable parameters"
+            )
+        frozen = set(self.frozen_parameter_hashes)
+        if trainable & frozen:
+            raise ValueError("trainable and frozen parameter names must not overlap")
+        canonical = trainable | frozen
+        aliases: set[str] = set()
+        for group in self.parameter_aliases:
+            if len(group) < 2:
+                raise ValueError("parameter alias groups require at least two names")
+            names = set(group)
+            if len(names) != len(group):
+                raise ValueError("parameter alias names must be distinct")
+            if aliases & names:
+                raise ValueError("parameter alias groups must be disjoint")
+            if len(names & canonical) != 1:
+                raise ValueError(
+                    "alias group must identify exactly one canonical parameter"
+                )
+            aliases.update(names)
+        if set(self.public_buffer_hashes) & (canonical | aliases):
+            raise ValueError("buffer and parameter names must not overlap")
+        return self
+
+
 class PrivacyReservation(DomainModel):
     version: Literal[1] = 1
     run_id: RunId
@@ -620,7 +685,7 @@ class PrivacyReservation(DomainModel):
 
 
 class DraftRunSpec(DomainModel):
-    manifest_version: Literal[3, 4, 5] = MANIFEST_VERSION
+    manifest_version: Literal[3, 4, 5, 6] = MANIFEST_VERSION
     protocol_version: Literal[1] = PROTOCOL_VERSION
     run_id: RunId
     algorithm_id: AlgorithmId = NOLOCO_ALGORITHM_ID
@@ -645,7 +710,7 @@ class DraftRunSpec(DomainModel):
     artifact_codecs: tuple[ArtifactCodec, ...] | None = None
 
     privacy: PrivacyPolicy | None = None
-    private_training: PrivateTrainingSpec | None = None
+    private_training: PrivateTrainingSpec | TaskTrainingSpec | None = None
     divergence_detection: DivergencePolicy | None = None
 
     @property
@@ -669,15 +734,35 @@ class DraftRunSpec(DomainModel):
 
     @model_validator(mode="after")
     def valid_manifest(self) -> Self:
-        if self.manifest_version != 5 and (
+        if isinstance(self.private_training, TaskTrainingSpec) and (
+            self.manifest_version != 6
+            or not isinstance(self.dataset, ApplicationTaskContract)
+        ):
+            raise ValueError(
+                "generic tasks require manifest version 6 application tasks"
+            )
+        if self.manifest_version == 6 and isinstance(
+            self.private_training, PrivateTrainingSpec
+        ):
+            raise ValueError("legacy private training requires version 5")
+        if self.manifest_version not in (5, 6) and (
             self.privacy is not None
             or self.private_training is not None
             or self.divergence_detection is not None
         ):
-            raise ValueError("M3 policies require manifest version 5")
+            raise ValueError("M3 policies require manifest version 5 or 6")
         if self.privacy is None and self.private_training is not None:
             raise ValueError("private training requires privacy policy")
         if self.privacy is not None:
+            if self.manifest_version == 6 and not isinstance(
+                self.private_training, TaskTrainingSpec
+            ):
+                raise ValueError("version 6 privacy requires a task specification")
+            if (
+                isinstance(self.private_training, TaskTrainingSpec)
+                and self.private_training.sampling != "poisson"
+            ):
+                raise ValueError("private tasks require Poisson sampling")
             if self.privacy.max_logical_steps != self.local_steps * self.round_count:
                 raise ValueError("privacy horizon must match local steps and rounds")
             if self.algorithm_id != NOLOCO_ALGORITHM_ID:

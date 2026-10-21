@@ -122,3 +122,26 @@ complete-node/round reconciliation, matched compression, label-skew provenance,
 reservation chains and independent export evaluation. Synthetic report fixtures
 verify the tools; actual campaign artifacts establish the measured results.
 See [the campaign guide](../benchmarks/m3/final-campaign.md).
+
+
+## Generic application tasks (manifest v6)
+
+Focused generic-task checks:
+
+```sh
+uv run --frozen --no-sync pytest tests/unit/manifests/test_generic_task_manifest.py tests/unit/training/test_task_data.py tests/unit/training/test_private_model.py tests/unit/training/test_task_trainer.py tests/unit/training/test_ordinary_task.py tests/unit/training/test_nanogpt_task.py tests/unit/runtime/test_generic_application.py
+```
+
+Independent processes over real AXL (ordinary identity and private compressed
+nanoGPT fixtures) are opt-in:
+
+```sh
+DROMEUS_PRIVATE_AXL_BINARY=/absolute/path/to/axl-node \
+DROMEUS_GENERIC_EVIDENCE_ROOT=/absolute/path/to/evidence \
+uv run --frozen --no-sync pytest tests/integration/test_generic_task_axl.py
+```
+
+These use reduced public synthetic token records for conformance. They do not
+establish full-size GPT-2 utility or a production privacy guarantee for seeded
+research runs. Independent secure GPU execution and resource pilots have separate
+retained records.
