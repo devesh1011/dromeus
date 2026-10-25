@@ -97,13 +97,13 @@ def prepare_private_workload(
         raise ValueError("generic task requires version 2 training specification")
     if model_factory is None or inputs is None or targets is None:
         raise ValueError("legacy private preparation requires tensor inputs and model")
-    return _LegacyTensorWorkload(
+    return _TensorPrivateWorkload(
         model_factory, inputs, targets, specification, evaluate, optimizer_registration
     )
 
 
-class _LegacyTensorWorkload:
-    """Keep the v1 tensor recipe intact, including its restrictive model profile."""
+class _TensorPrivateWorkload:
+    """Adapt fixed tensor datasets and their declared private-training recipe."""
 
     exchange_names: tuple[str, ...] | None = None
     poisson_sampling = True
@@ -208,7 +208,7 @@ class _LegacyTensorWorkload:
         pass
 
     def begin_step(self) -> PrivateWorkloadStep:
-        return _LegacyTensorStep(self.model, self.specification)
+        return _TensorBatchGradients(self.model, self.specification)
 
     def export_tensors(self, weights: WeightSnapshot) -> dict[str, np.ndarray]:
         return weights()
@@ -218,7 +218,9 @@ class _LegacyTensorWorkload:
         pass
 
 
-class _LegacyTensorStep:
+class _TensorBatchGradients:
+    """Prepare batch gradients; optimizer invocation stays in the trainer."""
+
     def __init__(self, model: nn.Module, specification: PrivateTrainingSpec) -> None:
         self._model, self._specification = model, specification
 
