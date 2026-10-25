@@ -1,4 +1,4 @@
-"""Group-selected optimizers at the owned sanitized-gradient boundary.
+"""Construction and state validation for built-in and group-selected optimizers.
 
 Factories and validators are trusted application code. Their implementation hash
 must bind the optimizer, factory and state validator. Optimizers may consume only
@@ -17,8 +17,96 @@ from typing import Any, cast
 import torch
 from torch import nn
 
-from dromeus.manifests.models import FactoryOptimizerSpec, OptimizerParameterGroup
+from dromeus.manifests.models import (
+    FactoryOptimizerSpec,
+    OptimizerParameterGroup,
+    PrivateOptimizerSpec,
+)
 from dromeus.training.private_state import decode_state, encode_state
+
+
+def build_private_optimizer(
+    model: nn.Module, spec: PrivateOptimizerSpec | FactoryOptimizerSpec
+) -> torch.optim.Optimizer:
+    """Build the declared ordinary update rule, before optional Opacus wrapping."""
+    if isinstance(spec, FactoryOptimizerSpec):
+        raise ValueError("factory optimizer requires a local optimizer registration")
+    parameters = [p for p in model.parameters() if p.requires_grad]
+    common: dict[str, Any] = dict(
+        lr=spec.learning_rate,
+        weight_decay=spec.weight_decay,
+        foreach=False,
+        fused=False,
+        differentiable=False,
+        maximize=False,
+    )
+    if spec.name == "sgd":
+        return torch.optim.SGD(
+            parameters,
+            momentum=spec.momentum,
+            dampening=spec.dampening,
+            nesterov=spec.nesterov,
+            **common,
+        )
+    factory = torch.optim.Adam if spec.name == "adam" else torch.optim.AdamW
+    return factory(
+        parameters,
+        betas=spec.betas,
+        eps=spec.numerical_epsilon,
+        amsgrad=False,
+        capturable=False,
+        **common,
+    )
+
+
+def validate_builtin_optimizer_checkpoint(
+    state: dict[str, Any],
+    *,
+    spec: PrivateOptimizerSpec,
+    parameters: tuple[torch.Tensor, ...],
+    initial_groups: list[dict[str, Any]],
+    logical_steps: int,
+    horizon: int,
+    schedule: str,
+) -> None:
+    """Validate built-in state against the frozen recipe without mutating it.
+
+    Parameters retain model order and groups come from the initial state_dict,
+    before scheduling. Factory-defined state uses its registered validator.
+    """
+    if set(state) != {"state", "param_groups"}:
+        raise ValueError("optimizer checkpoint fields mismatch")
+    groups = state["param_groups"]
+    if len(groups) != len(initial_groups):
+        raise ValueError("optimizer checkpoint groups mismatch")
+    for group, initial in zip(groups, initial_groups, strict=True):
+        expected = dict(initial)
+        if schedule == "linear_decay":
+            expected["lr"] *= 1 - logical_steps / horizon
+        if group != expected:
+            raise ValueError("optimizer checkpoint options or schedule mismatch")
+    fields: set[str] = (
+        ({"momentum_buffer"} if spec.momentum else set())
+        if spec.name == "sgd"
+        else {"step", "exp_avg", "exp_avg_sq"}
+    )
+    ids: set[int] = set(range(len(parameters))) if logical_steps and fields else set()
+    if set(state["state"]) != ids:
+        raise ValueError("optimizer checkpoint state coverage mismatch")
+    for index in ids:
+        values = state["state"][index]
+        if set(values) != fields:
+            raise ValueError("optimizer checkpoint state fields mismatch")
+        for name, tensor in values.items():
+            shape = () if name == "step" else parameters[index].shape
+            if (
+                not isinstance(tensor, torch.Tensor)
+                or tensor.shape != shape
+                or tensor.dtype != torch.float32
+            ):
+                raise ValueError("optimizer checkpoint tensor mismatch")
+            if name == "step" and float(tensor) != logical_steps:
+                raise ValueError("optimizer checkpoint step mismatch")
 
 
 def _json_option(value: Any, depth: int = 0) -> Any:

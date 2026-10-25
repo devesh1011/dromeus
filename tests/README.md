@@ -109,6 +109,17 @@ rejection, failed-step reservations, local secure mode (when CSPRNG is installed
 and four in-memory NoLoCo nodes. Existing private presets retain their conformance
 and canonical representation. See [optimizer registration](../examples/private-training.md).
 
+Built-in optimizer construction and the shared ordinary/private checkpoint rules:
+
+```bash
+uv run --frozen --no-sync pytest tests/unit/training/test_builtin_optimizer.py tests/unit/training/test_ordinary_task.py tests/unit/training/test_private_trainer.py -q
+```
+
+These checks compare SGD/Adam/AdamW updates with direct PyTorch and preserve
+checkpoint continuation, scheduled learning rates and atomic malformed-state
+rejection through the trainer interfaces. Factory-specific state validation
+remains covered by the registration tests above.
+
 ### Calibration and final evidence
 
 ```bash

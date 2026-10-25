@@ -15,6 +15,10 @@ from torch.utils.data import DataLoader, Sampler
 
 from dromeus.manifests.canonical import canonical_hash, canonical_json
 from dromeus.manifests.models import FactoryOptimizerSpec, TaskTrainingSpec
+from dromeus.training.optimizer_factory import (
+    build_private_optimizer,
+    validate_builtin_optimizer_checkpoint,
+)
 from dromeus.training.private_data import dataset_size, make_task_loader
 from dromeus.training.private_model import (
     ModelStateGuard,
@@ -23,7 +27,6 @@ from dromeus.training.private_model import (
     tensor_digest,
 )
 from dromeus.training.private_state import decode_state, encode_state
-from dromeus.training.private_trainer import build_private_optimizer
 from dromeus.training.task import TrainingTask, validate_record_losses
 from dromeus.training.trainer import PyTorchTrainer
 
@@ -294,39 +297,15 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
                 schedule=self.specification.schedule,
             )
             return
-        if set(state) != {"state", "param_groups"}:
-            raise ValueError("ordinary optimizer checkpoint fields mismatch")
-        groups = state["param_groups"]
-        if len(groups) != len(self._initial_groups):
-            raise ValueError("ordinary optimizer checkpoint groups mismatch")
-        for group, initial in zip(groups, self._initial_groups, strict=True):
-            expected = dict(initial)
-            if self.specification.schedule == "linear_decay":
-                expected["lr"] *= 1 - steps / self._horizon
-            if group != expected:
-                raise ValueError("ordinary optimizer checkpoint options mismatch")
-        fields: set[str] = (
-            ({"momentum_buffer"} if spec.momentum else set())
-            if spec.name == "sgd"
-            else {"step", "exp_avg", "exp_avg_sq"}
+        validate_builtin_optimizer_checkpoint(
+            state,
+            spec=spec,
+            parameters=self._parameters,
+            initial_groups=self._initial_groups,
+            logical_steps=steps,
+            horizon=self._horizon,
+            schedule=self.specification.schedule,
         )
-        ids: set[int] = set(range(len(self._parameters))) if steps and fields else set()
-        if set(state["state"]) != ids:
-            raise ValueError("ordinary optimizer checkpoint coverage mismatch")
-        for index in ids:
-            values = state["state"][index]
-            if set(values) != fields:
-                raise ValueError("ordinary optimizer checkpoint state mismatch")
-            for name, tensor in values.items():
-                shape = () if name == "step" else self._parameters[index].shape
-                if (
-                    not isinstance(tensor, torch.Tensor)
-                    or tensor.shape != shape
-                    or tensor.dtype != torch.float32
-                ):
-                    raise ValueError("ordinary optimizer checkpoint tensor mismatch")
-                if name == "step" and float(tensor) != steps:
-                    raise ValueError("ordinary optimizer checkpoint step mismatch")
 
     def _load_state(self, arrays: dict[str, np.ndarray]) -> None:
         state = decode_state(arrays)

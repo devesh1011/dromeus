@@ -7,6 +7,7 @@ this adapter, including research mode.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -31,6 +32,12 @@ from dromeus.training.model_state import model_state_alias_groups
 from dromeus.training.optimizer_factory import (
     PrivateOptimizerFactory,
     SanitizedOptimizer,
+    validate_builtin_optimizer_checkpoint,
+)
+
+# Preserve the original builder import for application and benchmark callers.
+from dromeus.training.optimizer_factory import (
+    build_private_optimizer as build_private_optimizer,
 )
 from dromeus.training.privacy import (
     ReservationStore,
@@ -55,39 +62,6 @@ def private_training_definition(
     specification: PrivateTrainingSpec | TaskTrainingSpec,
 ) -> str:
     return canonical_json(specification).decode()
-
-
-def build_private_optimizer(
-    model: nn.Module, spec: PrivateOptimizerSpec | FactoryOptimizerSpec
-) -> torch.optim.Optimizer:
-    if isinstance(spec, FactoryOptimizerSpec):
-        raise ValueError("factory optimizer requires a local optimizer registration")
-    parameters = [p for p in model.parameters() if p.requires_grad]
-    common: dict[str, Any] = dict(
-        lr=spec.learning_rate,
-        weight_decay=spec.weight_decay,
-        foreach=False,
-        fused=False,
-        differentiable=False,
-        maximize=False,
-    )
-    if spec.name == "sgd":
-        return torch.optim.SGD(
-            parameters,
-            momentum=spec.momentum,
-            dampening=spec.dampening,
-            nesterov=spec.nesterov,
-            **common,
-        )
-    factory = torch.optim.Adam if spec.name == "adam" else torch.optim.AdamW
-    return factory(
-        parameters,
-        betas=spec.betas,
-        eps=spec.numerical_epsilon,
-        amsgrad=False,
-        capturable=False,
-        **common,
-    )
 
 
 class PrivateTrainer(PyTorchTrainer):
@@ -188,6 +162,11 @@ class PrivateTrainer(PyTorchTrainer):
                 else build_private_optimizer(self._raw_model, spec)
             )
         self._validate_optimizer()
+        self._initial_optimizer_groups: list[dict[str, Any]] = (
+            copy.deepcopy(self._base_optimizer.state_dict()["param_groups"])
+            if isinstance(spec, PrivateOptimizerSpec)
+            else []
+        )
         self._initial_learning_rates = tuple(
             float(g["lr"]) for g in self._base_optimizer.param_groups
         )
@@ -752,7 +731,17 @@ class PrivateTrainer(PyTorchTrainer):
                 schedule=self.specification.schedule,
             )
         else:
-            self._validate_legacy_optimizer_state(state, steps)
+            validate_builtin_optimizer_checkpoint(
+                state["optimizer"],
+                spec=spec,
+                parameters=tuple(
+                    p for p in self._raw_model.parameters() if p.requires_grad
+                ),
+                initial_groups=self._initial_optimizer_groups,
+                logical_steps=steps,
+                horizon=self.policy.max_logical_steps,
+                schedule=self.specification.schedule,
+            )
         for key, generator in (
             ("sampling_rng", self._sampling_generator),
             ("noise_rng", self._noise_generator),
@@ -766,52 +755,6 @@ class PrivateTrainer(PyTorchTrainer):
                 raise ValueError("research checkpoint RNG mismatch")
             probe = torch.Generator(device=generator.device)
             probe.set_state(state[key])
-
-    def _validate_legacy_optimizer_state(
-        self, state: dict[str, Any], steps: int
-    ) -> None:
-        optimizer = state["optimizer"]
-        if (
-            set(optimizer) != {"state", "param_groups"}
-            or len(optimizer["param_groups"]) != 1
-        ):
-            raise ValueError("invalid optimizer checkpoint")
-        group = optimizer["param_groups"][0]
-        reference = self._base_optimizer.state_dict()["param_groups"][0]
-        if group.keys() != reference.keys() or any(
-            group[k] != reference[k] for k in reference if k != "lr"
-        ):
-            raise ValueError("optimizer checkpoint group mismatch")
-        assert isinstance(self.specification.optimizer, PrivateOptimizerSpec)
-        learning_rate = self.specification.optimizer.learning_rate
-        if self.specification.schedule == "linear_decay":
-            learning_rate *= 1 - steps / self.policy.max_logical_steps
-        if group["lr"] != learning_rate:
-            raise ValueError("checkpoint scheduler mismatch")
-        spec = self.specification.optimizer
-        assert isinstance(spec, PrivateOptimizerSpec)
-        keys: set[str] = (
-            ({"momentum_buffer"} if spec.momentum else set())
-            if spec.name == "sgd"
-            else {"step", "exp_avg", "exp_avg_sq"}
-        )
-        trainable = [p for p in self._raw_model.parameters() if p.requires_grad]
-        ids: set[int] = set(range(len(trainable))) if steps and keys else set()
-        if set(optimizer["state"]) != ids:
-            raise ValueError("optimizer checkpoint state coverage mismatch")
-        for index, parameter in enumerate(trainable):
-            values = optimizer["state"].get(index, {})
-            if set(values) != keys and index in ids:
-                raise ValueError("optimizer checkpoint state fields mismatch")
-            for key, tensor in values.items():
-                if (
-                    not isinstance(tensor, torch.Tensor)
-                    or tensor.dtype != torch.float32
-                    or tensor.shape != (() if key == "step" else parameter.shape)
-                ):
-                    raise ValueError("optimizer checkpoint tensor mismatch")
-                if key == "step" and float(tensor) != steps:
-                    raise ValueError("optimizer checkpoint step mismatch")
 
     def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
         self._check_execution()

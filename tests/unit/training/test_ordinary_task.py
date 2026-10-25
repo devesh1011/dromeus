@@ -14,6 +14,7 @@ from torch.utils.data import TensorDataset
 from dromeus.manifests.models import PrivateOptimizerSpec, TaskTrainingSpec
 from dromeus.training.ordinary_task import OrdinaryTaskTrainer
 from dromeus.training.private_model import describe_private_model
+from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.task import TensorBatchAdapter, TrainingTask
 
 
@@ -50,14 +51,17 @@ def specification(
     *,
     batch_size: int = 4,
     momentum: float = 0,
+    optimizer_name: Literal["sgd", "adam", "adamw"] = "sgd",
+    weight_decay: float = 0,
 ) -> TaskTrainingSpec:
     return TaskTrainingSpec(
         optimizer=PrivateOptimizerSpec(
-            name="sgd",
+            name=optimizer_name,
             torch_version=torch.__version__,
             parameter_names=("weight",),
             learning_rate=0.01,
             momentum=momentum,
+            weight_decay=weight_decay,
         ),
         batch_size=batch_size,
         sampling=sampling,
@@ -78,9 +82,18 @@ def trainer(
     momentum: float = 0,
     seed: int = 3,
     decay: bool = False,
+    optimizer_name: Literal["sgd", "adam", "adamw"] = "sgd",
+    weight_decay: float = 0,
 ) -> OrdinaryTaskTrainer:
     task = make_task()
-    spec = specification(task, sampling, batch_size=batch_size, momentum=momentum)
+    spec = specification(
+        task,
+        sampling,
+        batch_size=batch_size,
+        momentum=momentum,
+        optimizer_name=optimizer_name,
+        weight_decay=weight_decay,
+    )
     if decay:
         spec = spec.model_copy(update={"schedule": "linear_decay"})
     return OrdinaryTaskTrainer(
@@ -153,16 +166,31 @@ def test_physical_splitting_preserves_the_objective(
 
 
 @pytest.mark.parametrize("sampling", ["shuffle", "poisson"])
+@pytest.mark.parametrize("optimizer_name", ["sgd", "adam", "adamw"])
+@pytest.mark.parametrize("decay", [False, True])
 def test_checkpoint_continuation_preserves_sampler_optimizer_and_schedule(
     sampling: Literal["shuffle", "poisson"],
+    optimizer_name: Literal["sgd", "adam", "adamw"],
+    decay: bool,
 ) -> None:
     if sampling == "poisson":
         pytest.importorskip("opacus")
-    uninterrupted = trainer(sampling=sampling, batch_size=3, momentum=0.9, decay=True)
+
+    def make_trainer() -> OrdinaryTaskTrainer:
+        return trainer(
+            sampling=sampling,
+            batch_size=3,
+            momentum=0.9 if optimizer_name == "sgd" else 0,
+            optimizer_name=optimizer_name,
+            weight_decay=0.1 if optimizer_name == "adamw" else 0,
+            decay=decay,
+        )
+
+    uninterrupted = make_trainer()
     uninterrupted.train_local_steps(3)
     checkpoint = uninterrupted.checkpoint_tensors()
     uninterrupted.train_local_steps(4)
-    restored = trainer(sampling=sampling, batch_size=3, momentum=0.9, decay=True)
+    restored = make_trainer()
     restored.load_checkpoint_tensors(checkpoint)
     restored.train_local_steps(4)
     for key, value in uninterrupted.checkpoint_tensors().items():
@@ -178,6 +206,61 @@ def test_malformed_checkpoint_rolls_back_without_changing_training() -> None:
     with pytest.raises(ValueError, match="counters"):
         ordinary.load_checkpoint_tensors(broken)
     for key, value in before.items():
+        np.testing.assert_array_equal(ordinary.checkpoint_tensors()[key], value)
+
+
+@pytest.mark.parametrize("optimizer_name", ["sgd", "adam", "adamw"])
+@pytest.mark.parametrize(
+    "corruption", ["learning_rate", "tensor_shape", "state_fields"]
+)
+def test_malformed_optimizer_restore_preserves_state_and_continuation(
+    optimizer_name: Literal["sgd", "adam", "adamw"],
+    corruption: str,
+) -> None:
+    def make_trainer() -> OrdinaryTaskTrainer:
+        return trainer(
+            optimizer_name=optimizer_name,
+            momentum=0.9 if optimizer_name == "sgd" else 0,
+            weight_decay=0.1 if optimizer_name == "adamw" else 0,
+            decay=True,
+        )
+
+    ordinary = make_trainer()
+    ordinary.train_local_steps(2)
+    before = ordinary.checkpoint_tensors()
+    payload = decode_state(
+        {
+            key.removeprefix("application."): value
+            for key, value in before.items()
+            if key.startswith("application.")
+        }
+    )
+    optimizer_state = payload["optimizer"]
+    state_field = "momentum_buffer" if optimizer_name == "sgd" else "exp_avg"
+    if corruption == "learning_rate":
+        optimizer_state["param_groups"][0]["lr"] = 0.5
+    elif corruption == "tensor_shape":
+        optimizer_state["state"][0][state_field] = torch.zeros(3)
+    else:
+        del optimizer_state["state"][0][state_field]
+    broken = {
+        key: value.copy()
+        for key, value in before.items()
+        if not key.startswith("application.")
+    }
+    broken.update(
+        {f"application.{key}": value for key, value in encode_state(payload).items()}
+    )
+    with pytest.raises(ValueError):
+        ordinary.load_checkpoint_tensors(broken)
+    for key, value in before.items():
+        np.testing.assert_array_equal(ordinary.checkpoint_tensors()[key], value)
+
+    control = make_trainer()
+    control.load_checkpoint_tensors(before)
+    ordinary.train_local_steps(1)
+    control.train_local_steps(1)
+    for key, value in control.checkpoint_tensors().items():
         np.testing.assert_array_equal(ordinary.checkpoint_tensors()[key], value)
 
 
