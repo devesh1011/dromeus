@@ -120,6 +120,18 @@ checkpoint continuation, scheduled learning rates and atomic malformed-state
 rejection through the trainer interfaces. Factory-specific state validation
 remains covered by the registration tests above.
 
+Legacy tensor-task compatibility through the public private trainer:
+
+```bash
+uv run --frozen --no-sync pytest tests/unit/training/test_legacy_private_task.py tests/unit/training/test_private_trainer.py tests/unit/runtime/test_generic_application.py -q
+```
+
+The legacy cases check cross-entropy and spatial MSE against direct Opacus at
+multiple physical batch sizes, defensive data copies, checkpoint continuation
+and model-only exports. The private workload adapters preserve each task
+generation's sampler, empty-batch handling, guards and state inventory while the
+trainer retains the shared privacy mechanism and logical-step lifecycle.
+
 ### Calibration and final evidence
 
 ```bash
