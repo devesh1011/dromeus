@@ -145,3 +145,18 @@ These use reduced public synthetic token records for conformance. They do not
 establish full-size GPT-2 utility or a production privacy guarantee for seeded
 research runs. Independent secure GPU execution and resource pilots have separate
 retained records.
+
+
+## Divergence warning repair
+
+```sh
+uv run --frozen --no-sync pytest tests/benchmarks/test_repair_replay.py tests/benchmarks/test_detector_campaign.py -q
+```
+
+The replay seam uses compact measured public traces to retain early false alerts,
+pre-active fault masking and successful detection under the historical policy.
+The fresh campaign seam checks disjoint split freezes, exact required evidence,
+honest entry scoring, semantic live/replay reconciliation and live-delay gates.
+Synthetic fixtures validate tool behavior; they do not establish threshold
+readiness. See [the repair workflow](../benchmarks/m3/divergence-repair.md) for
+reproduction and the separately gated fresh GPU assessment.

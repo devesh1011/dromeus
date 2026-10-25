@@ -1,0 +1,869 @@
+{
+  "cases": [
+    {
+      "fault_start_round": null,
+      "node_id": "084b8476373b441e0a3fb47314d73742ccec7687f5cc2294e5d0678e89f52a6e",
+      "observations": [
+        {
+          "absolute_rms_spread": 0.5829556177984235,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.58450925646285,
+          "member_distances": [],
+          "normalized_rms": 0.04632326981673893,
+          "observation_version": 2,
+          "round_id": 0,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.72321931947104,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.703027581107515,
+          "member_distances": [],
+          "normalized_rms": 0.056932830764422314,
+          "observation_version": 2,
+          "round_id": 1,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.647966606843968,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.893705023420187,
+          "member_distances": [],
+          "normalized_rms": 0.05025449284491526,
+          "observation_version": 2,
+          "round_id": 2,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5347698183369253,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.118077372479023,
+          "member_distances": [],
+          "normalized_rms": 0.040765868591292276,
+          "observation_version": 2,
+          "round_id": 3,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.838792188510477,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.341885745951112,
+          "member_distances": [],
+          "normalized_rms": 0.06286908795969595,
+          "observation_version": 2,
+          "round_id": 4,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6257719255890066,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.534101015928856,
+          "member_distances": [],
+          "normalized_rms": 0.04623668205612349,
+          "observation_version": 2,
+          "round_id": 5,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.473328819121661,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.699885361538334,
+          "member_distances": [],
+          "normalized_rms": 0.03454983794612405,
+          "observation_version": 2,
+          "round_id": 6,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6046810178281673,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.842054270794877,
+          "member_distances": [],
+          "normalized_rms": 0.043684340922136834,
+          "observation_version": 2,
+          "round_id": 7,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.8012994474329099,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.974268863024259,
+          "member_distances": [],
+          "normalized_rms": 0.05734106415778796,
+          "observation_version": 2,
+          "round_id": 8,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5132249057130924,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.100274113716322,
+          "member_distances": [],
+          "normalized_rms": 0.03639822187668013,
+          "observation_version": 2,
+          "round_id": 9,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5014557996388914,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.22120244243084,
+          "member_distances": [],
+          "normalized_rms": 0.03526113925097475,
+          "observation_version": 2,
+          "round_id": 10,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4550052416544158,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.328463028474673,
+          "member_distances": [],
+          "normalized_rms": 0.0317553418500059,
+          "observation_version": 2,
+          "round_id": 11,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.3922998237495166,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.417689294135409,
+          "member_distances": [],
+          "normalized_rms": 0.027209618389339454,
+          "observation_version": 2,
+          "round_id": 12,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.34697246861676967,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.497864623997376,
+          "member_distances": [],
+          "normalized_rms": 0.0239326602651831,
+          "observation_version": 2,
+          "round_id": 13,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4098048241292621,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.572635836899094,
+          "member_distances": [],
+          "normalized_rms": 0.028121530567007995,
+          "observation_version": 2,
+          "round_id": 14,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.59103923098823,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.642614408383626,
+          "member_distances": [],
+          "normalized_rms": 0.04036432391812423,
+          "observation_version": 2,
+          "round_id": 15,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.8366321718962292,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.705046783902285,
+          "member_distances": [],
+          "normalized_rms": 0.0568942203442725,
+          "observation_version": 2,
+          "round_id": 16,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.034800069255278,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.766816803040902,
+          "member_distances": [],
+          "normalized_rms": 0.07007604164508315,
+          "observation_version": 2,
+          "round_id": 17,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.1979709079249423,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.828508629539025,
+          "member_distances": [],
+          "normalized_rms": 0.08078836097774877,
+          "observation_version": 2,
+          "round_id": 18,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.3415023907908261,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.889342336495478,
+          "member_distances": [],
+          "normalized_rms": 0.09009816286529732,
+          "observation_version": 2,
+          "round_id": 19,
+          "sketch_count": 4
+        }
+      ],
+      "participant_count": 4,
+      "run_id": "final-baseline-s29",
+      "source": {
+        "capture": "exact loader observations, prefix only; scale values not synthesized",
+        "log": "runs/final-baseline-s29/rank-1/logs/dromeus.jsonl",
+        "log_sha256": "e4661c59d9f4632c2e3cabc23c68bbde49630412c3689db288465b24f222e9c4",
+        "manifest_sha256": "82dc0a927d535328445c7915c9442664c4f6a6496f81d7eb247626ee87c808e0",
+        "source_observation_count": 75
+      }
+    },
+    {
+      "fault_start_round": 25,
+      "node_id": "084b8476373b441e0a3fb47314d73742ccec7687f5cc2294e5d0678e89f52a6e",
+      "observations": [
+        {
+          "absolute_rms_spread": 0.7189554378943827,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.581057544727164,
+          "member_distances": [],
+          "normalized_rms": 0.05714586673960857,
+          "observation_version": 2,
+          "round_id": 0,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7299408153665924,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.636092853201161,
+          "member_distances": [],
+          "normalized_rms": 0.057766338364759265,
+          "observation_version": 2,
+          "round_id": 1,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5387016968657856,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.697972771672276,
+          "member_distances": [],
+          "normalized_rms": 0.04242422838293724,
+          "observation_version": 2,
+          "round_id": 2,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5063733794748629,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.757560340865556,
+          "member_distances": [],
+          "normalized_rms": 0.03969202307848677,
+          "observation_version": 2,
+          "round_id": 3,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.859820088476178,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.812407074838015,
+          "member_distances": [],
+          "normalized_rms": 0.06710839606124373,
+          "observation_version": 2,
+          "round_id": 4,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.629664114369479,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.867019416506013,
+          "member_distances": [],
+          "normalized_rms": 0.04893628384221502,
+          "observation_version": 2,
+          "round_id": 5,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4765411750464475,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.925246199458293,
+          "member_distances": [],
+          "normalized_rms": 0.036869021115155456,
+          "observation_version": 2,
+          "round_id": 6,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6107609732555181,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.984828999865728,
+          "member_distances": [],
+          "normalized_rms": 0.04703650492908199,
+          "observation_version": 2,
+          "round_id": 7,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.8581095563422096,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.049193964083905,
+          "member_distances": [],
+          "normalized_rms": 0.0657595832128767,
+          "observation_version": 2,
+          "round_id": 8,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6095417968924235,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.104365362711205,
+          "member_distances": [],
+          "normalized_rms": 0.04651440798703944,
+          "observation_version": 2,
+          "round_id": 9,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5613846766134225,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.156105502996741,
+          "member_distances": [],
+          "normalized_rms": 0.04267103790597497,
+          "observation_version": 2,
+          "round_id": 10,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5176223852137333,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.20716303897289,
+          "member_distances": [],
+          "normalized_rms": 0.03919254904980329,
+          "observation_version": 2,
+          "round_id": 11,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5213611196517041,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.256957246335586,
+          "member_distances": [],
+          "normalized_rms": 0.0393273592095031,
+          "observation_version": 2,
+          "round_id": 12,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4369457102019904,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.308412255493637,
+          "member_distances": [],
+          "normalized_rms": 0.032832294477621767,
+          "observation_version": 2,
+          "round_id": 13,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5070151193152963,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.361346120522793,
+          "member_distances": [],
+          "normalized_rms": 0.037946410095349006,
+          "observation_version": 2,
+          "round_id": 14,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7379865775095305,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.404726465644714,
+          "member_distances": [],
+          "normalized_rms": 0.05505420639510089,
+          "observation_version": 2,
+          "round_id": 15,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.0549335026548636,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.446495467307447,
+          "member_distances": [],
+          "normalized_rms": 0.0784541596893891,
+          "observation_version": 2,
+          "round_id": 16,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.349075635903105,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.489406768300654,
+          "member_distances": [],
+          "normalized_rms": 0.10001000481898557,
+          "observation_version": 2,
+          "round_id": 17,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.6101463558046984,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.53548278057218,
+          "member_distances": [],
+          "normalized_rms": 0.11895743815770378,
+          "observation_version": 2,
+          "round_id": 18,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.8425408386182742,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.574981469243298,
+          "member_distances": [],
+          "normalized_rms": 0.13573063379812084,
+          "observation_version": 2,
+          "round_id": 19,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7551168923143082,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.608712884817075,
+          "member_distances": [],
+          "normalized_rms": 0.05548775249397164,
+          "observation_version": 2,
+          "round_id": 20,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5273844833090499,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.643351161781021,
+          "member_distances": [],
+          "normalized_rms": 0.038655054543077945,
+          "observation_version": 2,
+          "round_id": 21,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7655018196328275,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.683753067427373,
+          "member_distances": [],
+          "normalized_rms": 0.0559423877251163,
+          "observation_version": 2,
+          "round_id": 22,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7123393912395292,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.719985879155223,
+          "member_distances": [],
+          "normalized_rms": 0.05191983413931458,
+          "observation_version": 2,
+          "round_id": 23,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.47989068037077587,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.75493545383303,
+          "member_distances": [],
+          "normalized_rms": 0.03488861739711122,
+          "observation_version": 2,
+          "round_id": 24,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.6717852363896697,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.970720415784143,
+          "member_distances": [],
+          "normalized_rms": 0.11966349526977609,
+          "observation_version": 2,
+          "round_id": 25,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 2.3153218508182007,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.702951165651971,
+          "member_distances": [],
+          "normalized_rms": 0.15747327354435753,
+          "observation_version": 2,
+          "round_id": 26,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 4.994455724094979,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 16.265306710578635,
+          "member_distances": [],
+          "normalized_rms": 0.30706188410491986,
+          "observation_version": 2,
+          "round_id": 27,
+          "sketch_count": 4
+        }
+      ],
+      "participant_count": 4,
+      "run_id": "final-fault-s29-retry1",
+      "source": {
+        "capture": "exact loader observations, prefix only; scale values not synthesized",
+        "log": "runs/final-fault-s29-retry1/rank-1/logs/dromeus.jsonl",
+        "log_sha256": "2d6ee0fe0e3b4c76074480e06aca9ef733109a9dbb96c84079eeabb99f1d3e15",
+        "manifest_sha256": "9d2a716fe485b5b83ae2a661b2feac8ec2cc56b54a2ef84d270c6c4ef3904570",
+        "source_observation_count": 75
+      }
+    },
+    {
+      "fault_start_round": 25,
+      "node_id": "084b8476373b441e0a3fb47314d73742ccec7687f5cc2294e5d0678e89f52a6e",
+      "observations": [
+        {
+          "absolute_rms_spread": 0.7220621346691819,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.63263181834502,
+          "member_distances": [],
+          "normalized_rms": 0.05715848803735031,
+          "observation_version": 2,
+          "round_id": 0,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7349170132188466,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.671962817167898,
+          "member_distances": [],
+          "normalized_rms": 0.05799551528222033,
+          "observation_version": 2,
+          "round_id": 1,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5426759384852011,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.72428152947716,
+          "member_distances": [],
+          "normalized_rms": 0.04264884718465177,
+          "observation_version": 2,
+          "round_id": 2,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.8746990796220078,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.78835970574953,
+          "member_distances": [],
+          "normalized_rms": 0.06839806665968917,
+          "observation_version": 2,
+          "round_id": 3,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6570789027904373,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.856173565554077,
+          "member_distances": [],
+          "normalized_rms": 0.05110999003240879,
+          "observation_version": 2,
+          "round_id": 4,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6159949054561866,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.918719734991788,
+          "member_distances": [],
+          "normalized_rms": 0.04768234918725331,
+          "observation_version": 2,
+          "round_id": 5,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4623078321897799,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 12.980938535257895,
+          "member_distances": [],
+          "normalized_rms": 0.035614361082910675,
+          "observation_version": 2,
+          "round_id": 6,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.47367393850837175,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.039872350469834,
+          "member_distances": [],
+          "normalized_rms": 0.036325044124474785,
+          "observation_version": 2,
+          "round_id": 7,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5037893482040384,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.089745612357735,
+          "member_distances": [],
+          "normalized_rms": 0.03848732917531902,
+          "observation_version": 2,
+          "round_id": 8,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7970338752609155,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.1340191062739,
+          "member_distances": [],
+          "normalized_rms": 0.060684689797666364,
+          "observation_version": 2,
+          "round_id": 9,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.1736201022333381,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.16804276012721,
+          "member_distances": [],
+          "normalized_rms": 0.08912638906269098,
+          "observation_version": 2,
+          "round_id": 10,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6788321113092995,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.202073782409398,
+          "member_distances": [],
+          "normalized_rms": 0.05141859699449129,
+          "observation_version": 2,
+          "round_id": 11,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5608358524981196,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.23648169687407,
+          "member_distances": [],
+          "normalized_rms": 0.04237046258527478,
+          "observation_version": 2,
+          "round_id": 12,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7749027213791402,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.27604063633649,
+          "member_distances": [],
+          "normalized_rms": 0.05836851080872523,
+          "observation_version": 2,
+          "round_id": 13,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.532268948423273,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.326627541976581,
+          "member_distances": [],
+          "normalized_rms": 0.03994025845973991,
+          "observation_version": 2,
+          "round_id": 14,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.524700678889006,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.383038813587167,
+          "member_distances": [],
+          "normalized_rms": 0.03920639297229438,
+          "observation_version": 2,
+          "round_id": 15,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.48011424828537874,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.43875381110478,
+          "member_distances": [],
+          "normalized_rms": 0.03572609893996365,
+          "observation_version": 2,
+          "round_id": 16,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.7143852761845206,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.492304547708658,
+          "member_distances": [],
+          "normalized_rms": 0.052947609776996085,
+          "observation_version": 2,
+          "round_id": 17,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.5107829695960312,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.539958578943896,
+          "member_distances": [],
+          "normalized_rms": 0.037724116112904243,
+          "observation_version": 2,
+          "round_id": 18,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4190188757101022,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.58642530997764,
+          "member_distances": [],
+          "normalized_rms": 0.030840995048370158,
+          "observation_version": 2,
+          "round_id": 19,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.44392669890679304,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.626702950743992,
+          "member_distances": [],
+          "normalized_rms": 0.03257770427016778,
+          "observation_version": 2,
+          "round_id": 20,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4646438086676502,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.662025589628167,
+          "member_distances": [],
+          "normalized_rms": 0.03400987691169024,
+          "observation_version": 2,
+          "round_id": 21,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.456556737799335,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.69684165898767,
+          "member_distances": [],
+          "normalized_rms": 0.03333299377814707,
+          "observation_version": 2,
+          "round_id": 22,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.6595868810981717,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.72639655271448,
+          "member_distances": [],
+          "normalized_rms": 0.04805244250121028,
+          "observation_version": 2,
+          "round_id": 23,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 0.4589174951787465,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.748592139844634,
+          "member_distances": [],
+          "normalized_rms": 0.0333792355254128,
+          "observation_version": 2,
+          "round_id": 24,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 1.691507546332808,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 13.907271735193191,
+          "member_distances": [],
+          "normalized_rms": 0.12162756136073938,
+          "observation_version": 2,
+          "round_id": 25,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 2.305161311766214,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 14.561524501502673,
+          "member_distances": [],
+          "normalized_rms": 0.15830494338200476,
+          "observation_version": 2,
+          "round_id": 26,
+          "sketch_count": 4
+        },
+        {
+          "absolute_rms_spread": 2.6562165123189887,
+          "denominator_degenerate": false,
+          "mean_sketch_norm": 16.050130350777597,
+          "member_distances": [],
+          "normalized_rms": 0.16549501183273163,
+          "observation_version": 2,
+          "round_id": 27,
+          "sketch_count": 4
+        }
+      ],
+      "participant_count": 4,
+      "run_id": "final-fault-s41",
+      "source": {
+        "capture": "exact loader observations, prefix only; scale values not synthesized",
+        "log": "runs/final-fault-s41/rank-1/logs/dromeus.jsonl",
+        "log_sha256": "389a58f02d2cdb9755f340f3d57cdee807f72ccad162abcf5ef374655f549b13",
+        "manifest_sha256": "519560d19b4e8adf5d9f201c8b3be7dac33b5f931569441b2532837f79780e67",
+        "source_observation_count": 75
+      }
+    }
+  ],
+  "content_sha256": "e1b13092176a0487106e33c32585cf5f453d37f814bd3c7f39bc438a05334814",
+  "policy": {
+    "absolute_distance_floor": 0.1078185190517367,
+    "absolute_recovery_distance": 1.3130099288410901,
+    "absolute_severe_distance": 1.7904680847833045,
+    "distance_floor": 0.007481537110715133,
+    "growth_ratio": 2.0,
+    "max_lag_rounds": 8,
+    "min_log_slope": 0.02,
+    "mode": "warn",
+    "patience_windows": 2,
+    "recovery_distance": 0.09545891032223923,
+    "recovery_windows": 3,
+    "severe_distance": 0.13017124134850802,
+    "severe_patience": 2,
+    "threshold_set_id": "m3-calibrated-af37d87d5f644db2",
+    "version": 1,
+    "warmup_rounds": 10,
+    "window_rounds": 8
+  },
+  "policy_hash": "f151a2cb4df040cf145c0ffb1f2560bedccd74b408f5edce17fa5a0aabea7136",
+  "provenance": {
+    "freeze_hash": "8732bd5b2eeb110b317a87b9c45671af763ba3cde8494b08bca8290baae093ee",
+    "frozen_policy_file_sha256": "61b7be113a7ef32bfb2cb3b8f70a694ec7c494d83cb09ab83d7d370059a65c20",
+    "index_sha256": "9b6b2c02e2fe9c12cfe0b7f3e57de966bd1655ce32762c74c886df301dc4f2d1",
+    "original_metrics": {
+      "alert_precision": 0.1111111111111111,
+      "delay_rounds": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "detected_fault_nodes": 4,
+      "false_alerts": 32,
+      "fault_node_recall": 0.5,
+      "fault_nodes": 8,
+      "healthy_nodes": 52,
+      "healthy_run_false_warning_rate": 0.5384615384615384,
+      "healthy_runs": 13,
+      "healthy_runs_with_false_alerts": [
+        "final-baseline-s29",
+        "final-compressed-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-robustness-s29"
+      ],
+      "max_delay_rounds": 2,
+      "mean_delay_rounds": 2.0,
+      "median_delay_rounds": 2.0,
+      "missed_fault_nodes": 4,
+      "node_repetitions_independent": false,
+      "nodes_with_false_alerts": 32,
+      "true_alerts": 4
+    },
+    "purpose": "public development regression; not untouched assessment"
+  },
+  "version": 1
+}
