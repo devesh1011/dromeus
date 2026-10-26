@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import math
+from collections import Counter
 from collections.abc import Callable
 from typing import Any, Protocol
 
@@ -49,7 +50,20 @@ def privacy_epsilon(
         if accountant == "prv"
         else accountants.RDPAccountant()
     )
-    engine.history = list(history)
+    query_history = list(history)
+    # Do not normalize unsupported counts into a different valid mechanism.
+    if all(steps > 0 for _, _, steps in history):
+        # Identical fixed Poisson-Gaussian mechanisms share one privacy-loss
+        # distribution. Compose their total multiplicity once in the query copy;
+        # live accountant histories and durable reservations retain their order.
+        counts: Counter[tuple[float, float]] = Counter()
+        for noise, sample_rate, steps in history:
+            counts[noise, sample_rate] += steps
+        query_history = [
+            (noise, sample_rate, steps)
+            for (noise, sample_rate), steps in counts.items()
+        ]
+    engine.history = query_history
     kwargs = (
         {
             "eps_error": policy.prv_epsilon_error,
