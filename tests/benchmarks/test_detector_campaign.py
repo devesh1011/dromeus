@@ -169,6 +169,30 @@ def test_fresh_spec_freeze_calibration_and_untouched_replay(tmp_path: Path) -> N
         evaluate(index, predeclared, frozen, require_live=True)
 
 
+def test_frozen_json_subset_recipe_does_not_block_calibration(tmp_path: Path) -> None:
+    path = spec_file(tmp_path)
+    specification = json.loads(path.read_text())
+    subset = next(
+        run
+        for run in specification["runs"]
+        if run["split"] == "validation" and run["configuration"]["fault"] is None
+    )
+    subset["configuration"]["train_counts"] = [3000, 2400, 1800, 1200]
+    path.write_text(json.dumps(specification))
+    frozen_path = tmp_path / "predeclared.json"
+    frozen_path.write_text(json.dumps(freeze_spec(path)))
+    before = frozen_path.read_bytes()
+    predeclared = json.loads(before)
+
+    result = calibrate(evidence(tmp_path / "cal", 101, "calibration"), predeclared)
+
+    assert result["status"] == "frozen"
+    assert result["group_metrics"]["groups"] == 2
+    assert frozen_path.read_bytes() == before
+    assert predeclared == json.loads(before)
+    assert not (tmp_path / "final").exists()
+
+
 @pytest.mark.parametrize(
     "problem", ["historical", "overlap", "unused_seed", "duplicate"]
 )
