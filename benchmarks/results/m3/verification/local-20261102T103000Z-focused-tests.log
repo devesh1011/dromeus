@@ -1,0 +1,43 @@
+........................................................................ [ 84%]
+.............                                                            [100%]
+=============================== warnings summary ===============================
+tests/unit/training/test_private_trainer.py: 32 warnings
+tests/unit/runtime/test_private_application.py: 2 warnings
+  .venv/lib/python3.12/site-packages/opacus/privacy_engine.py:98: UserWarning: Secure RNG turned off. This is perfectly fine for experimentation as it allows for much faster training performance, but remember to turn it on and retrain one last time before production with ``secure_mode`` turned on.
+    warnings.warn(
+
+tests/unit/training/test_private_trainer.py: 35 warnings
+  src/dromeus/training/private_workload.py:244: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+    cast(Any, loss).backward()
+
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[False-sgd]
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[False-adam]
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[False-adamw]
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[True-sgd]
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[True-adam]
+tests/unit/training/test_private_trainer.py::test_direct_opacus_trajectory_parity[True-adamw]
+  tests/unit/training/test_private_trainer.py:171: UserWarning: Full backward hook is firing when gradients are computed with respect to module outputs since no inputs require gradients. See https://docs.pytorch.org/docs/main/generated/torch.nn.Module.html#torch.nn.Module.register_full_backward_hook for more details.
+    loss.backward()
+
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-sgd]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-adam]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-adamw]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-sgd]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-adam]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-adamw]
+tests/unit/training/test_private_trainer.py::test_seeded_gaussian_noise_variance_and_expected_batch_normalization
+  .venv/lib/python3.12/site-packages/opacus/accountants/analysis/prv/prvs.py:67: RuntimeWarning: divide by zero encountered in log
+    z = np.log(np.where(t > np.log(1 - q), (np.exp(t) + q - 1) / q, 1))
+
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-sgd]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-adam]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.0--0.5-adamw]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-sgd]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-adam]
+tests/unit/training/test_private_trainer.py::test_analytic_clipped_gradient_preserves_optimizer_rule[0.2--0.4-adamw]
+tests/unit/training/test_private_trainer.py::test_seeded_gaussian_noise_variance_and_expected_batch_normalization
+  .venv/lib/python3.12/site-packages/opacus/accountants/analysis/prv/prvs.py:70: RuntimeWarning: divide by zero encountered in log
+    t > np.log(1 - q),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+85 passed, 89 warnings in 25.59s
