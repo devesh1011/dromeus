@@ -1,0 +1,21 @@
+{
+  "basis": "Canonical project proposal; separate executed agreement not located in scoped sources",
+  "proposal_note": "Dromeus Final Proposal.md",
+  "proposal_sha256": "6d2fc20e1edd2faf02bb792565865f5ecf843c4e41cc152823bb5084ff12e619",
+  "m3_text_verbatim": "M3: DP-SGD and convergence hardening, $2,000 & ~4 weeks\n\nIntegrate Opacus for DP-SGD and make the noise multiplier, clipping bound, and related hyperparameters configurable, with published utility-versus-privacy curves so a group can pick its own setting from real numbers. Harden the consensus-distance tracking into proper divergence detection that flags a run going bad while it can still be retuned.\n\nDeliverable: tunable DP-SGD working end to end, published tradeoff curves, divergence detection.",
+  "canonical_implementation_guide": "plans/M-3 implementation plan.md",
+  "distinctions": [
+    "Four weeks and $2,000 are proposal estimates/grant amount, not benchmark acceptance thresholds.",
+    "Published utility-versus-privacy curves are an explicit deliverable; local evidence preparation does not prove publication.",
+    "No minimum language-model accuracy, maximum perplexity, maximum epsilon or allowable accuracy loss is stated for M3.",
+    "M4 library distribution, external user and multi-region demo requirements are not M3 exit criteria."
+  ],
+  "agreement_check": {
+    "executed_agreement_reviewed": false,
+    "search_scope": [
+      "repository and Dromeus Obsidian folder",
+      "focused connected Notion search for Dromeus agreement/proposal"
+    ],
+    "limitation": "No separate signed agreement was found. This map verifies the available proposal scope only; any agreement amendment must be compared before contractual signoff."
+  }
+}

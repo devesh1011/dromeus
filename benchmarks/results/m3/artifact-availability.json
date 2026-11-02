@@ -1,0 +1,47 @@
+{
+  "available_other_evidence": [
+    "Frozen recipes and run matrix",
+    "Numeric metrics, trajectories and derived audit summaries",
+    "Current-checkout focused test logs",
+    "Per-file provenance and package checksums"
+  ],
+  "detailed_audit": "audit/README.md",
+  "excluded": [
+    "Models/checkpoints/dataset caches",
+    "Raw privacy-owner ledgers and secure RNG state",
+    "Full memory traces and omitted verbose transport messages",
+    "GPT logs",
+    "Duplicate report charts/PDFs and source/release archives"
+  ],
+  "historical_availability": "provenance/historical-artifact-availability.json",
+  "limitations": [
+    "The original full source logs and some model/build artifacts were retired; source hashes cannot recreate them.",
+    "Extraction records and original collection hashes bind retained bytes, but missing original sources cannot be compared again.",
+    "Model-export/CSPRNG audit recreation is not fully possible from this folder alone.",
+    "Locally stored hashes and logs are not standalone independent attestation."
+  ],
+  "retained_event_logs": {
+    "cohorts": {
+      "digit_calibration": 40,
+      "original_digit_final": 88,
+      "warning_assessment": 56,
+      "warning_calibration": 48
+    },
+    "complete_verbose_sources_included": false,
+    "index": "audit/log-index.json",
+    "omitted_records": [
+      "message_received with routed exactly true",
+      "transfer_message_sent with integer retry_count exactly zero"
+    ],
+    "record_bytes_rewritten": false,
+    "retained_rows": 190041,
+    "source_gzip_bytes": 5629636,
+    "status": "included",
+    "storage_format": "plain UTF-8 JSONL, readable in a text editor",
+    "stored_bytes": 80539833,
+    "worker_files": 232
+  },
+  "reviewer_entry": "README.md",
+  "scope": "Current curated M3 team handoff; historical retirement inventory retained separately.",
+  "version": 1
+}
