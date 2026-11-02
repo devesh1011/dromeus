@@ -1,0 +1,80 @@
+{
+  "all_workers_positive_full_endpoint_learning": true,
+  "assessment_opened": false,
+  "derivation": "Sanitized selected-field derivative of locally available small final proofs; source hashes identify originals. This is not the original raw audit body and contains no model, trace, raw owner ledger, instance identifier or account identifier.",
+  "domain_mean_final_nll": {
+    "fineweb_edu": 8.06812068337129,
+    "pg19": 6.835411812177366,
+    "stackexchange": 5.739380274348084,
+    "wikipedia": 8.151374890887828
+  },
+  "frozen_quality_threshold": 7.311522905996883,
+  "initial_full_macro_nll": 7.411522905996883,
+  "mean_final_full_macro_nll": 7.198571915196142,
+  "mean_final_worker_perplexity": 1337.5193565908514,
+  "mean_full_nll_gain": 0.21295099080074031,
+  "population": "unchanged full public calibration,1024fixedsequence records per domain",
+  "quality_gate_passed": true,
+  "rows": [
+    {
+      "assessment_opened": false,
+      "committed_rounds": 1024,
+      "elapsed_whole_node_seconds": 89204.85417983602,
+      "event_delivery_dropped": 0,
+      "final_full_macro_nll": 7.19819730906021,
+      "final_full_perplexity": 1337.01835975426,
+      "full_nll_gain": 0.21332559693667275,
+      "initial_full_macro_nll": 7.411522905996883,
+      "initial_full_perplexity": 1654.944754019476,
+      "logical_updates": 4096,
+      "metrics_delivery_dropped": 0,
+      "rank": 0
+    },
+    {
+      "assessment_opened": false,
+      "committed_rounds": 1024,
+      "elapsed_whole_node_seconds": 89203.35544217599,
+      "event_delivery_dropped": 0,
+      "final_full_macro_nll": 7.1985706100064295,
+      "final_full_perplexity": 1337.517563143821,
+      "full_nll_gain": 0.21295229599045307,
+      "initial_full_macro_nll": 7.411522905996883,
+      "initial_full_perplexity": 1654.944754019476,
+      "logical_updates": 4096,
+      "metrics_delivery_dropped": 0,
+      "rank": 1
+    },
+    {
+      "assessment_opened": false,
+      "committed_rounds": 1024,
+      "elapsed_whole_node_seconds": 89202.41618647802,
+      "event_delivery_dropped": 0,
+      "final_full_macro_nll": 7.198566859168927,
+      "final_full_perplexity": 1337.512546342193,
+      "full_nll_gain": 0.21295604682795588,
+      "initial_full_macro_nll": 7.411522905996883,
+      "initial_full_perplexity": 1654.944754019476,
+      "logical_updates": 4096,
+      "metrics_delivery_dropped": 0,
+      "rank": 2
+    },
+    {
+      "assessment_opened": false,
+      "committed_rounds": 1024,
+      "elapsed_whole_node_seconds": 89200.64220280401,
+      "event_delivery_dropped": 0,
+      "final_full_macro_nll": 7.198952882549003,
+      "final_full_perplexity": 1338.0289571231315,
+      "full_nll_gain": 0.21257002344787956,
+      "initial_full_macro_nll": 7.411522905996883,
+      "initial_full_perplexity": 1654.944754019476,
+      "logical_updates": 4096,
+      "metrics_delivery_dropped": 0,
+      "rank": 3
+    }
+  ],
+  "source_sha256": {
+    "parsed_public_summary_derivation": "dcdde18854d38ca5cc00e2d43bbb585464340ad12184bc82808d816583a44ad2",
+    "raw_audit": "9424bf44c344b55ec2cd550160d6ffe199bb559514c9b9d38fbfee2bedf193a4"
+  }
+}

@@ -1,0 +1,3 @@
+learning_rate,label,mean_accuracy,sample_sd_seed_means
+0.003,reference,0.7254166666666667,0.013622754019776355
+0.01,frozen_combined_calibration_selected,0.7670833333333333,0.017467417584844443

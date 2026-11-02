@@ -1,0 +1,803 @@
+{
+  "data": {
+    "accounting_reconciliation_policy": {
+      "mechanism_history_and_identity_checks": "exact",
+      "prv_absolute_tolerance": 1e-06,
+      "rdp_absolute_tolerance": 1e-09,
+      "relative_tolerance": 1e-09,
+      "reported_epsilon_source": "original worker record"
+    },
+    "analysis_environment": {
+      "packages": {
+        "numpy": "2.5.3",
+        "opacus": "1.6.0",
+        "scipy": "1.16.3",
+        "torch": "2.13.0"
+      },
+      "platform": "macOS-27.0-arm64-arm-64bit",
+      "python": "3.12.11"
+    },
+    "compression_comparisons": [
+      {
+        "accuracy_delta_percentage_points": -0.13297872340425343,
+        "compressed_mean_accuracy": 0.7083776595744681,
+        "compressed_run_id": "final-compressed-s17",
+        "difference_exceeds_identity_seed_sd": false,
+        "encoded_bytes_ratio": 0.22240312242737859,
+        "identity_mean_accuracy": 0.7097074468085106,
+        "identity_run_id": "final-dp-sigma1-s17",
+        "identity_sample_sd_percentage_points": 2.5184639576936427,
+        "material_effect_interpretation": "Diagnostic only: absolute paired accuracy difference exceeds the observed sample SD of three identity seed means. No significance test or grant target.",
+        "seed": 17,
+        "sigma": 1.0,
+        "status": "verified_pair",
+        "wall_time_ratio": 1.014119647565197
+      },
+      {
+        "accuracy_delta_percentage_points": -0.2925531914893753,
+        "compressed_mean_accuracy": 0.7570478723404255,
+        "compressed_run_id": "final-compressed-s29",
+        "difference_exceeds_identity_seed_sd": false,
+        "encoded_bytes_ratio": 0.22240312242737859,
+        "identity_mean_accuracy": 0.7599734042553192,
+        "identity_run_id": "final-dp-sigma1-s29",
+        "identity_sample_sd_percentage_points": 2.5184639576936427,
+        "material_effect_interpretation": "Diagnostic only: absolute paired accuracy difference exceeds the observed sample SD of three identity seed means. No significance test or grant target.",
+        "seed": 29,
+        "sigma": 1.0,
+        "status": "verified_pair",
+        "wall_time_ratio": 1.0747954121909433
+      },
+      {
+        "accuracy_delta_percentage_points": -0.15957446808509967,
+        "compressed_mean_accuracy": 0.7360372340425532,
+        "compressed_run_id": "final-compressed-s41",
+        "difference_exceeds_identity_seed_sd": false,
+        "encoded_bytes_ratio": 0.22240312242737859,
+        "identity_mean_accuracy": 0.7376329787234042,
+        "identity_run_id": "final-dp-sigma1-s41",
+        "identity_sample_sd_percentage_points": 2.5184639576936427,
+        "material_effect_interpretation": "Diagnostic only: absolute paired accuracy difference exceeds the observed sample SD of three identity seed means. No significance test or grant target.",
+        "seed": 41,
+        "sigma": 1.0,
+        "status": "verified_pair",
+        "wall_time_ratio": 1.0590133050024921
+      }
+    ],
+    "cpu_export_evaluation": {
+      "all_matches": false,
+      "device": "cpu",
+      "discrepancies": [
+        {
+          "cpu_correct": 211,
+          "difference": -1,
+          "gpu_correct": 212,
+          "holdout_source": "svhn",
+          "rank": 1,
+          "run_id": "final-dp-sigma05-s17"
+        },
+        {
+          "cpu_correct": 142,
+          "difference": -1,
+          "gpu_correct": 143,
+          "holdout_source": "svhn",
+          "rank": 1,
+          "run_id": "final-dp-sigma1-s17"
+        },
+        {
+          "cpu_correct": 100,
+          "difference": -1,
+          "gpu_correct": 101,
+          "holdout_source": "svhn",
+          "rank": 0,
+          "run_id": "final-dp-sigma2-s17"
+        },
+        {
+          "cpu_correct": 100,
+          "difference": 1,
+          "gpu_correct": 99,
+          "holdout_source": "svhn",
+          "rank": 1,
+          "run_id": "final-dp-sigma2-s17"
+        },
+        {
+          "cpu_correct": 347,
+          "difference": 1,
+          "gpu_correct": 346,
+          "holdout_source": "usps",
+          "rank": 0,
+          "run_id": "final-dp-sigma4-s17-retry1"
+        },
+        {
+          "cpu_correct": 107,
+          "difference": -1,
+          "gpu_correct": 108,
+          "holdout_source": "svhn",
+          "rank": 1,
+          "run_id": "final-dp-sigma2-s29"
+        },
+        {
+          "cpu_correct": 360,
+          "difference": 1,
+          "gpu_correct": 359,
+          "holdout_source": "usps",
+          "rank": 1,
+          "run_id": "final-dp-sigma4-s41"
+        },
+        {
+          "cpu_correct": 140,
+          "difference": 1,
+          "gpu_correct": 139,
+          "holdout_source": "svhn",
+          "rank": 0,
+          "run_id": "final-compressed-s17"
+        },
+        {
+          "cpu_correct": 209,
+          "difference": -4,
+          "gpu_correct": 213,
+          "holdout_source": "mnist",
+          "rank": 0,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 335,
+          "difference": -3,
+          "gpu_correct": 338,
+          "holdout_source": "usps",
+          "rank": 0,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 62,
+          "difference": -6,
+          "gpu_correct": 68,
+          "holdout_source": "svhn",
+          "rank": 0,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 301,
+          "difference": 4,
+          "gpu_correct": 297,
+          "holdout_source": "optdigits",
+          "rank": 0,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 201,
+          "difference": 6,
+          "gpu_correct": 195,
+          "holdout_source": "mnist",
+          "rank": 1,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 331,
+          "difference": -5,
+          "gpu_correct": 336,
+          "holdout_source": "usps",
+          "rank": 1,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 70,
+          "difference": 5,
+          "gpu_correct": 65,
+          "holdout_source": "svhn",
+          "rank": 1,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 304,
+          "difference": 1,
+          "gpu_correct": 303,
+          "holdout_source": "optdigits",
+          "rank": 1,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 215,
+          "difference": -3,
+          "gpu_correct": 218,
+          "holdout_source": "mnist",
+          "rank": 2,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 327,
+          "difference": -10,
+          "gpu_correct": 337,
+          "holdout_source": "usps",
+          "rank": 2,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 295,
+          "difference": -3,
+          "gpu_correct": 298,
+          "holdout_source": "optdigits",
+          "rank": 2,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 217,
+          "difference": -4,
+          "gpu_correct": 221,
+          "holdout_source": "mnist",
+          "rank": 3,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 330,
+          "difference": -7,
+          "gpu_correct": 337,
+          "holdout_source": "usps",
+          "rank": 3,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 290,
+          "difference": -1,
+          "gpu_correct": 291,
+          "holdout_source": "optdigits",
+          "rank": 3,
+          "run_id": "final-fault-s29-retry1"
+        },
+        {
+          "cpu_correct": 212,
+          "difference": -7,
+          "gpu_correct": 219,
+          "holdout_source": "mnist",
+          "rank": 0,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 327,
+          "difference": -6,
+          "gpu_correct": 333,
+          "holdout_source": "usps",
+          "rank": 0,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 76,
+          "difference": -3,
+          "gpu_correct": 79,
+          "holdout_source": "svhn",
+          "rank": 0,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 308,
+          "difference": -6,
+          "gpu_correct": 314,
+          "holdout_source": "optdigits",
+          "rank": 0,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 199,
+          "difference": -2,
+          "gpu_correct": 201,
+          "holdout_source": "mnist",
+          "rank": 1,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 311,
+          "difference": -2,
+          "gpu_correct": 313,
+          "holdout_source": "optdigits",
+          "rank": 1,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 211,
+          "difference": -7,
+          "gpu_correct": 218,
+          "holdout_source": "mnist",
+          "rank": 2,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 329,
+          "difference": -8,
+          "gpu_correct": 337,
+          "holdout_source": "usps",
+          "rank": 2,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 80,
+          "difference": 4,
+          "gpu_correct": 76,
+          "holdout_source": "svhn",
+          "rank": 2,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 303,
+          "difference": -4,
+          "gpu_correct": 307,
+          "holdout_source": "optdigits",
+          "rank": 2,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 206,
+          "difference": -6,
+          "gpu_correct": 212,
+          "holdout_source": "mnist",
+          "rank": 3,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 333,
+          "difference": -3,
+          "gpu_correct": 336,
+          "holdout_source": "usps",
+          "rank": 3,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 72,
+          "difference": -6,
+          "gpu_correct": 78,
+          "holdout_source": "svhn",
+          "rank": 3,
+          "run_id": "final-fault-s41"
+        },
+        {
+          "cpu_correct": 148,
+          "difference": 1,
+          "gpu_correct": 147,
+          "holdout_source": "svhn",
+          "rank": 3,
+          "run_id": "final-secure-s17"
+        },
+        {
+          "cpu_correct": 396,
+          "difference": -1,
+          "gpu_correct": 397,
+          "holdout_source": "mnist",
+          "rank": 1,
+          "run_id": "final-robustness-s29"
+        }
+      ],
+      "discrepancy_count": 37,
+      "interpretation": "Exact correct-count comparison on fresh CPU models. GPU summaries remain unchanged.",
+      "row_count": 88,
+      "torch_version": "2.13.0"
+    },
+    "experiment_sha256": "374b982ef02d836730c223d280b39b761b859107904b97289b39d6c65bf930cb",
+    "gates": {
+      "all_node_distance_rounds_present": true,
+      "compression_pilot": "verified_pair",
+      "declared_runs_complete": true,
+      "detector_live_evidence": "verified_evidence",
+      "final_exact_sketch_reconciled": true,
+      "independent_cpu_export_evaluation": "discrepancies",
+      "privacy_histories_recomputed": true,
+      "runtime_source_and_worker_identity": "verified_retained_evidence",
+      "secure_execution": "completed",
+      "unequal_and_label_skew": "verified_unequal_label_skew"
+    },
+    "limitations": [
+      "Cross-platform PRV recomputation permits 1e-6 absolute or 1e-9 relative reporting roundoff; RDP retains 1e-9 absolute/relative checks. Original worker epsilons and all recomputed differences are retained. Analysis dependency versions are recorded; frozen accountant settings and exact mechanism-history checks are unchanged.",
+      "Worker provenance records four distinct EC2 instance IDs and fractional GPU profile UUIDs. These are retained deployment declarations, not remote attestation or proof of four physical GPUs.",
+      "Public-data research runs report per-node mathematical mechanism estimates; no full-history or group transcript guarantee.",
+      "Baseline and clipping-only controls are non-private; their epsilon is unavailable, never zero.",
+      "Sample SD is computed across three seed-level node/source means; nodes are not independent repetitions.",
+      "Cumulative budgets compose retained reservations, including failed/unfinished reserved horizons, at the frozen delta.",
+      "Exact consensus is available for final model exports only. Intermediate trajectories use CountSketch approximations.",
+      "Trajectory wall time starts at each node's first completed-round log. Reported node wall time covers formation, training and evaluation; it excludes preparation, final accounting and artifact collection. Fleet cost is recorded separately.",
+      "Calibration/final splits exclude exact image duplicates; distinct-person and near-duplicate separation is not established."
+    ],
+    "original_detector_adverse": {
+      "limitations": [
+        "Workload-specific thresholds; no universal deployment defaults.",
+        "Round-order replay does not measure online arrival or warning delivery.",
+        "Node detections within a run are correlated, not independent repetitions.",
+        "Sensitivity covers declared injected disagreement. Shared model collapse can be invisible.",
+        "Complete scale observations required; missing telemetry is not healthy.",
+        "Live delivery requires matching terminal zero-drop summaries."
+      ],
+      "live_metrics": {
+        "alert_precision": 0.1111111111111111,
+        "delay_rounds": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "detected_fault_nodes": 4,
+        "false_alerts": 32,
+        "fault_node_recall": 0.5,
+        "fault_nodes": 8,
+        "healthy_nodes": 52,
+        "healthy_run_false_warning_rate": 0.5384615384615384,
+        "healthy_runs": 13,
+        "healthy_runs_with_false_alerts": [
+          "final-baseline-s29",
+          "final-compressed-s29",
+          "final-dp-sigma05-s29",
+          "final-dp-sigma1-s29",
+          "final-dp-sigma2-s29",
+          "final-dp-sigma4-s29",
+          "final-robustness-s29"
+        ],
+        "max_delay_rounds": 2,
+        "mean_delay_rounds": 2.0,
+        "median_delay_rounds": 2.0,
+        "missed_fault_nodes": 4,
+        "node_repetitions_independent": false,
+        "nodes_with_false_alerts": 32,
+        "true_alerts": 4
+      },
+      "metrics": {
+        "alert_precision": 0.1111111111111111,
+        "delay_rounds": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "detected_fault_nodes": 4,
+        "false_alerts": 32,
+        "fault_node_recall": 0.5,
+        "fault_nodes": 8,
+        "healthy_nodes": 52,
+        "healthy_run_false_warning_rate": 0.5384615384615384,
+        "healthy_runs": 13,
+        "healthy_runs_with_false_alerts": [
+          "final-baseline-s29",
+          "final-compressed-s29",
+          "final-dp-sigma05-s29",
+          "final-dp-sigma1-s29",
+          "final-dp-sigma2-s29",
+          "final-dp-sigma4-s29",
+          "final-robustness-s29"
+        ],
+        "max_delay_rounds": 2,
+        "mean_delay_rounds": 2.0,
+        "median_delay_rounds": 2.0,
+        "missed_fault_nodes": 4,
+        "node_repetitions_independent": false,
+        "nodes_with_false_alerts": 32,
+        "true_alerts": 4
+      }
+    },
+    "status": "reconciled",
+    "utility_settings": [
+      {
+        "arm": "baseline",
+        "delta": null,
+        "maximum_node_mean": 0.925531914893617,
+        "maximum_seed_mean": 0.9240691489361702,
+        "mean_accuracy": 0.9196808510638298,
+        "mean_node_wall_seconds": 97.45938107949996,
+        "minimum_node_mean": 0.9164893617021277,
+        "minimum_seed_mean": 0.9172872340425532,
+        "peak_cuda_allocated_bytes": 103358464.0,
+        "peak_cuda_reserved_bytes": 161480704.0,
+        "per_seed_mean_node_wall_seconds": [
+          98.11012263975,
+          96.86434259800012,
+          97.40367800074978
+        ],
+        "per_seed_node_means": [
+          [
+            0.9180851063829787,
+            0.9175531914893618,
+            0.9186170212765958,
+            0.9164893617021277
+          ],
+          [
+            0.9164893617021277,
+            0.9170212765957446,
+            0.9170212765957448,
+            0.9186170212765958
+          ],
+          [
+            0.922340425531915,
+            0.925,
+            0.925531914893617,
+            0.923404255319149
+          ]
+        ],
+        "prv_epsilon": null,
+        "rdp_epsilon": null,
+        "repetitions": 3,
+        "run_ids": [
+          "final-baseline-s17",
+          "final-baseline-s29",
+          "final-baseline-s41"
+        ],
+        "sample_sd_seed_means": 0.003805608516291021,
+        "seed_means": [
+          0.9176861702127659,
+          0.9172872340425532,
+          0.9240691489361702
+        ],
+        "seeds": [
+          17,
+          29,
+          41
+        ],
+        "sigma": null,
+        "source_mean_accuracy": [
+          0.9632978723404255,
+          0.9556737588652483,
+          0.7670212765957447,
+          0.9927304964539005
+        ],
+        "uncertainty": "Sample SD across seed-level means, not node-level SEM or CI.",
+        "wall_time_ratio_to_baseline": 1.0
+      },
+      {
+        "arm": "private",
+        "delta": 1e-05,
+        "maximum_node_mean": 0.8202127659574469,
+        "maximum_seed_mean": 0.819813829787234,
+        "mean_accuracy": 0.8070035460992909,
+        "mean_node_wall_seconds": 132.75430117308335,
+        "minimum_node_mean": 0.7909574468085107,
+        "minimum_seed_mean": 0.7918882978723405,
+        "peak_cuda_allocated_bytes": 103358464.0,
+        "peak_cuda_reserved_bytes": 155189248.0,
+        "per_seed_mean_node_wall_seconds": [
+          128.7457908455,
+          125.61409109075021,
+          143.90302158299983
+        ],
+        "per_seed_node_means": [
+          [
+            0.7925531914893618,
+            0.7925531914893618,
+            0.7909574468085107,
+            0.7914893617021277
+          ],
+          [
+            0.8186170212765957,
+            0.8202127659574467,
+            0.8202127659574469,
+            0.8202127659574469
+          ],
+          [
+            0.8095744680851064,
+            0.8095744680851065,
+            0.8111702127659575,
+            0.8069148936170213
+          ]
+        ],
+        "prv_epsilon": 22.328626404185062,
+        "rdp_epsilon": 25.254810774729503,
+        "repetitions": 3,
+        "run_ids": [
+          "final-dp-sigma05-s17",
+          "final-dp-sigma05-s29",
+          "final-dp-sigma05-s41"
+        ],
+        "sample_sd_seed_means": 0.014104732515258653,
+        "seed_means": [
+          0.7918882978723405,
+          0.819813829787234,
+          0.8093085106382979
+        ],
+        "seeds": [
+          17,
+          29,
+          41
+        ],
+        "sigma": 0.5,
+        "source_mean_accuracy": [
+          0.9269503546099293,
+          0.9067375886524821,
+          0.47659574468085103,
+          0.9177304964539007
+        ],
+        "uncertainty": "Sample SD across seed-level means, not node-level SEM or CI.",
+        "wall_time_ratio_to_baseline": 1.3621500537212776
+      },
+      {
+        "arm": "private",
+        "delta": 1e-05,
+        "maximum_node_mean": 0.7617021276595745,
+        "maximum_seed_mean": 0.7599734042553192,
+        "mean_accuracy": 0.7357712765957447,
+        "mean_node_wall_seconds": 127.80483859474997,
+        "minimum_node_mean": 0.7063829787234043,
+        "minimum_seed_mean": 0.7097074468085106,
+        "peak_cuda_allocated_bytes": 103358464.0,
+        "peak_cuda_reserved_bytes": 167772160.0,
+        "per_seed_mean_node_wall_seconds": [
+          131.25209324049996,
+          124.44501186099978,
+          127.71741068275014
+        ],
+        "per_seed_node_means": [
+          [
+            0.7111702127659574,
+            0.7122340425531914,
+            0.7090425531914893,
+            0.7063829787234043
+          ],
+          [
+            0.7590425531914894,
+            0.7590425531914894,
+            0.7617021276595745,
+            0.7601063829787233
+          ],
+          [
+            0.7393617021276595,
+            0.7377659574468085,
+            0.7372340425531916,
+            0.7361702127659575
+          ]
+        ],
+        "prv_epsilon": 3.6203465797914096,
+        "rdp_epsilon": 4.025752414798054,
+        "repetitions": 3,
+        "run_ids": [
+          "final-dp-sigma1-s17",
+          "final-dp-sigma1-s29",
+          "final-dp-sigma1-s41"
+        ],
+        "sample_sd_seed_means": 0.025184639576936427,
+        "seed_means": [
+          0.7097074468085106,
+          0.7599734042553192,
+          0.7376329787234042
+        ],
+        "seeds": [
+          17,
+          29,
+          41
+        ],
+        "sigma": 1.0,
+        "source_mean_accuracy": [
+          0.8710992907801421,
+          0.875886524822695,
+          0.3157801418439716,
+          0.8803191489361702
+        ],
+        "uncertainty": "Sample SD across seed-level means, not node-level SEM or CI.",
+        "wall_time_ratio_to_baseline": 1.3113651777707933
+      },
+      {
+        "arm": "private",
+        "delta": 1e-05,
+        "maximum_node_mean": 0.648936170212766,
+        "maximum_seed_mean": 0.647872340425532,
+        "mean_accuracy": 0.6363918439716312,
+        "mean_node_wall_seconds": 127.57167447783324,
+        "minimum_node_mean": 0.6148936170212767,
+        "minimum_seed_mean": 0.6167553191489361,
+        "peak_cuda_allocated_bytes": 103358464.0,
+        "peak_cuda_reserved_bytes": 167772160.0,
+        "per_seed_mean_node_wall_seconds": [
+          122.79134628675001,
+          126.54094789024975,
+          133.38272925649994
+        ],
+        "per_seed_node_means": [
+          [
+            0.6175531914893616,
+            0.6148936170212767,
+            0.6164893617021276,
+            0.6180851063829788
+          ],
+          [
+            0.6457446808510638,
+            0.6446808510638298,
+            0.6436170212765957,
+            0.6441489361702127
+          ],
+          [
+            0.6462765957446809,
+            0.648936170212766,
+            0.647872340425532,
+            0.6484042553191489
+          ]
+        ],
+        "prv_epsilon": 1.231042120875658,
+        "rdp_epsilon": 1.3417806190211727,
+        "repetitions": 3,
+        "run_ids": [
+          "final-dp-sigma2-s17",
+          "final-dp-sigma2-s29",
+          "final-dp-sigma2-s41"
+        ],
+        "sample_sd_seed_means": 0.01708677419369916,
+        "seed_means": [
+          0.6167553191489361,
+          0.6445478723404255,
+          0.647872340425532
+        ],
+        "seeds": [
+          17,
+          29,
+          41
+        ],
+        "sigma": 2.0,
+        "source_mean_accuracy": [
+          0.7095744680851065,
+          0.8154255319148936,
+          0.2168439716312057,
+          0.8037234042553192
+        ],
+        "uncertainty": "Sample SD across seed-level means, not node-level SEM or CI.",
+        "wall_time_ratio_to_baseline": 1.3089727542366594
+      },
+      {
+        "arm": "private",
+        "delta": 1e-05,
+        "maximum_node_mean": 0.5664893617021277,
+        "maximum_seed_mean": 0.5658244680851063,
+        "mean_accuracy": 0.5461879432624114,
+        "mean_node_wall_seconds": 125.74727916708362,
+        "minimum_node_mean": 0.5207446808510638,
+        "minimum_seed_mean": 0.5222074468085106,
+        "peak_cuda_allocated_bytes": 103358464.0,
+        "peak_cuda_reserved_bytes": 155189248.0,
+        "per_seed_mean_node_wall_seconds": [
+          126.2897941132502,
+          122.49943197050038,
+          128.4526114175003
+        ],
+        "per_seed_node_means": [
+          [
+            0.5207446808510638,
+            0.5228723404255319,
+            0.5218085106382978,
+            0.5234042553191489
+          ],
+          [
+            0.5510638297872341,
+            0.548936170212766,
+            0.5510638297872341,
+            0.5510638297872341
+          ],
+          [
+            0.5664893617021276,
+            0.5654255319148935,
+            0.5664893617021277,
+            0.5648936170212766
+          ]
+        ],
+        "prv_epsilon": 0.5409873319452468,
+        "rdp_epsilon": 0.5845269457502239,
+        "repetitions": 3,
+        "run_ids": [
+          "final-dp-sigma4-s17-retry1",
+          "final-dp-sigma4-s29",
+          "final-dp-sigma4-s41"
+        ],
+        "sample_sd_seed_means": 0.02213060558164397,
+        "seed_means": [
+          0.5222074468085106,
+          0.5505319148936171,
+          0.5658244680851063
+        ],
+        "seeds": [
+          17,
+          29,
+          41
+        ],
+        "sigma": 4.0,
+        "source_mean_accuracy": [
+          0.5624113475177305,
+          0.7390070921985816,
+          0.1652482269503546,
+          0.7180851063829786
+        ],
+        "uncertainty": "Sample SD across seed-level means, not node-level SEM or CI.",
+        "wall_time_ratio_to_baseline": 1.290253208816384
+      }
+    ],
+    "version": 1
+  },
+  "derivation": "sanitized aggregate derived from retained source; not raw body proof",
+  "source_sha256": "89b46330bda93b1759c5ad8a577fe047f1c771cc59765424b0faa7076b5c3c91"
+}

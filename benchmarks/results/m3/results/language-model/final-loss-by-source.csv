@@ -1,0 +1,5 @@
+source,display_name,population,records_per_source,correlated_node_models,mean_prediction_loss,minimum_node_loss,maximum_node_loss
+fineweb_edu,FineWeb-Edu,matched final full development set,1024,4,8.06812068337129,8.066347665736885,8.069825853534326
+wikipedia,Wikipedia,matched final full development set,1024,4,8.151374890887828,8.150526297962703,8.15223999448395
+pg19,PG-19,matched final full development set,1024,4,6.835411812177366,6.8318779223297845,6.839997975807268
+stackexchange,StackExchange,matched final full development set,1024,4,5.739380274348084,5.736884312552977,5.742103260415554

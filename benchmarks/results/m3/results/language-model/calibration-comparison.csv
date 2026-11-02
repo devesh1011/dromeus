@@ -1,0 +1,4 @@
+setting,noise_multiplier,logical_updates_per_worker,committed_rounds_per_worker,model_parameters,full_calibration_records_per_domain,mean_full_macro_nll,mean_per_worker_perplexity_derived,resource_disposition,assessment_executed,repetitions
+ordinary,,128,32,81948672,1024,6.468907124781796,644.8157715014554,ordinary reference; no new resource qualification asserted by this comparison,False,1
+private_sigma1,1,128,32,81948672,1024,9.472243290671898,12994.48450197434,legacy memory replay FAIL ranks0/2/3; rank1 PASS; adverse result retained,False,1
+private_sigma0_5,0.5,128,32,81948672,1024,8.91502572486884,7443.647367362822,prospective phase-resource gate PASS all4; legacy metric FAIL ranks0/2/3 remains retained,False,1

@@ -1,0 +1,4 @@
+seed,reference_accuracy,selected_accuracy,gain_percentage_points,svhn_gain_percentage_points
+163,0.7334375,0.7646875,3.125,2.875
+167,0.733125,0.785625,5.25,10.75
+173,0.7096875,0.7509375,4.125,-2.25

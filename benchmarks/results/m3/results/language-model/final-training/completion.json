@@ -1,0 +1,25 @@
+{
+  "all_four_training_success_zero": true,
+  "all_owned_jobs_and_timer_closed": true,
+  "assessment_disposition": "UNUSED_NOT_AUTHORIZED_FOR_THIS_CONTINUATION",
+  "assessment_opened": false,
+  "audit_cgroup_closed_before_exact_lease_revocation": true,
+  "derivation": "Sanitized selected-field derivative of locally available small final proofs; source hashes identify originals. This is not the original raw audit body and contains no model, trace, raw owner ledger, instance identifier or account identifier.",
+  "exact_owned_runtime_and_audit_grants_absent": true,
+  "fresh_retention_verification_utc": "2026-11-02T09:06:54.649501+00:00",
+  "host_lifecycle_actions": 0,
+  "raw_data_models_traces_kept_aws_only": true,
+  "remaining_authorized_active_work": false,
+  "retained_instances_running": 4,
+  "retention_until_owner_release": true,
+  "robustness_or_useful_language_quality_claimed": false,
+  "source_sha256": {
+    "closure-proof.json": "a6e09b9aa413419d5e3675795dd856f2e2f985e2862d894cbeefe2061f4d767f",
+    "failure-job-stop-requests.json": "23f1793302ea321a5146c472eea55a87a17255211fbf2a224f9faffe99920f7f",
+    "final-readonly-host-and-grant-proof.json": "fac8bbd988382d7d7245459132d5851f85a45ac32c9491e5b96aa8c50f1b0b04",
+    "lease-revoked.json": "970e11d3cb9c230b586e44e6a09a6789f4bdb103f0cd7662ed624652c87a2289",
+    "terminal-disposition.json": "f58bdde7600cb4b4bd528eb915d5bf72a13463afc27db69d2c2cc9e399a06cc4"
+  },
+  "status": "COMPLETE_WARMSTART_TRAINING_RESOURCE_BODY_AND_FROZEN_CALIBRATION_QUALITY_PASS",
+  "unrelated_grants_preserved": true
+}

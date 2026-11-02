@@ -1,0 +1,14 @@
+{
+  "assessment_used": false,
+  "campaign_updates_per_worker": 8192,
+  "committed_rounds_total_per_worker": 2048,
+  "evaluation": "Full public calibration uses same1024fixedsequence records/domain;128record/domain progress subsets are distinct.",
+  "execution_boundary": "After4096updates, all workers used the predetermined audited worker0 export, then started fresh optimizer/NoLoCo mixing/secure RNG. All ancestral privacy charges remain counted.",
+  "executions": 2,
+  "important_adverse_results": "H128 private runs retain legacy memory failures; sigma0.5 separately frozen phase-consistent test passed. Original124M compressed run breached memory floor and dropped final sketches before repair.",
+  "scope": "Additional language-model studies beyond the original M3 requirement; not a substitute acceptance criterion.",
+  "uninterrupted_training_claimed": false,
+  "updates_per_execution_per_worker": 4096,
+  "useful_language_quality_or_robustness_claimed": false,
+  "workers_are_independent_repeated_campaigns": false
+}

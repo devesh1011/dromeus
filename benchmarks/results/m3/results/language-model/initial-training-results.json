@@ -1,0 +1,148 @@
+{
+  "data": {
+    "committed_rounds_per_worker": 1024,
+    "final_macro_domain_nll": 7.411267825782868,
+    "full_calibration": {
+      "all_workers_positive_full_endpoint_learning": true,
+      "assessment_opened": false,
+      "domains": {
+        "fineweb_edu": {
+          "mean_final_nll": 8.30337514438483,
+          "per_worker_final_nll": {
+            "fineweb_edu": 8.302080641660439,
+            "pg19": 8.304758541517117,
+            "stackexchange": 8.30368905350366,
+            "wikipedia": 8.302972340858105
+          }
+        },
+        "pg19": {
+          "mean_final_nll": 7.051934268369187,
+          "per_worker_final_nll": {
+            "fineweb_edu": 7.0553605050324855,
+            "pg19": 7.0483564516832935,
+            "stackexchange": 7.05417675961489,
+            "wikipedia": 7.049843357146077
+          }
+        },
+        "stackexchange": {
+          "mean_final_nll": 5.960156186950274,
+          "per_worker_final_nll": {
+            "fineweb_edu": 5.959193492311623,
+            "pg19": 5.961573139449161,
+            "stackexchange": 5.956314145539245,
+            "wikipedia": 5.9635439705010675
+          }
+        },
+        "wikipedia": {
+          "mean_final_nll": 8.329605703427182,
+          "per_worker_final_nll": {
+            "fineweb_edu": 8.329456984982983,
+            "pg19": 8.329878504614285,
+            "stackexchange": 8.33088362497864,
+            "wikipedia": 8.328203699132821
+          }
+        }
+      },
+      "mean_final_macro_domain_nll": 7.411267825782868,
+      "mean_final_macro_domain_nll_max": 8.41502572486884,
+      "per_worker": {
+        "fineweb_edu": {
+          "final_macro_domain_nll": 7.411522905996883,
+          "initial_macro_domain_nll": 10.88016816046752,
+          "macro_domain_nll_improvement": 3.468645254470637,
+          "public_evaluation_seconds": 360.09764233200985
+        },
+        "pg19": {
+          "final_macro_domain_nll": 7.411141659315964,
+          "initial_macro_domain_nll": 10.88016816046752,
+          "macro_domain_nll_improvement": 3.4690265011515553,
+          "public_evaluation_seconds": 357.2526125340373
+        },
+        "stackexchange": {
+          "final_macro_domain_nll": 7.411265895909109,
+          "initial_macro_domain_nll": 10.88016816046752,
+          "macro_domain_nll_improvement": 3.4689022645584107,
+          "public_evaluation_seconds": 361.09212690001004
+        },
+        "wikipedia": {
+          "final_macro_domain_nll": 7.411140841909518,
+          "initial_macro_domain_nll": 10.88016816046752,
+          "macro_domain_nll_improvement": 3.469027318558002,
+          "public_evaluation_seconds": 349.79806803702377
+        }
+      },
+      "quality_gate_passed": true,
+      "robustness_claim": false
+    },
+    "held_out_final_assessment_executed": false,
+    "initial_macro_domain_nll": 10.88016816046752,
+    "initialization": "public random initialization, seed17",
+    "large_raw_artifacts_excluded": true,
+    "macro_domain_nll_improvement": 3.468900334684651,
+    "model_family": "GPT-2-style transformer",
+    "model_parameters": 81948672,
+    "optimizer_updates_per_worker": 4096,
+    "privacy_by_source": {
+      "fineweb_edu": {
+        "actual_history_prv_epsilon": 3.810330008924817,
+        "actual_history_rdp_epsilon": 4.862800547288304,
+        "cumulative_reserved_prv_epsilon": 3.8265464615814397,
+        "cumulative_reserved_rdp_epsilon": 4.880099491979139,
+        "cumulative_reserved_steps": 4552,
+        "delta": 1e-06,
+        "new_reserved_steps": 4096,
+        "owner_prefix_preserved": true,
+        "scope": "whole-pilot actual history and conservative cumulative reservations"
+      },
+      "pg19": {
+        "actual_history_prv_epsilon": 3.810330008924817,
+        "actual_history_rdp_epsilon": 4.862800547288304,
+        "cumulative_reserved_prv_epsilon": 3.8265001476735883,
+        "cumulative_reserved_rdp_epsilon": 4.880044801288092,
+        "cumulative_reserved_steps": 4480,
+        "delta": 1e-06,
+        "new_reserved_steps": 4096,
+        "owner_prefix_preserved": true,
+        "scope": "whole-pilot actual history and conservative cumulative reservations"
+      },
+      "stackexchange": {
+        "actual_history_prv_epsilon": 3.810330008924817,
+        "actual_history_rdp_epsilon": 4.862800547288304,
+        "cumulative_reserved_prv_epsilon": 3.8265001476735883,
+        "cumulative_reserved_rdp_epsilon": 4.880044801288092,
+        "cumulative_reserved_steps": 4480,
+        "delta": 1e-06,
+        "new_reserved_steps": 4096,
+        "owner_prefix_preserved": true,
+        "scope": "whole-pilot actual history and conservative cumulative reservations"
+      },
+      "wikipedia": {
+        "actual_history_prv_epsilon": 3.810330008924817,
+        "actual_history_rdp_epsilon": 4.862800547288304,
+        "cumulative_reserved_prv_epsilon": 3.8265001476735883,
+        "cumulative_reserved_rdp_epsilon": 4.880044801288092,
+        "cumulative_reserved_steps": 4480,
+        "delta": 1e-06,
+        "new_reserved_steps": 4096,
+        "owner_prefix_preserved": true,
+        "scope": "whole-pilot actual history and conservative cumulative reservations"
+      }
+    },
+    "recipe": {
+      "clipping_norm": 1,
+      "delta": 1e-06,
+      "learning_rate": 0.0001,
+      "logical_batch": 16,
+      "noise_multiplier": 0.5,
+      "optimizer": "AdamW",
+      "physical_batch": 1,
+      "sample_rate": 0.00048828125
+    },
+    "robustness_claim": false,
+    "scope": "one completed exploratory group; calibration is not independent assessment; not a useful-language-quality guarantee",
+    "status": "COMPLETED_G4_BODY_INTEGRITY_AND_FULL_CALIBRATION_PASS",
+    "worker_count": 4
+  },
+  "derivation": "sanitized aggregate derived from retained source; not raw body proof",
+  "source_sha256": "89a3d0cdd4c352b5850884b9e433e038d895094f8a9d7a184698965ac0464bca"
+}

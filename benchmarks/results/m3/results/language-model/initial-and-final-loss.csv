@@ -1,0 +1,3 @@
+endpoint,campaign_updates_per_worker,population,records_per_source,correlated_node_models,mean_prediction_loss
+Public initialization,0,matched full development set,1024,4,10.88016816046752
+Final model,8192,matched full development set,1024,4,7.198571915196142

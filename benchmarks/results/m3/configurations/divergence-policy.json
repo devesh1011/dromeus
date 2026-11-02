@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "mode": "warn",
+  "threshold_set_id": "m3-repair-candidate-growth-ratio3",
+  "warmup_rounds": 10,
+  "window_rounds": 8,
+  "patience_windows": 2,
+  "distance_floor": 0.007481537110715133,
+  "growth_ratio": 3.0,
+  "min_log_slope": 0.02,
+  "severe_distance": 0.13017124134850802,
+  "severe_patience": 2,
+  "recovery_windows": 3,
+  "recovery_distance": 0.09545891032223923,
+  "max_lag_rounds": 8,
+  "absolute_distance_floor": 0.1078185190517367,
+  "absolute_severe_distance": 1.7904680847833045,
+  "absolute_recovery_distance": 1.3130099288410901
+}

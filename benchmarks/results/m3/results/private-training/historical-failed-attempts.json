@@ -1,0 +1,46 @@
+{
+  "cross_platform_accounting": {
+    "frozen_prv_error_setting": 0.01,
+    "initial_failed_numerical_checks_retained": true,
+    "mechanism_histories_rates_steps_and_identity_checks": "exact",
+    "prv_absolute_reporting_tolerance": 1e-06,
+    "prv_relative_reporting_tolerance": 1e-09,
+    "rdp_absolute_and_relative_tolerance": 1e-09,
+    "recorded_original_worker_values_preserved": true
+  },
+  "derivation": "Selected factual summary from sanitized original-campaign historical report; not a reconstructed raw log or terminal proof.",
+  "failed_attempts": [
+    {
+      "competing_successful_attempt_selection": false,
+      "failure": "Unattended OS package update interrupted rank1 after committedround47; restarted process refused existing run directory.",
+      "full_privacy_reservation_steps_per_worker_retained": 750,
+      "record_gap": "Rank1 original stdout was overwritten by the restarted wrapper.",
+      "run_id": "final-dp-sigma4-s17",
+      "same_recipe_replacement": "final-dp-sigma4-s17-retry1"
+    },
+    {
+      "failure": "Rank0 host memory exhausted during cumulative PRV accounting before writing terminal summary.",
+      "memory_amendment": "16GiB task-owned swap on the same four workers; source and thresholds unchanged.",
+      "model_exports_completed_all_workers": true,
+      "passing_summary_reconstructed": false,
+      "privacy_reservations_retained": true,
+      "run_id": "final-fault-s29",
+      "same_recipe_replacement": "final-fault-s29-retry1",
+      "training_completed_all_workers": true,
+      "unavailable": [
+        "exact timing",
+        "peak CUDA counters",
+        "rank0 terminal delivery-drop count"
+      ]
+    }
+  ],
+  "failed_fault_attempt_detector": {
+    "false_alerts": 4,
+    "injection_round": 25,
+    "missed_new_fault_detections": 4,
+    "monitors": 4,
+    "scope": "Supplemental failed-attempt result; missing rank0 terminal delivery count remains unknown.",
+    "warning_started_round": 19
+  },
+  "historical_execution_amendments": "Small original digit campaign had recorded deadline amendments; this is historical evidence and does not describe or modify the later frozen GPT run clocks."
+}

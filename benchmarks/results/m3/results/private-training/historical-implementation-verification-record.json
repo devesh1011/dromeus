@@ -1,0 +1,19 @@
+{
+  "data": {
+    "actual_axl_scope": "public tiny 8-update/2-round fixture with parent-aware body audit",
+    "full_suite_passed": 1979,
+    "full_suite_skipped": 32,
+    "full_verification_log_sha256": "f14c148b77bd606eb3c6accd5f1e0de7cd167a6ec1c4317608d21eae54d35201",
+    "lock_architecture_lint_types_passed": true,
+    "new_accounted_core_tests_passed": 17,
+    "new_warmstart_benchmark_tests_passed": 10,
+    "retained_expected_failures": 1,
+    "separate_actual_four_process_axl_warmstart_passed": true,
+    "source_archive_sha256": "d034361b5f49ac1329858bce38b40ab85171fd0d8d73af5c92936d708634091f",
+    "status": "PASS_APPROVED_CORE_AND_WARMSTART_SOURCE_VERIFICATION",
+    "subtests_passed": 6,
+    "utc": "2026-11-01T07:21:06.385760+00:00"
+  },
+  "derivation": "recorded verification results only; no test suite rerun for report/pack preparation; actual AXL fixture separate from environment-gated full-suite integration",
+  "source_sha256": "1adbce9e6de22fdd422557b7be4b7ee0539125440c27367bb1573f30dd49804f"
+}

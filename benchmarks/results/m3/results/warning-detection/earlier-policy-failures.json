@@ -1,0 +1,86 @@
+{
+  "derivation": "Original failed warning outcomes selected unchanged from original-campaign aggregate; cohort definitions differ from the later matched reporting subset.",
+  "old_and_repaired_cohorts_matched_ab": false,
+  "original_full_retained_aggregate": {
+    "limitations": [
+      "Workload-specific thresholds; no universal deployment defaults.",
+      "Round-order replay does not measure online arrival or warning delivery.",
+      "Node detections within a run are correlated, not independent repetitions.",
+      "Sensitivity covers declared injected disagreement. Shared model collapse can be invisible.",
+      "Complete scale observations required; missing telemetry is not healthy.",
+      "Live delivery requires matching terminal zero-drop summaries."
+    ],
+    "live_metrics": {
+      "alert_precision": 0.1111111111111111,
+      "delay_rounds": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "detected_fault_nodes": 4,
+      "false_alerts": 32,
+      "fault_node_recall": 0.5,
+      "fault_nodes": 8,
+      "healthy_nodes": 52,
+      "healthy_run_false_warning_rate": 0.5384615384615384,
+      "healthy_runs": 13,
+      "healthy_runs_with_false_alerts": [
+        "final-baseline-s29",
+        "final-compressed-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-robustness-s29"
+      ],
+      "max_delay_rounds": 2,
+      "mean_delay_rounds": 2.0,
+      "median_delay_rounds": 2.0,
+      "missed_fault_nodes": 4,
+      "node_repetitions_independent": false,
+      "nodes_with_false_alerts": 32,
+      "true_alerts": 4
+    },
+    "metrics": {
+      "alert_precision": 0.1111111111111111,
+      "delay_rounds": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "detected_fault_nodes": 4,
+      "false_alerts": 32,
+      "fault_node_recall": 0.5,
+      "fault_nodes": 8,
+      "healthy_nodes": 52,
+      "healthy_run_false_warning_rate": 0.5384615384615384,
+      "healthy_runs": 13,
+      "healthy_runs_with_false_alerts": [
+        "final-baseline-s29",
+        "final-compressed-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-robustness-s29"
+      ],
+      "max_delay_rounds": 2,
+      "mean_delay_rounds": 2.0,
+      "median_delay_rounds": 2.0,
+      "missed_fault_nodes": 4,
+      "node_repetitions_independent": false,
+      "nodes_with_false_alerts": 32,
+      "true_alerts": 4
+    }
+  },
+  "repair_scope": "Revised policy has a fresh14-group/56-node assessment,11no-injection groups and3fault groups; valid only for declared digit/CNN/noise/growing-offset settings. Higher learning rates, changed preprocessing and text require separate validation.",
+  "reported_ordinary_private_heldout_subset": {
+    "correlated_fault_monitors": 8,
+    "groups": 10,
+    "groups_with_false_warnings": 5,
+    "new_fault_warnings": 4,
+    "preactive_warning_not_new_detection": true
+  }
+}

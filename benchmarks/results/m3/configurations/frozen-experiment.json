@@ -1,0 +1,715 @@
+{
+  "dataset_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+  "derivation": "Lossless factoring of the22accepted final configuration objects into shared fields plus per-run differences from frozen-experiment-retry2.json. Earlier freeze variant identities/runIDs retained for failed/replacement history. External data/source artifacts are bound by hashes, not included.",
+  "execution_environment_sha256": "96d778a6d2f77c00458e3d43c1066173c8168b94b786e793f7d81ef70fc37010",
+  "freeze_variants": [
+    {
+      "file": "frozen-experiment-retry1.json",
+      "raw_file_sha256": "0b9a063ccafcaf4ab68d544ec62ddecb43e5f6bc5eafafd32db64267e0e8499e",
+      "run_ids": [
+        "final-baseline-s17",
+        "final-dp-sigma05-s17",
+        "final-dp-sigma1-s17",
+        "final-dp-sigma2-s17",
+        "final-dp-sigma4-s17-retry1",
+        "final-baseline-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-baseline-s41",
+        "final-dp-sigma05-s41",
+        "final-dp-sigma1-s41",
+        "final-dp-sigma2-s41",
+        "final-dp-sigma4-s41",
+        "final-compressed-s17",
+        "final-compressed-s29",
+        "final-compressed-s41",
+        "final-fault-s29",
+        "final-fault-s41",
+        "final-secure-s17",
+        "final-robustness-s29"
+      ]
+    },
+    {
+      "file": "frozen-experiment-retry2.json",
+      "raw_file_sha256": "374b982ef02d836730c223d280b39b761b859107904b97289b39d6c65bf930cb",
+      "run_ids": [
+        "final-baseline-s17",
+        "final-dp-sigma05-s17",
+        "final-dp-sigma1-s17",
+        "final-dp-sigma2-s17",
+        "final-dp-sigma4-s17-retry1",
+        "final-baseline-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-baseline-s41",
+        "final-dp-sigma05-s41",
+        "final-dp-sigma1-s41",
+        "final-dp-sigma2-s41",
+        "final-dp-sigma4-s41",
+        "final-compressed-s17",
+        "final-compressed-s29",
+        "final-compressed-s41",
+        "final-fault-s29-retry1",
+        "final-fault-s41",
+        "final-secure-s17",
+        "final-robustness-s29"
+      ]
+    },
+    {
+      "file": "frozen-experiment.json",
+      "raw_file_sha256": "764c03db27d14a51a3df97b49adf5e8e5696511905fcaecb10becdfaf31f783e",
+      "run_ids": [
+        "final-baseline-s17",
+        "final-dp-sigma05-s17",
+        "final-dp-sigma1-s17",
+        "final-dp-sigma2-s17",
+        "final-dp-sigma4-s17",
+        "final-baseline-s29",
+        "final-dp-sigma05-s29",
+        "final-dp-sigma1-s29",
+        "final-dp-sigma2-s29",
+        "final-dp-sigma4-s29",
+        "final-baseline-s41",
+        "final-dp-sigma05-s41",
+        "final-dp-sigma1-s41",
+        "final-dp-sigma2-s41",
+        "final-dp-sigma4-s41",
+        "final-compressed-s17",
+        "final-compressed-s29",
+        "final-compressed-s41",
+        "final-fault-s29",
+        "final-fault-s41",
+        "final-secure-s17",
+        "final-robustness-s29"
+      ]
+    }
+  ],
+  "original_detector_file_sha256": "61b7be113a7ef32bfb2cb3b8f70a694ec7c494d83cb09ab83d7d370059a65c20",
+  "original_detector_policy_hash": "f151a2cb4df040cf145c0ffb1f2560bedccd74b408f5edce17fa5a0aabea7136",
+  "run_matrix_matches_all22accepted_node_csv_run_ids": true,
+  "runs": [
+    {
+      "configuration_differences": {
+        "arm": "baseline",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-baseline-s17",
+        "seed": 17,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma05-s17",
+        "seed": 17,
+        "sigma": 0.5,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma1-s17",
+        "seed": 17,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma2-s17",
+        "seed": 17,
+        "sigma": 2.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma4-s17-retry1",
+        "seed": 17,
+        "sigma": 4.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "baseline",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-baseline-s29",
+        "seed": 29,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma05-s29",
+        "seed": 29,
+        "sigma": 0.5,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma1-s29",
+        "seed": 29,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma2-s29",
+        "seed": 29,
+        "sigma": 2.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma4-s29",
+        "seed": 29,
+        "sigma": 4.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "baseline",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-baseline-s41",
+        "seed": 41,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma05-s41",
+        "seed": 41,
+        "sigma": 0.5,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma1-s41",
+        "seed": 41,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma2-s41",
+        "seed": 41,
+        "sigma": 2.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-dp-sigma4-s41",
+        "seed": 41,
+        "sigma": 4.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "utility"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "lossy",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-compressed-s17",
+        "seed": 17,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "compression"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "lossy",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-compressed-s29",
+        "seed": 29,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "compression"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "lossy",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-compressed-s41",
+        "seed": 41,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "compression"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": {
+          "growth": 1.15,
+          "kind": "public_post_local_offset",
+          "rank": 0,
+          "scale": 0.05,
+          "start_round": 25
+        },
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-fault-s29-retry1",
+        "seed": 29,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "validation_fault"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": {
+          "growth": 1.15,
+          "kind": "public_post_local_offset",
+          "rank": 0,
+          "scale": 0.05,
+          "start_round": 25
+        },
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-fault-s41",
+        "seed": 41,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "validation_fault"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "f91951bc198a5f1d6605cfbffd76597c5798ecf605585f7f4349ba83edded942",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "653820d055a0c2e2cb71d735597ae0121057147bff5877703860051a6131ed8b",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "ccadf787bb850dcbff3c7bcc7d79edf440fce0197a6676b5a9b75975d8f9eba8"
+        },
+        "randomness_profile": "secure",
+        "run_id": "final-secure-s17",
+        "seed": 17,
+        "sigma": 1.0,
+        "split_manifest_sha256": "9928c50b14aac17aacee876af6cf507ede3d099080b95b7f88d7dff7bcc04aca",
+        "train_counts": null
+      },
+      "data_manifest": null,
+      "role": "secure"
+    },
+    {
+      "configuration_differences": {
+        "arm": "private",
+        "codecs": "identity",
+        "fault": null,
+        "input_sha256": {
+          "mnist-final.npz": "79fedcf6f79f948e6475b7be08cfac25f604ee1f41c5e47140da57ac5b4728cb",
+          "mnist-train.npz": "12869cce3c88eab966e071095c911917eea2c464af07b1a494bdcbe7f096a2a7",
+          "optdigits-final.npz": "3681726e921e0cdc4607c68df48f3490633f8c281f930455fc82029967392e90",
+          "optdigits-train.npz": "12649137a91a93ef1ca1eb1ba804bcc6d7b9c12b8543bdc8b041d73122d6c685",
+          "svhn-final.npz": "445238d0f6745d00f4fb521f171aa6759ed53ffc4783f50d9c2dbd7fbc053163",
+          "svhn-train.npz": "f51bdbafb38b2b9bf3876824634cddfa72096be2e598b1895b8caebf5b2b0013",
+          "usps-final.npz": "54df7b94a175721573dd24cc61cc31bc4e2d6a2da8d9591da3c5b5e480daf386",
+          "usps-train.npz": "e67f69123d880c22428d9bba933c75613163a446cd9390908bc1d58239a8a28c"
+        },
+        "randomness_profile": "research",
+        "run_id": "final-robustness-s29",
+        "seed": 29,
+        "sigma": 1.0,
+        "split_manifest_sha256": "219b4cdbaa11019a9ee6c5377078a44f27d9cb924ae6d1484236713e2f8cba11",
+        "train_counts": [
+          3000,
+          2400,
+          1800,
+          1200
+        ]
+      },
+      "data_manifest": {
+        "path": "robustness-data-freeze/dataset-provenance.json",
+        "sha256": "219b4cdbaa11019a9ee6c5377078a44f27d9cb924ae6d1484236713e2f8cba11"
+      },
+      "role": "robustness"
+    }
+  ],
+  "runtime_source_hash_manifest_sha256": "71dae9c0ba16f1494777df3f6ace62ab9f117a58d3dd7824064b4be13cef140c",
+  "selected_freeze_variant": "frozen-experiment-retry2.json",
+  "shared_configuration": {
+    "batch_size": 64,
+    "clipping": 5.0,
+    "delta": 1e-05,
+    "detector": {
+      "absolute_distance_floor": 0.1078185190517367,
+      "absolute_recovery_distance": 1.3130099288410901,
+      "absolute_severe_distance": 1.7904680847833045,
+      "distance_floor": 0.007481537110715133,
+      "growth_ratio": 2.0,
+      "max_lag_rounds": 8,
+      "min_log_slope": 0.02,
+      "mode": "warn",
+      "patience_windows": 2,
+      "recovery_distance": 0.09545891032223923,
+      "recovery_windows": 3,
+      "severe_distance": 0.13017124134850802,
+      "severe_patience": 2,
+      "threshold_set_id": "m3-calibrated-af37d87d5f644db2",
+      "version": 1,
+      "warmup_rounds": 10,
+      "window_rounds": 8
+    },
+    "evaluation_count": 470,
+    "evaluation_interval": 15,
+    "evaluation_partition": "final",
+    "learning_rate": 0.003,
+    "local_steps": 10,
+    "physical_batch": 32,
+    "source_commit": "ab69d8886ad737c67d6ec8f4a372d6cbd3b310c6",
+    "steps": 750,
+    "torch_version": "2.13.0+cu130",
+    "train_count": 3000
+  },
+  "utility_seeds": [
+    17,
+    29,
+    41
+  ],
+  "utility_sigmas": [
+    0.5,
+    1.0,
+    2.0,
+    4.0
+  ],
+  "version": 1,
+  "warning_policy_scope": "This is the original growth_ratio2policy, whose failedgeneralization is retained; repairedgrowth_ratio3policy is separate03-divergence/deployed-digit-policy.json."
+}

@@ -1,0 +1,28 @@
+{
+  "data": {
+    "analysis_environment": {
+      "numpy": "2.5.3",
+      "opacus": "1.6.0",
+      "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.39",
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "scipy": "1.16.3",
+      "torch": "2.13.0+cu130"
+    },
+    "analysis_source_manifest_sha256": "1ae35399f8730b1c66c651dd54b7fb20b3f93517bd972c8a9c6d9e9ad90af2a6",
+    "elapsed_seconds": 1635.6689539879999,
+    "frozen_policy_hash": "d7a815d67ff04c9419231b89a400d63f2e951063c1c37ff67fef699cd407a448",
+    "frozen_policy_sha256": "0d2d7606cd91bf1da756e5743297338f210d258048b37043ec3c9c53912e1fe9",
+    "mode": "all14",
+    "node_runs_passed": 56,
+    "peak_rss_kib": 7070132,
+    "runner_sha256": "a0a3a0286e407d1fa859152d09747ab32b5051bd0129927586b2f97e54360e25",
+    "scope": "Linux independent accounting/runtime/export audit, no training/reservation/data access",
+    "source_profile": "grouped-query-v2",
+    "started_utc": "2026-10-25T09:21:13.136635+00:00",
+    "status": "all14_runtime_audits_passed",
+    "version": 1,
+    "warning_quality_gate_passed": true
+  },
+  "derivation": "sanitized aggregate derived from retained source; not raw body proof",
+  "source_sha256": "86dd83c97ead26b85da158bbd2e0ddbbc9ba783c0009918217a069e19a840689"
+}

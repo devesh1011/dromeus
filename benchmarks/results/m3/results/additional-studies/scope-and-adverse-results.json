@@ -1,0 +1,34 @@
+{
+  "derivation": "Historical report-derived scope summary; figures and report documents excluded.",
+  "learning_rate": {
+    "all_overall_seed_gains_positive": true,
+    "candidate": 0.01,
+    "evaluation": "200previouslyunusedTRAIN-pool records/source, distinct from original470officialTEST/source",
+    "higher_rate_warning_validation": false,
+    "new_ordinary_baseline": false,
+    "per_run_prv_epsilon_approximately": 3.62035,
+    "reference": 0.003,
+    "same_clipping_limit": 5,
+    "same_sample_rate": "1/47",
+    "same_sigma": 1,
+    "same_updates": 750,
+    "svhn_mean_gain_pp": 3.7917,
+    "svhn_seed173_gain_pp": -2.25,
+    "three_paired_seed_gain_percentage_points": 4.167
+  },
+  "svhn_preprocessing": {
+    "all_three_training_seed_gains_positive": true,
+    "balanced_new_svhn_records": 1000,
+    "fresh_four_source_macro_score": false,
+    "mnist_mean_gain_pp": -1.292,
+    "mnist_one_seed_gain_pp": -3.375,
+    "new_seed_generalization": false,
+    "ninety_percent_private_accuracy_claim": false,
+    "optdigits_gain_pp": 0.583,
+    "optional_recipe_only": true,
+    "other_sources_reuse_existing_records": 200,
+    "svhn_gain_pp": 10.05,
+    "usps_gain_pp": 1.875,
+    "warning_profile_validated": false
+  }
+}

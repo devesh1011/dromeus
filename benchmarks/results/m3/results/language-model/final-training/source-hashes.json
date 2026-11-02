@@ -1,0 +1,42 @@
+{
+  "derivation": "Sanitized selected-field derivative of locally available small final proofs; source hashes identify originals. This is not the original raw audit body and contains no model, trace, raw owner ledger, instance identifier or account identifier.",
+  "new_training_or_assessment_or_cloud_query_performed_for_pack": false,
+  "sources": {
+    "audit.json": {
+      "bytes": 6558,
+      "sha256": "9424bf44c344b55ec2cd550160d6ffe199bb559514c9b9d38fbfee2bedf193a4"
+    },
+    "closure-proof.json": {
+      "bytes": 812,
+      "sha256": "a6e09b9aa413419d5e3675795dd856f2e2f985e2862d894cbeefe2061f4d767f"
+    },
+    "complete.json": {
+      "bytes": 3205,
+      "sha256": "539a9ae7493854d74366007f0b4783b3c612e8c9e7d51a38b58203e4e2d6b8e6"
+    },
+    "failure-job-stop-requests.json": {
+      "bytes": 10628,
+      "sha256": "23f1793302ea321a5146c472eea55a87a17255211fbf2a224f9faffe99920f7f"
+    },
+    "final-readonly-host-and-grant-proof.json": {
+      "bytes": 3217,
+      "sha256": "fac8bbd988382d7d7245459132d5851f85a45ac32c9491e5b96aa8c50f1b0b04"
+    },
+    "lease-revoked.json": {
+      "bytes": 149,
+      "sha256": "970e11d3cb9c230b586e44e6a09a6789f4bdb103f0cd7662ed624652c87a2289"
+    },
+    "phase-resource-admission.json": {
+      "bytes": 20030,
+      "sha256": "7b935f4b8938a79085edc16f9a045307832e90ccddf2dc546c3fc48463073172"
+    },
+    "public-full-calibration-derived.json": {
+      "bytes": 3343,
+      "sha256": "dcdde18854d38ca5cc00e2d43bbb585464340ad12184bc82808d816583a44ad2"
+    },
+    "terminal-disposition.json": {
+      "bytes": 3351,
+      "sha256": "f58bdde7600cb4b4bd528eb915d5bf72a13463afc27db69d2c2cc9e399a06cc4"
+    }
+  }
+}

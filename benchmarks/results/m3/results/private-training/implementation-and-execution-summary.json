@@ -1,0 +1,65 @@
+{
+  "derivation": "Selected factual summary from retained sanitized historical reports and aggregate; no tests rerun or raw proof reconstruction.",
+  "generic_actual_axl_local_fixture": {
+    "ordinary_identity_and_private_compressed_cases": 2,
+    "processes_each": 4,
+    "seconds": 10.22,
+    "separately_executed": true
+  },
+  "generic_four_secure_gpu_workers": {
+    "committed_rounds_per_worker": 3,
+    "delta": 1e-05,
+    "event_delivery_drops": 0,
+    "independent_cpu_prv_epsilon": 4.890848864087261,
+    "logical_updates_per_worker": 6,
+    "public_synthetic_records_per_worker": 16,
+    "runtime_prv_epsilon": 4.890848864064803,
+    "sample_rate": 0.25,
+    "scope": "Reduced tied-weight synthetic model conformance, not language utility; historical report-derived summary, not raw worker receipts.",
+    "sigma": 1,
+    "workers": 4
+  },
+  "limitations": [
+    "Cross-platform PRV recomputation permits 1e-6 absolute or 1e-9 relative reporting roundoff; RDP retains 1e-9 absolute/relative checks. Original worker epsilons and all recomputed differences are retained. Analysis dependency versions are recorded; frozen accountant settings and exact mechanism-history checks are unchanged.",
+    "Worker provenance records four distinct EC2 instance IDs and fractional GPU profile UUIDs. These are retained deployment declarations, not remote attestation or proof of four physical GPUs.",
+    "Public-data research runs report per-node mathematical mechanism estimates; no full-history or group transcript guarantee.",
+    "Baseline and clipping-only controls are non-private; their epsilon is unavailable, never zero.",
+    "Sample SD is computed across three seed-level node/source means; nodes are not independent repetitions.",
+    "Cumulative budgets compose retained reservations, including failed/unfinished reserved horizons, at the frozen delta.",
+    "Exact consensus is available for final model exports only. Intermediate trajectories use CountSketch approximations.",
+    "Trajectory wall time starts at each node's first completed-round log. Reported node wall time covers formation, training and evaluation; it excludes preparation, final accounting and artifact collection. Fleet cost is recorded separately.",
+    "Calibration/final splits exclude exact image duplicates; distinct-person and near-duplicate separation is not established."
+  ],
+  "original_m3_secure_digit_execution": {
+    "actual_axl": true,
+    "gate": "completed",
+    "logical_updates_per_worker": 750,
+    "mean_accuracy_percent": 71.30319148936171,
+    "run": "final-secure-s17",
+    "scope": "Separate secure execution check; not a fourth repeat of the reproducible seeded utility curve; fractional GPU allocation does not prove four physical chips.",
+    "secure_csprng": true,
+    "workers": 4
+  },
+  "privacy_contract": {
+    "crosscheck": "RDP",
+    "excluded": [
+      "person-level differential privacy",
+      "secure aggregation",
+      "Byzantine robustness",
+      "complete timing/traffic protection",
+      "arbitrary callbacks or raw-data-reading custom optimizers"
+    ],
+    "full_horizon_reservations_survive_failures_and_checkpoint_rollback": true,
+    "local_operator_trusted": true,
+    "physical_microbatching_no_extra_privacy_steps": true,
+    "primary_accountant": "PRV",
+    "public_seeded_curve_is_full_release_secure_dp_guarantee": false,
+    "secure_crash_resume_supported": false,
+    "unit": "one example in a fixed local dataset, add/remove adjacency"
+  },
+  "supported_optimizers": [
+    "SGD",
+    "Adam",
+    "AdamW"
+  ]
+}

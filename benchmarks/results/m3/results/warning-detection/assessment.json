@@ -1,0 +1,219 @@
+{
+  "data": {
+    "calibration_freeze_hash": "1c61fd5277af64a70651cf3312c113d9368716d1789750474377cd865f138293",
+    "campaign_freeze_hash": "78c865881047c753a91512e61c7f9fdfdeee5daa9dc26ff8af5897bfa61b8ae8",
+    "group_metrics": {
+      "fault_groups": 3,
+      "fault_groups_detected_on_all_nodes": 3,
+      "groups": 14,
+      "groups_with_false_entries": 0,
+      "healthy_groups": 11,
+      "node_repetitions_independent": false,
+      "runs": [
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-baseline-s109",
+          "seed": 109
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma1-s109",
+          "seed": 109
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma4-s109",
+          "seed": 109
+        },
+        {
+          "detected_on_all_nodes": true,
+          "false_entries": 0,
+          "faulted": true,
+          "run_id": "repair-assessment-fault-s109",
+          "seed": 109
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-baseline-s113",
+          "seed": 113
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma1-s113",
+          "seed": 113
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma4-s113",
+          "seed": 113
+        },
+        {
+          "detected_on_all_nodes": true,
+          "false_entries": 0,
+          "faulted": true,
+          "run_id": "repair-assessment-fault-s113",
+          "seed": 113
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-baseline-s127",
+          "seed": 127
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma1-s127",
+          "seed": 127
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-sigma4-s127",
+          "seed": 127
+        },
+        {
+          "detected_on_all_nodes": true,
+          "false_entries": 0,
+          "faulted": true,
+          "run_id": "repair-assessment-fault-s127",
+          "seed": 127
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-compressed-s109",
+          "seed": 109
+        },
+        {
+          "detected_on_all_nodes": false,
+          "false_entries": 0,
+          "faulted": false,
+          "run_id": "repair-assessment-skew-s109",
+          "seed": 109
+        }
+      ]
+    },
+    "limitations": [
+      "No-injection labels do not prove useful learning.",
+      "Node monitors and repeated profiles sharing a seed are correlated.",
+      "A pre-active warning is not a new fault detection.",
+      "Small workload-specific suite; no population false-alert guarantee.",
+      "Shared model collapse can remain invisible to disagreement.",
+      "Live statuses alone do not prove completed training, fault execution or deployment provenance; full runtime proof is independently required."
+    ],
+    "live_delivery_verified": true,
+    "live_metrics": {
+      "alert_precision": 1.0,
+      "delay_rounds": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "detected_fault_nodes": 12,
+      "false_alerts": 0,
+      "fault_node_recall": 1.0,
+      "fault_nodes": 12,
+      "healthy_nodes": 44,
+      "healthy_run_false_warning_rate": 0.0,
+      "healthy_runs": 11,
+      "healthy_runs_with_false_alerts": [],
+      "max_delay_rounds": 2,
+      "mean_delay_rounds": 2.0,
+      "median_delay_rounds": 2.0,
+      "missed_fault_nodes": 0,
+      "node_repetitions_independent": false,
+      "nodes_with_false_alerts": 0,
+      "true_alerts": 12
+    },
+    "live_replay_matches": true,
+    "live_warning_gate_passed": true,
+    "metrics": {
+      "alert_precision": 1.0,
+      "delay_rounds": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "detected_fault_nodes": 12,
+      "false_alerts": 0,
+      "fault_node_recall": 1.0,
+      "fault_nodes": 12,
+      "healthy_nodes": 44,
+      "healthy_run_false_warning_rate": 0.0,
+      "healthy_runs": 11,
+      "healthy_runs_with_false_alerts": [],
+      "max_delay_rounds": 2,
+      "mean_delay_rounds": 2.0,
+      "median_delay_rounds": 2.0,
+      "missed_fault_nodes": 0,
+      "node_repetitions_independent": false,
+      "nodes_with_false_alerts": 0,
+      "true_alerts": 12
+    },
+    "policy_hash": "d7a815d67ff04c9419231b89a400d63f2e951063c1c37ff67fef699cd407a448",
+    "readiness_passed": true,
+    "replay_gate_passed": true,
+    "runtime_proof_verified": true,
+    "seed_metrics": {
+      "109": {
+        "fault_groups": 1,
+        "fault_groups_detected_on_all_nodes": 1,
+        "groups": 6,
+        "groups_with_false_entries": 0,
+        "healthy_groups": 5
+      },
+      "113": {
+        "fault_groups": 1,
+        "fault_groups_detected_on_all_nodes": 1,
+        "groups": 4,
+        "groups_with_false_entries": 0,
+        "healthy_groups": 3
+      },
+      "127": {
+        "fault_groups": 1,
+        "fault_groups_detected_on_all_nodes": 1,
+        "groups": 4,
+        "groups_with_false_entries": 0,
+        "healthy_groups": 3
+      }
+    },
+    "version": 1
+  },
+  "derivation": "sanitized aggregate derived from retained source; not raw body proof",
+  "source_sha256": "33116bd379ca4fa04cd2353b1add55508fbfb84d97e698135de2be09919b97fb"
+}

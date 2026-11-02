@@ -1,0 +1,175 @@
+{
+  "selection_metric": "final-step equal node x source calibration mean accuracy",
+  "tie_break": "smaller learning rate, then smaller clipping",
+  "chosen_lr": 0.003,
+  "chosen_clipping": 5.0,
+  "source_hash_manifest_sha256": "7a13a689e90d9f192a2bae9c63a076f655d0412a3049777801cd633f8f514cec",
+  "runs": [
+    {
+      "run_id": "cal-baseline-s17",
+      "mean_accuracy": 0.918875,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 1.0,
+      "arm": "baseline",
+      "fault": null,
+      "run_config_hash": "88c549ce8ab4daf3a54e646ddd5695459540d7ff6b2110031d23cc13fdb0780c",
+      "summary_sha256": {
+        "0": "13e2e8432d44500fe66362b4f1a15c7b2442b0299fb1b29b21aef496e01aecd6",
+        "1": "6e26ee7b5d72d35b7a08fec6e52e56af1da8793815532101fcd29a57031658ea",
+        "2": "3b4aa6fec684d448d8c6fce0799533f1ccdf803edd39873c9206cbf7e7036cae",
+        "3": "6ca910ac3b2874e3f9327d833f72e61e9146c68f9b4f5db8a71a78149dbd26f0"
+      }
+    },
+    {
+      "run_id": "cal-c01-s17",
+      "mean_accuracy": 0.69425,
+      "learning_rate": 0.003,
+      "clipping": 0.1,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "7f1470d95e24e2a7b76be87ca0fc30c83a971cce5e2763a5234bec4bb7a35151",
+      "summary_sha256": {
+        "0": "072bbd93346aa3e113e6c57acdc9c7087c31208ecf95d648d06a44a7d82da44f",
+        "1": "23860ebf91cff1f9f14118e97325dc7013b357b08ae8cff6e76396f5bb378e75",
+        "2": "843b716c6440f026f26eba61cce7aa897274a2ccbce5eb78802779e8e30bfc42",
+        "3": "79586b6289c1a857a2dfa09c12002dc15d454e017f7e81420f4c58f7d12931e4"
+      }
+    },
+    {
+      "run_id": "cal-c5-s17",
+      "mean_accuracy": 0.71675,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "d08ee54f081dbc971504bd4c8e96fba753ff274349538706069acb87832b05c8",
+      "summary_sha256": {
+        "0": "06be45d04e2f2fc54da6c24fb07b38b7ffc907835026b5fcdb1a941266467a3a",
+        "1": "79a802f78b2848488362b11572def47442b3e0df5183cf90f90d61ee3aa6015c",
+        "2": "54d2b07f665ecc315f0d7f9d135c02318ec580128ff8b68cef80165226f12b46",
+        "3": "31e4a0eff5bdfb9f04e7f6f0458006ccbab1e5b8282b131752022c37f310e099"
+      }
+    },
+    {
+      "run_id": "cal-fault-s17",
+      "mean_accuracy": 0.441,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": {
+        "kind": "public_post_local_offset",
+        "rank": 0,
+        "start_round": 25,
+        "scale": 0.05,
+        "growth": 1.15
+      },
+      "run_config_hash": "adb85a6ac4166554913d3ab3812fcc837faa4844b898e860a246228b544c997f",
+      "summary_sha256": {
+        "0": "8b4d2b561fa35739864d5e2cc07cdfe501c6628ffd657d7a89aaf1cb3c0083c0",
+        "1": "96a88a33cf7c34a5c34bd0b52a98ac0cfe52ba405b949679524fe282548d275c",
+        "2": "a4526e8ba4b1c2ab0075df6d654739ec329896140ac00e4b5b3942e545c2d1d5",
+        "3": "e09fd35014e8e73d1bf59b79e83fc2c00ac1e62ed55f5f67dfbd20678031d2c3"
+      }
+    },
+    {
+      "run_id": "cal-lr0003-s17",
+      "mean_accuracy": 0.507875,
+      "learning_rate": 0.0003,
+      "clipping": 1.0,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "6b44b037d090be517f5843a88c76ccb63bdf677ded7183f6447b616dac774d33",
+      "summary_sha256": {
+        "0": "6aba94b34c7493308608f450432fadcee94823b4809f8a3f5018d2e6b6e274c5",
+        "1": "834819c40520de3ae5576e69268241182a48870dc3b39d3558fe904d0c227700",
+        "2": "4fe84f3c6ed54194e3d66337b8a4ae30a3d3db569f7d6bdaf341aad6c282e427",
+        "3": "f0ea82738ba880bc4243a03bc415cb3ceaf065723f2254fdc5e7381fd0338420"
+      }
+    },
+    {
+      "run_id": "cal-lr001-s17",
+      "mean_accuracy": 0.6072500000000001,
+      "learning_rate": 0.001,
+      "clipping": 1.0,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "d8c7e43c583bb53ff04a6027eeb5dff543cac78d714ba614167ba82a5bab72ef",
+      "summary_sha256": {
+        "0": "a7e9b49782f633d49cf5f0e19c1e98d9aad05ef75466a7a94e0f312c5f1695d3",
+        "1": "c321d7143992f40213ea8043d3f750b1685f77885c7a49c52001551b7e6231ea",
+        "2": "2e7b06a8a46b8ccf453981c08fb7061fd44ed4464c8cfa97e8e62363972c0e8e",
+        "3": "44597cc29d710d977d83bfca7e3a39f602fb8e88dc655ac2bd4e18e81e2d9f21"
+      }
+    },
+    {
+      "run_id": "cal-lr003-s17",
+      "mean_accuracy": 0.708125,
+      "learning_rate": 0.003,
+      "clipping": 1.0,
+      "sigma": 1.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "3db32aa1d384892f5388172492eba1838f090e50976656b5c5a1a645d40d9c8f",
+      "summary_sha256": {
+        "0": "02bead66058d297924fd1279a85ce77d656d0c0f2c55f48e777a0ec530c9e618",
+        "1": "94427abf45f72a2617085c4cfb142863ded961d5d4ab96298500bcbfb4ec4128",
+        "2": "4021493e7a318d0e4d2d0c6064784f349a93a02092750f859e748eddd82f2ee5",
+        "3": "1a307c7d26d1cf4fd295ab1883111352cec9f902f47798ac8be46c479648f613"
+      }
+    },
+    {
+      "run_id": "cal-sigma05-s17",
+      "mean_accuracy": 0.794125,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 0.5,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "73257e1f8afd0c8efd1de200b2071601dc92b890bd0f8726fd64f2aa7d2b18fe",
+      "summary_sha256": {
+        "0": "b2de26e40f68c09f8e7cfdeda9e821205ee00b457ec28542bf341a3e73e6afdf",
+        "1": "baaaf21605e06d627d6ea361a42f5808435230067c2aee89105eede77d6c8e37",
+        "2": "6fd43373be51f7f64965f3f3543005e5b1f03f3a8b9dd53e1652a1e2d5f9a847",
+        "3": "40703c523052db08f05f07dec61b1f67eb1bde60a4e8a48d44bcb30a1e6078cf"
+      }
+    },
+    {
+      "run_id": "cal-sigma2-s17",
+      "mean_accuracy": 0.61575,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 2.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "f3ce00848be81d1e3ab152a5f3c745dd932f263f47e5583bfbab30b0fd5b7504",
+      "summary_sha256": {
+        "0": "bfef9907396738bc57db03c9784972bafb61bc5d3868a5b62f3049f9cad93ebf",
+        "1": "d7a9493fda7a5cf097dbe3ad16a93095e25c286f5055998200d4aa458bb1cfa7",
+        "2": "e7fdd5c984e244373426c10bfa070e70d6bd2de0aef3107841ad9b9aa5b48ffa",
+        "3": "69b87610b874cea5e72a960e10bb0e0d0ed5380f185ce457952ad3c5114cee54"
+      }
+    },
+    {
+      "run_id": "cal-sigma4-s17",
+      "mean_accuracy": 0.525375,
+      "learning_rate": 0.003,
+      "clipping": 5.0,
+      "sigma": 4.0,
+      "arm": "private",
+      "fault": null,
+      "run_config_hash": "6e535c9ed45b8f81b8e563a35287c537baf05c13f749a9b75a264e157aaea3f0",
+      "summary_sha256": {
+        "0": "b952103e6c638161ba9f5799ec9ba4476499a001976fa63cb2cbe4d51dcfa657",
+        "1": "bee702e30bc2b8eb527b6c5eeb689955d33e5d0394fc2288e243f1f12bda6c08",
+        "2": "726cd5bca3c728f5262ca25407de110efe319a1cc3372ae6a9244eba05ef56b0",
+        "3": "ecc870637a06e5d0d698f56eff37f7f1b2b41d340ff6abc2a3afcd16a6d9dc1e"
+      }
+    }
+  ]
+}

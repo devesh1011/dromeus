@@ -1,0 +1,110 @@
+{
+  "comparison_limits": [
+    "One exploratory group per setting; correlated node models are not independent repetitions",
+    "Sigma0.5 improves utility at weaker privacy, not equal privacy",
+    "Legacy memory FAIL and prospective phase PASS use different declared methods; neither supersedes adverse historical evidence",
+    "Calibration is not independent assessment; no new evaluation or training performed"
+  ],
+  "derivation": "sanitized public full-calibration comparison; not raw audit-body proof or model re-evaluation",
+  "population": "same fixed full1024-record/domain public calibration",
+  "rows": [
+    {
+      "assessment_executed": false,
+      "committed_rounds_per_worker": 32,
+      "full_calibration_records_per_domain": 1024,
+      "logical_updates_per_worker": 128,
+      "mean_full_macro_nll": 6.468907124781796,
+      "mean_per_worker_perplexity_derived": 644.8157715014554,
+      "model_parameters": 81948672,
+      "noise_multiplier": null,
+      "repetitions": 1,
+      "resource_disposition": "ordinary reference; no new resource qualification asserted by this comparison",
+      "setting": "ordinary"
+    },
+    {
+      "assessment_executed": false,
+      "committed_rounds_per_worker": 32,
+      "full_calibration_records_per_domain": 1024,
+      "logical_updates_per_worker": 128,
+      "mean_full_macro_nll": 9.472243290671898,
+      "mean_per_worker_perplexity_derived": 12994.48450197434,
+      "model_parameters": 81948672,
+      "noise_multiplier": 1,
+      "repetitions": 1,
+      "resource_disposition": "legacy memory replay FAIL ranks0/2/3; rank1 PASS; adverse result retained",
+      "setting": "private_sigma1"
+    },
+    {
+      "assessment_executed": false,
+      "committed_rounds_per_worker": 32,
+      "full_calibration_records_per_domain": 1024,
+      "logical_updates_per_worker": 128,
+      "mean_full_macro_nll": 8.91502572486884,
+      "mean_per_worker_perplexity_derived": 7443.647367362822,
+      "model_parameters": 81948672,
+      "noise_multiplier": 0.5,
+      "repetitions": 1,
+      "resource_disposition": "prospective phase-resource gate PASS all4; legacy metric FAIL ranks0/2/3 remains retained",
+      "setting": "private_sigma0_5"
+    }
+  ],
+  "sigma0_5_legacy_memory_readiness_retained": {
+    "0": "failed_bounded_pilot",
+    "1": "passed_bounded_pilot",
+    "2": "failed_bounded_pilot",
+    "3": "failed_bounded_pilot"
+  },
+  "sigma0_5_prospective_phase_gate_all_four_passed": true,
+  "sigma1_legacy_memory_replay_terminals": {
+    "0": {
+      "response_code": 1,
+      "source_sha256": "c9ae15db2c715c132326523abfaabe193e1bee50d75cdcb61f41c724ee2a0e6b",
+      "status": "Failed"
+    },
+    "1": {
+      "response_code": 0,
+      "source_sha256": "5fe383ff42b48907516602312933cf0d785837296f6a13a98e8eb1f008a8dd14",
+      "status": "Success"
+    },
+    "2": {
+      "response_code": 1,
+      "source_sha256": "014fab42a621708bcedc9e7b28fa03483b447dea41ba400050a872ccc2bc923b",
+      "status": "Failed"
+    },
+    "3": {
+      "response_code": 1,
+      "source_sha256": "a950822605e811649d6e81c405d5ca1d25635c739a3a55c95dd6a46bf4857212",
+      "status": "Failed"
+    }
+  },
+  "source_hash_references": {
+    "focused_sigma0_5_trial_outcome": {
+      "scope": "existing local small audit/outcome; only selected numeric aggregates included",
+      "sha256": "a7ca702f0b95f6d9cbb6da25018a542fd7af6baad690615a09123b75befcecce"
+    },
+    "matched_h128_integrity_audit": {
+      "scope": "existing local small audit/outcome; only selected numeric aggregates included",
+      "sha256": "d4b9b216af6ef95d31cc3c5e922a95fedf75fc15df207b06cfa186bcc2469708"
+    },
+    "ordinary-public-summary-rank-0": {
+      "scope": "local numeric final full-calibration summary; not bundled",
+      "sha256": "0f68ea9485d145335dc791ff2cda81951b49f3729375f62f170773307afdbce6"
+    },
+    "ordinary-public-summary-rank-1": {
+      "scope": "local numeric final full-calibration summary; not bundled",
+      "sha256": "85c7bc6acc88016a41ad577b7e176e8dbfe225ff4fd963cedfae1f7a52b88eaa"
+    },
+    "ordinary-public-summary-rank-2": {
+      "scope": "local numeric final full-calibration summary; not bundled",
+      "sha256": "98e83ab577a98e155f3be167b18329384a5b00864dcdc135e68e932204952ee1"
+    },
+    "ordinary-public-summary-rank-3": {
+      "scope": "local numeric final full-calibration summary; not bundled",
+      "sha256": "5bd33e2457590c408edbe7b10ceddae5fa7a6bc6dd3f88613fcb83159d43a1ad"
+    },
+    "sigma0_5_private_integrity_audit": {
+      "scope": "existing local small audit/outcome; only selected numeric aggregates included",
+      "sha256": "9c4abf7b7f362387361a6f45ed02214c53c9a962e6ae3e5a351d569becb8f684"
+    }
+  }
+}

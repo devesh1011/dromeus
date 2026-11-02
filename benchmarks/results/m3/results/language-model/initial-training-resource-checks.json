@@ -1,0 +1,14 @@
+{
+  "data": {
+    "all_4096_updates_1024_rounds_completed": true,
+    "all_four_complete_final_member_sets": true,
+    "all_full_memory_traces_replayed": true,
+    "all_original_ssm_success": true,
+    "all_phase_memory_checks_and_stability_passed": true,
+    "all_raw_completion_receipts_verified": true,
+    "all_zero_consensus_pending_and_dropped": true,
+    "status": "PASS_G4_PHASE_RESOURCE_AND_COMPLETION"
+  },
+  "derivation": "sanitized aggregate derived from retained source; not raw body proof",
+  "source_sha256": "2d7759aeb7d260e95c79c8de0ade40d660c0f4683c2ebdc23f101109120fafaa"
+}

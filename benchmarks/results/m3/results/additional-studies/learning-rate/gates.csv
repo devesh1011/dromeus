@@ -1,0 +1,6 @@
+gate,requirement,passed_from_frozen_scorer
+mean_paired_gain_at_least_two_percentage_points,Mean paired gain ≥2 pp,True
+all_three_seed_gains_nonnegative,Every seed-pair gain ≥0,True
+mean_svhn_paired_gain_nonnegative,Mean paired SVHN gain ≥0,True
+all24_nodes_zero_delivery_drops,All 24 nodes report zero delivery drops,True
+all_six_runtime_proofs_passed,All six runtime/privacy/export-integrity/sketch proofs pass,True

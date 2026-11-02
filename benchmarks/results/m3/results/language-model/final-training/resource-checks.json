@@ -1,0 +1,362 @@
+{
+  "all_full_memory_traces_replayed": true,
+  "all_phase_memory_checks_and_stability_passed": true,
+  "all_zero_consensus_pending_and_dropped": true,
+  "derivation": "Sanitized selected-field derivative of locally available small final proofs; source hashes identify originals. This is not the original raw audit body and contains no model, trace, raw owner ledger, instance identifier or account identifier.",
+  "ranks": {
+    "0": {
+      "all_zero_consensus_pending_and_dropped": true,
+      "checks": {
+        "actual_checkpoint_capture_observed": true,
+        "coverage": true,
+        "host_swap_growth": true,
+        "late_phase_uss_stability": true,
+        "minimum_available": true,
+        "minimum_disk_free": true,
+        "no_new_oom": true,
+        "post_round_checkpoint_objects_released": true,
+        "python_swap": true,
+        "worker_execution_bound": true
+      },
+      "phase_round_stability": {
+        "baseline_rounds": [
+          {
+            "completed_steps": 4080,
+            "round_id": 1019,
+            "round_return_uss_bytes": 3638464512
+          },
+          {
+            "completed_steps": 4084,
+            "round_id": 1020,
+            "round_return_uss_bytes": 3648233472
+          },
+          {
+            "completed_steps": 4088,
+            "round_id": 1021,
+            "round_return_uss_bytes": 3631013888
+          },
+          {
+            "completed_steps": 4092,
+            "round_id": 1022,
+            "round_return_uss_bytes": 3636543488
+          }
+        ],
+        "indefinite_stability_claimed": false,
+        "maximum_growth_bytes_per_round": 134217728,
+        "maximum_range_bytes": 536870912,
+        "metrics": {
+          "peak_uss_bytes": {
+            "passed": true,
+            "range_bytes": 3031040,
+            "slope_bytes_per_round": 252313.6
+          },
+          "round_return_uss_bytes": {
+            "passed": true,
+            "range_bytes": 17219584,
+            "slope_bytes_per_round": -2298265.6
+          }
+        },
+        "passed": true,
+        "peak_rounds": [
+          {
+            "peak_uss_bytes": 8368332800,
+            "round_id": 1020,
+            "sample_count": 297
+          },
+          {
+            "peak_uss_bytes": 8367792128,
+            "round_id": 1021,
+            "sample_count": 231
+          },
+          {
+            "peak_uss_bytes": 8366555136,
+            "round_id": 1022,
+            "sample_count": 208
+          },
+          {
+            "peak_uss_bytes": 8369586176,
+            "round_id": 1023,
+            "sample_count": 657
+          }
+        ],
+        "retained_terminal_coverage": {
+          "checkpoint_objects_released": true,
+          "completed_steps": 4096,
+          "included_in_peak_screen": true,
+          "round_id": 1023,
+          "round_return_uss_bytes": 3145273344,
+          "scheduled_evaluation": true,
+          "scheduled_generation": true
+        },
+        "round_return_is_not_a_quiescence_barrier": true,
+        "scope": "last four comparable nonevaluation nonterminal phase snapshots; actual final four full round intervals include terminal evaluation"
+      }
+    },
+    "1": {
+      "all_zero_consensus_pending_and_dropped": true,
+      "checks": {
+        "actual_checkpoint_capture_observed": true,
+        "coverage": true,
+        "host_swap_growth": true,
+        "late_phase_uss_stability": true,
+        "minimum_available": true,
+        "minimum_disk_free": true,
+        "no_new_oom": true,
+        "post_round_checkpoint_objects_released": true,
+        "python_swap": true,
+        "worker_execution_bound": true
+      },
+      "phase_round_stability": {
+        "baseline_rounds": [
+          {
+            "completed_steps": 4080,
+            "round_id": 1019,
+            "round_return_uss_bytes": 3583799296
+          },
+          {
+            "completed_steps": 4084,
+            "round_id": 1020,
+            "round_return_uss_bytes": 3580166144
+          },
+          {
+            "completed_steps": 4088,
+            "round_id": 1021,
+            "round_return_uss_bytes": 3594223616
+          },
+          {
+            "completed_steps": 4092,
+            "round_id": 1022,
+            "round_return_uss_bytes": 3586146304
+          }
+        ],
+        "indefinite_stability_claimed": false,
+        "maximum_growth_bytes_per_round": 134217728,
+        "maximum_range_bytes": 536870912,
+        "metrics": {
+          "peak_uss_bytes": {
+            "passed": true,
+            "range_bytes": 8642560,
+            "slope_bytes_per_round": 1799782.4
+          },
+          "round_return_uss_bytes": {
+            "passed": true,
+            "range_bytes": 14057472,
+            "slope_bytes_per_round": 2109849.6
+          }
+        },
+        "passed": true,
+        "peak_rounds": [
+          {
+            "peak_uss_bytes": 8309415936,
+            "round_id": 1020,
+            "sample_count": 257
+          },
+          {
+            "peak_uss_bytes": 8314032128,
+            "round_id": 1021,
+            "sample_count": 287
+          },
+          {
+            "peak_uss_bytes": 8318058496,
+            "round_id": 1022,
+            "sample_count": 282
+          },
+          {
+            "peak_uss_bytes": 8314073088,
+            "round_id": 1023,
+            "sample_count": 575
+          }
+        ],
+        "retained_terminal_coverage": {
+          "checkpoint_objects_released": true,
+          "completed_steps": 4096,
+          "included_in_peak_screen": true,
+          "round_id": 1023,
+          "round_return_uss_bytes": 3092398080,
+          "scheduled_evaluation": true,
+          "scheduled_generation": true
+        },
+        "round_return_is_not_a_quiescence_barrier": true,
+        "scope": "last four comparable nonevaluation nonterminal phase snapshots; actual final four full round intervals include terminal evaluation"
+      }
+    },
+    "2": {
+      "all_zero_consensus_pending_and_dropped": true,
+      "checks": {
+        "actual_checkpoint_capture_observed": true,
+        "coverage": true,
+        "host_swap_growth": true,
+        "late_phase_uss_stability": true,
+        "minimum_available": true,
+        "minimum_disk_free": true,
+        "no_new_oom": true,
+        "post_round_checkpoint_objects_released": true,
+        "python_swap": true,
+        "worker_execution_bound": true
+      },
+      "phase_round_stability": {
+        "baseline_rounds": [
+          {
+            "completed_steps": 4080,
+            "round_id": 1019,
+            "round_return_uss_bytes": 3598602240
+          },
+          {
+            "completed_steps": 4084,
+            "round_id": 1020,
+            "round_return_uss_bytes": 3593158656
+          },
+          {
+            "completed_steps": 4088,
+            "round_id": 1021,
+            "round_return_uss_bytes": 3600281600
+          },
+          {
+            "completed_steps": 4092,
+            "round_id": 1022,
+            "round_return_uss_bytes": 3595911168
+          }
+        ],
+        "indefinite_stability_claimed": false,
+        "maximum_growth_bytes_per_round": 134217728,
+        "maximum_range_bytes": 536870912,
+        "metrics": {
+          "peak_uss_bytes": {
+            "passed": true,
+            "range_bytes": 4820992,
+            "slope_bytes_per_round": -1489715.2
+          },
+          "round_return_uss_bytes": {
+            "passed": true,
+            "range_bytes": 7122944,
+            "slope_bytes_per_round": -95027.2
+          }
+        },
+        "passed": true,
+        "peak_rounds": [
+          {
+            "peak_uss_bytes": 8328683520,
+            "round_id": 1020,
+            "sample_count": 337
+          },
+          {
+            "peak_uss_bytes": 8326307840,
+            "round_id": 1021,
+            "sample_count": 197
+          },
+          {
+            "peak_uss_bytes": 8325873664,
+            "round_id": 1022,
+            "sample_count": 209
+          },
+          {
+            "peak_uss_bytes": 8323862528,
+            "round_id": 1023,
+            "sample_count": 742
+          }
+        ],
+        "retained_terminal_coverage": {
+          "checkpoint_objects_released": true,
+          "completed_steps": 4096,
+          "included_in_peak_screen": true,
+          "round_id": 1023,
+          "round_return_uss_bytes": 3104428032,
+          "scheduled_evaluation": true,
+          "scheduled_generation": true
+        },
+        "round_return_is_not_a_quiescence_barrier": true,
+        "scope": "last four comparable nonevaluation nonterminal phase snapshots; actual final four full round intervals include terminal evaluation"
+      }
+    },
+    "3": {
+      "all_zero_consensus_pending_and_dropped": true,
+      "checks": {
+        "actual_checkpoint_capture_observed": true,
+        "coverage": true,
+        "host_swap_growth": true,
+        "late_phase_uss_stability": true,
+        "minimum_available": true,
+        "minimum_disk_free": true,
+        "no_new_oom": true,
+        "post_round_checkpoint_objects_released": true,
+        "python_swap": true,
+        "worker_execution_bound": true
+      },
+      "phase_round_stability": {
+        "baseline_rounds": [
+          {
+            "completed_steps": 4080,
+            "round_id": 1019,
+            "round_return_uss_bytes": 3589177344
+          },
+          {
+            "completed_steps": 4084,
+            "round_id": 1020,
+            "round_return_uss_bytes": 3586736128
+          },
+          {
+            "completed_steps": 4088,
+            "round_id": 1021,
+            "round_return_uss_bytes": 3583516672
+          },
+          {
+            "completed_steps": 4092,
+            "round_id": 1022,
+            "round_return_uss_bytes": 3584806912
+          }
+        ],
+        "indefinite_stability_claimed": false,
+        "maximum_growth_bytes_per_round": 134217728,
+        "maximum_range_bytes": 536870912,
+        "metrics": {
+          "peak_uss_bytes": {
+            "passed": true,
+            "range_bytes": 2187264,
+            "slope_bytes_per_round": -128614.4
+          },
+          "round_return_uss_bytes": {
+            "passed": true,
+            "range_bytes": 5660672,
+            "slope_bytes_per_round": -1633075.2
+          }
+        },
+        "passed": true,
+        "peak_rounds": [
+          {
+            "peak_uss_bytes": 8319070208,
+            "round_id": 1020,
+            "sample_count": 219
+          },
+          {
+            "peak_uss_bytes": 8316882944,
+            "round_id": 1021,
+            "sample_count": 324
+          },
+          {
+            "peak_uss_bytes": 8317624320,
+            "round_id": 1022,
+            "sample_count": 282
+          },
+          {
+            "peak_uss_bytes": 8318394368,
+            "round_id": 1023,
+            "sample_count": 501
+          }
+        ],
+        "retained_terminal_coverage": {
+          "checkpoint_objects_released": true,
+          "completed_steps": 4096,
+          "included_in_peak_screen": true,
+          "round_id": 1023,
+          "round_return_uss_bytes": 3094409216,
+          "scheduled_evaluation": true,
+          "scheduled_generation": true
+        },
+        "round_return_is_not_a_quiescence_barrier": true,
+        "scope": "last four comparable nonevaluation nonterminal phase snapshots; actual final four full round intervals include terminal evaluation"
+      }
+    }
+  },
+  "source_sha256": "7b935f4b8938a79085edc16f9a045307832e90ccddf2dc546c3fc48463073172",
+  "status": "PASS_G4_PHASE_RESOURCE_AND_COMPLETION"
+}

@@ -1,0 +1,135 @@
+{
+  "actual_role_permission_canaries": 24,
+  "all_four_committed_rounds": 1024,
+  "all_four_updates": 4096,
+  "assessment_opened": false,
+  "calibration_quality_gate_passed": true,
+  "campaign_sha256": "1eefd9a3c485522a677d4d4690d3e2e9bf02b0974eaa9823bcadae8735e46066",
+  "configuration_sha256": "636034f789fc5a42a7bdc9e8fe46c58ee83bd48e07d2cc0c37432a6448e4b557",
+  "current_reservation_counts": [
+    15,
+    12,
+    12,
+    12
+  ],
+  "current_reserved_steps": [
+    8648,
+    8576,
+    8576,
+    8576
+  ],
+  "derivation": "Sanitized selected-field derivative of locally available small final proofs; source hashes identify originals. This is not the original raw audit body and contains no model, trace, raw owner ledger, instance identifier or account identifier.",
+  "final_models": {
+    "fineweb_edu": {
+      "model_sha256": "254004149ac07a285a27a6f34592b038e9572a2cb6278f55d8cd8c963cace85f",
+      "summary_sha256": "a3144dab3dc938985ee0f7b3a5c3622e601c78bcb43f6b8d2b8c27c9b5d7883d"
+    },
+    "pg19": {
+      "model_sha256": "78ee602978559394e5b0989a183e7c3f612c04280b844232a828a0f737ef1e57",
+      "summary_sha256": "e696abb80833fa1566c900c35559a726c45d9dedd0e3ef75ca1e8ed3a42fd732"
+    },
+    "stackexchange": {
+      "model_sha256": "2b8da53d9ea5c1f111c4b44181ac42afdd73fa1bc4eda897c572920b2becdb42",
+      "summary_sha256": "2d01476d3830873a15ab55bf3552ebfbfac523bbf53a74553b423546c14e11d7"
+    },
+    "wikipedia": {
+      "model_sha256": "3c516265a199443a0921734a8b4e866ddde7440c8f642a1c8f2b6cbf2bb855e3",
+      "summary_sha256": "714c57b71dae78423cde0b605e4e0a7d30bbf169c5b7a1edfed8d6e8b482ade7"
+    }
+  },
+  "initialization": {
+    "all_parent_owner_prefixes_verified": true,
+    "checkpoint_resume": false,
+    "fresh_state_receipts_verified": true,
+    "kind": "accounted_private_model_only_warmstart",
+    "parent_model_and_body_audit_verified": true,
+    "private_ancestry_included_in_cumulative_reservations": true,
+    "provenance": {
+      "accounting_authorities": [
+        {
+          "ledger_sha256": "cd038921f1e265a1f962725fa8e616106bea91c6da1c30250be9eacf18858fa6",
+          "lineage_id": "p5-public-text-v1:fineweb_edu",
+          "reservation_count": 14,
+          "reserved_steps": 4552
+        },
+        {
+          "ledger_sha256": "7ef83c9c923e5ad1f184f1cd70604bca259be1c413c45c3697b90f672fbf89e9",
+          "lineage_id": "p5-public-text-v1:wikipedia",
+          "reservation_count": 11,
+          "reserved_steps": 4480
+        },
+        {
+          "ledger_sha256": "40ae8152c54b09a52b7865c986ba7cbca29ff1fb26f3aa2fcfb4758fbab0169d",
+          "lineage_id": "p5-public-text-v1:pg19",
+          "reservation_count": 11,
+          "reserved_steps": 4480
+        },
+        {
+          "ledger_sha256": "88c477ee89e57121984e797b9f51f458c24bfeb539cfc913d916d7f2ffdc4353",
+          "lineage_id": "p5-public-text-v1:stackexchange",
+          "reservation_count": 11,
+          "reserved_steps": 4480
+        }
+      ],
+      "parent_audit_sha256": "89a3d0cdd4c352b5850884b9e433e038d895094f8a9d7a184698965ac0464bca",
+      "parent_model_sha256": "25e0b35cc7a48159e6ee21112a68f556d2dc4154875efbba4701b74f2c5bed2a",
+      "parent_run_id": "g4-native-mmap-private-sigma05-20261031-1",
+      "version": 1
+    }
+  },
+  "privacy_by_source": {
+    "fineweb_edu": {
+      "actual_history_prv_epsilon": 3.810330008924817,
+      "actual_history_rdp_epsilon": 4.862800547288304,
+      "cumulative_reserved_prv_epsilon": 4.21687538528221,
+      "cumulative_reserved_rdp_epsilon": 5.267553175080379,
+      "cumulative_reserved_steps": 8648,
+      "delta": 1e-06,
+      "new_reserved_steps": 4096,
+      "owner_prefix_preserved": true,
+      "scope": "actual_history is current campaign only; cumulative_reserved includes all accounted initialization ancestry and new reservation"
+    },
+    "pg19": {
+      "actual_history_prv_epsilon": 3.810330008924817,
+      "actual_history_rdp_epsilon": 4.862800547288304,
+      "cumulative_reserved_prv_epsilon": 4.216830035952686,
+      "cumulative_reserved_rdp_epsilon": 5.267501454347347,
+      "cumulative_reserved_steps": 8576,
+      "delta": 1e-06,
+      "new_reserved_steps": 4096,
+      "owner_prefix_preserved": true,
+      "scope": "actual_history is current campaign only; cumulative_reserved includes all accounted initialization ancestry and new reservation"
+    },
+    "stackexchange": {
+      "actual_history_prv_epsilon": 3.810330008924817,
+      "actual_history_rdp_epsilon": 4.862800547288304,
+      "cumulative_reserved_prv_epsilon": 4.216830035952686,
+      "cumulative_reserved_rdp_epsilon": 5.267501454347347,
+      "cumulative_reserved_steps": 8576,
+      "delta": 1e-06,
+      "new_reserved_steps": 4096,
+      "owner_prefix_preserved": true,
+      "scope": "actual_history is current campaign only; cumulative_reserved includes all accounted initialization ancestry and new reservation"
+    },
+    "wikipedia": {
+      "actual_history_prv_epsilon": 3.810330008924817,
+      "actual_history_rdp_epsilon": 4.862800547288304,
+      "cumulative_reserved_prv_epsilon": 4.216830035952686,
+      "cumulative_reserved_rdp_epsilon": 5.267501454347347,
+      "cumulative_reserved_steps": 8576,
+      "delta": 1e-06,
+      "new_reserved_steps": 4096,
+      "owner_prefix_preserved": true,
+      "scope": "actual_history is current campaign only; cumulative_reserved includes all accounted initialization ancestry and new reservation"
+    }
+  },
+  "quality_separate": true,
+  "raw_audit_sha256": "9424bf44c344b55ec2cd550160d6ffe199bb559514c9b9d38fbfee2bedf193a4",
+  "raw_receipt_sha256": "71f3bc112aeb00d3ed7d9de6270420efde63bcee30fd908457d81fb503f33825",
+  "scientific_dispatches": 1,
+  "scientific_input_bodies": 19,
+  "source_and_population_hashes_verified": true,
+  "source_archive_sha256": "d034361b5f49ac1329858bce38b40ab85171fd0d8d73af5c92936d708634091f",
+  "source_complete_sha256": "539a9ae7493854d74366007f0b4783b3c612e8c9e7d51a38b58203e4e2d6b8e6",
+  "status": "PASS_G4_SINGLE_PRIVATE_BODY_INTEGRITY_AUDIT"
+}
