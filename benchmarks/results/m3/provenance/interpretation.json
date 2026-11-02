@@ -1,0 +1,17 @@
+{
+  "accepted_groups": 22,
+  "accepted_nodes": 88,
+  "assembly_did_not_rerun_these_historical_checks": true,
+  "evaluation_rows": 440,
+  "final_source_comparisons": 352,
+  "hashes_identify_missing_bytes_but_do_not_recover_them": true,
+  "historical_metric_extracts": 448,
+  "historical_retained_index_files": 633,
+  "historical_total_metric_comparisons": 2552,
+  "initial_step_zero_rows": 88,
+  "pack_is_compact_review_evidence_not_self_contained_raw_reexecution_bundle": true,
+  "packed_trajectory_csv_rows": 528,
+  "post_initial_evaluation_rows": 440,
+  "raw_logs_unique_models_builds_and_some_release_archives_were_owner_retired": true,
+  "trajectory_value_comparisons": 2200
+}

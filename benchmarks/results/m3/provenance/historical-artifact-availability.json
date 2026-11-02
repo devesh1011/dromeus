@@ -1,0 +1,40 @@
+{
+  "data": {
+    "approved_files": 7314,
+    "approved_list": "approved-deletions.csv",
+    "approved_primary_csv_sha256": "177fe5dbb4f4323c1c580ed6f8d9cdbedf681035f4a0caeb768f11958fde03d8",
+    "archive_members": "archive-metadata/members.csv.gz",
+    "archive_retention": "archive-metadata/summary.json",
+    "current_duplicate_lookup": "duplicate-relocations.csv",
+    "deleted_files": 7314,
+    "deleted_logical_bytes": 4001589330,
+    "deletion_outcomes": "deletion-outcomes.csv",
+    "deletion_summary": "deletion-summary.json",
+    "duplicate_relocations": "duplicate-relocations.csv",
+    "final_verification": "completion.json",
+    "historical_note": "Approved list/outcomes and earlier verification receipts describe their execution-time paths. Current duplicate/archive-member lookup reflects subsequently approved source-tooling retirement.",
+    "historical_raw_backup_verified": false,
+    "historical_report_package": "../../history-reports-2026-10-29/README.md",
+    "historical_result_trees_retired": true,
+    "historical_results_retirement": "historical-result-relocations.json",
+    "log_metrics": "log-metrics/index.json",
+    "log_to_report_validation": "log-metrics/final-report-check.json",
+    "optional_historical_files_retained": 0,
+    "policy": "Historical manifests and completion receipts describe their execution-time availability. The owner subsequently authorized permanent raw retirement of M1/M2/local validation trees. Compact reports survive in history-reports-2026-10-29; no full backup is asserted. Group H bytes resolve through the current duplicate map; original models/raw/source-build bundles marked retired cannot be recovered from hashes alone. Authoritative M3 privacy histories and current GPT configurations remain outside all deletion sets.",
+    "regenerated_caches_after_tests": 87,
+    "retention_verification": {
+      "approved_deletion_list_sha256": "177fe5dbb4f4323c1c580ed6f8d9cdbedf681035f4a0caeb768f11958fde03d8",
+      "archive_member_retained_reference_checks": 28767,
+      "distinct_reference_paths": 3258,
+      "status": "pass",
+      "verified_log_extracts": 448
+    },
+    "skipped_files": 0,
+    "source_tooling_retired": "source-retirement-relocations.json",
+    "status": "primary_cleanup_completed",
+    "verification_log": "verify.log",
+    "version": 1
+  },
+  "derivation": "sanitized historical availability/verification record; historical hashes are not this pack manifest",
+  "source_sha256": "34f9eda5a03fdeb512eb78c2647dc03c0169e2cba032bf91a178b8215e715817"
+}

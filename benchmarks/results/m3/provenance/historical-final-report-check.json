@@ -1,0 +1,14 @@
+{
+  "data": {
+    "accepted_groups": 22,
+    "accepted_nodes": 88,
+    "evaluation_cadence": "exactly 5 evaluation rows for each of 88 nodes; report trajectory step match",
+    "identity_checks": "node_id/run_id/manifest_hash exact on every evaluation row",
+    "metric_value_comparisons": 2552,
+    "report_path": "benchmarks/results/m3/final-2026-10-21/report/results.json",
+    "report_sha256": "89b46330bda93b1759c5ad8a577fe047f1c771cc59765424b0faa7076b5c3c91",
+    "status": "pass"
+  },
+  "derivation": "sanitized historical availability/verification record; historical hashes are not this pack manifest",
+  "source_sha256": "8a7e36288dee32fc482c7617fc411500b2fc94d25069fd81ee6422f03574b653"
+}

@@ -1,0 +1,19 @@
+{
+  "remote_repository": "https://github.com/devesh1011/dromeus",
+  "m2_review_release": "https://github.com/devesh1011/dromeus/releases/tag/v0.2.0",
+  "m2_tag_commit": "2f35fd0569250516626b8ea73b2c7c9c2c8d9288",
+  "observed_remote_main": "388fb3e32f2d8d7e8161fb67d143ff2cb329c3ce",
+  "m2_evidence_index": "https://github.com/devesh1011/dromeus/blob/v0.2.0/benchmarks/results/m2/README.md",
+  "layout": [
+    "README.md",
+    "report/",
+    "run-matrix.json",
+    "experiment-config/",
+    "benchmark-results/",
+    "evidence-availability.json",
+    "package-checksums.sha256"
+  ],
+  "m3_adaptation": "Same navigation and storage pattern, omitting duplicate charts/report PDFs per owner instruction. Per-run records are explicitly derived where original raw receipts are unavailable.",
+  "remote_m3_release_observed": false,
+  "remote_modified": false
+}

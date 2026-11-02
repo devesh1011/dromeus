@@ -1,0 +1,179 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "configurations/calibration-selection.json": {
+      "bytes": 6933,
+      "sha256": "8845c9ad80f37019313adcf58aa9d939a467a0c7b65588de3dba20e73d879c8b"
+    },
+    "configurations/divergence-policy.json": {
+      "bytes": 565,
+      "sha256": "f8d8fda6688c750e1cd679f6ed81e8f12e9607080162e47c3b4222d2b4955aa5"
+    },
+    "configurations/freeze-record.json": {
+      "bytes": 341,
+      "sha256": "c3cabeb43005e63a510463d5e9d56be2e38619657abfb0cd2076e942668e0d61"
+    },
+    "configurations/frozen-experiment.json": {
+      "bytes": 33281,
+      "sha256": "1e9dc6f02792956078e3e922096965a8c2d97d2c3b75c72229e3d37fb3c1b110"
+    },
+    "configurations/privacy-utility-settings.json": {
+      "bytes": 9149,
+      "sha256": "622c803b502c48615fe65c8eb30313831c6144d5ddf0440ea600a15b7df735c7"
+    },
+    "configurations/secure-run.json": {
+      "bytes": 1717,
+      "sha256": "392c07449a13776ffa815a61974c9886b744d31176745b598f0726a7c255b686"
+    },
+    "provenance/historical-artifact-availability.json": {
+      "bytes": 2541,
+      "sha256": "98eb14eb3ecab003798602cfb728420f388f6c5d1693b85208f1d4b283bbe3f8"
+    },
+    "provenance/historical-final-report-check.json": {
+      "bytes": 699,
+      "sha256": "3f47b7897222cec47601cbcfb3a00e6ecd15599c8e986fc1a81e0a146206adac"
+    },
+    "provenance/historical-review-scope-and-gaps.json": {
+      "bytes": 2091,
+      "sha256": "fc9135de0e2ab718ddc87371f658efc2f76a164d560ec1b3f42c12b3eed98e46"
+    },
+    "provenance/interpretation.json": {
+      "bytes": 681,
+      "sha256": "b1c8b991526b2098cb891aa1ad8924cd75855dd5fdc92e325fddd2d8feeeb3e9"
+    },
+    "provenance/selection-provenance.json": {
+      "bytes": 29115,
+      "sha256": "519556ff3c43bf5fefca343070858c37bdf8aa28fb90fa083d85c0181a76dd71"
+    },
+    "provenance/unavailable-historical-references.json": {
+      "bytes": 826,
+      "sha256": "e1642dbcccc8880aef7a9da272e135fcb3c2bb0648505427ada550bbc4c63fd9"
+    },
+    "results/additional-studies/learning-rate/gates.csv": {
+      "bytes": 423,
+      "sha256": "e083bce7025cd1a72672758528de5f07a06c98a49545312214a2fe919fdb09ed"
+    },
+    "results/additional-studies/learning-rate/paired-gains.csv": {
+      "bytes": 198,
+      "sha256": "22c87e1fc21e8bc1475e509c83cdc5cc74a2cddae4465ac59dbb826a1051f277"
+    },
+    "results/additional-studies/learning-rate/settings.csv": {
+      "bytes": 193,
+      "sha256": "53932e7a7a282550ae1b447c0a3a2bc8f6d20865361310d8131b53d7a7f8d05c"
+    },
+    "results/additional-studies/learning-rate/sources.csv": {
+      "bytes": 292,
+      "sha256": "3a72ebfc571aa61be99908e2e795a76c7869d579ee12f8961da3392751ad5bb6"
+    },
+    "results/additional-studies/scope-and-adverse-results.json": {
+      "bytes": 1229,
+      "sha256": "147d40aeb9c59132ac800b190efd8d19574581d07a651f0beed380e33a7a5444"
+    },
+    "results/additional-studies/svhn-source-comparison.csv": {
+      "bytes": 325,
+      "sha256": "7b8d7db411f03ce3a3dcdb45351221eb3a71bf7a119598159177603445e05486"
+    },
+    "results/language-model/calibration-comparison.csv": {
+      "bytes": 729,
+      "sha256": "f4ae5243da200084d3c40733fb45d0581970d0f7fed11e5d84965797a5dd619e"
+    },
+    "results/language-model/calibration-comparison.json": {
+      "bytes": 4681,
+      "sha256": "c2f3a12656bf0ae0f217ae8605fc019577a289596c2f205774a075c1f84ac1d2"
+    },
+    "results/language-model/final-loss-by-source.csv": {
+      "bytes": 601,
+      "sha256": "01696f9fefbb5ce3109589e9ba9bd7e1af48a7d9fe659e94f2ee70f17efb7376"
+    },
+    "results/language-model/final-training/completion.json": {
+      "bytes": 1569,
+      "sha256": "0e8f13bfec56b813d1420333523367c7265b906eebd218f2be1b46320c181c20"
+    },
+    "results/language-model/final-training/evaluation.json": {
+      "bytes": 3122,
+      "sha256": "41b9627176a074a43efe3726f7beb916ef92d34a6635b0d12bc2240b77c9efd8"
+    },
+    "results/language-model/final-training/integrity-and-privacy-check.json": {
+      "bytes": 5994,
+      "sha256": "6c262f0275acb0bcd425b4ae1a279228c086b85859f01e757143286618dc8310"
+    },
+    "results/language-model/final-training/resource-checks.json": {
+      "bytes": 11461,
+      "sha256": "b0b7f59e47f8b5f2fb1899adbc25e0b72794a612fc994d5dd2e9a087f3a653fe"
+    },
+    "results/language-model/final-training/source-hashes.json": {
+      "bytes": 1664,
+      "sha256": "2042c30d87b0c72e8b65e0b2381a27468df85414ac51f309d7cb24711b9884a8"
+    },
+    "results/language-model/initial-and-final-loss.csv": {
+      "bytes": 263,
+      "sha256": "44b8965e87c993f7dd26acf59afdc9b753f9e6188d0084ef5a9588a629adfd4b"
+    },
+    "results/language-model/initial-training-resource-checks.json": {
+      "bytes": 593,
+      "sha256": "65b053832d3cd3445e8cd875ec3e47c1eafbee71d8e260dabe3bb016e09a1fb1"
+    },
+    "results/language-model/initial-training-results.json": {
+      "bytes": 5850,
+      "sha256": "1eba473b3669f7252b9b3bc743c8f066be480152f7aed1f775c568ab0d107799"
+    },
+    "results/language-model/initial-training-worker-metrics.csv": {
+      "bytes": 1246,
+      "sha256": "9edb71838d9e8273fc73e862cc7e4fb4f0b0b4d9d26cb6ac853a4e8490402404"
+    },
+    "results/language-model/scope.json": {
+      "bytes": 1027,
+      "sha256": "aff1676222d0c5e0f0bad1f45da400035fe5e93a2bc74815bdef5c0983a1396b"
+    },
+    "results/privacy-utility/accuracy-vs-privacy.csv": {
+      "bytes": 1127,
+      "sha256": "888a4765d14900d20c937afd5f7e14bd9eaf7ef08bc57ba7c0055bcc31839953"
+    },
+    "results/privacy-utility/learning-trajectory.csv": {
+      "bytes": 83622,
+      "sha256": "8e73c6fff245ff13ca8526520d24613bb0c0a54251231f1e54ce511c30946b59"
+    },
+    "results/privacy-utility/study-results.json": {
+      "bytes": 25410,
+      "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+    },
+    "results/privacy-utility/worker-results.csv": {
+      "bytes": 28913,
+      "sha256": "3815c71ab65a6820324d984c515cd73c68f892af3196f71c7eadf1ffe20553f2"
+    },
+    "results/private-training/historical-failed-attempts.json": {
+      "bytes": 2165,
+      "sha256": "594415e4c80a6cef6aaf2d48597d9e6f9a1caca74636b6e8152373b6ab819829"
+    },
+    "results/private-training/historical-implementation-verification-record.json": {
+      "bytes": 1022,
+      "sha256": "e5757d27d4a435f8d6e6eb8fcce45f8db73640bf52a2a2b5979000e75909c177"
+    },
+    "results/private-training/implementation-and-execution-summary.json": {
+      "bytes": 3556,
+      "sha256": "d3a56ce57c15fba0e2521c8e75c95805992b004928e11eab4e827a03be26459c"
+    },
+    "results/private-training/secure-campaign-nodes.csv": {
+      "bytes": 1603,
+      "sha256": "a8a6a19e7cc11cbab746f57520c3a19b8de45516a0df3ed549d25ee3e8bc5333"
+    },
+    "results/warning-detection/assessment.json": {
+      "bytes": 6230,
+      "sha256": "9cbdbfd5daf4c66527db9cea3f5b9048cf71988fe1a71dab77b23f7a9063046c"
+    },
+    "results/warning-detection/earlier-policy-failures.json": {
+      "bytes": 3018,
+      "sha256": "9a994043e6c765674538f571617bb9750f6e11ec8ac5a35b2a56a56e386b3a05"
+    },
+    "results/warning-detection/runtime-audit.json": {
+      "bytes": 1279,
+      "sha256": "d3d99bc453a75c86c877d880d3ab31ae46597f3cf1f4cf1e664f7847528d45f1"
+    },
+    "results/warning-detection/worker-assessment.csv": {
+      "bytes": 7233,
+      "sha256": "5b4177883d25eebbb2979d061507328980295f5814f7b6b334a6109db6d1dd10"
+    }
+  },
+  "paths_relative_to": "benchmarks/results/m3",
+  "scope": "Historical compact evidence selection with current relocated paths; additional logs and current wrappers are covered by log-index.json and package-manifest.json."
+}

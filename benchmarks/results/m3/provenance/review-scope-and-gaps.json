@@ -1,0 +1,54 @@
+{
+  "additional_not_original_criterion": [
+    "learning-rate/SVHN optional recipes",
+    "GPT calibration/resource/model/ancestry/accounting studies"
+  ],
+  "current_local_assembly_did_not_rerun_science_or_query_cloud": true,
+  "excluded": [
+    "charts/images",
+    "PDF/Word/Markdown reports",
+    "ZIP/sourcearchives",
+    "models/checkpoints",
+    "raw ownerledgers",
+    "complete verbose source logs and full memory traces",
+    "credentials",
+    "account/instance IDs",
+    "private local paths"
+  ],
+  "most_proofs_are_derived_aggregates_or_report_summaries": true,
+  "original_m3_coverage": [
+    "private training and secure actualAXL execution summaries",
+    "matched ordinary and4noise utility settings with3seed-level repeats,88node rows and528trajectory rows",
+    "initial warning failures and fresh14-group56-node repair assessment",
+    "compatibility/runtime/accounting verification records"
+  ],
+  "raw_runtime_model_csprng_reverification_possible_from_this_directory_alone": false,
+  "retained_event_logs": {
+    "cohorts": {
+      "digit_calibration": 40,
+      "original_digit_final": 88,
+      "warning_assessment": 56,
+      "warning_calibration": 48
+    },
+    "extraction_filters": [
+      "message_received with routed exactly true",
+      "transfer_message_sent with integer retry_count exactly zero"
+    ],
+    "files": 232,
+    "index": "audit/log-index.json",
+    "security_scan": "Separate scan of all selected decompressed streams passed before byte-identical copying.",
+    "storage_format": "plain UTF-8 JSONL; gzip source provenance preserved in log-index.json"
+  },
+  "reviewer_entry": "README.md",
+  "scope": "Curated team review evidence including filtered original digit/warning event streams; not a full raw model/transport replay bundle.",
+  "scope_gaps": [
+    "Some historical raw models/logs/builds were owner-retired. Hashes identify missing bytes but cannot recover them.",
+    "Secure originalAXL and generic conformance summaries are retained metric/report derivatives, not original full runtime/CSPRNG bodies.",
+    "Public seeded digit privacy figures are mechanism estimates, not secure guarantees for the full released benchmark history.",
+    "Four node models in a group are correlated; no population false-alert guarantee or universal warning readiness.",
+    "Language-model assessment remains unused; no robustness or useful general-language-quality claim.",
+    "A losslessly factored22-run original freeze matrix, exact original freeze record, calibration selection and exact secure run configuration are included from surviving repository metadata. These do not restore deleted raw models/logs or all run-index/runtime provenance and cannot make this a complete raw reexecution bundle.",
+    "Retained event records are now included, but omitted routine transport traffic and retired model/source bytes remain unavailable."
+  ],
+  "source_members_already_sanitized": "Applies to original compact JSON/CSV selection only; selected log streams received a separate scan and were not rewritten."
+}

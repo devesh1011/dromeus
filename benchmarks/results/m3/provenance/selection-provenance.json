@@ -1,0 +1,584 @@
+{
+  "additional_log_index": "audit/log-index.json",
+  "files": [
+    {
+      "bytes": 1127,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/utility.csv",
+          "sha256": "888a4765d14900d20c937afd5f7e14bd9eaf7ef08bc57ba7c0055bcc31839953"
+        }
+      ],
+      "target": "results/privacy-utility/accuracy-vs-privacy.csv",
+      "target_sha256": "888a4765d14900d20c937afd5f7e14bd9eaf7ef08bc57ba7c0055bcc31839953"
+    },
+    {
+      "bytes": 28913,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/nodes.csv",
+          "sha256": "3815c71ab65a6820324d984c515cd73c68f892af3196f71c7eadf1ffe20553f2"
+        }
+      ],
+      "target": "results/privacy-utility/worker-results.csv",
+      "target_sha256": "3815c71ab65a6820324d984c515cd73c68f892af3196f71c7eadf1ffe20553f2"
+    },
+    {
+      "bytes": 83622,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/trajectory.csv",
+          "sha256": "8e73c6fff245ff13ca8526520d24613bb0c0a54251231f1e54ce511c30946b59"
+        }
+      ],
+      "target": "results/privacy-utility/learning-trajectory.csv",
+      "target_sha256": "8e73c6fff245ff13ca8526520d24613bb0c0a54251231f1e54ce511c30946b59"
+    },
+    {
+      "bytes": 25410,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/results-aggregate.json",
+          "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+        }
+      ],
+      "target": "results/privacy-utility/study-results.json",
+      "target_sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+    },
+    {
+      "bytes": 9149,
+      "derivation": "Extracted utility_settings verbatim into an explicit selected-field derivative.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/results-aggregate.json",
+          "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+        }
+      ],
+      "target": "configurations/privacy-utility-settings.json",
+      "target_sha256": "622c803b502c48615fe65c8eb30313831c6144d5ddf0440ea600a15b7df735c7"
+    },
+    {
+      "bytes": 1603,
+      "derivation": "Filtered the four role=secure rows; CSV numeric/text values unchanged, with a new CSV serialization. These are retained node metrics, not complete CSPRNG/runtime trace bodies.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/nodes.csv",
+          "sha256": "3815c71ab65a6820324d984c515cd73c68f892af3196f71c7eadf1ffe20553f2"
+        }
+      ],
+      "target": "results/private-training/secure-campaign-nodes.csv",
+      "target_sha256": "a8a6a19e7cc11cbab746f57520c3a19b8de45516a0df3ed549d25ee3e8bc5333"
+    },
+    {
+      "bytes": 3556,
+      "derivation": "Explicit selected factual derivative of historical report text and node metrics; no original raw runtime/CSPRNG proof is asserted.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/REPORT.md",
+          "sha256": "2dcd46191e67ae764411338989374a1e09bc2a3f7337b3fbb77c2af36699c1fb"
+        },
+        {
+          "pack_member": "E1-original-campaign/results-aggregate.json",
+          "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+        },
+        {
+          "pack_member": "E1-original-campaign/nodes.csv",
+          "sha256": "3815c71ab65a6820324d984c515cd73c68f892af3196f71c7eadf1ffe20553f2"
+        },
+        {
+          "pack_member": "E3-generic-training/REPORT.md",
+          "sha256": "c6708d46645f0c87e0b1a16524e00d58338968ceec2cb791d3ffefc750713cd8"
+        }
+      ],
+      "target": "results/private-training/implementation-and-execution-summary.json",
+      "target_sha256": "d3a56ce57c15fba0e2521c8e75c95805992b004928e11eab4e827a03be26459c"
+    },
+    {
+      "bytes": 1022,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof. Historical1979-test record, not a test run of today's checkout.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/current-verification-record.json",
+          "sha256": "e5757d27d4a435f8d6e6eb8fcce45f8db73640bf52a2a2b5979000e75909c177"
+        }
+      ],
+      "target": "results/private-training/historical-implementation-verification-record.json",
+      "target_sha256": "e5757d27d4a435f8d6e6eb8fcce45f8db73640bf52a2a2b5979000e75909c177"
+    },
+    {
+      "bytes": 6230,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E2-warning-repair/assessment-aggregate.json",
+          "sha256": "9cbdbfd5daf4c66527db9cea3f5b9048cf71988fe1a71dab77b23f7a9063046c"
+        }
+      ],
+      "target": "results/warning-detection/assessment.json",
+      "target_sha256": "9cbdbfd5daf4c66527db9cea3f5b9048cf71988fe1a71dab77b23f7a9063046c"
+    },
+    {
+      "bytes": 7233,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E2-warning-repair/assessment-nodes.csv",
+          "sha256": "5b4177883d25eebbb2979d061507328980295f5814f7b6b334a6109db6d1dd10"
+        }
+      ],
+      "target": "results/warning-detection/worker-assessment.csv",
+      "target_sha256": "5b4177883d25eebbb2979d061507328980295f5814f7b6b334a6109db6d1dd10"
+    },
+    {
+      "bytes": 1279,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E2-warning-repair/runtime-proof-aggregate.json",
+          "sha256": "d3d99bc453a75c86c877d880d3ab31ae46597f3cf1f4cf1e664f7847528d45f1"
+        }
+      ],
+      "target": "results/warning-detection/runtime-audit.json",
+      "target_sha256": "d3d99bc453a75c86c877d880d3ab31ae46597f3cf1f4cf1e664f7847528d45f1"
+    },
+    {
+      "bytes": 565,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E2-warning-repair/deployed-digit-policy.json",
+          "sha256": "f8d8fda6688c750e1cd679f6ed81e8f12e9607080162e47c3b4222d2b4955aa5"
+        }
+      ],
+      "target": "configurations/divergence-policy.json",
+      "target_sha256": "f8d8fda6688c750e1cd679f6ed81e8f12e9607080162e47c3b4222d2b4955aa5"
+    },
+    {
+      "bytes": 3018,
+      "derivation": "Selected original_detector_adverse object verbatim plus explicitly scoped report subset and limitations. Original full-aggregate7/13 and report-subset5/10 false-warning counts concern different cohorts; neither is substituted for the other.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/results-aggregate.json",
+          "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+        },
+        {
+          "pack_member": "E1-original-campaign/REPORT.md",
+          "sha256": "2dcd46191e67ae764411338989374a1e09bc2a3f7337b3fbb77c2af36699c1fb"
+        },
+        {
+          "pack_member": "E2-warning-repair/REPORT.md",
+          "sha256": "e042c26b8c73598040c0adaa476f655fc57a12aa61e0c000bca11e74150fc6ad"
+        }
+      ],
+      "target": "results/warning-detection/earlier-policy-failures.json",
+      "target_sha256": "9a994043e6c765674538f571617bb9750f6e11ec8ac5a35b2a56a56e386b3a05"
+    },
+    {
+      "bytes": 5850,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/g4-completed-derived-summary.json",
+          "sha256": "1eba473b3669f7252b9b3bc743c8f066be480152f7aed1f775c568ab0d107799"
+        }
+      ],
+      "target": "results/language-model/initial-training-results.json",
+      "target_sha256": "1eba473b3669f7252b9b3bc743c8f066be480152f7aed1f775c568ab0d107799"
+    },
+    {
+      "bytes": 1246,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/g4-full-calibration-by-model.csv",
+          "sha256": "9edb71838d9e8273fc73e862cc7e4fb4f0b0b4d9d26cb6ac853a4e8490402404"
+        }
+      ],
+      "target": "results/language-model/initial-training-worker-metrics.csv",
+      "target_sha256": "9edb71838d9e8273fc73e862cc7e4fb4f0b0b4d9d26cb6ac853a4e8490402404"
+    },
+    {
+      "bytes": 593,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/g4-phase-resource-aggregate.json",
+          "sha256": "65b053832d3cd3445e8cd875ec3e47c1eafbee71d8e260dabe3bb016e09a1fb1"
+        }
+      ],
+      "target": "results/language-model/initial-training-resource-checks.json",
+      "target_sha256": "65b053832d3cd3445e8cd875ec3e47c1eafbee71d8e260dabe3bb016e09a1fb1"
+    },
+    {
+      "bytes": 729,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/h128-full-calibration-comparison.csv",
+          "sha256": "f4ae5243da200084d3c40733fb45d0581970d0f7fed11e5d84965797a5dd619e"
+        }
+      ],
+      "target": "results/language-model/calibration-comparison.csv",
+      "target_sha256": "f4ae5243da200084d3c40733fb45d0581970d0f7fed11e5d84965797a5dd619e"
+    },
+    {
+      "bytes": 4681,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/h128-full-calibration-derived-comparison.json",
+          "sha256": "c2f3a12656bf0ae0f217ae8605fc019577a289596c2f205774a075c1f84ac1d2"
+        }
+      ],
+      "target": "results/language-model/calibration-comparison.json",
+      "target_sha256": "c2f3a12656bf0ae0f217ae8605fc019577a289596c2f205774a075c1f84ac1d2"
+    },
+    {
+      "bytes": 3122,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-full-calibration-summary.json",
+          "sha256": "41b9627176a074a43efe3726f7beb916ef92d34a6635b0d12bc2240b77c9efd8"
+        }
+      ],
+      "target": "results/language-model/final-training/evaluation.json",
+      "target_sha256": "41b9627176a074a43efe3726f7beb916ef92d34a6635b0d12bc2240b77c9efd8"
+    },
+    {
+      "bytes": 5994,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-body-and-ancestry-proof-derived.json",
+          "sha256": "6c262f0275acb0bcd425b4ae1a279228c086b85859f01e757143286618dc8310"
+        }
+      ],
+      "target": "results/language-model/final-training/integrity-and-privacy-check.json",
+      "target_sha256": "6c262f0275acb0bcd425b4ae1a279228c086b85859f01e757143286618dc8310"
+    },
+    {
+      "bytes": 11461,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-phase-resource-aggregate.json",
+          "sha256": "b0b7f59e47f8b5f2fb1899adbc25e0b72794a612fc994d5dd2e9a087f3a653fe"
+        }
+      ],
+      "target": "results/language-model/final-training/resource-checks.json",
+      "target_sha256": "b0b7f59e47f8b5f2fb1899adbc25e0b72794a612fc994d5dd2e9a087f3a653fe"
+    },
+    {
+      "bytes": 1569,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-disposition-derived.json",
+          "sha256": "0e8f13bfec56b813d1420333523367c7265b906eebd218f2be1b46320c181c20"
+        }
+      ],
+      "target": "results/language-model/final-training/completion.json",
+      "target_sha256": "0e8f13bfec56b813d1420333523367c7265b906eebd218f2be1b46320c181c20"
+    },
+    {
+      "bytes": 1664,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/SOURCE_HASH_PROVENANCE.json",
+          "sha256": "2042c30d87b0c72e8b65e0b2381a27468df85414ac51f309d7cb24711b9884a8"
+        }
+      ],
+      "target": "results/language-model/final-training/source-hashes.json",
+      "target_sha256": "2042c30d87b0c72e8b65e0b2381a27468df85414ac51f309d7cb24711b9884a8"
+    },
+    {
+      "bytes": 263,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "presentation/unified/gpt-unified-campaign-endpoints.csv",
+          "sha256": "44b8965e87c993f7dd26acf59afdc9b753f9e6188d0084ef5a9588a629adfd4b"
+        }
+      ],
+      "target": "results/language-model/initial-and-final-loss.csv",
+      "target_sha256": "44b8965e87c993f7dd26acf59afdc9b753f9e6188d0084ef5a9588a629adfd4b"
+    },
+    {
+      "bytes": 601,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "presentation/unified/gpt-final-domain-loss.csv",
+          "sha256": "01696f9fefbb5ce3109589e9ba9bd7e1af48a7d9fe659e94f2ee70f17efb7376"
+        }
+      ],
+      "target": "results/language-model/final-loss-by-source.csv",
+      "target_sha256": "01696f9fefbb5ce3109589e9ba9bd7e1af48a7d9fe659e94f2ee70f17efb7376"
+    },
+    {
+      "bytes": 1027,
+      "derivation": "Selected scope/provenance facts; no chart metadata or excluded payload inventory inherited.",
+      "sources": [
+        {
+          "pack_member": "E8-gpt-completed-and-live/h128-full-calibration-derived-comparison.json",
+          "sha256": "c2f3a12656bf0ae0f217ae8605fc019577a289596c2f205774a075c1f84ac1d2"
+        },
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-body-and-ancestry-proof-derived.json",
+          "sha256": "6c262f0275acb0bcd425b4ae1a279228c086b85859f01e757143286618dc8310"
+        },
+        {
+          "pack_member": "E6-transformer-resource/compression-REPORT.md",
+          "sha256": "fc79997cc3aab8c53e8e7ef693e86714daa8e8d5e053459ec0d3e576ea26efee"
+        },
+        {
+          "pack_member": "presentation/unified/gpt-unified-campaign-receipt-derived.json",
+          "sha256": "c07fde2a3b84b065829f9373ca94b323e1e0df060b1e63017f8e49d66fa66385"
+        }
+      ],
+      "target": "results/language-model/scope.json",
+      "target_sha256": "aff1676222d0c5e0f0bad1f45da400035fe5e93a2bc74815bdef5c0983a1396b"
+    },
+    {
+      "bytes": 193,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E4-learning-rate/settings.csv",
+          "sha256": "53932e7a7a282550ae1b447c0a3a2bc8f6d20865361310d8131b53d7a7f8d05c"
+        }
+      ],
+      "target": "results/additional-studies/learning-rate/settings.csv",
+      "target_sha256": "53932e7a7a282550ae1b447c0a3a2bc8f6d20865361310d8131b53d7a7f8d05c"
+    },
+    {
+      "bytes": 292,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E4-learning-rate/sources.csv",
+          "sha256": "3a72ebfc571aa61be99908e2e795a76c7869d579ee12f8961da3392751ad5bb6"
+        }
+      ],
+      "target": "results/additional-studies/learning-rate/sources.csv",
+      "target_sha256": "3a72ebfc571aa61be99908e2e795a76c7869d579ee12f8961da3392751ad5bb6"
+    },
+    {
+      "bytes": 198,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E4-learning-rate/paired-gains.csv",
+          "sha256": "22c87e1fc21e8bc1475e509c83cdc5cc74a2cddae4465ac59dbb826a1051f277"
+        }
+      ],
+      "target": "results/additional-studies/learning-rate/paired-gains.csv",
+      "target_sha256": "22c87e1fc21e8bc1475e509c83cdc5cc74a2cddae4465ac59dbb826a1051f277"
+    },
+    {
+      "bytes": 423,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E4-learning-rate/gates.csv",
+          "sha256": "e083bce7025cd1a72672758528de5f07a06c98a49545312214a2fe919fdb09ed"
+        }
+      ],
+      "target": "results/additional-studies/learning-rate/gates.csv",
+      "target_sha256": "e083bce7025cd1a72672758528de5f07a06c98a49545312214a2fe919fdb09ed"
+    },
+    {
+      "bytes": 325,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E5-svhn-confirmation/source-comparison.csv",
+          "sha256": "7b8d7db411f03ce3a3dcdb45351221eb3a71bf7a119598159177603445e05486"
+        }
+      ],
+      "target": "results/additional-studies/svhn-source-comparison.csv",
+      "target_sha256": "7b8d7db411f03ce3a3dcdb45351221eb3a71bf7a119598159177603445e05486"
+    },
+    {
+      "bytes": 1229,
+      "derivation": "Selected numeric scope and adverse outcomes from sanitized historical reports; values rounded as reported; detailed source CSVs copied separately.",
+      "sources": [
+        {
+          "pack_member": "E4-learning-rate/REPORT.md",
+          "sha256": "c02f54d8cb4ea13eca4a531983568e27af44b801461191d34e4a1cb252f6019e"
+        },
+        {
+          "pack_member": "E5-svhn-confirmation/REPORT.md",
+          "sha256": "71837300e947fd9c0cf73ecacb413b10897b1ca5dd6fcf70b794bb994ca0d7c4"
+        },
+        {
+          "pack_member": "E5-svhn-confirmation/source-comparison.csv",
+          "sha256": "7b8d7db411f03ce3a3dcdb45351221eb3a71bf7a119598159177603445e05486"
+        }
+      ],
+      "target": "results/additional-studies/scope-and-adverse-results.json",
+      "target_sha256": "147d40aeb9c59132ac800b190efd8d19574581d07a651f0beed380e33a7a5444"
+    },
+    {
+      "bytes": 2541,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E7-availability/artifact-availability.json",
+          "sha256": "98eb14eb3ecab003798602cfb728420f388f6c5d1693b85208f1d4b283bbe3f8"
+        }
+      ],
+      "target": "provenance/historical-artifact-availability.json",
+      "target_sha256": "98eb14eb3ecab003798602cfb728420f388f6c5d1693b85208f1d4b283bbe3f8"
+    },
+    {
+      "bytes": 699,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E7-availability/historical-final-report-check.json",
+          "sha256": "3f47b7897222cec47601cbcfb3a00e6ecd15599c8e986fc1a81e0a146206adac"
+        }
+      ],
+      "target": "provenance/historical-final-report-check.json",
+      "target_sha256": "3f47b7897222cec47601cbcfb3a00e6ecd15599c8e986fc1a81e0a146206adac"
+    },
+    {
+      "bytes": 681,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "E7-availability/interpretation.json",
+          "sha256": "b1c8b991526b2098cb891aa1ad8924cd75855dd5fdc92e325fddd2d8feeeb3e9"
+        }
+      ],
+      "target": "provenance/interpretation.json",
+      "target_sha256": "b1c8b991526b2098cb891aa1ad8924cd75855dd5fdc92e325fddd2d8feeeb3e9"
+    },
+    {
+      "bytes": 826,
+      "derivation": "Byte-identical copy of a previously sanitized compact evidence-pack member. Existing derived/raw labels remain authoritative; this is not a newly acquired raw runtime proof.",
+      "sources": [
+        {
+          "pack_member": "UNAVAILABLE_REFERENCES.json",
+          "sha256": "e1642dbcccc8880aef7a9da272e135fcb3c2bb0648505427ada550bbc4c63fd9"
+        }
+      ],
+      "target": "provenance/unavailable-historical-references.json",
+      "target_sha256": "e1642dbcccc8880aef7a9da272e135fcb3c2bb0648505427ada550bbc4c63fd9"
+    },
+    {
+      "bytes": 2091,
+      "derivation": "New explicit curation/availability disclosure. No stale source-pack manifest is included.",
+      "sources": [
+        {
+          "pack_member": "E7-availability/artifact-availability.json",
+          "sha256": "98eb14eb3ecab003798602cfb728420f388f6c5d1693b85208f1d4b283bbe3f8"
+        },
+        {
+          "pack_member": "E7-availability/interpretation.json",
+          "sha256": "b1c8b991526b2098cb891aa1ad8924cd75855dd5fdc92e325fddd2d8feeeb3e9"
+        },
+        {
+          "pack_member": "E3-generic-training/REPORT.md",
+          "sha256": "c6708d46645f0c87e0b1a16524e00d58338968ceec2cb791d3ffefc750713cd8"
+        },
+        {
+          "pack_member": "E1-original-campaign/results-aggregate.json",
+          "sha256": "0df00138817fb57c7ca280b700608d198134214dce9ebec64ee9fc7619718ad2"
+        },
+        {
+          "pack_member": "E8-gpt-completed-and-live/completed-continuation/final-disposition-derived.json",
+          "sha256": "0e8f13bfec56b813d1420333523367c7265b906eebd218f2be1b46320c181c20"
+        }
+      ],
+      "target": "provenance/historical-review-scope-and-gaps.json",
+      "target_sha256": "fc9135de0e2ab718ddc87371f658efc2f76a164d560ec1b3f42c12b3eed98e46"
+    },
+    {
+      "bytes": 2165,
+      "derivation": "Explicit factual selected-field derivative of original historical failed attempts and numeric-accounting amendments; raw gaps retained, no replacement proof invented.",
+      "sources": [
+        {
+          "pack_member": "E1-original-campaign/REPORT.md",
+          "sha256": "2dcd46191e67ae764411338989374a1e09bc2a3f7337b3fbb77c2af36699c1fb"
+        }
+      ],
+      "target": "results/private-training/historical-failed-attempts.json",
+      "target_sha256": "594415e4c80a6cef6aaf2d48597d9e6f9a1caca74636b6e8152373b6ab819829"
+    },
+    {
+      "bytes": 341,
+      "derivation": "Byte-identical surviving original repository configuration/selection record, independently checked for sensitive paths/identifiers. This is configuration evidence, not a complete raw runtime or CSPRNG receipt.",
+      "sources": [
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/freeze-record.json",
+          "sha256": "c3cabeb43005e63a510463d5e9d56be2e38619657abfb0cd2076e942668e0d61"
+        }
+      ],
+      "target": "configurations/freeze-record.json",
+      "target_sha256": "c3cabeb43005e63a510463d5e9d56be2e38619657abfb0cd2076e942668e0d61"
+    },
+    {
+      "bytes": 6933,
+      "derivation": "Byte-identical surviving original repository configuration/selection record, independently checked for sensitive paths/identifiers. This is configuration evidence, not a complete raw runtime or CSPRNG receipt.",
+      "sources": [
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/calibration/selection.json",
+          "sha256": "8845c9ad80f37019313adcf58aa9d939a467a0c7b65588de3dba20e73d879c8b"
+        }
+      ],
+      "target": "configurations/calibration-selection.json",
+      "target_sha256": "8845c9ad80f37019313adcf58aa9d939a467a0c7b65588de3dba20e73d879c8b"
+    },
+    {
+      "bytes": 1717,
+      "derivation": "Byte-identical surviving original repository configuration/selection record, independently checked for sensitive paths/identifiers. This is configuration evidence, not a complete raw runtime or CSPRNG receipt.",
+      "sources": [
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/runs/final-secure-s17/rank-0/run-config.json",
+          "sha256": "392c07449a13776ffa815a61974c9886b744d31176745b598f0726a7c255b686"
+        }
+      ],
+      "target": "configurations/secure-run.json",
+      "target_sha256": "392c07449a13776ffa815a61974c9886b744d31176745b598f0726a7c255b686"
+    },
+    {
+      "bytes": 33281,
+      "derivation": "Selected frozen recipe/run matrix with exact numeric/configuration values; shared-field factoring is reversible to every original config. Runtime/source/data bodies and raw privacy ledgers are not copied.",
+      "sources": [
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/frozen-experiment-retry2.json",
+          "sha256": "374b982ef02d836730c223d280b39b761b859107904b97289b39d6c65bf930cb"
+        },
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/frozen-experiment-retry1.json",
+          "sha256": "0b9a063ccafcaf4ab68d544ec62ddecb43e5f6bc5eafafd32db64267e0e8499e"
+        },
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/frozen-experiment-retry2.json",
+          "sha256": "374b982ef02d836730c223d280b39b761b859107904b97289b39d6c65bf930cb"
+        },
+        {
+          "repository_relative": "benchmarks/results/m3/final-2026-10-21/frozen-experiment.json",
+          "sha256": "764c03db27d14a51a3df97b49adf5e8e5696511905fcaecb10becdfaf31f783e"
+        }
+      ],
+      "target": "configurations/frozen-experiment.json",
+      "target_sha256": "1e9dc6f02792956078e3e922096965a8c2d97d2c3b75c72229e3d37fb3c1b110"
+    }
+  ],
+  "scope": "Historical compact JSON/CSV selection and its byte provenance. New retained original-event streams are separately indexed in log-index.json; current availability wrappers extend the preserved historical scope.",
+  "source_package": "M3_Gensyn_Evidence_Unified.zip",
+  "source_package_sha256": "07223b7b1ebb2d9b35d01588f4cfc60c14786cfceb7166b2d031f22b5eaad8ed",
+  "source_repository_metadata_added": true,
+  "target_paths_relative_to": "benchmarks/results/m3",
+  "this_provenance_file_excluded_from_its_own_hash_inventory": true,
+  "version": 1
+}

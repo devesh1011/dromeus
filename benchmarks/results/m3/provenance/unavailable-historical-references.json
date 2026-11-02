@@ -1,0 +1,20 @@
+{
+  "excluded_categories": [
+    "raw owner/privacy ledgers",
+    "model-only tensor exports",
+    "private checkpoints",
+    "sampling/noise RNG state",
+    "raw training/telemetry log bundles",
+    "source/build archives",
+    "cloud credentials/private keys",
+    "training and assessment data arrays"
+  ],
+  "historical_report_links_not_listed_in_references_may_be_excluded_or_retired": true,
+  "missing_or_substituted": [
+    {
+      "pack_substitute": "E2-warning-repair/deployed-digit-policy.json",
+      "reason": "cited path absent; exact surviving examples/m3-digits-divergence-policy.json has matching canonical policy hash d7a815d67ff04c9419231b89a400d63f2e951063c1c37ff67fef699cd407a448",
+      "source_reference": "benchmarks/results/m3/divergence-repair-2026-10-25/assessment/validated-policy.json"
+    }
+  ]
+}
