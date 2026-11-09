@@ -42,13 +42,13 @@ cd dromeus
 ./scripts/bootstrap
 ```
 
-The [application guide](examples/README.md) walks through a custom PyTorch
+The [application guide](guides/application-training.md) walks through a custom PyTorch
 regression model using Huber loss and RMSprop. Each participant supplies its own
-local data file. You can replace that training code with your own workload.
+local data file. Create your own `my_training.py` module using that interface.
 
 Before launching, configure an AXL node on each machine and connect the group's
-peers. Adapt [the node configuration](examples/node.yaml) for each participant,
-fill in the shared settings in [the run draft](examples/custom-regression-draft.yaml),
+peers. Create the per-node configuration and shared run draft using the
+[configuration guide](guides/configuration.md),
 and prepare the local data described in the guide. One participant initiates
 group formation; share its invitation file with the other participants.
 
@@ -57,8 +57,8 @@ Once those inputs are ready, launch each participant:
 ```bash
 DROMEUS_LOCAL_DATA=/absolute/path/to/this-nodes-data.npz \
   uv run python -m dromeus.node \
-  --config examples/node.yaml \
-  --factory examples.custom_training:prepare_training
+  --config /path/to/node.yaml \
+  --factory my_training:prepare_training
 ```
 
 The factory connects your local training code to the shared run. The guide
@@ -76,23 +76,43 @@ Membership stays fixed for the run. A peer failure or missed deadline can end
 training; automatic distributed restart is not implemented. Checkpoint restore
 requires compatible application state.
 
-Keeping datasets local does not make model updates private. Dromeus does not
-currently provide differential privacy, secure aggregation, or Byzantine fault
-tolerance. The application guide describes the supported tensor layouts and
-other integration constraints.
+Keeping datasets local does not make ordinary model updates private. Optional
+private training uses Opacus per-example clipping, Gaussian noise and per-node
+accounting through an owned trainer. Groups supply compatible optimizer factories;
+private execution also requires an admitted model/loss and the documented state
+contract. See [private training](guides/private-training.md) for supported
+profiles, secure randomness, privacy scope and fresh-start restrictions.
+
+Divergence monitoring records model disagreement and emits configurable warnings.
+Thresholds are workload-specific and require calibration; agreement alone does not
+prove model utility. See [monitoring](guides/divergence-monitoring.md).
+Secure aggregation and Byzantine fault tolerance are not implemented.
 
 ## Benchmarks
 
-The [technical report](benchmarks/results/m2/report/M2_Gensyn_Submission_Report.pdf)
+The [technical report](https://github.com/devesh1011/dromeus/releases/download/v0.2.0/M2_Gensyn_Submission_Report.pdf)
 compares NoLoCo over AXL with an independent NCCL reference at 4, 8, and 16 GPU
 workers using GroupNorm ResNet-18 on IID CIFAR-10 partitions. It includes codec
 comparisons, learning curves, communication measurements, and deployment limits.
 These results describe that workload; they do not establish convergence for
 arbitrary models or data distributions.
 
-See the [accuracy table](benchmarks/results/m2/report/metrics.csv) and
-[evidence index](benchmarks/results/m2/README.md) for per-run results, logs,
-configuration, and artifact availability.
+See the [accuracy table](https://github.com/devesh1011/dromeus/blob/v0.2.0/benchmarks/results/m2/report/metrics.csv)
+and [published M2 evidence index](https://github.com/devesh1011/dromeus/blob/v0.2.0/benchmarks/results/m2/README.md)
+for retained metrics, charts and frozen settings. The owner permanently retired
+the old local raw-result trees; unique deleted logs and models are no longer
+available for re-audit from this checkout.
+
+Earlier-milestone benchmark runners have been retired from this checkout.
+Their compact historical reports remain available; current experiments share the
+[local AXL harness](benchmarks/support/README.md).
+
+The [M3 team review](benchmarks/results/m3/README.md) maps the proposal requirements to
+numeric results, runtime and privacy checks, and the validated digit-warning
+policy. It also includes the completed language-model study as additional
+evidence. The folder omits report charts and large training artifacts.
+Read the [criteria check](benchmarks/results/m3/milestone-requirements.md) for verified scope,
+publication status, and evidence-retention limits.
 
 ## Development
 
