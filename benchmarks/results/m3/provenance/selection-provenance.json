@@ -572,6 +572,29 @@
       ],
       "target": "configurations/frozen-experiment.json",
       "target_sha256": "1e9dc6f02792956078e3e922096965a8c2d97d2c3b75c72229e3d37fb3c1b110"
+    },
+    {
+      "bytes": 10698,
+      "derivation": "Selected scientific facts transcribed from three retained sanitized historical reports. This file is a derived review summary, not raw model, runtime, memory-trace or accounting proof. No experiment or test was rerun for this file.",
+      "sources": [
+        {
+          "kind": "Sanitized retained historical report; not original raw scientific body proof",
+          "pack_member": "E6-transformer-resource/full-124m-axl-REPORT.md",
+          "sha256": "1ef6c4ab98a0f163cfd1089ca8dd6cf6bb142c4c4ba46171d221ab5c409bffc0"
+        },
+        {
+          "kind": "Sanitized retained historical report; not original raw scientific body proof",
+          "pack_member": "E6-transformer-resource/compression-REPORT.md",
+          "sha256": "fc79997cc3aab8c53e8e7ef693e86714daa8e8d5e053459ec0d3e576ea26efee"
+        },
+        {
+          "kind": "Sanitized retained historical report; not original raw scientific body proof",
+          "pack_member": "E6-transformer-resource/memory-shutdown-REPORT.md",
+          "sha256": "739e42003d341bf78e936722abd9a7caca379565e3345d4266cba340e65f1a67"
+        }
+      ],
+      "target": "results/language-model/resource-pilot-evidence.json",
+      "target_sha256": "c608809daea92f7c1f97eabfee01223eaad6c282ce2cddacb00a72fec29ed245"
     }
   ],
   "scope": "Historical compact JSON/CSV selection and its byte provenance. New retained original-event streams are separately indexed in log-index.json; current availability wrappers extend the preserved historical scope.",

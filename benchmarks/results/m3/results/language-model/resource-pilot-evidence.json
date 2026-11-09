@@ -1,0 +1,212 @@
+{
+  "compressed_full_size_execution": {
+    "all_four_remote_terminals_exit_zero": true,
+    "authoritative_linux_model_accounting_audit_passed": true,
+    "compression": {
+      "combined_bytes_all12_node_rounds": 2353869720,
+      "combined_bytes_per_node_round": 196155810,
+      "experimental_caveat": "Combined codec and bounded CountSketch changes are not a single-factor performance experiment.",
+      "identity_reference_bytes_per_node_round": 995837120,
+      "outer_gradient_bytes_per_node_round": 71634970,
+      "outer_gradient_codec": "top-k 0.45 bitmap/int8",
+      "reported_application_payload_reduction_percent": 80.3024,
+      "scope": "Fixed-schema encoded outgoing application artifacts. Excludes initial dense formation, final model downloads, wire envelopes, TLS, acknowledgements and retransmissions. Not an 80.3024% reduction in full network traffic.",
+      "slow_weight_bytes_per_node_round": 124520840,
+      "slow_weights_codec": "dense int8"
+    },
+    "historical_disposition": "Functional and accounting result passed; memory readiness failed and final consensus delivery was incomplete. No promotion to longer training was justified by this run alone.",
+    "memory_gate": {
+      "below_threshold_samples": 36,
+      "below_threshold_span_seconds": 17.8317,
+      "failing_rank": 2,
+      "failing_source": "PG-19",
+      "minimum_available_host_ram_required_bytes": 4294967296,
+      "new_oom_observed": false,
+      "observed_minimum_available_host_ram_bytes": 3314479104,
+      "passed": false,
+      "python_swap_bytes_all_ranks": 0,
+      "scope": "Frozen engineering resource criteria, not a grant requirement. Three rounds cannot establish long-run stability."
+    },
+    "profile": "full_g5_m2_compressed_v1",
+    "run_id": "g2-compressed-resource-g5-20261029",
+    "shutdown_delivery": {
+      "consensus_pending_at_stop_per_worker": 0,
+      "consensus_sketches_dropped_per_worker": 1,
+      "event_sink_drops_per_worker": 0,
+      "metric_sink_drops_per_worker": 0,
+      "original_stop_timeout_seconds": 5,
+      "scope": "Passing event/metric delivery counters did not imply final consensus-sketch drain; the adverse consensus drops remain."
+    },
+    "target_token_presentations_all_workers": 774144,
+    "timing_scope": "Instrumented whole-run observation including preparation, dense formation, warmup, finalization and parallel collection; not a causal speedup or steady-state throughput claim.",
+    "whole_controller_window_seconds": 1034.511735084,
+    "whole_window_target_tokens_per_second": 748.318239
+  },
+  "derivation": "Selected scientific facts transcribed from three retained sanitized historical reports. This file is a derived review summary, not raw model, runtime, memory-trace or accounting proof. No experiment or test was rerun for this file.",
+  "identity_g2_execution": {
+    "checkpoint_pruning": "Exactly one current checkpoint remained after confirmation across three rounds; this establishes disk pruning, not memory reclamation.",
+    "controller_window_seconds": 1885.207028917,
+    "encoded_outgoing_application_bytes_all12_node_rounds": 11950045440,
+    "encoded_outgoing_application_bytes_per_node_round": 995837120,
+    "fineweb_final_sampled_host_swap_bytes": 8588550144,
+    "memory_limitation": "Completed short H12 execution had substantial host RAM/swap pressure. It did not establish sustained-memory readiness.",
+    "original_rank0_audit_admission": {
+      "observed_seconds_remaining": 546.117938,
+      "required_seconds_remaining": 660,
+      "status": "unmet; original rank0 audit was not dispatched"
+    },
+    "peak_process_rss_bytes": 30303039488,
+    "separate_cpu_contingency_audit": {
+      "completed": true,
+      "elapsed_seconds_including_input_processing": 52.40998,
+      "input_bodies": 20,
+      "new_training_or_reservations": false,
+      "original_gpu_deadline_extended": false,
+      "runtime_source_files": 72
+    },
+    "target_token_presentations_all_workers": 803840,
+    "timing_scope": "Formation, preparation, warmup, node work, export and authorized parallel collection; not steady GPU or pure-network throughput.",
+    "training_and_pinned_linux_model_accounting_audit_passed": true,
+    "whole_window_target_tokens_per_second": 426.393488
+  },
+  "later_memory_and_shutdown_repair": {
+    "allocator_override_adopted_as_library_default": false,
+    "checkpoint_ownership_repair": "Removed recursive serializer helper ownership cycles without forced GC or checkpoint format changes.",
+    "memory_causality_limit": "Removing checkpoint ownership cycles does not explain every cause of the earlier private-network RAM growth.",
+    "private_end_to_end_qualification": "Requires separate measured private-AXL evidence; these public diagnostics do not certify it by themselves. Later completed private runs are documented separately.",
+    "private_training_or_new_privacy_reservations_in_repair_diagnostics": false,
+    "public_cpu_diagnostic": {
+      "arms": [
+        {
+          "elapsed_seconds": 310.203,
+          "post_round_uss_decimal_gb_range": [
+            8.824,
+            9.133
+          ],
+          "sampled_peak_rss_decimal_gb": 14.445,
+          "serializer": "original"
+        },
+        {
+          "elapsed_seconds": 308.5,
+          "post_round_uss_decimal_gb_range": [
+            8.767,
+            9.868
+          ],
+          "sampled_peak_rss_decimal_gb": 12.546,
+          "serializer": "fixed"
+        },
+        {
+          "elapsed_seconds": 392.606,
+          "post_round_uss_decimal_gb_range": [
+            4.533,
+            4.536
+          ],
+          "sampled_peak_rss_decimal_gb": 12.323,
+          "serializer": "fixed plus static mmap threshold 131072"
+        }
+      ],
+      "checkpoint_bytes_identical_across_all_three_arms": true,
+      "end_only_gc_and_allocator_trim": "Separate labeled diagnostics, not inserted into baseline production training.",
+      "gpt_forward_or_backward_calls": 0,
+      "interpretation": "Serializer fix removed retained snapshots but did not reduce end-of-run USS in the default CPU fixture. Static mmap threshold reduced final post-round USS by 54.03% versus fixed default, with 27.26% slower instrumented execution; not a library default.",
+      "parameters": 124475904,
+      "rounds_per_arm": 8,
+      "training_record_or_privacy_ledger_access": false
+    },
+    "public_gpu_copy_path_diagnostic": {
+      "backward_calls": 0,
+      "checkpoint_bytes_identical_between_arms": true,
+      "device_family": "A10G",
+      "fixed_serializer": {
+        "elapsed_seconds": 360.806,
+        "live_encoded_snapshots": 0,
+        "post_round_uss_final_decimal_gb": 7.532,
+        "post_round_uss_start_decimal_gb": 7.338,
+        "sampled_peak_rss_decimal_gb": 11.595
+      },
+      "forward_calls": 0,
+      "opacus_or_formation_or_real_axl_or_consensus_publisher_in_this_gpu_fixture": false,
+      "optimizer_objects": 0,
+      "optional_gpu_static_threshold_arm_dispatched": false,
+      "original_serializer": {
+        "elapsed_seconds": 367.415,
+        "live_encoded_snapshots_range": [
+          1,
+          3
+        ],
+        "post_round_uss_final_decimal_gb": 13.261,
+        "post_round_uss_start_decimal_gb": 7.896,
+        "sampled_peak_rss_decimal_gb": 17.484
+      },
+      "parameter_identity_and_tied_alias_preserved": true,
+      "record_getters": 0,
+      "reported_final_post_round_uss_reduction_percent": 43.2,
+      "reported_sampled_peak_rss_reduction_percent": 33.68,
+      "rounds_per_arm": 8,
+      "scope": "Matched public GPU-copy/persistence seam, not GPT computation, private gradient training, full network workload, general speedup or language quality."
+    },
+    "serialization_differential_cases_preserving_exact_bytes": 32,
+    "shutdown_repair": {
+      "all_four_final_reports_completed": true,
+      "delayed_projection_seconds": 6,
+      "directed_peer_deliveries": 12,
+      "legacy_defaults_unchanged": true,
+      "opt_in": true,
+      "real_axl_processes": 4,
+      "scope": "Actual real-AXL completion regression; not a full private GPT learning experiment."
+    }
+  },
+  "new_aws_model_evaluation_training_source_or_test_actions": false,
+  "preserved_limits": [
+    "No evaluation loss, perplexity or language quality measured in the short full-size resource executions.",
+    "Original memory-gate failure and final-sketch drops are retained; passing model/accounting checks do not erase them.",
+    "Public CPU and GPU diagnostics isolate different seams; their absolute memory/timing values are not a one-factor hardware comparison.",
+    "These sources report historical scoped cleanup; they do not imply that all later retained project hosts are closed.",
+    "Raw scientific bodies, private owner history, model/checkpoint bytes and full traces are intentionally excluded."
+  ],
+  "schema_version": 1,
+  "scope": "Additional language-model execution/resource studies; they do not replace original M3 acceptance evidence or independently establish language quality.",
+  "shared_full_size_profile": {
+    "clipping_norm": 1,
+    "committed_noloco_rounds_per_worker": 3,
+    "context_tokens": 1024,
+    "delta": 1e-06,
+    "expected_logical_batch": 16,
+    "initialization": "random public initialization",
+    "language_loss_or_perplexity_measured": false,
+    "learning_rate": 0.0001,
+    "noise_multiplier": 1,
+    "optimizer": "AdamW",
+    "physical_microbatch": 1,
+    "sample_rate": 0.00048828125,
+    "secure_logical_updates_per_worker": 12,
+    "sources": [
+      "FineWeb-Edu",
+      "Wikipedia",
+      "PG-19",
+      "StackExchange"
+    ],
+    "unique_trainable_parameters": 124475904,
+    "workers": 4
+  },
+  "source_package": "M3_Gensyn_Evidence_Unified.zip",
+  "source_package_sha256": "07223b7b1ebb2d9b35d01588f4cfc60c14786cfceb7166b2d031f22b5eaad8ed",
+  "sources": [
+    {
+      "kind": "Sanitized retained historical report; not original raw scientific body proof",
+      "pack_member": "E6-transformer-resource/full-124m-axl-REPORT.md",
+      "sha256": "1ef6c4ab98a0f163cfd1089ca8dd6cf6bb142c4c4ba46171d221ab5c409bffc0"
+    },
+    {
+      "kind": "Sanitized retained historical report; not original raw scientific body proof",
+      "pack_member": "E6-transformer-resource/compression-REPORT.md",
+      "sha256": "fc79997cc3aab8c53e8e7ef693e86714daa8e8d5e053459ec0d3e576ea26efee"
+    },
+    {
+      "kind": "Sanitized retained historical report; not original raw scientific body proof",
+      "pack_member": "E6-transformer-resource/memory-shutdown-REPORT.md",
+      "sha256": "739e42003d341bf78e936722abd9a7caca379565e3345d4266cba340e65f1a67"
+    }
+  ],
+  "title": "Earlier GPT resource, compression and memory-repair evidence"
+}

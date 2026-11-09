@@ -978,8 +978,8 @@
       "sha256": "5dbb0beb747c31435cfa12d56632872f9c2a734ab7545606778f79971de1a76e"
     },
     "provenance/data-inventory.json": {
-      "bytes": 7563,
-      "sha256": "a306ffe47651d99ced40614b89d6a6dae8e549f575fb5fca63376a179438abac"
+      "bytes": 7736,
+      "sha256": "9ce5003da0f7315a1f5f494803ea8a505cca12be113954541e7644c37d8f12e3"
     },
     "provenance/historical-artifact-availability.json": {
       "bytes": 2541,
@@ -1006,16 +1006,16 @@
       "sha256": "164a5dcb578e36880ea003d937a40507db5d60a440b3eed6b1ae5d578a67a04a"
     },
     "provenance/selection-provenance.json": {
-      "bytes": 29115,
-      "sha256": "519556ff3c43bf5fefca343070858c37bdf8aa28fb90fa083d85c0181a76dd71"
+      "bytes": 30439,
+      "sha256": "1b6313d87c7fff3637b6e3172da1d6cfa7688e6b9478e0f31fd72ec3c677997a"
     },
     "provenance/unavailable-historical-references.json": {
       "bytes": 826,
       "sha256": "e1642dbcccc8880aef7a9da272e135fcb3c2bb0648505427ada550bbc4c63fd9"
     },
     "results/README.md": {
-      "bytes": 2148,
-      "sha256": "4bd2237b2eb635dba2a58d9d6cb33865157b0faf6baebbff69fcd6c567aadf44"
+      "bytes": 2231,
+      "sha256": "ee901da59b12eeaa73861f548a8b8d940fa82319d535becad24ce14fa2ecd209"
     },
     "results/additional-studies/learning-rate/gates.csv": {
       "bytes": 423,
@@ -1088,6 +1088,10 @@
     "results/language-model/initial-training-worker-metrics.csv": {
       "bytes": 1246,
       "sha256": "9edb71838d9e8273fc73e862cc7e4fb4f0b0b4d9d26cb6ac853a4e8490402404"
+    },
+    "results/language-model/resource-pilot-evidence.json": {
+      "bytes": 10698,
+      "sha256": "c608809daea92f7c1f97eabfee01223eaad6c282ce2cddacb00a72fec29ed245"
     },
     "results/language-model/scope.json": {
       "bytes": 1027,
@@ -1162,8 +1166,8 @@
       "sha256": "02d338ad9c1223d9ea30e9b3b0cc82fad70e41e4312879a7808971a33a85d247"
     },
     "verification/package-check.json": {
-      "bytes": 1094,
-      "sha256": "ef5bf064f7f210d887a8fa2a8a9da1943dfe9d9d9c44bf8623fc35a7c536ba94"
+      "bytes": 1185,
+      "sha256": "c7ebd8f7e2c159c2ea8be75ca3bb962fdbd58b95626e2c4a894ba1be5d680c5d"
     },
     "verification/retained-log-check.json": {
       "bytes": 268893,

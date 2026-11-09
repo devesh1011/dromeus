@@ -9,7 +9,7 @@ there are no duplicate charts or per-run narrative summaries.
 | [privacy-utility/](privacy-utility/) | [Accuracy versus privacy](privacy-utility/accuracy-vs-privacy.csv), [worker results](privacy-utility/worker-results.csv), [learning trajectories](privacy-utility/learning-trajectory.csv), [study aggregate](privacy-utility/study-results.json) |
 | [private-training/](private-training/) | Supported execution profiles, secure-run metrics and historical verification/failure records |
 | [warning-detection/](warning-detection/) | Fresh assessment, per-worker outcomes, runtime audit and earlier-policy failures |
-| [language-model/](language-model/) | Initial/final measurements, calibration comparisons and [final training audit proofs](language-model/final-training/) |
+| [language-model/](language-model/) | Initial/final measurements, calibration comparisons and [final training audit proofs](language-model/final-training/) and [earlier resource-pilot evidence](language-model/resource-pilot-evidence.json) |
 | [additional-studies/](additional-studies/) | Learning-rate and SVHN comparisons with adverse outcomes and scope limits |
 
 Digit accuracy values in CSVs are fractions: `0.91968` means about `91.97%`.

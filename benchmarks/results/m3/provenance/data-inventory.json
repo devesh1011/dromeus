@@ -42,8 +42,8 @@
       "sha256": "b1c8b991526b2098cb891aa1ad8924cd75855dd5fdc92e325fddd2d8feeeb3e9"
     },
     "provenance/selection-provenance.json": {
-      "bytes": 29115,
-      "sha256": "519556ff3c43bf5fefca343070858c37bdf8aa28fb90fa083d85c0181a76dd71"
+      "bytes": 30439,
+      "sha256": "1b6313d87c7fff3637b6e3172da1d6cfa7688e6b9478e0f31fd72ec3c677997a"
     },
     "provenance/unavailable-historical-references.json": {
       "bytes": 826,
@@ -120,6 +120,10 @@
     "results/language-model/initial-training-worker-metrics.csv": {
       "bytes": 1246,
       "sha256": "9edb71838d9e8273fc73e862cc7e4fb4f0b0b4d9d26cb6ac853a4e8490402404"
+    },
+    "results/language-model/resource-pilot-evidence.json": {
+      "bytes": 10698,
+      "sha256": "c608809daea92f7c1f97eabfee01223eaad6c282ce2cddacb00a72fec29ed245"
     },
     "results/language-model/scope.json": {
       "bytes": 1027,
