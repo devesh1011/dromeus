@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dromeus"
-version = "0.2.0"
+version = "0.3.0"
 description = "Decentralized federated learning over AXL"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -26,7 +26,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-benchmark = ["datasets>=3,<5", "pillow>=10,<13"]
+privacy = ["opacus==1.6.0"]
+benchmark = [
+    "datasets>=3,<5",
+    "pillow>=10,<13",
+    "tiktoken==0.14.0",
+]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
@@ -44,6 +49,7 @@ dev = [
   "pyright>=1.1.400",
   "pytest>=8.4",
   "ruff>=0.12",
+  "tiktoken==0.14.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -54,10 +60,18 @@ packages = ["src/dromeus"]
 only-include = ["src", "pyproject.toml", "README.md", "LICENSE"]
 
 [tool.pyright]
-include = ["src", "tests", "benchmarks", "examples"]
+extraPaths = [".", "src", "tests"]
+include = ["src", "tests", "benchmarks"]
 # Captured run source is immutable evidence, not maintained benchmark code.
-# The reference harness and report builders remain under strict checks.
-exclude = ["benchmarks/results/m2/nccl-reference"]
+# Maintained benchmark and report modules remain under strict checks.
+exclude = [
+  "benchmarks/results/m3",
+  # W0's standalone Opacus experiment runs in an isolated optional environment.
+  "benchmarks/m3/compatibility_spike.py",
+  "benchmarks/m3/cuda_spike.py",
+  "benchmarks/m3/secure_rng_spike.py",
+  "benchmarks/m3/optimizer_profile_spike.py",
+]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
@@ -65,8 +79,6 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
-# Preserve the source bytes bound by the archived runs' provenance hashes.
-extend-exclude = ["benchmarks/results/m2/nccl-reference"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
