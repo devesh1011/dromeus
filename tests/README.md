@@ -21,9 +21,9 @@ benchmark checks with `uv run pytest tests/benchmarks -q`.
 | `unit/protocol` | Envelope validation and frozen wire contracts |
 | `unit/persistence` | Durable run state, archives and checkpoint validation |
 | `unit/telemetry` | Events, metrics, evidence and consensus sketches |
-| `benchmarks` | Workload models/data, reference implementations, experiment preparation and reporting |
+| `benchmarks` | Retained workload models/data, M3 experiment preparation, shared AXL harness and reporting |
 | `integration` | Opt-in tests using real local AXL processes |
-| `support` | Shared fakes, small input builders and stable repository/fixture paths |
+| `support` | Shared fakes, compression diagnostics, small input builders and stable repository/fixture paths |
 | `golden` | Retained manifest/protocol bytes and independent NoLoCo reference outputs |
 
 In-memory multi-node tests belong with the module whose behavior they exercise.
@@ -38,6 +38,21 @@ Put new cases with their owning module. Share substantial reusable fakes through
 `support`; keep one-off helpers close to their tests. Use `support.paths` for
 repository and golden-fixture paths so moving tests does not break references.
 Generated `__pycache__` files are disposable and already ignored by Git.
+
+Previous-milestone runner/reference tests were retired with their benchmark
+programs. Core compression regression tests retain the wire-size and diagnostic
+helpers in `tests/support/`. The pinned local AXL harness lives in
+`benchmarks/support/local_axl.py`; its tests and the current private/text/custom
+integration callers remain. Accepted historical results stay in
+`benchmarks/results/`.
+
+The shared harness lifecycle tests use the existing environment variable for
+compatibility:
+
+```sh
+DROMEUS_FEDERATED_AXL_BINARY=/absolute/path/to/axl-node \
+uv run --frozen --no-sync pytest tests/benchmarks/test_local_axl.py -q
+```
 
 ## M3 private training
 
@@ -61,7 +76,7 @@ DROMEUS_PRIVATE_AXL_BINARY=/absolute/path/to/axl-node uv run --frozen --no-sync 
 
 Set `DROMEUS_W1_EVIDENCE_ROOT` to retain compact summaries. The smoke factory uses
 public synthetic data only and creates new synthetic ledgers. It is not a recipe
-for recreating a missing private-data ledger. See [private training usage](../examples/private-training.md).
+for recreating a missing private-data ledger. See [private training usage](../guides/private-training.md).
 
 ## M3 divergence monitoring
 
@@ -79,7 +94,7 @@ during warning I/O to exercise contention with other event producers.
 `benchmarks/m3/replay_divergence.py` replays accepted M2 normalized observations
 without rewriting them. Its explicit candidate thresholds are uncalibrated and the
 report records false warnings and unavailable absolute-scale diagnostics. W3 owns
-threshold calibration; see `examples/divergence-monitoring.md` for policy semantics.
+threshold calibration; see `guides/divergence-monitoring.md` for policy semantics.
 
 ## M3 matched non-private baseline
 
@@ -107,7 +122,7 @@ multi-group optimizer, direct Opacus trajectories, raw-gradient attribute
 shielding, logical/physical steps, malformed restore, closure and identity
 rejection, failed-step reservations, local secure mode (when CSPRNG is installed)
 and four in-memory NoLoCo nodes. Existing private presets retain their conformance
-and canonical representation. See [optimizer registration](../examples/private-training.md).
+and canonical representation. See [optimizer registration](../guides/private-training.md).
 
 Built-in optimizer construction and the shared ordinary/private checkpoint rules:
 
@@ -183,3 +198,19 @@ honest entry scoring, semantic live/replay reconciliation and live-delay gates.
 Synthetic fixtures validate tool behavior; they do not establish threshold
 readiness. See [the repair workflow](../benchmarks/m3/divergence-repair.md) for
 reproduction and the separately gated fresh GPU assessment.
+
+## Four-worker text AXL pilot
+
+```sh
+uv run --frozen --no-sync pytest -q tests/benchmarks/test_text_axl_freeze.py tests/benchmarks/test_text_axl_node.py tests/benchmarks/test_text_axl_audit.py tests/unit/membership/test_large_formation_transfer.py
+
+DROMEUS_PRIVATE_AXL_BINARY=/absolute/pinned-axl-node \
+uv run --frozen --no-sync pytest -q tests/integration/test_text_axl_pilot.py
+```
+
+The opt-in integration runs four independent Python processes and four real AXL
+nodes with tiny public synthetic corpora. It verifies the new harness, complete
+spending history, measurements and model-only exports. It does not establish
+124M four-GPU performance or language quality. See the
+[text pilot workflow](../benchmarks/m3/text-axl.md) for timing scopes, full-profile
+input requirements and separately gated infrastructure execution.
