@@ -14,13 +14,14 @@ from dromeus.algorithms.base import UpdateBundle
 from dromeus.algorithms.codec import (
     NamedSafetensorsUpdateBundleCodec,
 )
-from dromeus.algorithms.dpsgd import DPSGDAdapter
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.interfaces import (
     PairCommitError,
     PairExchangeResult,
     RunFailure,
 )
 from dromeus.manifests.models import (
+    NoLoCoConfig,
     TensorSchema,
     UpdateCodecBinding,
 )
@@ -28,6 +29,7 @@ from dromeus.protocol.models import (
     Envelope,
 )
 from dromeus.telemetry.metrics import RoundTiming
+from dromeus.training.base import EvaluationResult
 
 
 class LinearTrainer:
@@ -43,8 +45,10 @@ class LinearTrainer:
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
 
-    def evaluate(self) -> tuple[float, float]:
-        return abs(float(self._weights["weight"][0])), 0.5
+    def evaluate(self) -> EvaluationResult:
+        return EvaluationResult(
+            {"loss": abs(float(self._weights["weight"][0])), "accuracy": 0.5}
+        )
 
     @property
     def local_loss(self) -> float:
@@ -64,7 +68,7 @@ class NoLoCoConvexTrainer(LinearTrainer):
 
 
 class SlowEvaluationTrainer(LinearTrainer):
-    def evaluate(self) -> tuple[float, float]:
+    def evaluate(self) -> EvaluationResult:
         time.sleep(0.2)
         return super().evaluate()
 
@@ -74,7 +78,7 @@ class InvalidObservationTrainer(LinearTrainer):
     def local_loss(self) -> float:
         return float("nan")
 
-    def evaluate(self) -> tuple[float, float]:
+    def evaluate(self) -> EvaluationResult:
         raise RuntimeError("evaluation unavailable")
 
 
@@ -431,19 +435,18 @@ def make_algorithm(
     trainer: LinearTrainer,
     schema: TensorSchema,
     artifact_root: Path,
-    training_round_count: int | None = None,
-) -> DPSGDAdapter:
-    return DPSGDAdapter(
+) -> NoLoCoAlgorithm:
+    """NoLoCo with alpha=0 and beta=gamma=1: each pair averages trained weights."""
+    return NoLoCoAlgorithm(
         trainer=trainer,
         tensor_schema=schema,
-        local_steps=1,
-        training_round_count=training_round_count,
+        config=NoLoCoConfig(alpha=0.0, beta=1.0, gamma=1.0, inner_steps=1),
         bundle_codec=NamedSafetensorsUpdateBundleCodec(
             artifact_root=artifact_root,
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key=key,
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
+            algorithm_id="noloco",
+            artifact_schemas={"outer_gradient": schema, "slow_weights": schema},
         ),
     )

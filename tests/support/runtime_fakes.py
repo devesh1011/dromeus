@@ -21,6 +21,7 @@ from dromeus.runtime import (
     NodeRuntime,
     TrainingConfig,
 )
+from dromeus.training.base import EvaluationResult
 from support.in_memory_transport import (
     InMemoryNetwork,
     InMemoryTransport,
@@ -48,8 +49,14 @@ class RuntimeTrainer:
     def load_weights(self, weights: dict[str, np.ndarray]) -> None:
         self._weights = {name: value.copy() for name, value in weights.items()}
 
-    def evaluate(self) -> tuple[float, float]:
-        return 0.0, 0.5
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        return {"weights.layer.weight": self.weights()["layer.weight"]}
+
+    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
+        self.load_weights({"layer.weight": state["weights.layer.weight"]})
+
+    def evaluate(self) -> EvaluationResult:
+        return EvaluationResult({"loss": 0.0, "accuracy": 0.5})
 
     @property
     def local_loss(self) -> float:
