@@ -19,9 +19,7 @@ from support.sample_manifest import manifest_data, write_checkpoint
 from dromeus.algorithms.codec import (
     BitmapTopKInt8Codec,
     DenseInt8Codec,
-    TopKInt8Codec,
 )
-from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
@@ -57,11 +55,7 @@ def test_runtime_lifecycle_fails_ready_hook_before_run(tmp_path: Path) -> None:
     runtime = LifecycleRuntime(result)
     trainer = RuntimeTrainer()
     training = TrainingConfig(
-        algorithm=DPSGDAdapter(
-            trainer=trainer,
-            tensor_schema=manifest.tensor_schema,
-            local_steps=1,
-        ),
+        algorithm=build_algorithm(manifest=manifest, trainer=trainer),
         load_checkpoint=trainer.load_checkpoint,
         run_store=RunStore(tmp_path / "run"),
         artifact_root=tmp_path / "rounds",
@@ -110,11 +104,7 @@ def test_runtime_lifecycle_does_not_fail_after_completion_hook(
     runtime = LifecycleRuntime(result)
     trainer = RuntimeTrainer()
     training = TrainingConfig(
-        algorithm=DPSGDAdapter(
-            trainer=trainer,
-            tensor_schema=manifest.tensor_schema,
-            local_steps=1,
-        ),
+        algorithm=build_algorithm(manifest=manifest, trainer=trainer),
         load_checkpoint=trainer.load_checkpoint,
         run_store=RunStore(tmp_path / "run"),
         artifact_root=tmp_path / "rounds",
@@ -156,23 +146,15 @@ def test_runtime_builds_noloco_from_sealed_manifest() -> None:
     data.update(
         {
             "algorithm_id": "noloco",
-            "optimizer": "adam",
             "algorithm_config": {
                 "alpha": 0.5,
                 "beta": 0.7,
                 "gamma": 0.7,
-                "inner_steps": 50,
-                "adam": {
-                    "learning_rate": 0.001,
-                    "beta1": 0.9,
-                    "beta2": 0.999,
-                    "epsilon": 1e-8,
-                    "gradient_clip_norm": 1.0,
-                },
+                "inner_steps": 5,
             },
             "artifact_codecs": [
-                {"artifact_name": "outer_gradient", "codec_id": "identity-v1"},
-                {"artifact_name": "slow_weights", "codec_id": "identity-v1"},
+                {"artifact_name": "outer_gradient", "codec_id": "identity"},
+                {"artifact_name": "slow_weights", "codec_id": "identity"},
             ],
             "transport": {
                 **data["transport"],
@@ -198,40 +180,29 @@ def test_runtime_builds_noloco_from_sealed_manifest() -> None:
     assert {
         name: codec.codec_id for name, codec in algorithm.artifact_codecs.items()
     } == {
-        "outer_gradient": "identity-v1",
-        "slow_weights": "identity-v1",
+        "outer_gradient": "identity",
+        "slow_weights": "identity",
     }
 
 
 @pytest.mark.parametrize(
     ("codec_id", "codec_type", "fraction"),
-    (
-        ("topk-int8-v1", TopKInt8Codec, 0.01),
-        ("topk-bitmap-int8-v2", BitmapTopKInt8Codec, 0.4),
-    ),
+    (("topk-bitmap-int8", BitmapTopKInt8Codec, 0.4),),
 )
 def test_runtime_builds_compressed_noloco_codecs_from_manifest(
     codec_id: str,
-    codec_type: type[TopKInt8Codec] | type[BitmapTopKInt8Codec],
+    codec_type: type[BitmapTopKInt8Codec],
     fraction: float,
 ) -> None:
     data = manifest_data()
     data.update(
         {
             "algorithm_id": "noloco",
-            "optimizer": "adam",
             "algorithm_config": {
                 "alpha": 0.5,
                 "beta": 0.7,
                 "gamma": 0.7,
-                "inner_steps": 50,
-                "adam": {
-                    "learning_rate": 0.001,
-                    "beta1": 0.9,
-                    "beta2": 0.999,
-                    "epsilon": 1e-8,
-                    "gradient_clip_norm": 1.0,
-                },
+                "inner_steps": 5,
             },
             "artifact_codecs": [
                 {
@@ -242,7 +213,7 @@ def test_runtime_builds_compressed_noloco_codecs_from_manifest(
                 },
                 {
                     "artifact_name": "slow_weights",
-                    "codec_id": "dense-int8-v1",
+                    "codec_id": "dense-int8",
                     "lossy_allowed": True,
                 },
             ],
@@ -291,7 +262,6 @@ async def _test_runtime_runs_training_after_in_memory_formation(
     ):
         del draft_data[field]
     draft_data["round_count"] = 2
-    draft_data["local_steps"] = 1
     draft_data["transport"]["max_retries"] = 1
     draft_data["transport"]["retry_timeout_seconds"] = 0.05
     draft = DraftRunSpec.model_validate(draft_data)
@@ -308,11 +278,7 @@ async def _test_runtime_runs_training_after_in_memory_formation(
         training_trainer = RuntimeTrainer()
         training_configs.append(
             TrainingConfig(
-                algorithm=DPSGDAdapter(
-                    trainer=training_trainer,
-                    tensor_schema=manifest.tensor_schema,
-                    local_steps=1,
-                ),
+                algorithm=build_algorithm(manifest=manifest, trainer=training_trainer),
                 load_checkpoint=training_trainer.load_checkpoint,
                 run_store=RunStore(tmp_path / f"run-{index}"),
                 artifact_root=tmp_path / f"rounds-{index}",
@@ -460,11 +426,7 @@ async def _test_runtime_persists_and_broadcasts_failure_before_run(
             None
             if index == 0
             else TrainingConfig(
-                algorithm=DPSGDAdapter(
-                    trainer=trainer,
-                    tensor_schema=manifest.tensor_schema,
-                    local_steps=1,
-                ),
+                algorithm=build_algorithm(manifest=manifest, trainer=trainer),
                 load_checkpoint=trainer.load_checkpoint,
                 run_store=run_store,
                 artifact_root=tmp_path / f"rounds-{index}",

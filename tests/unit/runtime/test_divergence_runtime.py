@@ -14,7 +14,6 @@ from support.in_memory_transport import InMemoryNetwork, InMemoryTransport
 from support.runtime_fakes import RuntimeTrainer
 from support.sample_manifest import manifest_data, write_checkpoint
 
-from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import FormationResult, create_invitation
 from dromeus.persistence.run_store import RunStore
@@ -26,6 +25,7 @@ from dromeus.runtime import (
     NodeRuntime,
     ParticipantFormation,
     TrainingConfig,
+    build_algorithm,
 )
 from dromeus.telemetry.divergence import DetectorState
 from dromeus.telemetry.events import JsonlEventSink, emit_event
@@ -73,9 +73,7 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
             mode="python", include=set(DraftRunSpec.model_fields)
         )
         values.update(
-            manifest_version=5,
             round_count=8,
-            local_steps=1,
             divergence_detection=dict(
                 threshold_set_id="runtime-synthetic-v1",
                 warmup_rounds=0,
@@ -154,11 +152,7 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
             )
             configs.append(
                 TrainingConfig(
-                    algorithm=DPSGDAdapter(
-                        trainer=trainer,
-                        tensor_schema=manifest.tensor_schema,
-                        local_steps=1,
-                    ),
+                    algorithm=build_algorithm(manifest=manifest, trainer=trainer),
                     load_checkpoint=trainer.load_checkpoint,
                     run_store=RunStore(tmp_path / f"store-{rank}"),
                     artifact_root=tmp_path / f"rounds-{rank}",
@@ -221,7 +215,7 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
                         for x in log.records
                         if isinstance(x, ConsensusObservationEvidence)
                     ]
-                ) == (8 if detect else 0)
+                ) == 8
                 changes = [
                     x for x in log.records if isinstance(x, DivergenceStatusEvidence)
                 ]
@@ -274,7 +268,7 @@ def test_warning_delivery_never_stops_four_runtime_nodes(
 
 
 def test_created_runtime_stop_closes_event_delivery(tmp_path: Path) -> None:
-    from dromeus.telemetry.events import BoundedEventSink
+    from dromeus.telemetry.events import BoundedEventSink, JsonlEventSink
 
     async def run() -> None:
         values = manifest_data()
@@ -286,7 +280,6 @@ def test_created_runtime_stop_closes_event_delivery(tmp_path: Path) -> None:
         ):
             del values[k]
         values.update(
-            manifest_version=5,
             divergence_detection=dict(
                 threshold_set_id="stop-test",
                 warmup_rounds=0,
@@ -309,6 +302,8 @@ def test_created_runtime_stop_closes_event_delivery(tmp_path: Path) -> None:
             environment=draft.environment,
             dataset=draft.dataset,
             artifact_root=tmp_path,
+            # Only a supplied sink is wrapped; the runtime then owns its delivery.
+            event_sink=JsonlEventSink(tmp_path / "events.jsonl"),
         )
         sink = runtime.event_sink
         assert isinstance(sink, BoundedEventSink)

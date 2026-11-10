@@ -9,9 +9,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+from pydantic import ValidationError
 from support.application_fixture import application_draft, local_file
+from support.custom_training import (
+    MODEL_DEFINITION,
+    TASK_DEFINITION,
+    TRAINING_DEFINITION,
+    LocalRegression,
+)
 from support.in_memory_transport import InMemoryNetwork, InMemoryTransport
-from support.sample_manifest import manifest_data
 from torch import nn
 
 from dromeus import node as node_module
@@ -32,17 +38,11 @@ from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
 from dromeus.runtime import build_algorithm
 from dromeus.telemetry.events import JsonlEventSink
-from dromeus.telemetry.evidence import EvidenceLog, TaskRoundMetricsEvidence
+from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 from dromeus.telemetry.metrics import JsonlMetricsPublisher, RoundTiming
 from dromeus.training.base import EvaluationResult
 from dromeus.training.trainer import PyTorchTrainer
 from dromeus.transport.axl import AXLBridgeConfig
-from examples.custom_training import (
-    MODEL_DEFINITION,
-    TASK_DEFINITION,
-    TRAINING_DEFINITION,
-    LocalRegression,
-)
 
 
 def prepared(draft: DraftRunSpec, local: LocalRegression) -> PreparedApplication:
@@ -56,18 +56,16 @@ def prepared(draft: DraftRunSpec, local: LocalRegression) -> PreparedApplication
 
 
 @pytest.mark.parametrize(
-    "algorithm,compressed,omit_algorithm",
+    "compressed,omit_algorithm",
     [
-        ("dpsgd", False, False),
-        ("noloco", False, False),
-        ("noloco", True, False),
-        ("noloco", True, True),
+        (False, False),
+        (True, False),
+        (True, True),
     ],
 )
 def test_custom_regression_through_public_node_api(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    algorithm: str,
     compressed: bool,
     omit_algorithm: bool,
 ) -> None:
@@ -85,7 +83,7 @@ def test_custom_regression_through_public_node_api(
         return transports[int(config.base_url.rsplit(":", 1)[1]) - 9100]
 
     monkeypatch.setattr(node_module, "AXLTransport", transport)
-    draft = application_draft(algorithm, compressed)
+    draft = application_draft(compressed=compressed)
     draft_path = tmp_path / "draft.json"
     if omit_algorithm:
         draft_path.write_text(draft.model_dump_json(exclude={"algorithm_id"}))
@@ -141,7 +139,7 @@ def test_custom_regression_through_public_node_api(
         )
         root = tmp_path / f"node-{rank}"
         archive = RunArchive.open(root / "run-store")
-        assert archive.manifest.algorithm_id == algorithm
+        assert archive.manifest.algorithm_id == "noloco"
         assert archive.state.terminal is not None
         assert archive.state.terminal.result == "complete"
         log = EvidenceLog.open(
@@ -150,29 +148,22 @@ def test_custom_regression_through_public_node_api(
             manifest_hash=archive.manifest_hash,
         )
         metrics = [
-            record
-            for record in log.records
-            if isinstance(record, TaskRoundMetricsEvidence)
+            record for record in log.records if isinstance(record, RoundMetricsEvidence)
         ]
         assert len(metrics) == 3
         assert all(
             set(record.evaluation_metrics) == {"mae", "rmse"} for record in metrics
         )
-        assert all(record.evaluation_accuracy is None for record in metrics)
         assert archive.algorithm_state is not None
         checkpoint = archive.algorithm_state.load_tensors()
-        if algorithm == "noloco":
-            assert int(checkpoint["noloco.v1.completed_outer_steps"][0]) == 3
+        assert int(checkpoint["noloco.completed_outer_steps"][0]) == 3
         restored = LocalRegression(tmp_path / f"data-{rank}.npz")
         prepared(draft, restored)
-        if algorithm == "noloco":
-            restored_algorithm = build_algorithm(
-                manifest=archive.manifest, trainer=restored.trainer
-            )
-            assert isinstance(restored_algorithm, NoLoCoAlgorithm)
-            restored_algorithm.load_checkpoint_tensors(checkpoint)
-        else:
-            restored.trainer.load_checkpoint_tensors(checkpoint)
+        restored_algorithm = build_algorithm(
+            manifest=archive.manifest, trainer=restored.trainer
+        )
+        assert isinstance(restored_algorithm, NoLoCoAlgorithm)
+        restored_algorithm.load_checkpoint_tensors(checkpoint)
         for name, value in local.trainer.checkpoint_tensors().items():
             np.testing.assert_array_equal(
                 value, restored.trainer.checkpoint_tensors()[name]
@@ -260,7 +251,7 @@ def test_signed_loss_and_named_metrics_are_retained(tmp_path: Path) -> None:
         tmp_path / "metrics.jsonl", run_id="custom", manifest_hash="a" * 64
     )
     record = log.records[0]
-    assert isinstance(record, TaskRoundMetricsEvidence)
+    assert isinstance(record, RoundMetricsEvidence)
     assert record.local_loss == -2.0 and record.evaluation_metrics == {
         "signed_score": -0.5
     }
@@ -342,13 +333,10 @@ def test_integer_buffers_are_local_and_checkpointed() -> None:
 
 @pytest.mark.parametrize("field", ["training", "optimizer", "learning_rate"])
 def test_application_manifest_rejects_recipe_fields(field: str) -> None:
+    # Removed v6 recipe fields are extra inputs; the application owns its recipe.
     value = application_draft().model_dump(mode="python")
-    value[field] = {
-        "training": manifest_data()["training"],
-        "optimizer": "adam",
-        "learning_rate": 0.1,
-    }[field]
-    with pytest.raises(ValueError, match="application"):
+    value[field] = {"training": {}, "optimizer": "adam", "learning_rate": 0.1}[field]
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         DraftRunSpec.model_validate(value)
 
 
@@ -391,7 +379,7 @@ def _formed_application(
     return FormationResult(manifest, canonical_hash(manifest), initial.path)
 
 
-@pytest.mark.parametrize("change", ["beta", "round_count", "algorithm"])
+@pytest.mark.parametrize("change", ["beta", "round_count"])
 def test_actual_sealed_policy_is_checked_before_ready_and_build(
     tmp_path: Path, change: str
 ) -> None:
@@ -402,10 +390,8 @@ def test_actual_sealed_policy_is_checked_before_ready_and_build(
     value = result.manifest.model_dump(mode="python")
     if change == "beta":
         value["algorithm_config"]["beta"] = 0.9
-    elif change == "round_count":
-        value["round_count"] += 1
     else:
-        value.update(algorithm_id="dpsgd", algorithm_config=None, artifact_codecs=None)
+        value["round_count"] += 1
     changed = SealedManifest.model_validate(value)
     with pytest.raises(ReadyValidationError, match="draft"):
         validate_ready(

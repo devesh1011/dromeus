@@ -1,4 +1,8 @@
-"""Run an ordinary user Python factory in four separate processes over real AXL."""
+"""Run four private Python task processes over real AXL (opt-in, public synthetic data).
+
+The subprocess factory lives in this module, so each node imports it as
+``test_private_training_axl:prepare_training`` with this directory on PYTHONPATH.
+"""
 
 from __future__ import annotations
 
@@ -8,32 +12,119 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
 import torch
 from support.application_fixture import application_draft
 from support.paths import REPO_ROOT
+from torch import nn
+from torch.utils.data import TensorDataset
 
-from benchmarks.federated.local_axl import local_axl_cluster
-from benchmarks.m3.private_smoke import MODEL_DEFINITION, TASK_DEFINITION
-from dromeus.application import definition_hash
+from benchmarks.support.local_axl import local_axl_cluster
+from dromeus.application import (
+    LocalTrainingOptions,
+    PreparedApplication,
+    definition_hash,
+    describe_task,
+    prepare_task,
+)
 from dromeus.manifests.models import (
     DraftRunSpec,
     PrivacyPolicy,
     PrivateOptimizerSpec,
-    PrivateTrainingSpec,
+    TaskTrainingSpec,
 )
 from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 from dromeus.training.private_trainer import private_training_definition
+from dromeus.training.task import TensorBatchAdapter, TrainingTask
+
+MODEL_DEFINITION = "w1-smoke-linear-2-1-fp32-public-init-v1"
+TASK_DEFINITION = "w1-smoke-fixed-public-synthetic-mse-v1"
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DROMEUS_PRIVATE_AXL_BINARY"),
     reason="set DROMEUS_PRIVATE_AXL_BINARY to run the real custom training test",
 )
+
+
+def public_model() -> nn.Module:
+    model = nn.Linear(2, 1)
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.fill_(0.1)
+    return model
+
+
+def squared_error(model: nn.Module, batch: Any) -> torch.Tensor:
+    inputs, targets = batch
+    return (model(inputs) - targets).square().flatten(1).mean(1)
+
+
+def synthetic_task(rank: int) -> TrainingTask:
+    """Public synthetic records; every node's offset is fixed by its rank."""
+    inputs = torch.arange(16, dtype=torch.float32).reshape(8, 2) / 16 + rank * 0.01
+    targets = inputs[:, :1] * 0.3
+    return TrainingTask(
+        model_factory=public_model,
+        dataset=TensorDataset(inputs, targets),
+        batch_adapter=TensorBatchAdapter(
+            example=(inputs[:2], targets[:2]),
+            definition="w1-public-two-record-pairs-v1",
+        ),
+        loss_per_record=squared_error,
+        model_definition=MODEL_DEFINITION,
+        task_definition=TASK_DEFINITION,
+        loss_definition="w1-smoke-mean-squared-error-per-record-v1",
+        implementation_hash="5" * 64,
+        record_unit="example",
+    )
+
+
+def prepare_training(draft: DraftRunSpec) -> PreparedApplication:
+    root = Path(os.environ["DROMEUS_W1_LOCAL_ROOT"])
+    rank = int(os.environ["DROMEUS_W1_RANK"])
+    # All records are public synthetic data. This bootstrap must never be copied
+    # into a deployment that recreates a missing existing private-data ledger.
+    ledger = PrivacyLedger.create(
+        root / "privacy-ledger.json", lineage=f"w1-public-synthetic-{rank}"
+    )
+    return prepare_task(
+        draft=draft,
+        task=synthetic_task(rank),
+        local=LocalTrainingOptions(
+            data_identity=f"w1-public-tensors-rank-{rank}-v1",
+            reservation_store=ledger,
+            max_physical_batch_size=2,
+            research_seed=101 + rank,
+        ),
+    )
+
+
+def private_specification(
+    optimizer_name: Literal["sgd", "adam", "adamw"],
+) -> TaskTrainingSpec:
+    model = public_model()
+    return describe_task(
+        synthetic_task(0),
+        batch_size=4,
+        schedule="linear_decay",
+        optimizer=PrivateOptimizerSpec(
+            name=optimizer_name,
+            torch_version=torch.__version__,
+            parameter_names=tuple(
+                name
+                for name, parameter in model.named_parameters()
+                if parameter.requires_grad
+            ),
+            learning_rate=0.01,
+            momentum=0.9 if optimizer_name == "sgd" else 0,
+            nesterov=optimizer_name == "sgd",
+        ),
+    )
 
 
 @pytest.mark.parametrize("optimizer_name", ["sgd", "adam", "adamw"])
@@ -42,22 +133,10 @@ def test_four_private_python_processes_over_axl(
 ) -> None:
     binary = Path(os.environ["DROMEUS_PRIVATE_AXL_BINARY"])
     root = REPO_ROOT
+    spec = private_specification(optimizer_name)
     base = application_draft(compressed=True).model_dump(mode="python")
-    spec = PrivateTrainingSpec(
-        optimizer=PrivateOptimizerSpec(
-            name=optimizer_name,
-            torch_version=torch.__version__,
-            parameter_names=("weight", "bias"),
-            learning_rate=0.01,
-            momentum=0.9 if optimizer_name == "sgd" else 0,
-            nesterov=optimizer_name == "sgd",
-        ),
-        loss="mse",
-        batch_size=4,
-        schedule="linear_decay",
-    )
     base.update(
-        manifest_version=5,
+        model_definition_hash=definition_hash(MODEL_DEFINITION),
         private_training=spec,
         privacy=PrivacyPolicy(
             max_grad_norm=1,
@@ -66,7 +145,6 @@ def test_four_private_python_processes_over_axl(
             max_logical_steps=9,
             randomness_profile="reproducible_public_benchmark",
         ),
-        model_definition_hash=definition_hash(MODEL_DEFINITION),
     )
     base["environment"]["model_definition_hash"] = base["model_definition_hash"]
     base["dataset"]["definition_hash"] = definition_hash(TASK_DEFINITION)
@@ -84,6 +162,17 @@ def test_four_private_python_processes_over_axl(
     draft_path = tmp_path / "draft.json"
     # Exercise the actual CLI default in each independent Python process.
     draft_path.write_text(draft.model_dump_json(exclude={"algorithm_id"}))
+    # Each node imports the factory above from this file by module path.
+    integration_root = Path(__file__).resolve().parent
+    python_path = os.pathsep.join(
+        part
+        for part in (
+            str(integration_root),
+            str(root / "tests"),
+            os.environ.get("PYTHONPATH", ""),
+        )
+        if part
+    )
 
     async def run() -> None:
         async with local_axl_cluster(binary=binary, log_root=tmp_path / "axl") as nodes:
@@ -104,6 +193,7 @@ def test_four_private_python_processes_over_axl(
                         os.environ,
                         DROMEUS_W1_LOCAL_ROOT=str(tmp_path / f"node-{rank}"),
                         DROMEUS_W1_RANK=str(rank),
+                        PYTHONPATH=python_path,
                         OMP_NUM_THREADS="1",
                         MKL_NUM_THREADS="1",
                     )
@@ -116,7 +206,7 @@ def test_four_private_python_processes_over_axl(
                                 "--config",
                                 str(config_path),
                                 "--factory",
-                                "benchmarks.m3.private_smoke:prepare_training",
+                                "test_private_training_axl:prepare_training",
                                 cwd=root,
                                 env=env,
                                 stdout=log,
@@ -151,9 +241,9 @@ def test_four_private_python_processes_over_axl(
         assert archive.state.committed_round == 2
         assert archive.algorithm_state is not None
         state = archive.algorithm_state.load_tensors()
-        assert int(state["noloco.v1.completed_outer_steps"][0]) == 3
+        assert int(state["noloco.completed_outer_steps"][0]) == 3
         assert any("application." in key for key in state)
-        assert int(state["noloco.v1.trainer.meta.steps"][0]) == 9
+        assert int(state["noloco.trainer.meta.steps"][0]) == 9
         checkpoint_files = list(
             (run_root / "run-store/checkpoints").glob("*.safetensors")
         )
@@ -161,7 +251,7 @@ def test_four_private_python_processes_over_axl(
             p.stat().st_mode & 0o777 == 0o600 for p in checkpoint_files
         )
         assert (run_root / "run-store").stat().st_mode & 0o777 == 0o700
-        assert state["noloco.v1.trainer.meta.loss"].size == 0
+        assert state["noloco.trainer.meta.loss"].size == 0
         reservations = PrivacyLedger(
             run_root / "privacy-ledger.json", lineage=f"w1-public-synthetic-{rank}"
         ).reservations()
@@ -175,10 +265,7 @@ def test_four_private_python_processes_over_axl(
             record for record in log.records if isinstance(record, RoundMetricsEvidence)
         ]
         assert len(metrics) == 3
-        assert all(
-            record.local_loss is None and record.evaluation_loss is None
-            for record in metrics
-        )
+        assert all(record.local_loss is None for record in metrics)
         node_summaries.append(
             {
                 "node": rank,

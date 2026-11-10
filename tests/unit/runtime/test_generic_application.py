@@ -128,7 +128,6 @@ def draft_for(
     )
     values = application_draft().model_dump(mode="python")
     values.update(
-        manifest_version=6,
         model_id="custom-language-model",
         model_definition_hash=definition_hash(task.model_definition),
         private_training=specification if private else None,

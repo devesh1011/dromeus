@@ -12,10 +12,10 @@ import torch
 from support.application_fixture import application_draft, local_file
 from support.paths import REPO_ROOT
 
-from benchmarks.federated.local_axl import local_axl_cluster
+from benchmarks.support.local_axl import local_axl_cluster
 from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
-from dromeus.telemetry.evidence import EvidenceLog, TaskRoundMetricsEvidence
+from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DROMEUS_CUSTOM_AXL_BINARY"),
@@ -26,6 +26,9 @@ pytestmark = pytest.mark.skipif(
 def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> None:
     binary = Path(os.environ["DROMEUS_CUSTOM_AXL_BINARY"])
     root = REPO_ROOT
+    python_path = str(root / "tests")
+    if inherited_python_path := os.environ.get("PYTHONPATH"):
+        python_path += os.pathsep + inherited_python_path
     draft = application_draft(compressed=True)
     draft = draft.model_copy(
         update={
@@ -58,6 +61,7 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
                         DROMEUS_LOCAL_DATA=str(
                             local_file(tmp_path / f"data-{rank}.npz", rank)
                         ),
+                        PYTHONPATH=python_path,
                         OMP_NUM_THREADS="1",
                         MKL_NUM_THREADS="1",
                     )
@@ -70,7 +74,7 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
                                 "--config",
                                 str(config_path),
                                 "--factory",
-                                "examples.custom_training:prepare_training",
+                                "support.custom_training:prepare_training",
                                 cwd=root,
                                 env=env,
                                 stdout=log,
@@ -104,7 +108,7 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
         assert archive.state.committed_round == 2
         assert archive.algorithm_state is not None
         state = archive.algorithm_state.load_tensors()
-        assert int(state["noloco.v1.completed_outer_steps"][0]) == 3
+        assert int(state["noloco.completed_outer_steps"][0]) == 3
         assert any("application." in key for key in state)
         log = EvidenceLog.open(
             run_root / "logs/dromeus.jsonl",
@@ -112,9 +116,7 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
             manifest_hash=archive.manifest_hash,
         )
         metrics = [
-            record
-            for record in log.records
-            if isinstance(record, TaskRoundMetricsEvidence)
+            record for record in log.records if isinstance(record, RoundMetricsEvidence)
         ]
         assert len(metrics) == 3
         assert all(
