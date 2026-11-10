@@ -17,15 +17,49 @@ from support.factory_optimizer import (
 )
 from torch.utils.data import DataLoader, TensorDataset
 
-from dromeus.manifests.models import PrivacyPolicy, PrivateTrainingSpec
+from dromeus.application import describe_task
+from dromeus.manifests.models import PrivacyPolicy, TaskTrainingSpec
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.training.optimizer_factory import PrivateOptimizerFactory
 from dromeus.training.privacy import opacus_module
 from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.private_trainer import PrivateTrainer
+from dromeus.training.task import TensorBatchAdapter, TrainingTask
 
 pytest.importorskip("opacus")
 Kind = Literal["custom", "rmsprop", "adagrad"]
+
+
+def make_task(registration: PrivateOptimizerFactory) -> TrainingTask:
+    inputs = torch.arange(16, dtype=torch.float32).reshape(8, 2) / 8
+    targets = torch.ones(8, 1)
+
+    def loss(model: torch.nn.Module, batch: Any) -> torch.Tensor:
+        x, y = batch
+        return (model(x) - y).square().flatten(1).mean(1)
+
+    return TrainingTask(
+        model_factory=public_model,
+        dataset=TensorDataset(inputs, targets),
+        batch_adapter=TensorBatchAdapter(
+            (inputs[:2].clone(), targets[:2].clone()),
+            "synthetic regression records",
+        ),
+        loss_per_record=loss,
+        model_definition="public two-input linear model",
+        task_definition="squared error on fixed synthetic records",
+        loss_definition="one mean squared error per record",
+        implementation_hash="c" * 64,
+        optimizer_registration=registration,
+    )
+
+
+def make_specification(
+    registration: PrivateOptimizerFactory,
+    *,
+    schedule: Literal["constant", "linear_decay"] = "linear_decay",
+) -> TaskTrainingSpec:
+    return describe_task(make_task(registration), batch_size=4, schedule=schedule)
 
 
 def make_trainer(
@@ -33,12 +67,16 @@ def make_trainer(
     registration: PrivateOptimizerFactory,
     *,
     physical: int = 2,
-    specification: PrivateTrainingSpec | None = None,
+    specification: TaskTrainingSpec | None = None,
+    trainer_registration: PrivateOptimizerFactory | None = None,
 ) -> PrivateTrainer:
+    """Shared contract comes from ``registration``; the trainer may receive another.
+
+    Passing a different ``trainer_registration`` exercises mismatch rejection
+    between the group specification and the locally supplied task.
+    """
     return PrivateTrainer(
-        model_factory=public_model,
-        inputs=torch.arange(16, dtype=torch.float32).reshape(8, 2) / 8,
-        targets=torch.ones(8, 1),
+        task=make_task(trainer_registration or registration),
         policy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -47,18 +85,13 @@ def make_trainer(
             randomness_profile="reproducible_public_benchmark",
         ),
         specification=specification
-        or PrivateTrainingSpec(
-            optimizer=registration.describe(public_model()),
-            loss="mse",
-            batch_size=4,
-            schedule="linear_decay",
-        ),
+        if specification is not None
+        else make_specification(registration),
         run_id="factory-conformance",
         local_data_identity="public-synthetic",
         reservation_store=PrivacyLedger.create(path / "ledger.json", lineage="public"),
         max_physical_batch_size=physical,
         research_seed=31,
-        optimizer_registration=registration,
     )
 
 
@@ -156,13 +189,7 @@ def test_weight_copy_keeps_parameter_objects_and_group_history(tmp_path: Path) -
         return optimizer
 
     captured = replace(registration, create=capture)
-    specification = PrivateTrainingSpec(
-        optimizer=registration.describe(public_model()),
-        loss="mse",
-        batch_size=4,
-        schedule="linear_decay",
-    )
-    trainer = make_trainer(tmp_path, captured, specification=specification)
+    trainer = make_trainer(tmp_path, captured)
     optimizer = created[-1]
     identities = tuple(
         id(p) for group in optimizer.param_groups for p in group["params"]
@@ -254,11 +281,7 @@ def test_factory_mismatch_rejects_before_reservation(
     tmp_path: Path, mismatch: str
 ) -> None:
     registration = optimizer_registration()
-    specification = PrivateTrainingSpec(
-        optimizer=registration.describe(public_model()),
-        loss="mse",
-        batch_size=4,
-    )
+    specification = make_specification(registration, schedule="constant")
 
     def changed(model: torch.nn.Module) -> torch.optim.Optimizer:
         optimizer = registration.create(model)
@@ -274,7 +297,12 @@ def test_factory_mismatch_rejects_before_reservation(
         else replace(registration, create=changed)
     )
     with pytest.raises(ValueError):
-        make_trainer(tmp_path, actual, specification=specification)
+        make_trainer(
+            tmp_path,
+            registration,
+            specification=specification,
+            trainer_registration=actual,
+        )
     assert (
         PrivacyLedger(tmp_path / "ledger.json", lineage="public").reservations() == ()
     )
@@ -282,11 +310,7 @@ def test_factory_mismatch_rejects_before_reservation(
 
 def test_required_closure_rejected_before_reservation(tmp_path: Path) -> None:
     registration = optimizer_registration()
-    specification = PrivateTrainingSpec(
-        optimizer=registration.describe(public_model()),
-        loss="mse",
-        batch_size=4,
-    )
+    specification = make_specification(registration, schedule="constant")
 
     class ClosureOptimizer(CustomOptimizer):
         def step(self, closure: Any) -> Any:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -305,7 +329,12 @@ def test_required_closure_rejected_before_reservation(tmp_path: Path) -> None:
         }
     )
     with pytest.raises(ValueError, match="closure"):
-        make_trainer(tmp_path, actual, specification=spec)
+        make_trainer(
+            tmp_path,
+            registration,
+            specification=spec,
+            trainer_registration=actual,
+        )
     assert (
         PrivacyLedger(tmp_path / "ledger.json", lineage="public").reservations() == ()
     )
@@ -359,14 +388,9 @@ def test_integer_learning_rate_survives_linear_schedule(tmp_path: Path) -> None:
 def test_secure_factory_uses_same_mechanism_and_refuses_resume(tmp_path: Path) -> None:
     pytest.importorskip("torchcsprng")
     registration = optimizer_registration()
-    spec = PrivateTrainingSpec(
-        optimizer=registration.describe(public_model()), loss="mse", batch_size=4
-    )
     trainer = PrivateTrainer(
-        model_factory=public_model,
-        inputs=torch.ones(8, 2),
-        targets=torch.zeros(8, 1),
-        specification=spec,
+        task=make_task(registration),
+        specification=make_specification(registration, schedule="constant"),
         policy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -380,7 +404,7 @@ def test_secure_factory_uses_same_mechanism_and_refuses_resume(tmp_path: Path) -
             tmp_path / "ledger.json", lineage="public"
         ),
         max_physical_batch_size=1,
-        optimizer_registration=registration,
+        research_seed=None,
     )
     trainer.train_local_steps(2)
     state = trainer.checkpoint_tensors()
@@ -419,7 +443,7 @@ def test_optimizer_failure_does_not_refund_reservation(tmp_path: Path) -> None:
 
 
 def test_documented_registration_trains_and_restores(tmp_path: Path) -> None:
-    from examples.private_optimizer import registration
+    from support.private_optimizer import registration
 
     trainer = make_trainer(tmp_path, registration())
     trainer.train_local_steps(2)

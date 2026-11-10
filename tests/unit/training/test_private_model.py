@@ -52,7 +52,7 @@ def test_custom_model_is_checked_without_changing_model_or_attaching_hooks() -> 
         "last.weight",
         "last.bias",
     )
-    assert report.gradient_backend == "opacus_hooks_v1"
+    assert report.gradient_backend == "opacus_hooks"
     assert all(parameter.grad is None for parameter in model.parameters())
     assert not hasattr(model, "autograd_grad_sample_hooks")
     for name, value in model.state_dict().items():

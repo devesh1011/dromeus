@@ -1,23 +1,50 @@
 """Public private-training adapter behavior on fixed synthetic data."""
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pytest
 import torch
 from torch import nn
+from torch.utils.data import TensorDataset
 
-from dromeus.manifests.models import (
-    PrivacyPolicy,
-    PrivateOptimizerSpec,
-    PrivateTrainingSpec,
-)
+from dromeus.application import describe_task
+from dromeus.manifests.models import PrivacyPolicy, PrivateOptimizerSpec
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.training.private_trainer import PrivateTrainer
+from dromeus.training.task import TensorBatchAdapter, TrainingTask
 
 pytest.importorskip("opacus")
+
+
+def linear_model() -> nn.Module:
+    return nn.Linear(2, 1)
+
+
+def make_task(
+    inputs: torch.Tensor,
+    targets: torch.Tensor,
+    model_factory: Callable[[], nn.Module] = linear_model,
+) -> TrainingTask:
+    def loss(model: nn.Module, batch: Any) -> torch.Tensor:
+        x, y = batch
+        return (model(x) - y).square().flatten(1).mean(1)
+
+    return TrainingTask(
+        model_factory=model_factory,
+        dataset=TensorDataset(inputs, targets),
+        batch_adapter=TensorBatchAdapter(
+            (inputs[:2].clone(), targets[:2].clone()),
+            "synthetic regression records",
+        ),
+        loss_per_record=loss,
+        model_definition="synthetic private test model",
+        task_definition="squared error on fixed synthetic records",
+        loss_definition="one mean squared error per record",
+        implementation_hash="b" * 64,
+    )
 
 
 def make_trainer(
@@ -35,7 +62,10 @@ def make_trainer(
         max_logical_steps=4,
         randomness_profile="secure" if secure else "reproducible_public_benchmark",
     )
-    spec = PrivateTrainingSpec(
+    task = make_task(torch.ones(sample_count, 2), torch.zeros(sample_count, 1))
+    spec = describe_task(
+        task,
+        batch_size=4,
         optimizer=PrivateOptimizerSpec(
             name=name,
             torch_version=torch.__version__,
@@ -44,14 +74,10 @@ def make_trainer(
             momentum=0.9 if nesterov else 0,
             nesterov=nesterov,
         ),
-        loss="mse",
-        batch_size=4,
     )
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="public-synthetic")
     return PrivateTrainer(
-        model_factory=lambda: nn.Linear(2, 1),
-        inputs=torch.ones(sample_count, 2),
-        targets=torch.zeros(sample_count, 1),
+        task=task,
         policy=policy,
         specification=spec,
         run_id="synthetic-run",
@@ -127,10 +153,10 @@ def test_direct_opacus_trajectory_parity(
 ) -> None:
     if nesterov and name != "sgd":
         nesterov = False
-    from torch.utils.data import DataLoader, TensorDataset
+    from torch.utils.data import DataLoader
 
+    from dromeus.training.optimizer_factory import build_private_optimizer
     from dromeus.training.privacy import opacus_module
-    from dromeus.training.private_trainer import build_private_optimizer
 
     trainer = make_trainer(tmp_path, name, nesterov=nesterov)
     model = nn.Linear(2, 1)
@@ -210,8 +236,8 @@ def test_analytic_clipped_gradient_preserves_optimizer_rule(
     noise: float,
     expected_gradient: float,
 ) -> None:
+    from dromeus.training.optimizer_factory import build_private_optimizer
     from dromeus.training.privacy import opacus_module
-    from dromeus.training.private_trainer import build_private_optimizer
 
     # Independent analytic result: two gradients (-2,0), (0,-2), each
     # clipped to unit length, plus fixed sum noise (0.2,0.2),
@@ -224,17 +250,6 @@ def test_analytic_clipped_gradient_preserves_optimizer_rule(
         "_generate_noise",
         controlled_noise,
     )
-    spec = PrivateTrainingSpec(
-        optimizer=PrivateOptimizerSpec(
-            name=name,
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=0.1,
-            weight_decay=0.05,
-        ),
-        loss="mse",
-        batch_size=2,
-    )
 
     def model_factory() -> nn.Module:
         model = nn.Linear(2, 1, bias=False)
@@ -242,26 +257,20 @@ def test_analytic_clipped_gradient_preserves_optimizer_rule(
             model.weight.zero_()
         return model
 
-    seen: list[torch.Tensor] = []
-
-    def capture_optimizer(model: nn.Module) -> torch.optim.Optimizer:
-        optimizer = build_private_optimizer(model, spec.optimizer)
-        original_step = optimizer.step
-
-        def capture_step(*args: object, **kwargs: object) -> object:
-            for parameter in model.parameters():
-                assert parameter.grad is not None
-                seen.append(parameter.grad.detach().clone())
-            return original_step()  # pyright: ignore[reportUnknownMemberType]
-
-        optimizer.step = capture_step  # type: ignore[method-assign]
-        return optimizer
-
+    task = make_task(torch.eye(2), torch.ones(2, 1), model_factory=model_factory)
+    spec = describe_task(
+        task,
+        batch_size=2,
+        optimizer=PrivateOptimizerSpec(
+            name=name,
+            torch_version=torch.__version__,
+            parameter_names=("weight",),
+            learning_rate=0.1,
+            weight_decay=0.05,
+        ),
+    )
     trainer = PrivateTrainer(
-        optimizer_factory=capture_optimizer,
-        model_factory=model_factory,
-        inputs=torch.eye(2),
-        targets=torch.ones(2, 1),
+        task=task,
         policy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -283,6 +292,25 @@ def test_analytic_clipped_gradient_preserves_optimizer_rule(
     for parameter in reference.parameters():
         parameter.grad = torch.tensor([[expected_gradient, expected_gradient]])
     optimizer.step()
+
+    # Capture the gradients the owned trainer hands to the ordinary optimizer.
+    # Installed after the reference step so only trainer steps are recorded.
+    seen: list[torch.Tensor] = []
+    optimizer_type: Any = {
+        "sgd": torch.optim.SGD,
+        "adam": torch.optim.Adam,
+        "adamw": torch.optim.AdamW,
+    }[name]
+    original_step = optimizer_type.step
+
+    def capture_step(self: torch.optim.Optimizer, *args: Any, **kwargs: Any) -> Any:
+        for group in self.param_groups:
+            for parameter in group["params"]:
+                assert parameter.grad is not None
+                seen.append(parameter.grad.detach().clone())
+        return original_step(self, *args, **kwargs)
+
+    monkeypatch.setattr(optimizer_type, "step", capture_step)
     trainer.train_local_steps(1)
     assert len(seen) == 1
     np.testing.assert_allclose(
@@ -379,22 +407,21 @@ def test_custom_forward_mutation_rejected_before_reservation(tmp_path: Path) -> 
                 self.linear.weight.add_(inputs.sum())
             return self.linear(inputs)
 
-    spec = PrivateTrainingSpec(
-        optimizer=PrivateOptimizerSpec(
-            name="sgd",
-            torch_version=torch.__version__,
-            parameter_names=("linear.weight", "linear.bias"),
-            learning_rate=0.01,
-        ),
-        loss="mse",
-        batch_size=2,
-    )
+    task = make_task(torch.ones(8, 2), torch.zeros(8, 1), model_factory=RawMutation)
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="synthetic")
-    with pytest.raises(ValueError, match="unsupported private model"):
+    with pytest.raises(ValueError, match="mutated public model state"):
+        spec = describe_task(
+            task,
+            batch_size=2,
+            optimizer=PrivateOptimizerSpec(
+                name="sgd",
+                torch_version=torch.__version__,
+                parameter_names=("linear.weight", "linear.bias"),
+                learning_rate=0.01,
+            ),
+        )
         PrivateTrainer(
-            model_factory=RawMutation,
-            inputs=torch.ones(8, 2),
-            targets=torch.zeros(8, 1),
+            task=task,
             policy=PrivacyPolicy(
                 max_grad_norm=1,
                 noise_multiplier=1,
@@ -416,8 +443,6 @@ def test_secure_stream_wiring_and_one_noise_per_logical_step(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pytest.importorskip("torchcsprng")
-    from typing import Any
-
     from dromeus.training.privacy import opacus_module
 
     engines: list[Any] = []
@@ -543,28 +568,25 @@ def test_seeded_gaussian_noise_variance_and_expected_batch_normalization(
 ) -> None:
     # Zero inputs/targets and zero initialization give exactly zero raw gradients.
     # SGD with lr=1 exposes only the normalized Gaussian draw in the model delta.
-    spec = PrivateTrainingSpec(
-        optimizer=PrivateOptimizerSpec(
-            name="sgd",
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=1,
-        ),
-        loss="mse",
-        batch_size=32,
-    )
-
     def model() -> nn.Module:
         module = nn.Linear(1, 4096, bias=False)
         with torch.no_grad():
             module.weight.zero_()
         return module
 
+    task = make_task(torch.zeros(32, 1), torch.zeros(32, 4096), model_factory=model)
+    spec = describe_task(
+        task,
+        batch_size=32,
+        optimizer=PrivateOptimizerSpec(
+            name="sgd",
+            torch_version=torch.__version__,
+            parameter_names=("weight",),
+            learning_rate=1,
+        ),
+    )
     trainer = PrivateTrainer(
-        model_factory=model,
-        inputs=torch.zeros(32, 1),
-        targets=torch.zeros(32, 4096),
-        specification=spec,
+        task=task,
         policy=PrivacyPolicy(
             max_grad_norm=3,
             noise_multiplier=2,
@@ -572,6 +594,7 @@ def test_seeded_gaussian_noise_variance_and_expected_batch_normalization(
             max_logical_steps=1,
             randomness_profile="reproducible_public_benchmark",
         ),
+        specification=spec,
         run_id="variance",
         local_data_identity="public-zero-data",
         reservation_store=PrivacyLedger.create(

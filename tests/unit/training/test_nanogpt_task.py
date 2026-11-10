@@ -10,14 +10,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from dromeus.training.private_model import validate_private_model
-from examples.nanogpt_training import (
+from benchmarks.workloads.nanogpt.training import (
     GPT,
     GPTConfig,
     MMapTokenDataset,
     build_task,
     per_record_cross_entropy,
 )
+from dromeus.training.private_model import validate_private_model
 
 
 def tiny_config() -> GPTConfig:
