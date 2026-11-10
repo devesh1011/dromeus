@@ -21,3 +21,16 @@ jobs:
 
       - name: Verify
         run: ./scripts/verify
+
+  privacy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v8.3.2
+      - name: Install optional privacy profile
+        run: uv sync --frozen --extra privacy
+      - name: Private trainer and contract conformance
+        run: uv run --frozen --no-sync pytest tests/unit/training/test_private_trainer.py tests/unit/runtime/test_private_application.py tests/unit/persistence/test_privacy_ledger.py tests/unit/manifests/test_privacy_policy.py tests/unit/manifests/test_factory_optimizer_manifest.py tests/unit/training/test_factory_optimizer.py tests/unit/runtime/test_factory_private_application.py -q
