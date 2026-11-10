@@ -14,10 +14,10 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
-from uuid import uuid4
 
 from dromeus.manifests.canonical import canonical_json
 from dromeus.manifests.models import DomainModel, PrivacyReservation, Sha256
+from dromeus.persistence.files import atomic_write_bytes
 
 
 class _LedgerState(DomainModel):
@@ -72,21 +72,7 @@ class PrivacyLedger:
         return state
 
     def _write(self, state: _LedgerState) -> None:
-        temp = self.path.with_name(f".{self.path.name}.{uuid4().hex}.tmp")
-        try:
-            descriptor = os.open(temp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            with os.fdopen(descriptor, "wb") as handle:
-                handle.write(canonical_json(state))
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temp, self.path)
-            directory = os.open(self.path.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
-        finally:
-            temp.unlink(missing_ok=True)
+        atomic_write_bytes(self.path, canonical_json(state), mode=0o600)
 
     def reservations(self) -> tuple[PrivacyReservation, ...]:
         with self._locked():

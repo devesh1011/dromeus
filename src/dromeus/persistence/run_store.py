@@ -25,6 +25,7 @@ from dromeus.persistence.archive import (
     RunArchiveError,
     load_archive_state,
 )
+from dromeus.persistence.files import atomic_write_bytes, fsync_directory
 
 
 class RunStoreError(RuntimeError):
@@ -70,8 +71,7 @@ class RunStore:
                 state = self.load_state()
                 if state.manifest_hash != manifest_hash:
                     raise RunStoreError("run store state manifest does not match")
-                if state.archive_version == ARCHIVE_VERSION:
-                    self._remove_unreferenced_checkpoints(state)
+                self._remove_unreferenced_checkpoints(state)
             else:
                 _atomic_write_json(self._state_path, _initial_state(manifest_hash))
             return manifest_hash
@@ -85,30 +85,6 @@ class RunStore:
                 return load_archive_state(self._state_path)
             except RunArchiveError as error:
                 raise RunStoreError(str(error)) from error
-
-    def persist_commit(
-        self,
-        *,
-        committed_round: int,
-        algorithm_state: Mapping[str, np.ndarray],
-        state_checksum: str,
-        schedule: JsonRecord,
-        metrics: JsonRecord | None = None,
-        transfer_diagnostics: JsonRecord | None = None,
-    ) -> ArchiveState:
-        """Persist and immediately confirm one committed round."""
-        self.persist_prepared_commit(
-            committed_round=committed_round,
-            algorithm_state=algorithm_state,
-            state_checksum=state_checksum,
-            schedule=schedule,
-            metrics=metrics,
-            transfer_diagnostics=transfer_diagnostics,
-        )
-        return self.confirm_prepared_commit(
-            committed_round=committed_round,
-            state_checksum=state_checksum,
-        )
 
     def persist_prepared_commit(
         self,
@@ -288,10 +264,7 @@ class RunStore:
                 _remove_file(self._root / discarded.relative_path)
 
     def _writable_state(self) -> ArchiveState:
-        state = self.load_state()
-        if state.archive_version != ARCHIVE_VERSION:
-            raise RunStoreError("legacy run archive is read-only")
-        return state
+        return self.load_state()
 
     def _remove_unreferenced_checkpoints(self, state: ArchiveState) -> None:
         referenced = {record.relative_path for record in state.checkpoint_records()}
@@ -336,7 +309,7 @@ def _atomic_save_tensors(
             temporary.chmod(0o600)
         _fsync_file(temporary)
         os.replace(temporary, path)
-        _fsync_directory(path.parent)
+        fsync_directory(path.parent)
         return file_sha256(path)
     except (OSError, ValueError, TypeError) as error:
         temporary.unlink(missing_ok=True)
@@ -358,16 +331,9 @@ def _atomic_write_json(path: Path, value: object) -> None:
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
-        with temporary.open("wb") as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        _fsync_directory(path.parent)
+        atomic_write_bytes(path, data)
     except OSError as error:
-        temporary.unlink(missing_ok=True)
         raise RunStoreError(f"could not persist {path.name}") from error
 
 
@@ -376,21 +342,10 @@ def _fsync_file(path: Path) -> None:
         os.fsync(handle.fileno())
 
 
-def _fsync_directory(path: Path) -> None:
-    try:
-        descriptor = os.open(path, os.O_RDONLY)
-    except OSError:
-        return
-    try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
-
-
 def _remove_file(path: Path) -> None:
     try:
         path.unlink(missing_ok=True)
-        _fsync_directory(path.parent)
+        fsync_directory(path.parent)
     except OSError:
         pass
 

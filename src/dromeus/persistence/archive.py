@@ -22,7 +22,7 @@ from dromeus.manifests.canonical import canonical_hash, parse_sealed_json
 from dromeus.manifests.models import SealedManifest, Sha256
 
 ARCHIVE_VERSION = 2
-_CURRENT_STATE_FIELDS = frozenset(
+_STATE_FIELDS = frozenset(
     {
         "archive_version",
         "manifest_hash",
@@ -37,10 +37,6 @@ _CURRENT_STATE_FIELDS = frozenset(
         "terminal",
     }
 )
-_LEGACY_STATE_FIELDS = _CURRENT_STATE_FIELDS | {
-    "pre_mix_checkpoints",
-    "post_mix_checkpoints",
-}
 _LOAD_SAFETENSORS = cast(
     Callable[[bytes], dict[str, np.ndarray]],
     _load,
@@ -57,11 +53,9 @@ JsonRecord = Mapping[str, object]
 @dataclass(frozen=True, slots=True)
 class CheckpointRecord:
     relative_path: str
-    sha256: Sha256 | None
+    sha256: Sha256
 
     def as_json(self) -> dict[str, str]:
-        if self.sha256 is None:
-            raise RunArchiveError("legacy checkpoint has no recorded hash")
         return {"path": self.relative_path, "sha256": self.sha256}
 
 
@@ -73,7 +67,6 @@ class PreparedCommitState:
     schedule: JsonRecord
     metrics: JsonRecord | None
     transfer_diagnostics: JsonRecord | None
-    legacy_checkpoint_records: tuple[CheckpointRecord, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,26 +95,16 @@ class ArchiveState:
     transfer_diagnostics: tuple[JsonRecord, ...]
     consensus: tuple[ConsensusState, ...]
     terminal: TerminalState | None
-    legacy_checkpoint_records: tuple[CheckpointRecord, ...] = ()
-
-    @property
-    def integrity_recorded(self) -> bool:
-        return self.archive_version >= 1 and all(
-            record.sha256 is not None for record in self.checkpoint_records()
-        )
 
     def checkpoint_records(self) -> tuple[CheckpointRecord, ...]:
-        records = list(self.legacy_checkpoint_records)
+        records: list[CheckpointRecord] = []
         if self.algorithm_state is not None:
             records.append(self.algorithm_state)
         if self.prepared_commit is not None:
             records.append(self.prepared_commit.algorithm_state)
-            records.extend(self.prepared_commit.legacy_checkpoint_records)
         return tuple(records)
 
     def as_json(self) -> dict[str, object]:
-        if self.archive_version != ARCHIVE_VERSION:
-            raise RunArchiveError("legacy archive state is read-only")
         return {
             "archive_version": ARCHIVE_VERSION,
             "manifest_hash": self.manifest_hash,
@@ -169,24 +152,19 @@ class CheckpointRef:
 
     _root: Path
     relative_path: str
-    recorded_sha256: Sha256 | None
+    recorded_sha256: Sha256
 
     def verify(self) -> None:
-        if self.recorded_sha256 is None:
-            raise RunArchiveError(
-                f"checkpoint hash is not recorded: {self.relative_path}"
-            )
+        self._verified_bytes()
+
+    def _verified_bytes(self) -> bytes:
         data = _read_safe_file(self._root, self.relative_path)
         if hashlib.sha256(data).hexdigest() != self.recorded_sha256:
             raise RunArchiveError(f"checkpoint hash mismatch: {self.relative_path}")
+        return data
 
     def load_tensors(self) -> dict[str, np.ndarray]:
-        data = _read_safe_file(self._root, self.relative_path)
-        if (
-            self.recorded_sha256 is not None
-            and hashlib.sha256(data).hexdigest() != self.recorded_sha256
-        ):
-            raise RunArchiveError(f"checkpoint hash mismatch: {self.relative_path}")
+        data = self._verified_bytes()
         try:
             return {
                 name: value.copy(order="C")
@@ -270,11 +248,8 @@ class RunArchive:
         return self
 
     def verify_checkpoint_integrity(self) -> None:
-        if not self.state.integrity_recorded:
-            raise RunArchiveError("legacy archive has no recorded checkpoint integrity")
         seen: set[tuple[str, str]] = set()
         for record in self.state.checkpoint_records():
-            assert record.sha256 is not None
             key = (record.relative_path, record.sha256)
             if key in seen:
                 continue
@@ -295,44 +270,11 @@ def load_archive_state(path: Path) -> ArchiveState:
     except (OSError, ValueError) as error:
         raise RunArchiveError(f"run state is unreadable: {path}") from error
     record = _mapping(value, "run state")
-    version = _integer(record.get("archive_version", 0), "archive_version")
-    if version not in (0, 1, ARCHIVE_VERSION):
+    version = _integer(record.get("archive_version"), "archive_version")
+    if version != ARCHIVE_VERSION:
         raise RunArchiveError(f"unsupported archive version: {version}")
-    fields = (
-        _CURRENT_STATE_FIELDS
-        if version == ARCHIVE_VERSION
-        else _LEGACY_STATE_FIELDS
-    )
-    unknown = set(record) - fields
-    optional_fields: set[str] = (
-        {"archive_version", "prepared_commit"}
-        if version == 0
-        else set()
-    )
-    missing = fields - optional_fields - set(record)
-    if unknown or missing:
+    if frozenset(record) != _STATE_FIELDS:
         raise RunArchiveError("run state fields are invalid")
-    empty_checkpoint_map: Mapping[int, CheckpointRecord] = MappingProxyType({})
-    legacy_pre_mix: Mapping[int, CheckpointRecord] = (
-        _checkpoint_map(
-            record.get("pre_mix_checkpoints"), version, "pre_mix_checkpoints"
-        )
-        if version < ARCHIVE_VERSION
-        else empty_checkpoint_map
-    )
-    legacy_post_mix: Mapping[int, CheckpointRecord] = (
-        _checkpoint_map(
-            record.get("post_mix_checkpoints"), version, "post_mix_checkpoints"
-        )
-        if version < ARCHIVE_VERSION
-        else empty_checkpoint_map
-    )
-    if set(legacy_pre_mix) != set(legacy_post_mix):
-        raise RunArchiveError("pre/post checkpoint rounds do not match")
-    legacy_checkpoints = (
-        *legacy_pre_mix.values(),
-        *legacy_post_mix.values(),
-    )
     state = ArchiveState(
         archive_version=version,
         manifest_hash=_sha256(record.get("manifest_hash"), "manifest_hash"),
@@ -341,9 +283,9 @@ def load_archive_state(path: Path) -> ArchiveState:
         ),
         state_checksum=_optional_sha256(record.get("state_checksum"), "state_checksum"),
         algorithm_state=_optional_checkpoint(
-            record.get("algorithm_state"), version, "algorithm_state"
+            record.get("algorithm_state"), "algorithm_state"
         ),
-        prepared_commit=_optional_prepared(record.get("prepared_commit"), version),
+        prepared_commit=_optional_prepared(record.get("prepared_commit")),
         schedule_history=_record_list(
             record.get("schedule_history"), "schedule_history"
         ),
@@ -353,7 +295,6 @@ def load_archive_state(path: Path) -> ArchiveState:
         ),
         consensus=_consensus_list(record.get("consensus")),
         terminal=_optional_terminal(record.get("terminal")),
-        legacy_checkpoint_records=legacy_checkpoints,
     )
     _validate_state_consistency(state)
     return state
@@ -374,7 +315,7 @@ def _prepared_as_json(value: PreparedCommitState) -> dict[str, object]:
     }
 
 
-def _optional_prepared(value: object, version: int) -> PreparedCommitState | None:
+def _optional_prepared(value: object) -> PreparedCommitState | None:
     if value is None:
         return None
     record = _mapping(value, "prepared_commit")
@@ -386,75 +327,34 @@ def _optional_prepared(value: object, version: int) -> PreparedCommitState | Non
         "metrics",
         "transfer_diagnostics",
     }
-    if version < ARCHIVE_VERSION:
-        expected |= {"pre_mix_checkpoint", "post_mix_checkpoint"}
     if set(record) != expected:
         raise RunArchiveError("prepared_commit fields are invalid")
-    legacy_checkpoints = (
-        (
-            _checkpoint(
-                record["pre_mix_checkpoint"], version, "prepared pre_mix_checkpoint"
-            ),
-            _checkpoint(
-                record["post_mix_checkpoint"], version, "prepared post_mix_checkpoint"
-            ),
-        )
-        if version < ARCHIVE_VERSION
-        else ()
-    )
     return PreparedCommitState(
         round_id=_integer(record["round_id"], "prepared round", minimum=0),
         state_checksum=_sha256(record["state_checksum"], "prepared state_checksum"),
         algorithm_state=_checkpoint(
-            record["algorithm_state"], version, "prepared algorithm_state"
+            record["algorithm_state"], "prepared algorithm_state"
         ),
         schedule=_immutable_record(record["schedule"], "prepared schedule"),
         metrics=_optional_record(record["metrics"], "prepared metrics"),
         transfer_diagnostics=_optional_record(
             record["transfer_diagnostics"], "prepared transfer_diagnostics"
         ),
-        legacy_checkpoint_records=legacy_checkpoints,
     )
 
 
-def _checkpoint_map(
-    value: object, version: int, label: str
-) -> Mapping[int, CheckpointRecord]:
-    entries = _mapping(value, label)
-    result: dict[int, CheckpointRecord] = {}
-    for round_value, checkpoint_value in entries.items():
-        if not round_value.isdecimal():
-            raise RunArchiveError(f"{label} contains an invalid round")
-        round_id = int(round_value)
-        if round_id in result:
-            raise RunArchiveError(f"{label} contains a duplicate round")
-        result[round_id] = _checkpoint(
-            checkpoint_value, version, f"{label}[{round_value}]"
-        )
-    return MappingProxyType(result)
+def _optional_checkpoint(value: object, label: str) -> CheckpointRecord | None:
+    return None if value is None else _checkpoint(value, label)
 
 
-def _optional_checkpoint(
-    value: object, version: int, label: str
-) -> CheckpointRecord | None:
-    return None if value is None else _checkpoint(value, version, label)
-
-
-def _checkpoint(value: object, version: int, label: str) -> CheckpointRecord:
-    if version == 0:
-        if not isinstance(value, str):
-            raise RunArchiveError(f"{label} must be a path")
-        relative_path = value
-        digest = None
-    else:
-        record = _mapping(value, label)
-        if set(record) != {"path", "sha256"}:
-            raise RunArchiveError(f"{label} fields are invalid")
-        path_value = record["path"]
-        if not isinstance(path_value, str):
-            raise RunArchiveError(f"{label} path is invalid")
-        relative_path = path_value
-        digest = _sha256(record["sha256"], f"{label} sha256")
+def _checkpoint(value: object, label: str) -> CheckpointRecord:
+    record = _mapping(value, label)
+    if set(record) != {"path", "sha256"}:
+        raise RunArchiveError(f"{label} fields are invalid")
+    relative_path = record["path"]
+    if not isinstance(relative_path, str):
+        raise RunArchiveError(f"{label} path is invalid")
+    digest = _sha256(record["sha256"], f"{label} sha256")
     _validate_relative_path(relative_path)
     return CheckpointRecord(relative_path=relative_path, sha256=digest)
 
@@ -524,24 +424,17 @@ def _validate_state_consistency(state: ArchiveState) -> None:
             or state.schedule_history
         ):
             raise RunArchiveError("empty archive contains committed state")
-    else:
-        if state.archive_version < ARCHIVE_VERSION and len(
-            state.legacy_checkpoint_records
-        ) != 2 * (state.committed_round + 1):
-            raise RunArchiveError("committed archive state is incomplete")
-        if (
-            state.state_checksum is None
-            or state.algorithm_state is None
-            or len(state.schedule_history) != state.committed_round + 1
-        ):
-            raise RunArchiveError("committed archive state is incomplete")
+    elif (
+        state.state_checksum is None
+        or state.algorithm_state is None
+        or len(state.schedule_history) != state.committed_round + 1
+    ):
+        raise RunArchiveError("committed archive state is incomplete")
     if (
         state.prepared_commit is not None
         and state.prepared_commit.round_id <= state.committed_round
     ):
         raise RunArchiveError("prepared commit does not advance the archive")
-    if state.archive_version == ARCHIVE_VERSION and not state.integrity_recorded:
-        raise RunArchiveError("archive v2 checkpoint hashes are incomplete")
 
 
 def _bind_checkpoint(root: Path, record: CheckpointRecord) -> CheckpointRef:

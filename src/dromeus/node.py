@@ -27,6 +27,7 @@ from dromeus.manifests.models import (
     SealedManifestExpectation,
 )
 from dromeus.membership.formation import FormationResult, create_invitation
+from dromeus.persistence.files import atomic_write_bytes
 from dromeus.runtime import (
     FailureConfig,
     InitiatorFormation,
@@ -245,9 +246,7 @@ async def _write_topology_snapshot(transport: AXLTransport, path: Path) -> None:
 
 def _atomic_write(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f"{path.name}.tmp")
-    temporary.write_bytes(payload)
-    temporary.replace(path)
+    atomic_write_bytes(path, payload)
 
 
 def _parser() -> argparse.ArgumentParser:
