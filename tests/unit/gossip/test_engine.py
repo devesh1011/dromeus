@@ -25,10 +25,9 @@ from support.gossip_fakes import (
 )
 from support.gossip_fakes import make_algorithm as _algorithm
 
-from dromeus.algorithms.codec import (
-    NamedSafetensorsUpdateBundleCodec,
-)
-from dromeus.algorithms.dpsgd import DPSGDAdapter, checksum_tensors
+from dromeus.algorithms.base import UpdateBundle, checksum_tensors
+from dromeus.algorithms.codec import NamedSafetensorsUpdateBundleCodec
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import GossipEngine
 from dromeus.gossip.interfaces import (
     EvaluationMetrics,
@@ -43,6 +42,50 @@ from dromeus.manifests.models import (
     UpdateCodecBinding,
 )
 
+_ARTIFACTS = ("outer_gradient", "slow_weights")
+
+
+def _peer_bundle(
+    root: Path, *, key: str, value: float, schema: TensorSchema
+) -> UpdateBundle:
+    """Encode a peer NoLoCo bundle that the local test algorithm can decode."""
+    codec = NamedSafetensorsUpdateBundleCodec(
+        artifact_root=root,
+        run_id="test-run",
+        manifest_hash="0" * 64,
+        sender_public_key=key,
+        algorithm_id="noloco",
+        artifact_schemas={name: schema for name in _ARTIFACTS},
+    )
+    tensors = {"weight": np.array([value], dtype=np.float32)}
+    return codec.encode(
+        round_id=0,
+        artifacts={name: tensors for name in _ARTIFACTS},
+        codec_bindings={
+            name: UpdateCodecBinding(codec_id="identity", logical_schema=schema)
+            for name in _ARTIFACTS
+        },
+    )
+
+
+def _recording_algorithm(
+    *,
+    key: str,
+    trainer: LinearTrainer,
+    schema: TensorSchema,
+    artifact_root: Path,
+    validation_error: bool = False,
+) -> tuple[NoLoCoAlgorithm, RecordingBundleCodec]:
+    """Make the standard test algorithm and record its bundle releases."""
+    algorithm = _algorithm(
+        key=key, trainer=trainer, schema=schema, artifact_root=artifact_root
+    )
+    delegate = algorithm.bundle_codec
+    assert isinstance(delegate, NamedSafetensorsUpdateBundleCodec)
+    codec = RecordingBundleCodec(delegate, validation_error=validation_error)
+    algorithm.bundle_codec = codec
+    return algorithm, codec
+
 
 def test_pair_timeout_fails_once_and_reports_diagnostics(tmp_path: Path) -> None:
     failures: list[RunFailure] = []
@@ -53,26 +96,17 @@ def test_pair_timeout_fails_once_and_reports_diagnostics(tmp_path: Path) -> None
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        codec = RecordingBundleCodec(
-            NamedSafetensorsUpdateBundleCodec(
-                artifact_root=tmp_path / "peer-0",
-                run_id="test-run",
-                manifest_hash="0" * 64,
-                sender_public_key="peer-0",
-                algorithm_id="d-psgd",
-                artifact_schemas={"trained_weights": schema},
-            )
+        algorithm, codec = _recording_algorithm(
+            key="peer-0",
+            trainer=LinearTrainer(1.0),
+            schema=schema,
+            artifact_root=tmp_path / "peer-0",
         )
         engine = GossipEngine(
             local_public_key="peer-0",
             round_count=1,
             scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
-            algorithm=DPSGDAdapter(
-                trainer=LinearTrainer(1.0),
-                tensor_schema=schema,
-                local_steps=1,
-                bundle_codec=codec,
-            ),
+            algorithm=algorithm,
             transport=HangingPairTransport("peer-0", SharedPairChannel.create()),
             commit_callback=lambda commit: None,
             timeout_seconds=0.01,
@@ -99,28 +133,8 @@ def test_engine_confirms_durability_only_after_peer_confirmation(
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        peer_codec = NamedSafetensorsUpdateBundleCodec(
-            artifact_root=tmp_path / "peer",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            sender_public_key="peer-1",
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
-        )
-        peer_bundle = peer_codec.encode(
-            round_id=0,
-            artifacts={
-                "trained_weights": {
-                    "weight": np.array([3.0], dtype=np.float32)
-                }
-            },
-            codec_bindings={
-                "trained_weights": UpdateCodecBinding(
-                    codec_id="safetensors-v1",
-                    codec_version=1,
-                    logical_schema=schema,
-                )
-            },
+        peer_bundle = _peer_bundle(
+            tmp_path / "peer", key="peer-1", value=3.0, schema=schema
         )
         prepared: list[RoundCommit] = []
         confirmed: list[RoundCommit] = []
@@ -155,39 +169,15 @@ def test_release_runs_after_bundle_outcomes(
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        local_delegate = NamedSafetensorsUpdateBundleCodec(
+        algorithm, codec = _recording_algorithm(
+            key="peer-0",
+            trainer=LinearTrainer(1.0),
+            schema=schema,
             artifact_root=tmp_path / "local",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            sender_public_key="peer-0",
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
+            validation_error=failure == "validation",
         )
-        codec = RecordingBundleCodec(
-            local_delegate, validation_error=failure == "validation"
-        )
-        peer_codec = NamedSafetensorsUpdateBundleCodec(
-            artifact_root=tmp_path / "peer",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            sender_public_key="peer-1",
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
-        )
-        peer_bundle = peer_codec.encode(
-            round_id=0,
-            artifacts={
-                "trained_weights": {
-                    "weight": np.array([3.0], dtype=np.float32)
-                }
-            },
-            codec_bindings={
-                "trained_weights": UpdateCodecBinding(
-                    codec_id="safetensors-v1",
-                    codec_version=1,
-                    logical_schema=schema,
-                )
-            },
+        peer_bundle = _peer_bundle(
+            tmp_path / "peer", key="peer-1", value=3.0, schema=schema
         )
         if failure == "corruption":
             with peer_bundle.artifacts[0].path.open("ab") as handle:
@@ -196,12 +186,7 @@ def test_release_runs_after_bundle_outcomes(
             local_public_key="peer-0",
             round_count=1,
             scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
-            algorithm=DPSGDAdapter(
-                trainer=LinearTrainer(1.0),
-                tensor_schema=schema,
-                local_steps=1,
-                bundle_codec=codec,
-            ),
+            algorithm=algorithm,
             transport=StaticPairTransport(peer_bundle),
             commit_callback=lambda commit: None,
         )
@@ -221,47 +206,19 @@ def test_pair_readiness_is_exchanged_before_bulk_transfer(tmp_path: Path) -> Non
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        local_codec = NamedSafetensorsUpdateBundleCodec(
-            artifact_root=tmp_path / "local",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            sender_public_key="peer-0",
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
-        )
-        peer_codec = NamedSafetensorsUpdateBundleCodec(
-            artifact_root=tmp_path / "peer",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            sender_public_key="peer-1",
-            algorithm_id="d-psgd",
-            artifact_schemas={"trained_weights": schema},
-        )
-        peer_bundle = peer_codec.encode(
-            round_id=0,
-            artifacts={
-                "trained_weights": {
-                    "weight": np.array([3.0], dtype=np.float32)
-                }
-            },
-            codec_bindings={
-                "trained_weights": UpdateCodecBinding(
-                    codec_id="safetensors-v1",
-                    codec_version=1,
-                    logical_schema=schema,
-                )
-            },
+        peer_bundle = _peer_bundle(
+            tmp_path / "peer", key="peer-1", value=3.0, schema=schema
         )
         transport = ReadinessGuardTransport(peer_bundle)
         engine = GossipEngine(
             local_public_key="peer-0",
             round_count=1,
             scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
-            algorithm=DPSGDAdapter(
+            algorithm=_algorithm(
+                key="peer-0",
                 trainer=LinearTrainer(1.0),
-                tensor_schema=schema,
-                local_steps=1,
-                bundle_codec=local_codec,
+                schema=schema,
+                artifact_root=tmp_path / "local",
             ),
             transport=transport,
             commit_callback=lambda commit: None,
@@ -279,26 +236,17 @@ def test_release_runs_after_cancellation(tmp_path: Path) -> None:
         schema = TensorSchema(
             tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
         )
-        codec = RecordingBundleCodec(
-            NamedSafetensorsUpdateBundleCodec(
-                artifact_root=tmp_path / "local",
-                run_id="test-run",
-                manifest_hash="0" * 64,
-                sender_public_key="peer-0",
-                algorithm_id="d-psgd",
-                artifact_schemas={"trained_weights": schema},
-            )
+        algorithm, codec = _recording_algorithm(
+            key="peer-0",
+            trainer=LinearTrainer(1.0),
+            schema=schema,
+            artifact_root=tmp_path / "local",
         )
         engine = GossipEngine(
             local_public_key="peer-0",
             round_count=1,
             scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
-            algorithm=DPSGDAdapter(
-                trainer=LinearTrainer(1.0),
-                tensor_schema=schema,
-                local_steps=1,
-                bundle_codec=codec,
-            ),
+            algorithm=algorithm,
             transport=HangingPairTransport("peer-0", SharedPairChannel.create()),
             commit_callback=lambda commit: None,
         )
@@ -392,7 +340,11 @@ def test_engine_publishes_round_timings_without_waiting_for_metric_writer(
     assert all(timing.peer_wait_seconds >= 0 for timing in metrics.timings)
     assert all(timing.mixing_seconds >= 0 for timing in metrics.timings)
     assert all(timing.evaluation_seconds >= 0 for timing in metrics.timings)
-    assert all(timing.evaluation_accuracy == 0.5 for timing in metrics.timings)
+    assert all(
+        timing.evaluation_metrics is not None
+        and timing.evaluation_metrics["accuracy"] == 0.5
+        for timing in metrics.timings
+    )
 
 
 def test_observation_failures_never_control_round_commit(tmp_path: Path) -> None:
@@ -429,8 +381,7 @@ def test_observation_failures_never_control_round_commit(tmp_path: Path) -> None
     assert evaluations == []
     assert len(metrics.timings) == 2
     assert all(timing.local_loss is None for timing in metrics.timings)
-    assert all(timing.evaluation_loss is None for timing in metrics.timings)
-    assert all(timing.evaluation_accuracy is None for timing in metrics.timings)
+    assert all(timing.evaluation_metrics is None for timing in metrics.timings)
 
 
 def test_two_nodes_complete_pair_commit_without_group_barrier(
@@ -522,7 +473,7 @@ def test_evaluation_runs_every_five_rounds_and_on_final_round(
     assert [metric.round_id for metric in evaluations["peer-0"]] == [4, 5]
     assert [metric.round_id for metric in evaluations["peer-1"]] == [4, 5]
     assert all(
-        metric.accuracy == 0.5
+        metric.metrics["accuracy"] == 0.5
         for values in evaluations.values()
         for metric in values
     )
@@ -576,8 +527,11 @@ def test_private_failures_redact_exception_before_broadcast(tmp_path: Path) -> N
         local_public_key="peer-0",
         round_count=1,
         scheduler=PeerScheduler(["peer-0", "peer-1"], seed=8),
-        algorithm=DPSGDAdapter(
-            trainer=FailedTrainer(1), tensor_schema=schema, local_steps=1
+        algorithm=_algorithm(
+            key="peer-0",
+            trainer=FailedTrainer(1.0),
+            schema=schema,
+            artifact_root=tmp_path / "peer-0",
         ),
         transport=HangingPairTransport("peer-0", SharedPairChannel.create()),
         commit_callback=lambda _: None,

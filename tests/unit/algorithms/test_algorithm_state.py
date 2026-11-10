@@ -8,8 +8,8 @@ import pytest
 import dromeus.algorithms.codec as codec_module
 from dromeus.algorithms.base import UpdateBundle
 from dromeus.algorithms.codec import IdentityCodec, NamedSafetensorsUpdateBundleCodec
-from dromeus.algorithms.dpsgd import DPSGDAdapter
-from dromeus.manifests.models import Tensor, TensorSchema
+from dromeus.algorithms.noloco import NoLoCoAlgorithm
+from dromeus.manifests.models import NoLoCoConfig, Tensor, TensorSchema
 
 
 class Trainer:
@@ -31,6 +31,26 @@ class Trainer:
 
     def evaluate(self) -> None:
         return None
+
+
+class CheckpointTrainer(Trainer):
+    def __init__(self, value: float) -> None:
+        super().__init__(value)
+        self.completed_steps = 0
+
+    def train_local_steps(self, step_count: int) -> None:
+        super().train_local_steps(step_count)
+        self.completed_steps += step_count
+
+    def checkpoint_tensors(self) -> dict[str, np.ndarray]:
+        return {
+            "weight": self._weights["weight"].copy(),
+            "completed_steps": np.array([self.completed_steps], dtype=np.int64),
+        }
+
+    def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
+        self.load_weights({"weight": state["weight"]})
+        self.completed_steps = int(state["completed_steps"][0])
 
 
 def test_m1_identity_codec_has_no_state_and_copies_tensors() -> None:
@@ -58,17 +78,16 @@ def test_safetensors_bundle_codec_materializes_decodes_and_releases(
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
-        artifact_schemas={"trained_weights": schema},
+        algorithm_id="noloco",
+        artifact_schemas={"weights": schema},
     )
     source = {"weight": np.array([3.0], dtype=np.float32)}
 
-    bundle = codec.encode(round_id=4, artifacts={"trained_weights": source})
-    decoded = codec.decode(bundle)["trained_weights"]
+    bundle = codec.encode(round_id=4, artifacts={"weights": source})
+    decoded = codec.decode(bundle)["weights"]
 
     assert bundle.metadata.round_id == 4
-    assert bundle.metadata.artifacts[0].codec_id == "safetensors-v1"
-    assert bundle.metadata.artifacts[0].codec_version == 1
+    assert bundle.metadata.artifacts[0].codec_id == "safetensors"
     assert bundle.artifacts[0].path.is_file()
     assert np.array_equal(decoded["weight"], source["weight"])
     encoded_size = bundle.metadata.artifacts[0].size_bytes
@@ -96,16 +115,12 @@ def test_safetensors_bundle_codec_rejects_unknown_artifact_name(
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
-        artifact_schemas={"trained_weights": schema},
+        algorithm_id="noloco",
+        artifact_schemas={"weights": schema},
     )
     bundle = codec.encode(
         round_id=0,
-        artifacts={
-            "trained_weights": {
-                "weight": np.array([3.0], dtype=np.float32)
-            }
-        },
+        artifacts={"weights": {"weight": np.array([3.0], dtype=np.float32)}},
     )
     invalid = UpdateBundle(
         metadata=bundle.metadata.model_copy(
@@ -136,24 +151,16 @@ def test_bundle_size_limit_is_aggregate_across_artifacts(tmp_path: Path) -> None
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
-        artifact_schemas={"trained_weights": schema},
+        algorithm_id="noloco",
+        artifact_schemas={"weights": schema},
     )
     first = codec.encode(
         round_id=0,
-        artifacts={
-            "trained_weights": {
-                "weight": np.array([1.0], dtype=np.float32)
-            }
-        },
+        artifacts={"weights": {"weight": np.array([1.0], dtype=np.float32)}},
     )
     second = codec.encode(
         round_id=0,
-        artifacts={
-            "trained_weights": {
-                "weight": np.array([2.0], dtype=np.float32)
-            }
-        },
+        artifacts={"weights": {"weight": np.array([2.0], dtype=np.float32)}},
     )
     combined = UpdateBundle(
         metadata=first.metadata.model_copy(
@@ -191,8 +198,8 @@ def test_bundle_encode_failure_removes_partial_artifact(
         run_id="run-001",
         manifest_hash="1" * 64,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
-        artifact_schemas={"trained_weights": schema},
+        algorithm_id="noloco",
+        artifact_schemas={"weights": schema},
     )
 
     def fail_after_write(_values: object, path: str) -> None:
@@ -203,30 +210,30 @@ def test_bundle_encode_failure_removes_partial_artifact(
     with pytest.raises(OSError, match="forced"):
         codec.encode(
             round_id=0,
-            artifacts={
-                "trained_weights": {
-                    "weight": np.array([1.0], dtype=np.float32)
-                }
-            },
+            artifacts={"weights": {"weight": np.array([1.0], dtype=np.float32)}},
         )
     assert not any(path.is_file() for path in tmp_path.iterdir())
 
 
-def test_dpsgd_algorithm_state_round_trips_model_round_and_codec() -> None:
+def test_noloco_algorithm_state_round_trips_model_round_and_codec() -> None:
     schema = TensorSchema(
         tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),)
     )
-    first = DPSGDAdapter(trainer=Trainer(1.0), tensor_schema=schema, local_steps=2)
+    config = NoLoCoConfig(alpha=0.5, beta=0.7, gamma=0.7, inner_steps=2)
+    first = NoLoCoAlgorithm(
+        trainer=CheckpointTrainer(1.0), tensor_schema=schema, config=config
+    )
     first.pre_local(3)
-    first.local_training()
     state = first.state_dict()
 
-    second = DPSGDAdapter(trainer=Trainer(99.0), tensor_schema=schema, local_steps=2)
+    second = NoLoCoAlgorithm(
+        trainer=CheckpointTrainer(99.0), tensor_schema=schema, config=config
+    )
     second.load_state_dict(state)
 
     assert second.snapshot().round_id == 3
-    assert second.snapshot().phase == "post-local"
-    assert np.array_equal(second.snapshot().weights["weight"], np.array([3.0]))
+    assert second.snapshot().phase == "pre-local"
+    assert np.array_equal(second.snapshot().weights["weight"], np.array([1.0]))
     with pytest.raises(TypeError):
         second.snapshot().weights["weight"] = np.array([4.0])  # type: ignore[index]
     with pytest.raises(ValueError):

@@ -11,6 +11,7 @@ from support.in_memory_transport import (
     InMemoryNetwork,
     InMemoryTransport,
 )
+from support.transfer import wait_for_artifact
 
 from dromeus.manifests.models import Tensor, TensorSchema, TransportLimits
 from dromeus.transport.outbound_scheduler import OutboundScheduler
@@ -136,12 +137,11 @@ async def _transfer(
             destination="peer-1",
             artifact_name="payload",
             artifact_path=artifact,
-            codec_id="identity-v1",
+            codec_id="identity",
             tensor_schema=SCHEMA,
             round_id=0,
         )
-        receipt = await receiver_manager.wait_for_artifact(
-            transfer_id,
+        receipt = await wait_for_artifact(receiver_manager, transfer_id,
             timeout_seconds=5.0,
         )
         received = receipt.path.read_bytes()

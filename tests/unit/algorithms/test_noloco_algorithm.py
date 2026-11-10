@@ -7,21 +7,15 @@ from typing import Any, cast
 
 import numpy as np
 import pytest
-import torch
+from support.adam_trainer import build_adam_trainer
 from support.paths import TESTS_ROOT
+from support.run_store import persist_commit
 from support.sample_manifest import manifest_data
-from torch import nn
-from torch.utils.data import TensorDataset
 
-from dromeus.adapters.classification.torch_trainer import (
-    PyTorchTrainer,
-    TrainerSettings,
-)
 from dromeus.algorithms.base import NamedValidatedUpdate, checksum_artifacts
 from dromeus.algorithms.codec import IdentityCodec, NamedSafetensorsUpdateBundleCodec
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.manifests.models import (
-    AdamSettings,
     NoLoCoConfig,
     SealedManifest,
     Tensor,
@@ -76,13 +70,6 @@ def _config() -> NoLoCoConfig:
         beta=0.7,
         gamma=0.7,
         inner_steps=50,
-        adam=AdamSettings(
-            learning_rate=0.001,
-            beta1=0.9,
-            beta2=0.999,
-            epsilon=1e-8,
-            gradient_clip_norm=1.0,
-        ),
     )
 
 
@@ -99,32 +86,6 @@ def _bundle_codec(
             "outer_gradient": schema,
             "slow_weights": schema,
         },
-    )
-
-
-def _adam_trainer(*, initial: tuple[float, float], seed: int) -> PyTorchTrainer:
-    model = nn.Linear(1, 2, bias=False)
-    with torch.no_grad():
-        model.weight.copy_(torch.tensor(initial, dtype=torch.float32).view(2, 1))
-    data = TensorDataset(
-        torch.tensor([[-2.0], [-1.0], [1.0], [2.0]], dtype=torch.float32),
-        torch.tensor([0, 0, 1, 1], dtype=torch.long),
-    )
-    return PyTorchTrainer(
-        model=model,
-        model_definition="test-noloco-linear",
-        train_data=data,  # pyright: ignore[reportArgumentType]
-        settings=TrainerSettings(
-            seed=seed,
-            batch_size=2,
-            learning_rate=0.001,
-            optimizer="adam",
-            adam_beta1=0.9,
-            adam_beta2=0.999,
-            adam_epsilon=1e-8,
-            gradient_clip_norm=1.0,
-            augment=False,
-        ),
     )
 
 
@@ -174,11 +135,11 @@ def test_two_instances_match_hand_computed_noloco_trace(tmp_path: Path) -> None:
         np.array([1.6], dtype=np.float32),
     )
     assert np.array_equal(
-        first.checkpoint_tensors()["noloco.v1.outer_momentum.weight"],
+        first.checkpoint_tensors()["noloco.outer_momentum.weight"],
         np.array([0.0], dtype=np.float32),
     )
     assert np.array_equal(
-        second.checkpoint_tensors()["noloco.v1.outer_momentum.weight"],
+        second.checkpoint_tensors()["noloco.outer_momentum.weight"],
         np.array([-1.4], dtype=np.float32),
     )
     assert not any(tmp_path.rglob("*.safetensors"))
@@ -218,10 +179,10 @@ def test_identity_path_matches_pinned_upstream_outer_step_fixture(
             ),
         )
         state = algorithm.checkpoint_tensors()
-        state["noloco.v1.round_id"] = np.array([0], dtype=np.int64)
-        state["noloco.v1.completed_outer_steps"] = np.array([1], dtype=np.int64)
-        state["noloco.v1.phase"] = np.array([4], dtype=np.int64)
-        state["noloco.v1.outer_momentum.weight"] = np.asarray(
+        state["noloco.round_id"] = np.array([0], dtype=np.int64)
+        state["noloco.completed_outer_steps"] = np.array([1], dtype=np.int64)
+        state["noloco.phase"] = np.array([4], dtype=np.int64)
+        state["noloco.outer_momentum.weight"] = np.asarray(
             node["outer_momentum_before"], dtype=np.float32
         )
         algorithm.load_checkpoint_tensors(state)
@@ -261,7 +222,7 @@ def test_identity_path_matches_pinned_upstream_outer_step_fixture(
             rtol=relative,
         )
         np.testing.assert_allclose(
-            algorithm.checkpoint_tensors()["noloco.v1.outer_momentum.weight"],
+            algorithm.checkpoint_tensors()["noloco.outer_momentum.weight"],
             np.asarray(nodes[rank]["outer_momentum_after"], dtype=np.float32),
             atol=absolute,
             rtol=relative,
@@ -323,19 +284,20 @@ def test_checkpoint_round_trip_resumes_bit_identical_next_step(
         peer.release_bundle(peer_bundle)
 
     checkpoint = original.checkpoint_tensors()
-    assert checkpoint["noloco.v1.slow_weights.weight"].dtype == np.float32
-    assert checkpoint["noloco.v1.outer_momentum.weight"].dtype == np.float32
-    assert checkpoint["noloco.v1.error_feedback_residual.weight"].dtype == np.float32
-    assert "noloco.v1.trainer.adam.first.weight" in checkpoint
-    assert "noloco.v1.trainer.loader_rng" in checkpoint
+    assert checkpoint["noloco.slow_weights.weight"].dtype == np.float32
+    assert checkpoint["noloco.outer_momentum.weight"].dtype == np.float32
+    assert checkpoint["noloco.error_feedback_residual.weight"].dtype == np.float32
+    assert "noloco.trainer.adam.first.weight" in checkpoint
+    assert "noloco.trainer.loader_rng" in checkpoint
     assert np.array_equal(
-        checkpoint["noloco.v1.completed_outer_steps"],
+        checkpoint["noloco.completed_outer_steps"],
         np.array([1], dtype=np.int64),
     )
 
     store = RunStore(tmp_path / "run-store")
     store.initialize(SealedManifest.model_validate(manifest_data()))
-    store.persist_commit(
+    persist_commit(
+        store,
         committed_round=0,
         algorithm_state=checkpoint,
         state_checksum="a" * 64,
@@ -387,7 +349,7 @@ def test_real_adam_state_restored_from_run_store_is_bit_identical(
         tensors=(Tensor(name="weight", dtype="float32", shape=(2, 1)),)
     )
     original = NoLoCoAlgorithm(
-        trainer=_adam_trainer(initial=(0.2, -0.1), seed=7),
+        trainer=build_adam_trainer(initial=(0.2, -0.1)),
         tensor_schema=schema,
         config=_config(),
         bundle_codec=_bundle_codec(
@@ -395,7 +357,7 @@ def test_real_adam_state_restored_from_run_store_is_bit_identical(
         ),
     )
     peer = NoLoCoAlgorithm(
-        trainer=_adam_trainer(initial=(-0.3, 0.4), seed=11),
+        trainer=build_adam_trainer(initial=(-0.3, 0.4)),
         tensor_schema=schema,
         config=_config(),
         bundle_codec=_bundle_codec(
@@ -417,7 +379,8 @@ def test_real_adam_state_restored_from_run_store_is_bit_identical(
 
     store = RunStore(tmp_path / "adam-run-store")
     store.initialize(SealedManifest.model_validate(manifest_data()))
-    store.persist_commit(
+    persist_commit(
+        store,
         committed_round=0,
         algorithm_state=original.checkpoint_tensors(),
         state_checksum="b" * 64,
@@ -426,7 +389,7 @@ def test_real_adam_state_restored_from_run_store_is_bit_identical(
     archive = RunArchive.open(tmp_path / "adam-run-store")
     assert archive.algorithm_state is not None
     restored = NoLoCoAlgorithm(
-        trainer=_adam_trainer(initial=(9.0, -9.0), seed=999),
+        trainer=build_adam_trainer(initial=(9.0, -9.0)),
         tensor_schema=schema,
         config=_config(),
         bundle_codec=_bundle_codec(
@@ -514,7 +477,7 @@ class _MutatingIdentity(IdentityCodec):
     fail_rollback: bool
 
     def __init__(self, *, fail_rollback: bool = False) -> None:
-        super().__init__("identity-v1")
+        super().__init__("identity")
         object.__setattr__(self, "counter", np.array([1], dtype=np.int64))
         object.__setattr__(self, "fail_rollback", fail_rollback)
 
@@ -551,13 +514,13 @@ def test_rejected_noloco_restore_preserves_complete_live_state_and_bundle(
     before = algorithm.checkpoint_tensors()
     invalid = {name: value.copy() for name, value in before.items()}
     if fault == "trainer_mismatch":
-        invalid["noloco.v1.trainer.weight"] += 3.0
+        invalid["noloco.trainer.weight"] += 3.0
     else:
-        invalid["noloco.v1.trainer.weight"] = invalid[
-            "noloco.v1.slow_weights.weight"
+        invalid["noloco.trainer.weight"] = invalid[
+            "noloco.slow_weights.weight"
         ].copy()
-        invalid["noloco.v1.codec.outer_gradient.counter"][0] = 4
-        invalid["noloco.v1.codec.slow_weights.counter"][0] = -1
+        invalid["noloco.codec.outer_gradient.counter"][0] = 4
+        invalid["noloco.codec.slow_weights.counter"][0] = -1
     try:
         with pytest.raises(ValueError, match="slow weights|codec rejected"):
             algorithm.load_checkpoint_tensors(invalid)
@@ -586,9 +549,9 @@ def test_broken_codec_rollback_is_reported_as_fatal(tmp_path: Path) -> None:
         },
     )
     invalid = algorithm.checkpoint_tensors()
-    invalid["noloco.v1.slow_weights.weight"] += 2
-    invalid["noloco.v1.trainer.weight"] += 2
-    invalid["noloco.v1.codec.slow_weights.counter"][0] = -1
+    invalid["noloco.slow_weights.weight"] += 2
+    invalid["noloco.trainer.weight"] += 2
+    invalid["noloco.codec.slow_weights.counter"][0] = -1
     with pytest.raises(RuntimeError, match="rollback failed"):
         algorithm.load_checkpoint_tensors(invalid)
     np.testing.assert_array_equal(

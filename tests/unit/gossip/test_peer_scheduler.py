@@ -25,16 +25,6 @@ def test_scheduler_is_independent_and_forms_a_perfect_matching() -> None:
     assert pairing.peer_for("peer-0") != "peer-0"
 
 
-def test_scheduler_records_history_and_cumulative_edges() -> None:
-    scheduler = PeerScheduler([f"peer-{index}" for index in range(4)], seed=2)
-
-    scheduler.schedule(0)
-    scheduler.schedule(1)
-
-    assert [item.round_id for item in scheduler.history()] == [0, 1]
-    assert sum(scheduler.cumulative_edges().values()) == 4
-
-
 def test_scheduler_rejects_invalid_membership() -> None:
     with pytest.raises(ParticipantCountError, match="even"):
         PeerScheduler(

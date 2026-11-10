@@ -7,16 +7,15 @@ from support.gossip_fakes import (
     ConvexTrainer,
     DivergentPairTransport,
     InMemoryPairTransport,
-    LinearTrainer,
     NoLoCoConvexTrainer,
     SharedPairChannel,
 )
 from support.gossip_fakes import make_algorithm as _algorithm
 
 from dromeus.algorithms.codec import (
+    BitmapTopKInt8Codec,
     DenseInt8Codec,
     NamedSafetensorsUpdateBundleCodec,
-    TopKInt8Codec,
 )
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.engine import GossipEngine
@@ -26,7 +25,6 @@ from dromeus.gossip.interfaces import (
 )
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import (
-    AdamSettings,
     NoLoCoConfig,
     Tensor,
     TensorSchema,
@@ -77,13 +75,6 @@ def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
         beta=0.7,
         gamma=0.7,
         inner_steps=50,
-        adam=AdamSettings(
-            learning_rate=0.001,
-            beta1=0.9,
-            beta2=0.999,
-            epsilon=1e-8,
-            gradient_clip_norm=1.0,
-        ),
     )
     channel = SharedPairChannel.create()
     trainers = {
@@ -141,7 +132,7 @@ def test_four_noloco_nodes_reduce_toy_convex_objective_with_divergent_states(
         for records in evaluations.values()
     )
     assert all(
-        metric.accuracy == 0.5
+        metric.metrics["accuracy"] == 0.5
         for records in evaluations.values()
         for metric in records
     )
@@ -156,13 +147,6 @@ def test_four_noloco_nodes_compressed_smoke_records_error_feedback(
         beta=0.7,
         gamma=0.7,
         inner_steps=50,
-        adam=AdamSettings(
-            learning_rate=0.001,
-            beta1=0.9,
-            beta2=0.999,
-            epsilon=1e-8,
-            gradient_clip_norm=1.0,
-        ),
     )
     channel = SharedPairChannel.create()
     trainers = {
@@ -174,7 +158,7 @@ def test_four_noloco_nodes_compressed_smoke_records_error_feedback(
     async def run() -> None:
         engines: list[GossipEngine] = []
         for key, trainer in trainers.items():
-            outer_codec = TopKInt8Codec(schema, top_k_fraction=0.01)
+            outer_codec = BitmapTopKInt8Codec(schema, top_k_fraction=0.01)
             slow_codec = DenseInt8Codec(schema)
             engines.append(
                 GossipEngine(
@@ -225,58 +209,3 @@ def test_four_noloco_nodes_compressed_smoke_records_error_feedback(
         for record in records
     )
     assert not any(tmp_path.rglob("*.safetensors"))
-
-
-def test_two_final_consensus_stages_exactly_average_four_nodes(
-    tmp_path: Path,
-) -> None:
-    schema = TensorSchema(tensors=(Tensor(name="weight", dtype="float32", shape=(1,)),))
-    channel = SharedPairChannel.create()
-    training_calls = {f"peer-{index}": 0 for index in range(4)}
-
-    class CountingTrainer(LinearTrainer):
-        def __init__(self, key: str, value: float) -> None:
-            super().__init__(value)
-            self._key = key
-
-        def train_local_steps(self, step_count: int) -> None:
-            training_calls[self._key] += 1
-            super().train_local_steps(step_count)
-
-    trainers = {
-        key: CountingTrainer(key, float(index * 2))
-        for index, key in enumerate(training_calls)
-    }
-
-    async def run() -> None:
-        engines = [
-            GossipEngine(
-                local_public_key=key,
-                round_count=3,
-                scheduler=PeerScheduler(
-                    list(trainers),
-                    seed=8,
-                    training_round_count=1,
-                    final_consensus_rounds=2,
-                ),
-                algorithm=_algorithm(
-                    key=key,
-                    trainer=trainer,
-                    schema=schema,
-                    artifact_root=tmp_path / key,
-                    training_round_count=1,
-                ),
-                transport=InMemoryPairTransport(key, channel),
-                commit_callback=lambda commit: None,
-            )
-            for key, trainer in trainers.items()
-        ]
-        await asyncio.gather(*(engine.run() for engine in engines))
-        assert all(len(engine.commits) == 3 for engine in engines)
-        assert all(engine.commits[-1].phase == "final-consensus" for engine in engines)
-
-    asyncio.run(run())
-    assert training_calls == {key: 1 for key in trainers}
-    assert {
-        float(trainer.weights()["weight"][0]) for trainer in trainers.values()
-    } == {4.0}

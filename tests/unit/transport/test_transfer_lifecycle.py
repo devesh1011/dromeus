@@ -11,6 +11,7 @@ from support.in_memory_transport import (
     InMemoryTransport,
 )
 from support.sample_manifest import manifest_data, write_checkpoint
+from support.transfer import wait_for_artifact
 
 from dromeus.manifests.models import SealedManifest
 from dromeus.protocol.codec import encode_envelope, encode_message
@@ -131,7 +132,9 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         codec_id=manifest.codec_id,
         tensor_schema=manifest.tensor_schema,
     )
-    receipt = await receiver_manager.wait_for_artifact(transfer_id, timeout_seconds=2.0)
+    receipt = await wait_for_artifact(
+        receiver_manager, transfer_id, timeout_seconds=2.0
+    )
     assert receipt.path.read_bytes() == artifact.read_bytes()
     assert sender_manager.last_timing is not None
     assert sender_manager.last_timing.elapsed_seconds >= 0
@@ -147,8 +150,8 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         codec_id="opaque-v2",
         tensor_schema=manifest.tensor_schema,
     )
-    opaque_receipt = await receiver_manager.wait_for_artifact(
-        opaque_transfer_id, timeout_seconds=2.0
+    opaque_receipt = await wait_for_artifact(
+        receiver_manager, opaque_transfer_id, timeout_seconds=2.0
     )
     assert opaque_receipt.codec_id == "opaque-v2"
     assert opaque_receipt.path.read_bytes() == opaque_artifact.read_bytes()
@@ -162,8 +165,8 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         tensor_schema=manifest.tensor_schema,
         round_id=0,
     )
-    partial_receipt = await receiver_manager.wait_for_artifact(
-        partial_transfer_id, timeout_seconds=2.0
+    partial_receipt = await wait_for_artifact(
+        receiver_manager, partial_transfer_id, timeout_seconds=2.0
     )
     partial_bytes = artifact.read_bytes()
     partial_sha256 = hashlib.sha256(partial_bytes).hexdigest()
@@ -248,8 +251,8 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         codec_id=manifest.codec_id,
         tensor_schema=manifest.tensor_schema,
     )
-    reusable_receipt = await receiver_manager.wait_for_artifact(
-        reusable_transfer_id, timeout_seconds=2.0
+    reusable_receipt = await wait_for_artifact(
+        receiver_manager, reusable_transfer_id, timeout_seconds=2.0
     )
     await receiver_manager.release_receipt(reusable_receipt)
 
@@ -330,8 +333,8 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         codec_id=manifest.codec_id,
         tensor_schema=manifest.tensor_schema,
     )
-    recovered_receipt = await corrupt_receiver_manager.wait_for_artifact(
-        recovered_transfer_id, timeout_seconds=2.0
+    recovered_receipt = await wait_for_artifact(
+        corrupt_receiver_manager, recovered_transfer_id, timeout_seconds=2.0
     )
     await corrupt_receiver_manager.release_receipt(recovered_receipt)
     for manager in (
@@ -454,8 +457,8 @@ async def _test_transfer_cancellation_and_shutdown_release_capacity(
         codec_id="opaque-v2",
         tensor_schema=manifest.tensor_schema,
     )
-    recovered = await receiver_manager.wait_for_artifact(
-        recovered_id, timeout_seconds=2.0
+    recovered = await wait_for_artifact(
+        receiver_manager, recovered_id, timeout_seconds=2.0
     )
     await receiver_manager.release_receipt(recovered)
 
