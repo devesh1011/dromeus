@@ -35,6 +35,15 @@ aws
 *.pem
 *.key
 
+# New benchmark Python scripts stay local; tracked modules remain tracked.
+/benchmarks/**/*.py
+
+# M3 experiment tooling remains local.
+/benchmarks/m3/
+
+# Benchmark tests stay local; source-module tests remain tracked.
+/tests/benchmarks/
+
 # Keep logs and compact benchmark evidence in Git; keep model binaries external.
 benchmarks/results/m2/**/*.safetensors
 benchmarks/results/m2/**/*.pt
@@ -54,3 +63,27 @@ benchmarks/results/m2/nccl-reference/campaign-*/
 
 # Generated application-development runs are separate from the M2 submission.
 benchmarks/results/local-data-validation/
+
+# Keep M3 working experiments local; expose only the curated judge handoff.
+/benchmarks/results/m3/*
+!/benchmarks/results/m3/README.md
+!/benchmarks/results/m3/milestone-requirements.md
+!/benchmarks/results/m3/proposal-basis.json
+!/benchmarks/results/m3/run-index.json
+!/benchmarks/results/m3/artifact-availability.json
+!/benchmarks/results/m3/file-manifest.json
+!/benchmarks/results/m3/checksums.sha256
+!/benchmarks/results/m3/results/
+!/benchmarks/results/m3/configurations/
+!/benchmarks/results/m3/audit/
+!/benchmarks/results/m3/provenance/
+!/benchmarks/results/m3/verification/
+!/benchmarks/results/m3/verification/verify-retained-logs.py
+
+# Local application samples; maintained fixtures and workloads live elsewhere.
+/examples/
+
+guides
+releases
+
+benchmarks/results/history-reports-2026-10-29
