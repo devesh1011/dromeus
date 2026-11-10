@@ -7,17 +7,23 @@ computation, but private execution owns sampling, backward and optimizer steps.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, cast
 
 import torch
 from torch import nn
 from torch.utils.data import Dataset
 
-from dromeus.manifests.models import TaskTrainingSpec
+from dromeus.manifests.canonical import file_sha256
+from dromeus.manifests.models import (
+    AccountedInitializationProvenance,
+    TaskTrainingSpec,
+)
 from dromeus.training.optimizer_factory import PrivateOptimizerFactory
 
 Batch = Any
@@ -183,6 +189,79 @@ def validate_record_losses(losses: object, count: int) -> torch.Tensor:
 
 
 @dataclass(frozen=True)
+class AccountedInitializationEvidence:
+    """Locally verified ancestry at the trusted application boundary.
+
+    ``verify_parent`` must verify the bound parent audit and every accounting
+    authority, including unchanged local lineage prefixes, and return True.
+    Core code verifies the actual factory tensors against the bound model file;
+    it cannot interpret application-specific audit formats or attest callbacks.
+    This admits weights only, never optimizer, RNG or checkpoint restoration.
+    """
+
+    provenance: AccountedInitializationProvenance
+    model_path: Path
+    verify_parent: Callable[[AccountedInitializationProvenance], bool]
+
+    def verify_source(self) -> None:
+        if self.verify_parent(self.provenance) is not True:
+            raise ValueError("accounted initialization ancestry was not verified")
+        if (
+            not self.model_path.is_file()
+            or self.model_path.is_symlink()
+            or file_sha256(self.model_path) != self.provenance.parent_model_sha256
+        ):
+            raise ValueError("accounted initialization model source differs")
+
+    def verify_model(self, model: nn.Module) -> None:
+        from dromeus.training.private_model import registered_model_state
+
+        safe_open: Any = importlib.import_module("safetensors").safe_open
+        if file_sha256(self.model_path) != self.provenance.parent_model_sha256:
+            raise ValueError(
+                "accounted initialization source changed during preparation"
+            )
+
+        def equal_chunks(actual: torch.Tensor, expected: torch.Tensor) -> bool:
+            # Bound device-to-host copies, including noncontiguous parameters.
+            if actual.numel() <= 262144:
+                value = actual.detach().cpu()
+                return bool(torch.isfinite(value).all()) and torch.equal(
+                    value, expected
+                )
+            width = actual.numel() // actual.shape[0]
+            rows = max(1, 262144 // width)
+            for start in range(0, actual.shape[0], rows):
+                left, right = (
+                    actual[start : start + rows],
+                    expected[start : start + rows],
+                )
+                if left.numel() > 262144:
+                    left, right = left.squeeze(0), right.squeeze(0)
+                if not equal_chunks(left, right):
+                    return False
+            return True
+
+        state = registered_model_state(model)
+        with safe_open(self.model_path, framework="pt", device="cpu") as source:
+            if set(source.keys()) != set(state):
+                raise ValueError("accounted initialization tensor inventory differs")
+            for name, actual in state.items():
+                expected = cast(torch.Tensor, source.get_tensor(name))
+                if (
+                    actual.dtype != expected.dtype
+                    or actual.shape != expected.shape
+                    or not equal_chunks(actual, expected)
+                ):
+                    raise ValueError("accounted initialization model tensors differ")
+        # Detect source replacement or mutation during the factory invocation.
+        if file_sha256(self.model_path) != self.provenance.parent_model_sha256:
+            raise ValueError(
+                "accounted initialization source changed during preparation"
+            )
+
+
+@dataclass(frozen=True)
 class TrainingTask:
     """Small application description; no private gradient mechanism lives here."""
 
@@ -197,6 +276,7 @@ class TrainingTask:
     optimizer_registration: PrivateOptimizerFactory | None = None
     record_unit: str = "example"
     public_evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None
+    initialization_evidence: AccountedInitializationEvidence | None = None
 
     def __post_init__(self) -> None:
         if any(
@@ -213,6 +293,35 @@ class TrainingTask:
             )
         if re.fullmatch(r"[0-9a-f]{64}", self.implementation_hash) is None:
             raise ValueError("task implementation requires a SHA-256 identity")
+        evidence = self.initialization_evidence
+        if evidence is not None:
+            factory = self.model_factory
+
+            def verified_factory() -> nn.Module:
+                evidence.verify_source()
+                model = factory()
+                evidence.verify_model(model)
+                return model
+
+            object.__setattr__(self, "model_factory", verified_factory)
+
+    def check_initialization(
+        self,
+        initialization: str,
+        provenance: AccountedInitializationProvenance | None,
+    ) -> None:
+        evidence = self.initialization_evidence
+        if initialization == "accounted_private_pretrained":
+            if (
+                evidence is None
+                or provenance is None
+                or evidence.provenance != provenance
+            ):
+                raise ValueError(
+                    "matching locally verified initialization evidence required"
+                )
+        elif evidence is not None or provenance is not None:
+            raise ValueError("accounted initialization cannot be declared public")
 
     def check_definition(self, specification: TaskTrainingSpec) -> None:
         """Bind trusted stateless task callbacks to the group's declared semantics.
@@ -220,6 +329,9 @@ class TrainingTask:
         Stateful task transforms need a separately versioned state contract.
         Hash agreement does not attest the behavior of arbitrary Python code.
         """
+        self.check_initialization(
+            specification.initialization, specification.initialization_provenance
+        )
         expected = {
             "task": (
                 hashlib.sha256(self.task_definition.encode()).hexdigest(),

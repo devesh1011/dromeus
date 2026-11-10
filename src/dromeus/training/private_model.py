@@ -11,11 +11,12 @@ import hashlib
 import json
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol, cast
+from typing import Any, Protocol, cast
 
 import torch
 from torch import nn
 
+from dromeus.manifests.models import GradientBackend
 from dromeus.training.model_state import model_state_alias_groups
 from dromeus.training.privacy import opacus_module
 
@@ -36,7 +37,7 @@ class ModelCompatibility:
     parameter_aliases: tuple[tuple[str, ...], ...]
     public_buffer_hashes: Mapping[str, str]
     frozen_parameter_hashes: Mapping[str, str]
-    gradient_backend: Literal["opacus_hooks_v1"] = "opacus_hooks_v1"
+    gradient_backend: GradientBackend = "opacus_hooks"
 
 
 def tensor_digest(value: torch.Tensor) -> str:
@@ -66,8 +67,12 @@ def registered_model_state(model: nn.Module) -> dict[str, torch.Tensor]:
     return state
 
 
-def describe_private_model(model: nn.Module) -> ModelCompatibility:
+def describe_private_model(
+    model: nn.Module, *, gradient_backend: GradientBackend = "opacus_hooks"
+) -> ModelCompatibility:
     """Inspect structure without running the model or reading a local dataset."""
+    if gradient_backend not in ("opacus_hooks", "opacus_native_b1"):
+        raise ValueError("unsupported private gradient backend")
     registered = registered_model_state(model)
     state: Mapping[str, Any] = model.state_dict()
     if set(state) != set(registered):
@@ -118,6 +123,7 @@ def describe_private_model(model: nn.Module) -> ModelCompatibility:
         ):
             raise ValueError("parameter aliases must share one Parameter object")
     return ModelCompatibility(
+        gradient_backend=gradient_backend,
         trainable_parameter_names=tuple(names),
         parameter_aliases=aliases,
         public_buffer_hashes={
@@ -239,13 +245,19 @@ def validate_private_model(
     loss_per_record: Callable[[nn.Module, Any], torch.Tensor],
     batch_adapter: ModelBatchAdapter,
     public_batch: Any,
+    *,
+    gradient_backend: GradientBackend = "opacus_hooks",
 ) -> ModelCompatibility:
     """Check supported hooks against single-record autograd on PUBLIC fixtures.
 
     The caller must supply synthetic/public representative inputs. No actual
     training records are sampled. All probes use disposable model copies.
     """
-    report = describe_private_model(model)
+    report = describe_private_model(model, gradient_backend=gradient_backend)
+    if gradient_backend == "opacus_native_b1":
+        from dromeus.training.native_gradients import validate_native_b1_model
+
+        validate_native_b1_model(model)
     probe = copy.deepcopy(model).train()
     _backend_structure(probe)
     device = next(probe.parameters()).device
@@ -304,6 +316,31 @@ def validate_private_model(
                     raise ValueError(
                         f"{name}: per-record gradient differs from autograd"
                     )
+            if gradient_backend == "opacus_native_b1":
+                from dromeus.training.native_gradients import (
+                    check_native_b1_samplers,
+                    install_native_b1_samplers,
+                )
+
+                wrapper.zero_grad(set_to_none=True)
+                token = install_native_b1_samplers(wrapper)
+                for index in range(count):
+                    wrapper.zero_grad(set_to_none=True)
+                    record = batch_adapter.slice(batch, index, index + 1)
+                    single = _losses(loss_per_record, wrapper, record, 1)
+                    cast(Any, single.sum()).backward()
+                    ensure_grad_samples(hooked, 1)
+                    check_native_b1_samplers(wrapper, token)
+                    for name, parameter in hooked.named_parameters():
+                        if not parameter.requires_grad:
+                            continue
+                        sample = cast(torch.Tensor, getattr(parameter, "grad_sample"))
+                        if not torch.allclose(
+                            sample[0], references[name][index], rtol=1e-4, atol=1e-6
+                        ):
+                            raise ValueError(
+                                f"{name}: native B1 gradient differs from autograd"
+                            )
             if _state_hashes(hooked) != original:
                 raise ValueError("model/loss mutated public model state during forward")
         finally:
@@ -322,7 +359,10 @@ class ModelStateGuard:
     """Preserve declared immutable public state and parameter objects during a run."""
 
     def __init__(self, model: nn.Module, report: ModelCompatibility) -> None:
-        if describe_private_model(model) != report:
+        if (
+            describe_private_model(model, gradient_backend=report.gradient_backend)
+            != report
+        ):
             raise ValueError("model differs from declared compatibility report")
         self._model = model
         self._report = copy.deepcopy(report)
@@ -346,7 +386,12 @@ class ModelStateGuard:
             != self._buffers
         ):
             raise ValueError("private model buffer identity changed")
-        if describe_private_model(self._model) != self._report:
+        if (
+            describe_private_model(
+                self._model, gradient_backend=self._report.gradient_backend
+            )
+            != self._report
+        ):
             raise ValueError(
                 "private model aliases, public buffers or frozen parameters changed"
             )

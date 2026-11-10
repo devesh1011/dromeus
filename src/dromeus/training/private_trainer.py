@@ -1,7 +1,7 @@
-"""Owned Opacus training shared by legacy tensors and generic application tasks.
+"""Owned Opacus training for private application tasks.
 
 Application factories and model code are trusted. Dense FP32 optimizers use
-legacy presets or a group-bound trusted factory contract. Raw losses never leave
+built-in presets or a group-bound trusted factory contract. Raw losses never leave
 this adapter, including research mode.
 """
 
@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import hashlib
-from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -23,19 +22,13 @@ from dromeus.manifests.models import (
     PrivacyPolicy,
     PrivacyReservation,
     PrivateOptimizerSpec,
-    PrivateTrainingSpec,
     TaskTrainingSpec,
 )
 from dromeus.training.base import EvaluationResult
 from dromeus.training.optimizer_factory import (
-    PrivateOptimizerFactory,
     SanitizedOptimizer,
+    build_private_optimizer,
     validate_builtin_optimizer_checkpoint,
-)
-
-# Preserve the original builder import for application and benchmark callers.
-from dromeus.training.optimizer_factory import (
-    build_private_optimizer as build_private_optimizer,
 )
 from dromeus.training.privacy import (
     ReservationStore,
@@ -49,9 +42,7 @@ from dromeus.training.task import TrainingTask
 from dromeus.training.trainer import PyTorchTrainer
 
 
-def private_training_definition(
-    specification: PrivateTrainingSpec | TaskTrainingSpec,
-) -> str:
+def private_training_definition(specification: TaskTrainingSpec) -> str:
     return canonical_json(specification).decode()
 
 
@@ -61,20 +52,14 @@ class PrivateTrainer(PyTorchTrainer):
     def __init__(
         self,
         *,
-        model_factory: Callable[[], nn.Module] | None = None,
-        inputs: torch.Tensor | None = None,
-        targets: torch.Tensor | None = None,
-        task: TrainingTask | None = None,
+        task: TrainingTask,
         policy: PrivacyPolicy,
-        specification: PrivateTrainingSpec | TaskTrainingSpec,
+        specification: TaskTrainingSpec,
         run_id: str,
         local_data_identity: str,
         reservation_store: ReservationStore,
         max_physical_batch_size: int,
         research_seed: int | None = None,
-        evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None,
-        optimizer_factory: Callable[[nn.Module], torch.optim.Optimizer] | None = None,
-        optimizer_registration: PrivateOptimizerFactory | None = None,
     ) -> None:
         if specification.optimizer.torch_version != torch.__version__:
             raise ValueError("private optimizer Torch version mismatch")
@@ -82,26 +67,20 @@ class PrivateTrainer(PyTorchTrainer):
             raise ValueError(
                 "physical batch limit and local data identity are required"
             )
+        if (
+            specification.gradient_backend == "opacus_native_b1"
+            and max_physical_batch_size != 1
+        ):
+            raise ValueError("native B1 backend requires physical batch limit 1")
         secure = policy.randomness_profile == "secure"
         if secure and research_seed is not None:
             raise ValueError("secure mode cannot accept a research seed")
         if not secure and research_seed is None:
             raise ValueError("public research mode requires an explicit local seed")
-        if (
-            evaluate is not None
-            and specification.evaluation_provenance != "public_fixed_holdout"
-        ):
-            raise ValueError("evaluation requires public fixed holdout provenance")
         # Freeze identity before application model construction can run callbacks.
         self._specification_hash = canonical_hash(specification)
         self._workload = prepare_private_workload(
-            specification=specification,
-            task=task,
-            model_factory=model_factory,
-            inputs=inputs,
-            targets=targets,
-            evaluate=evaluate,
-            optimizer_registration=optimizer_registration,
+            specification=specification, task=task
         )
         optimizer_registration = self._workload.optimizer_registration
         self.policy = policy
@@ -115,21 +94,15 @@ class PrivateTrainer(PyTorchTrainer):
         spec = specification.optimizer
         self._optimizer_registration = optimizer_registration
         if isinstance(spec, FactoryOptimizerSpec):
-            if optimizer_registration is None or optimizer_factory is not None:
-                raise ValueError(
-                    "factory optimizer requires exactly one local registration"
-                )
+            if optimizer_registration is None:
+                raise ValueError("factory optimizer requires a local registration")
             self._base_optimizer = optimizer_registration.build(self._raw_model, spec)
         else:
             if optimizer_registration is not None:
                 raise ValueError(
                     "optimizer registration requires a factory specification"
                 )
-            self._base_optimizer = (
-                optimizer_factory(self._raw_model)
-                if optimizer_factory
-                else build_private_optimizer(self._raw_model, spec)
-            )
+            self._base_optimizer = build_private_optimizer(self._raw_model, spec)
         self._validate_optimizer()
         self._initial_optimizer_groups: list[dict[str, Any]] = (
             copy.deepcopy(self._base_optimizer.state_dict()["param_groups"])
@@ -368,8 +341,11 @@ class PrivateTrainer(PyTorchTrainer):
             optimizer=self._optimizer,
         ) as physical_loader:
             for batch in physical_loader:
-                self._optimizer.zero_grad()
+                # Clear p.grad too: an empty Poisson draw runs no backward, and a
+                # zero-filled grad left behind would look like an unsampled one.
+                self._optimizer.zero_grad(set_to_none=True)
                 step.prepare_gradients(self._private_model, batch)
+                self._check_execution()
                 self._optimizer.step()
                 step.after_optimizer_step()
                 self._physical_steps += 1
@@ -385,7 +361,7 @@ class PrivateTrainer(PyTorchTrainer):
                             group["lr"] = initial * (
                                 1 - completed / self.policy.max_logical_steps
                             )
-                    self._optimizer.zero_grad()
+                    self._optimizer.zero_grad(set_to_none=True)
                     break
                 if completed != self._logical_steps:
                     raise ValueError("invalid logical mechanism boundary")
