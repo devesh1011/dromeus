@@ -17,11 +17,11 @@ from typing import Any, Literal
 import pytest
 import torch
 from support.application_fixture import application_draft
+from support.local_axl import local_axl_cluster
 from support.paths import REPO_ROOT
 from torch import nn
 from torch.utils.data import TensorDataset
 
-from benchmarks.support.local_axl import local_axl_cluster
 from dromeus.application import (
     LocalTrainingOptions,
     PreparedApplication,

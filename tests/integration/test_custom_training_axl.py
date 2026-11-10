@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import torch
 from support.application_fixture import application_draft, local_file
+from support.local_axl import local_axl_cluster
 from support.paths import REPO_ROOT
 
-from benchmarks.support.local_axl import local_axl_cluster
 from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
