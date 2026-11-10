@@ -1,8 +1,7 @@
-"""Model-state initialization and deterministic experiment seed helpers."""
+"""Initial model-state checkpoint helpers."""
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,12 +26,6 @@ class InitialCheckpoint:
     path: Path
     tensor_schema: TensorSchema
     sha256: str
-
-
-def derive_benchmark_seed(benchmark_seed: int, purpose: str) -> int:
-    """Derive one stable RNG seed for a named benchmark concern."""
-    digest = hashlib.sha256(f"{benchmark_seed}:{purpose}".encode()).digest()
-    return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
 
 
 def create_initial_checkpoint(

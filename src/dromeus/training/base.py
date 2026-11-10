@@ -44,8 +44,8 @@ class WeightTrainer(Protocol):
         """Return the latest local loss, or none before training."""
         ...
 
-    def evaluate(self) -> EvaluationResult | tuple[float, float] | None:
-        """Return named metrics, a legacy loss/accuracy pair, or no evaluation."""
+    def evaluate(self) -> EvaluationResult | None:
+        """Return named evaluation metrics, or none when evaluation is disabled."""
         ...
 
 

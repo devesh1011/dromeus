@@ -30,7 +30,7 @@ def floating_model_state(
             for name, value in model.state_dict().items()
             if value.is_floating_point()
         }
-    # The v6 exchange inventory is registered parameters, never an application
+    # The exchange inventory is registered parameters, never an application
     # override's serialization output or mutable auxiliary model state.
     state = dict(model.named_parameters(remove_duplicate=False))
     if not names or len(set(names)) != len(names) or not set(names) <= state.keys():

@@ -90,7 +90,7 @@ class EncodedBundleMetadata:
 def materialize_bundle_metadata(
     metadata: OpaqueUpdateBundleMetadata, root: Path
 ) -> EncodedBundleMetadata:
-    """Atomically encode opaque metadata into a v1-compatible artifact."""
+    """Atomically encode bundle metadata into a safetensors carrier artifact."""
     root.mkdir(parents=True, exist_ok=True)
     payload = canonical_json(metadata)
     values = np.frombuffer(payload, dtype=np.uint8).view(np.int8).copy()

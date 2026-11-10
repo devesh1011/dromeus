@@ -4,18 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import torch
-from torch import nn
-
 from dromeus.manifests.canonical import canonical_hash, validate_sealed_draft
 from dromeus.manifests.models import (
-    ApplicationTaskContract,
+    AccountedInitializationProvenance,
     DraftRunSpec,
+    GradientBackend,
     PrivateOptimizerSpec,
     TaskTrainingSpec,
     TensorSchema,
@@ -23,7 +20,6 @@ from dromeus.manifests.models import (
 from dromeus.membership.formation import FormationResult
 from dromeus.persistence.run_store import RunStore
 from dromeus.runtime import MetricsService, TrainingConfig, build_algorithm
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
 from dromeus.training.privacy import ReservationStore
 from dromeus.training.private_model import describe_private_model
 from dromeus.training.private_trainer import PrivateTrainer, private_training_definition
@@ -55,16 +51,19 @@ def describe_task(
     sampling: Literal["poisson", "shuffle"] = "poisson",
     schedule: Literal["constant", "linear_decay"] = "constant",
     initialization: Literal[
-        "public_untrained", "public_pretrained"
+        "public_untrained", "public_pretrained", "accounted_private_pretrained"
     ] = "public_untrained",
+    initialization_provenance: AccountedInitializationProvenance | None = None,
+    gradient_backend: GradientBackend = "opacus_hooks",
 ) -> TaskTrainingSpec:
     """Describe public task/model semantics without opening private records."""
+    task.check_initialization(initialization, initialization_provenance)
     model = task.model_factory()
-    report = describe_private_model(model)
+    report = describe_private_model(model, gradient_backend=gradient_backend)
     if task.optimizer_registration is not None:
         if optimizer is not None:
             raise ValueError(
-                "select one optimizer registration or legacy specification"
+                "select an optimizer registration or a built-in specification, not both"
             )
         selected = task.optimizer_registration.describe(model)
     else:
@@ -77,6 +76,7 @@ def describe_task(
         sampling=sampling,
         schedule=schedule,
         initialization=initialization,
+        initialization_provenance=initialization_provenance,
         evaluation_provenance="public_fixed_holdout"
         if task.public_evaluate
         else "disabled",
@@ -85,6 +85,7 @@ def describe_task(
         batch_definition_hash=task.batch_adapter.definition_hash,
         loss_definition_hash=definition_hash(task.loss_definition),
         record_unit=task.record_unit,
+        gradient_backend=report.gradient_backend,
         trainable_parameter_names=report.trainable_parameter_names,
         parameter_aliases=report.parameter_aliases,
         public_buffer_hashes=dict(report.public_buffer_hashes),
@@ -101,10 +102,6 @@ def prepare_task(
     evaluation_interval: int = 1,
 ) -> PreparedApplication:
     """Prepare one application task using the group's ordinary/private policy."""
-    if draft.manifest_version != 6 or not isinstance(
-        draft.dataset, ApplicationTaskContract
-    ):
-        raise ValueError("generic tasks require a version 6 application manifest")
     selected = draft.private_training if draft.privacy is not None else specification
     if not isinstance(selected, TaskTrainingSpec):
         raise ValueError("generic task training specification is required")
@@ -115,7 +112,6 @@ def prepare_task(
     if (
         definition_hash(task.model_definition) != draft.model_definition_hash
         or definition_hash(task.task_definition) != draft.dataset.definition_hash
-        or draft.application_training is None
         or definition_hash(training_definition)
         != draft.application_training.definition_hash
     ):
@@ -249,11 +245,6 @@ def prepare_application(
             raise ValueError("private training definition mismatch")
     elif isinstance(trainer, PrivateTrainer):
         raise ValueError("private adapter requires a private manifest")
-    if (
-        not isinstance(draft.dataset, ApplicationTaskContract)
-        or draft.application_training is None
-    ):
-        raise ValueError("application preparation requires an application manifest")
     for actual, expected in (
         (definition_hash(model_definition), draft.model_definition_hash),
         (definition_hash(task_definition), draft.dataset.definition_hash),
@@ -277,21 +268,18 @@ def prepare_application(
             "artifact_codecs",
             "codec_id",
             "local_steps",
+            "round_count",
+            "privacy",
+            "private_training",
         },
     )
-    if draft.manifest_version in (5, 6):
-        outer_policy.update(
-            draft.model_dump(
-                mode="json", include={"round_count", "privacy", "private_training"}
-            )
-        )
     outer_identity = definition_hash(
         json.dumps(outer_policy, sort_keys=True, separators=(",", ":"), allow_nan=False)
     )
     trainer.bind_contract(
         ":".join(
             (
-                "application-restore-v2",
+                "application-restore",
                 draft.model_definition_hash,
                 canonical_hash(draft.dataset),
                 canonical_hash(draft.application_training),
@@ -301,61 +289,4 @@ def prepare_application(
     )
     return PreparedApplication(
         canonical_hash(draft), trainer, model_definition, evaluation_interval
-    )
-
-
-def prepare_private_application(
-    *,
-    draft: DraftRunSpec,
-    model_factory: Callable[[], nn.Module],
-    inputs: torch.Tensor,
-    targets: torch.Tensor,
-    model_definition: str,
-    task_definition: str,
-    local_data_identity: str,
-    reservation_store: ReservationStore,
-    max_physical_batch_size: int,
-    research_seed: int | None = None,
-    public_evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None,
-    optimizer_factory: Callable[[nn.Module], torch.optim.Optimizer] | None = None,
-    optimizer_registration: PrivateOptimizerFactory | None = None,
-    evaluation_interval: int = 1,
-) -> PreparedApplication:
-    """Construct the sole supported private workload before formation/output."""
-    if draft.privacy is None or draft.private_training is None:
-        raise ValueError("explicit private policy and training specification required")
-    if (
-        not isinstance(draft.dataset, ApplicationTaskContract)
-        or draft.application_training is None
-    ):
-        raise ValueError("private adapter requires an application task contract")
-    definition = private_training_definition(draft.private_training)
-    if (
-        definition_hash(model_definition) != draft.model_definition_hash
-        or definition_hash(task_definition) != draft.dataset.definition_hash
-        or definition_hash(definition) != draft.application_training.definition_hash
-    ):
-        raise ValueError("private application definitions do not match draft")
-    trainer = PrivateTrainer(
-        model_factory=model_factory,
-        inputs=inputs,
-        targets=targets,
-        policy=draft.privacy,
-        specification=draft.private_training,
-        run_id=draft.run_id,
-        local_data_identity=local_data_identity,
-        reservation_store=reservation_store,
-        max_physical_batch_size=max_physical_batch_size,
-        research_seed=research_seed,
-        evaluate=public_evaluate,
-        optimizer_factory=optimizer_factory,
-        optimizer_registration=optimizer_registration,
-    )
-    return prepare_application(
-        draft=draft,
-        trainer=trainer,
-        model_definition=model_definition,
-        task_definition=task_definition,
-        training_definition=definition,
-        evaluation_interval=evaluation_interval,
     )

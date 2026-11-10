@@ -1,8 +1,7 @@
-"""Internal workload adapters for the two supported private-task generations.
+"""Internal workload adapter for private application tasks.
 
-Workloads prepare gradients and enforce their model/task contracts. The trainer
+The workload prepares gradients and enforces the model/task contract. The trainer
 owns Opacus, optimizer invocation, accounting, reservations and logical steps.
-Legacy tensors keep their original sampler, loss reduction and state inventory.
 """
 
 from __future__ import annotations
@@ -13,16 +12,12 @@ from typing import Any, Protocol, cast
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 
 from dromeus.manifests.models import (
-    FactoryOptimizerSpec,
-    PrivateTrainingSpec,
     TaskTrainingSpec,
 )
-from dromeus.training.model_state import model_state_alias_groups
 from dromeus.training.optimizer_factory import PrivateOptimizerFactory
-from dromeus.training.privacy import opacus_module
 from dromeus.training.private_data import make_task_loader
 from dromeus.training.private_model import (
     ModelStateGuard,
@@ -66,185 +61,18 @@ class PrivateWorkload(Protocol):
 
 
 def prepare_private_workload(
-    *,
-    specification: PrivateTrainingSpec | TaskTrainingSpec,
-    task: TrainingTask | None,
-    model_factory: Callable[[], nn.Module] | None,
-    inputs: torch.Tensor | None,
-    targets: torch.Tensor | None,
-    evaluate: PublicEvaluation | None,
-    optimizer_registration: PrivateOptimizerFactory | None,
+    *, specification: TaskTrainingSpec, task: TrainingTask
 ) -> PrivateWorkload:
-    """Select compatibility once, without rewriting specification identities."""
-    if isinstance(specification, TaskTrainingSpec):
-        if (
-            task is None
-            or model_factory is not None
-            or inputs is not None
-            or targets is not None
-        ):
-            raise ValueError("generic private preparation requires exactly one task")
-        if specification.sampling != "poisson":
-            raise ValueError("private tasks require Poisson sampling")
-        task.check_definition(specification)
-        if (
-            task.public_evaluate is not None
-            and specification.evaluation_provenance != "public_fixed_holdout"
-        ):
-            raise ValueError("evaluation requires public fixed holdout provenance")
-        return _ApplicationWorkload(task, specification)
-    if task is not None:
-        raise ValueError("generic task requires version 2 training specification")
-    if model_factory is None or inputs is None or targets is None:
-        raise ValueError("legacy private preparation requires tensor inputs and model")
-    return _TensorPrivateWorkload(
-        model_factory, inputs, targets, specification, evaluate, optimizer_registration
-    )
-
-
-class _TensorPrivateWorkload:
-    """Adapt fixed tensor datasets and their declared private-training recipe."""
-
-    exchange_names: tuple[str, ...] | None = None
-    poisson_sampling = True
-
-    def __init__(
-        self,
-        model_factory: Callable[[], nn.Module],
-        inputs: torch.Tensor,
-        targets: torch.Tensor,
-        specification: PrivateTrainingSpec,
-        evaluate: PublicEvaluation | None,
-        optimizer_registration: PrivateOptimizerFactory | None,
-    ) -> None:
-        if (
-            inputs.ndim < 2
-            or inputs.dtype != torch.float32
-            or len(inputs) != len(targets)
-            or not len(inputs)
-        ):
-            raise ValueError("fixed FP32 tensor dataset required")
-        if not torch.isfinite(inputs).all() or not torch.isfinite(targets).all():
-            raise ValueError("invalid local data")
-        if specification.loss == "mse" and (
-            targets.dtype != torch.float32 or targets.ndim < 2
-        ):
-            raise ValueError("MSE requires FP32 targets with batch and feature axes")
-        if specification.loss == "cross_entropy" and (
-            targets.dtype != torch.int64 or targets.ndim != 1
-        ):
-            raise ValueError("cross entropy requires integer class targets")
-        self.specification = specification
-        self.evaluate = evaluate
-        self.optimizer_registration = optimizer_registration
-        self.model = model_factory()
-        self._validate_model()
-        # Clone at loader preparation, after optimizer construction as in v1.
-        self._data: tuple[torch.Tensor, torch.Tensor] | None = (inputs, targets)
-
-    def _validate_model(self) -> None:
-        model = self.model
-        if list(model.buffers()) or model_state_alias_groups(model):
-            raise ValueError("private model buffers and aliases are unsupported")
-        approved = {
-            nn.Sequential,
-            nn.Linear,
-            nn.Conv1d,
-            nn.Conv2d,
-            nn.Conv3d,
-            nn.GroupNorm,
-            nn.ReLU,
-            nn.Tanh,
-            nn.Sigmoid,
-            nn.Flatten,
-            nn.Identity,
-            nn.MaxPool2d,
-            nn.AvgPool2d,
-            nn.AdaptiveAvgPool2d,
-        }
-        for module in model.modules():
-            if (
-                type(module) not in approved
-                or "forward" in module.__dict__
-                or getattr(module, "_forward_hooks")
-                or getattr(module, "_forward_pre_hooks")
-            ):
-                raise ValueError("unsupported private model leaf module")
-        named = tuple(model.named_parameters())
-        spec = self.specification.optimizer
-        if (
-            (set(name for name, _ in named) != set(spec.parameter_names))
-            if isinstance(spec, FactoryOptimizerSpec)
-            else tuple(name for name, _ in named) != spec.parameter_names
-        ):
-            raise ValueError("private parameter names or order mismatch")
-        if any(
-            not p.requires_grad or p.dtype != torch.float32 or p.is_sparse
-            for _, p in named
-        ):
-            raise ValueError(
-                "private profile requires all parameters trainable dense FP32"
-            )
-        opacus_module("opacus.validators").ModuleValidator.validate(model, strict=True)
-
-    def make_loader(self, generator: torch.Generator | None) -> DataLoader[Any]:
-        assert self._data is not None
-        inputs, targets = self._data
-        loader = DataLoader(
-            TensorDataset(inputs.detach().clone(), targets.detach().clone()),
-            batch_size=self.specification.batch_size,
-            num_workers=0,
-            generator=generator,
-        )
-        self._data = None  # Do not retain the caller's tensors alongside the copy.
-        return loader
-
-    def configure_private_model(self, private_model: Any) -> None:
-        # Opacus already forbids accumulation when it converts this loader.
-        pass
-
-    def check(self) -> None:
-        # The v1 profile relies on the trainer's common execution checks.
-        pass
-
-    def begin_step(self) -> PrivateWorkloadStep:
-        return _TensorBatchGradients(self.model, self.specification)
-
-    def export_tensors(self, weights: WeightSnapshot) -> dict[str, np.ndarray]:
-        return weights()
-
-    def validate_checkpoint(self, state: dict[str, np.ndarray]) -> None:
-        # The v1 model profile has no frozen parameters or public buffers.
-        pass
-
-
-class _TensorBatchGradients:
-    """Prepare batch gradients; optimizer invocation stays in the trainer."""
-
-    def __init__(self, model: nn.Module, specification: PrivateTrainingSpec) -> None:
-        self._model, self._specification = model, specification
-
-    def prepare_gradients(self, private_model: nn.Module, batch: Any) -> None:
-        device = next(self._model.parameters()).device
-        inputs, targets = batch
-        prediction = private_model(inputs.to(device))
-        targets = targets.to(device)
-        if self._specification.loss == "mse":
-            loss = (
-                (prediction - targets).square().reshape(len(inputs), -1).mean()
-                if len(inputs)
-                else prediction.sum()
-            )
-        else:
-            loss = (
-                nn.functional.cross_entropy(prediction, targets, reduction="mean")
-                if len(inputs)
-                else prediction.sum()
-            )
-        cast(Any, loss).backward()
-
-    def after_optimizer_step(self) -> None:
-        pass
+    """Bind one application task to the group's private training specification."""
+    if specification.sampling != "poisson":
+        raise ValueError("private tasks require Poisson sampling")
+    task.check_definition(specification)
+    if (
+        task.public_evaluate is not None
+        and specification.evaluation_provenance != "public_fixed_holdout"
+    ):
+        raise ValueError("evaluation requires public fixed holdout provenance")
+    return _ApplicationWorkload(task, specification)
 
 
 class _ApplicationWorkload:
@@ -254,6 +82,8 @@ class _ApplicationWorkload:
 
     def __init__(self, task: TrainingTask, specification: TaskTrainingSpec) -> None:
         self._task, self._specification = task, specification
+        self._native_private_model: Any = None
+        self._native_sampler_token: Any = None
         self.evaluate = task.public_evaluate
         self.optimizer_registration = task.optimizer_registration
         self.exchange_names: tuple[str, ...] | None = (
@@ -265,6 +95,7 @@ class _ApplicationWorkload:
             task.loss_per_record,
             task.batch_adapter,
             task.batch_adapter.example,
+            gradient_backend=specification.gradient_backend,
         )
         for name in (
             "trainable_parameter_names",
@@ -287,10 +118,21 @@ class _ApplicationWorkload:
 
     def configure_private_model(self, private_model: Any) -> None:
         private_model.forbid_grad_accumulation()
+        if self._specification.gradient_backend == "opacus_native_b1":
+            from dromeus.training.native_gradients import install_native_b1_samplers
+
+            self._native_sampler_token = install_native_b1_samplers(private_model)
+            self._native_private_model = private_model
 
     def check(self) -> None:
         self._guard.check()
         self._task.check_definition(self._specification)
+        if self._native_private_model is not None:
+            from dromeus.training.native_gradients import check_native_b1_samplers
+
+            check_native_b1_samplers(
+                self._native_private_model, self._native_sampler_token
+            )
 
     def begin_step(self) -> PrivateWorkloadStep:
         return _ApplicationStep(self.model, self._task, self._guard)
