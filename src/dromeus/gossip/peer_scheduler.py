@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import cast
 
 from dromeus.manifests.models import (
     MAX_PARTICIPANT_COUNT,
@@ -22,7 +22,6 @@ class Pairing:
 
     round_id: RoundId
     pairs: tuple[tuple[PublicKey, PublicKey], ...]
-    phase: Literal["training", "final-consensus"] = "training"
 
     @property
     def peers(self) -> tuple[PublicKey, ...]:
@@ -45,19 +44,9 @@ class PeerScheduler:
         participants: Sequence[Participant | PublicKey],
         *,
         seed: int,
-        training_round_count: int | None = None,
-        final_consensus_rounds: Literal[0, 2] = 0,
     ) -> None:
         self._members = self._normalise_members(participants)
         self._seed = seed
-        if final_consensus_rounds and training_round_count is None:
-            raise ValueError(
-                "training_round_count is required for final consensus"
-            )
-        if training_round_count is not None and training_round_count <= 0:
-            raise ValueError("training_round_count must be positive")
-        self._training_round_count = training_round_count
-        self._final_consensus_rounds = final_consensus_rounds
         self._cache: dict[RoundId, Pairing] = {}
 
     def schedule(self, round_id: RoundId) -> Pairing:
@@ -67,16 +56,6 @@ class PeerScheduler:
         cached = self._cache.get(round_id)
         if cached is not None:
             return cached
-        if (
-            self._training_round_count is not None
-            and round_id >= self._training_round_count
-        ):
-            stage = round_id - self._training_round_count
-            if stage >= self._final_consensus_rounds:
-                raise ValueError("round exceeds configured final consensus")
-            pairing = self._final_consensus_schedule(round_id, stage=stage)
-            self._cache[round_id] = pairing
-            return pairing
         ordered = sorted(
             self._members,
             key=lambda key: (
@@ -94,45 +73,13 @@ class PeerScheduler:
         self._cache[round_id] = pairing
         return pairing
 
-    def _final_consensus_schedule(self, round_id: RoundId, *, stage: int) -> Pairing:
-        """Return one butterfly stage that exactly averages four participants."""
-        if len(self._members) != 4:
-            raise ValueError("final consensus requires exactly four participants")
-        if stage == 0:
-            index_pairs = ((0, 1), (2, 3))
-        elif stage == 1:
-            index_pairs = ((0, 2), (1, 3))
-        else:
-            raise ValueError("final consensus stage must be 0 or 1")
-        pairs = tuple(
-            tuple(sorted((self._members[left], self._members[right])))
-            for left, right in index_pairs
-        )
-        return Pairing(
-            round_id=round_id,
-            pairs=cast(tuple[tuple[PublicKey, PublicKey], ...], pairs),
-            phase="final-consensus",
-        )
-
-    def history(self) -> tuple[Pairing, ...]:
-        """Return schedules requested so far in round order."""
-        return tuple(self._cache[round_id] for round_id in sorted(self._cache))
-
-    def cumulative_edges(self) -> dict[tuple[PublicKey, PublicKey], int]:
-        """Count how often each undirected edge appeared in requested rounds."""
-        edges: dict[tuple[PublicKey, PublicKey], int] = {}
-        for pairing in self.history():
-            for edge in pairing.pairs:
-                edges[edge] = edges.get(edge, 0) + 1
-        return edges
-
     @staticmethod
     def _normalise_members(
         participants: Sequence[Participant | PublicKey],
     ) -> tuple[PublicKey, ...]:
         if not participants:
             raise ParticipantCountError(
-                "participant count must be between 4 and 16 inclusive"
+                "scheduler participant count must be between 2 and 16 inclusive"
             )
         first = participants[0]
         if isinstance(first, Participant):

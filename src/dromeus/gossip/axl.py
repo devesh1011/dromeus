@@ -248,7 +248,7 @@ class AXLPairTransport:
                 destination=peer,
                 artifact_name="update-bundle-metadata",
                 artifact_path=metadata_carrier.path,
-                codec_id="safetensors-v1",
+                codec_id="safetensors",
                 tensor_schema=metadata_carrier.tensor_schema,
                 round_id=round_id,
             )

@@ -208,7 +208,6 @@ class GossipEngine:
                 local_bundle_digest=materialized.digest,
                 peer_bundle_digest=peer_bundle.digest,
                 state_checksum=state_checksum,
-                phase=pairing.phase,
                 local_loss=observations.local_loss,
                 error_feedback_residual_l2_norm=(
                     observations.error_feedback_residual_l2_norm
@@ -271,15 +270,9 @@ class GossipEngine:
                     error_feedback_residual_to_signal_ratio=(
                         commit.error_feedback_residual_to_signal_ratio
                     ),
-                    evaluation_loss=(
-                        evaluation.loss if evaluation is not None else None
-                    ),
                     evaluation_metrics=evaluation.metrics
                     if evaluation is not None
                     else None,
-                    evaluation_accuracy=(
-                        evaluation.accuracy if evaluation is not None else None
-                    ),
                     transfer_id=commit.transfer_id,
                     encoded_artifact_bytes=commit.encoded_artifact_bytes,
                 )
@@ -322,8 +315,6 @@ class GossipEngine:
             return None
         metrics = EvaluationMetrics(
             round_id=round_id,
-            loss=evaluation.loss,
-            accuracy=evaluation.accuracy,
             metrics=evaluation.metrics,
         )
         if self._evaluation_callback is not None:

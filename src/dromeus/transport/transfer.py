@@ -272,7 +272,6 @@ class TransferManager:
         self._event_sink = event_sink
         self._incoming: dict[TransferId, _IncomingTransfer] = {}
         self._completed: dict[TransferId, ArtifactReceipt] = {}
-        self._completed_futures: dict[TransferId, asyncio.Future[ArtifactReceipt]] = {}
         self._completed_queue: asyncio.Queue[ArtifactReceipt] = asyncio.Queue(
             maxsize=64
         )
@@ -313,13 +312,9 @@ class TransferManager:
             if not waiter.done():
                 waiter.cancel()
         self._ack_waiters.clear()
-        for future in self._completed_futures.values():
-            if not future.done():
-                future.cancel()
         for transfer_id in tuple(self._completed):
             await asyncio.to_thread(self._artifact_store.abort, transfer_id)
         self._completed.clear()
-        self._completed_futures.clear()
         while True:
             try:
                 self._completed_queue.get_nowait()
@@ -419,19 +414,6 @@ class TransferManager:
                 retry_count=retry_count,
             )
             raise
-
-    async def wait_for_artifact(
-        self, transfer_id: TransferId, *, timeout_seconds: float
-    ) -> ArtifactReceipt:
-        completed = self._completed.get(transfer_id)
-        if completed is not None:
-            return completed
-        future = self._completed_futures.get(transfer_id)
-        if future is None:
-            loop = asyncio.get_running_loop()
-            future = loop.create_future()
-            self._completed_futures[transfer_id] = future
-        return await asyncio.wait_for(future, timeout=timeout_seconds)
 
     async def _send_chunk_with_ack(
         self,
@@ -534,7 +516,6 @@ class TransferManager:
         completed = self._completed.pop(receipt.transfer_id, None)
         if completed is not None:
             self._artifact_store.claim(receipt.transfer_id)
-        self._completed_futures.pop(receipt.transfer_id, None)
         retained: list[ArtifactReceipt] = []
         while True:
             try:
@@ -791,9 +772,6 @@ class TransferManager:
         self._incoming.pop(complete.transfer_id, None)
         self._incoming_reserved_bytes -= incoming.begin.total_size_bytes
         self._completed[complete.transfer_id] = receipt
-        future = self._completed_futures.get(complete.transfer_id)
-        if future is not None and not future.done():
-            future.set_result(receipt)
         await self._completed_queue.put(receipt)
 
     def _expire_incoming(self) -> None:

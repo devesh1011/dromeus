@@ -5,18 +5,18 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Protocol
 
 import numpy as np
 
 from dromeus.algorithms.base import (
-    AlgorithmEvaluation,
     AlgorithmObservations,
     AlgorithmSnapshot,
     AlgorithmUpdate,
     UpdateBundle,
 )
 from dromeus.manifests.models import PublicKey, RoundId
+from dromeus.training.base import EvaluationResult
 
 
 class PairCommitError(RuntimeError):
@@ -37,9 +37,7 @@ class EvaluationMetrics:
     """One node's deterministic evaluation result for a committed round."""
 
     round_id: RoundId
-    loss: float | None
-    accuracy: float | None
-    metrics: Mapping[str, float] | None = None
+    metrics: Mapping[str, float]
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,7 +105,7 @@ class GossipAlgorithm(Protocol):
 
     def observations(self) -> AlgorithmObservations: ...
 
-    def evaluate(self) -> AlgorithmEvaluation | None: ...
+    def evaluate(self) -> EvaluationResult | None: ...
 
 
 class PairTransport(Protocol):
@@ -147,7 +145,6 @@ class RoundCommit:
     local_bundle_digest: str
     peer_bundle_digest: str
     state_checksum: str
-    phase: Literal["training", "final-consensus"] = "training"
     local_loss: float | None = None
     error_feedback_residual_l2_norm: float | None = None
     error_feedback_signal_l2_norm: float | None = None

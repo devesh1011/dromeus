@@ -51,9 +51,6 @@ class UpdateCodec(Protocol):
     def codec_id(self) -> str: ...
 
     @property
-    def codec_version(self) -> int: ...
-
-    @property
     def lossy(self) -> bool: ...
 
     def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
@@ -74,7 +71,6 @@ class CodecDescription:
     """Validated capabilities bound to an algorithm's logical schema."""
 
     codec_id: str
-    codec_version: int
     lossy: bool
     encoded_schema: TensorSchema
 
@@ -86,22 +82,15 @@ def describe_update_codec(
     if not isinstance(codec, UpdateCodec):
         raise TypeError("codec must implement the complete UpdateCodec interface")
     codec_id = cast(object, codec.codec_id)
-    codec_version = cast(object, codec.codec_version)
     lossy = cast(object, codec.lossy)
     encoded_schema = cast(object, codec.encoded_schema_for(logical_schema))
     if not isinstance(codec_id, str) or not codec_id:
         raise TypeError("codec ID must be a nonempty string")
-    if (
-        not isinstance(codec_version, int)
-        or isinstance(codec_version, bool)
-        or codec_version <= 0
-    ):
-        raise TypeError("codec version must be a positive integer")
     if not isinstance(lossy, bool):
         raise TypeError("codec lossy marker must be boolean")
     if not isinstance(encoded_schema, TensorSchema):
         raise TypeError("codec must resolve an encoded tensor schema")
-    return CodecDescription(codec_id, codec_version, lossy, encoded_schema)
+    return CodecDescription(codec_id, lossy, encoded_schema)
 
 
 class NamedUpdateBundleCodec(Protocol):
@@ -130,17 +119,13 @@ class NamedUpdateBundleCodec(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class IdentityCodec:
-    """M1 codec: preserve named tensors and keep no codec state."""
+    """Preserve named tensors unchanged and keep no codec state."""
 
-    _codec_id: str = "safetensors-v1"
+    _codec_id: str = "safetensors"
 
     @property
     def codec_id(self) -> str:
         return self._codec_id
-
-    @property
-    def codec_version(self) -> int:
-        return 1
 
     @property
     def lossy(self) -> bool:
@@ -181,11 +166,7 @@ class DenseInt8Codec:
 
     @property
     def codec_id(self) -> str:
-        return "dense-int8-v1"
-
-    @property
-    def codec_version(self) -> int:
-        return 1
+        return "dense-int8"
 
     @property
     def encoded_schema(self) -> TensorSchema:
@@ -235,109 +216,6 @@ class DenseInt8Codec:
 
 
 @dataclass(frozen=True, slots=True)
-class TopKInt8Codec:
-    """Deterministic per-tensor top-k sparsification plus signed int8 values."""
-
-    logical_schema: TensorSchema
-    top_k_fraction: float
-    _encoded_schema: TensorSchema = field(init=False, repr=False)
-
-    def __post_init__(self) -> None:
-        _validate_lossy_logical_schema(self.logical_schema)
-        if not 0.0 < self.top_k_fraction <= 1.0 or not math.isfinite(
-            self.top_k_fraction
-        ):
-            raise ValueError("top-k fraction must be finite in (0, 1]")
-        object.__setattr__(
-            self,
-            "_encoded_schema",
-            _topk_encoded_schema(self.logical_schema, self.top_k_fraction),
-        )
-
-    @property
-    def codec_id(self) -> str:
-        return "topk-int8-v1"
-
-    @property
-    def codec_version(self) -> int:
-        return 1
-
-    @property
-    def encoded_schema(self) -> TensorSchema:
-        return self._encoded_schema
-
-    @property
-    def lossy(self) -> bool:
-        return True
-
-    def encoded_schema_for(self, logical_schema: TensorSchema) -> TensorSchema:
-        _validate_codec_logical_schema(logical_schema, self.logical_schema)
-        return self.encoded_schema
-
-    def encode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
-        validate_tensor_map(tensors, self.logical_schema)
-        encoded: TensorMap = {}
-        encoded_names = {tensor.name for tensor in self.encoded_schema.tensors}
-        for spec in self.logical_schema.tensors:
-            if f"{spec.name}.__q" in encoded_names:
-                quantized, scale = _quantize_symmetric(tensors[spec.name])
-                encoded[f"{spec.name}.__q"] = quantized
-            else:
-                flattened = np.asarray(tensors[spec.name], dtype=np.float32).reshape(-1)
-                indices = _deterministic_topk_indices(
-                    flattened,
-                    _top_k_count(flattened.size, self.top_k_fraction),
-                )
-                quantized, scale = _quantize_symmetric(flattened[indices])
-                encoded[f"{spec.name}.__indices"] = indices.astype(
-                    "<i4", copy=False
-                )
-                encoded[f"{spec.name}.__values"] = quantized
-            encoded[f"{spec.name}.__scale"] = np.array(
-                [scale], dtype="<f4"
-            )
-            encoded[f"{spec.name}.__zero_point"] = np.array(
-                [0], dtype="<i4"
-            )
-        validate_tensor_map(encoded, self.encoded_schema)
-        return encoded
-
-    def decode(self, tensors: Mapping[str, np.ndarray]) -> TensorMap:
-        validate_tensor_map(tensors, self.encoded_schema)
-        decoded: TensorMap = {}
-        encoded_names = set(tensors)
-        for spec in self.logical_schema.tensors:
-            scale = _validated_quantization_metadata(tensors, spec.name)
-            if f"{spec.name}.__q" in encoded_names:
-                quantized = np.asarray(tensors[f"{spec.name}.__q"], dtype=np.int8)
-                value = quantized.astype(np.float32) * np.float32(scale)
-            else:
-                indices = np.asarray(
-                    tensors[f"{spec.name}.__indices"], dtype=np.int32
-                )
-                if indices.size > 1 and np.any(indices[1:] <= indices[:-1]):
-                    raise ValueError("top-k indices must be strictly increasing")
-                element_count = math.prod(spec.shape)
-                if np.any(indices < 0) or np.any(indices >= element_count):
-                    raise ValueError("top-k index is outside logical tensor range")
-                quantized = np.asarray(
-                    tensors[f"{spec.name}.__values"], dtype=np.int8
-                )
-                value = np.zeros(element_count, dtype=np.float32)
-                value[indices] = quantized.astype(np.float32) * np.float32(scale)
-            decoded[spec.name] = value.reshape(spec.shape)
-        validate_tensor_map(decoded, self.logical_schema)
-        return decoded
-
-    def state_dict(self) -> dict[str, object]:
-        return {}
-
-    def load_state_dict(self, state: StateMap) -> None:
-        if state:
-            raise ValueError("top-k int8 codec has no state")
-
-
-@dataclass(frozen=True, slots=True)
 class BitmapTopKInt8Codec:
     """Deterministic top-k int8 values with one-bit membership indices."""
 
@@ -362,11 +240,7 @@ class BitmapTopKInt8Codec:
 
     @property
     def codec_id(self) -> str:
-        return "topk-bitmap-int8-v2"
-
-    @property
-    def codec_version(self) -> int:
-        return 2
+        return "topk-bitmap-int8"
 
     @property
     def encoded_schema(self) -> TensorSchema:
@@ -453,41 +327,6 @@ def _dense_encoded_schema(schema: TensorSchema) -> TensorSchema:
         tensors.extend(
             (
                 TensorSpec(name=f"{spec.name}.__q", dtype="int8", shape=spec.shape),
-                TensorSpec(
-                    name=f"{spec.name}.__scale", dtype="float32", shape=(1,)
-                ),
-                TensorSpec(
-                    name=f"{spec.name}.__zero_point", dtype="int32", shape=(1,)
-                ),
-            )
-        )
-    return TensorSchema(tensors=tuple(sorted(tensors, key=lambda item: item.name)))
-
-
-def _topk_encoded_schema(
-    schema: TensorSchema, top_k_fraction: float
-) -> TensorSchema:
-    tensors: list[TensorSpec] = []
-    for spec in schema.tensors:
-        element_count = math.prod(spec.shape)
-        k = _top_k_count(element_count, top_k_fraction)
-        if 5 * k <= element_count:
-            tensors.extend(
-                (
-                    TensorSpec(
-                        name=f"{spec.name}.__indices", dtype="int32", shape=(k,)
-                    ),
-                    TensorSpec(
-                        name=f"{spec.name}.__values", dtype="int8", shape=(k,)
-                    ),
-                )
-            )
-        else:
-            tensors.append(
-                TensorSpec(name=f"{spec.name}.__q", dtype="int8", shape=spec.shape)
-            )
-        tensors.extend(
-            (
                 TensorSpec(
                     name=f"{spec.name}.__scale", dtype="float32", shape=(1,)
                 ),
@@ -629,7 +468,6 @@ class NamedSafetensorsUpdateBundleCodec:
                         size_bytes=path.stat().st_size,
                         sha256=file_sha256(path),
                         codec_id=binding.codec_id,
-                        codec_version=binding.codec_version,
                         logical_schema_hash=canonical_hash(
                             binding.logical_schema
                         ),
@@ -639,7 +477,7 @@ class NamedSafetensorsUpdateBundleCodec:
                 materialized.append(
                     MaterializedArtifact(
                         path=path,
-                        transfer_codec_id="safetensors-v1",
+                        transfer_codec_id="safetensors",
                         transfer_schema=schema,
                     )
                 )
@@ -696,7 +534,6 @@ class NamedSafetensorsUpdateBundleCodec:
             binding = bindings[name]
             if (
                 item.codec_id != binding.codec_id
-                or item.codec_version != binding.codec_version
                 or item.logical_schema_hash
                 != canonical_hash(binding.logical_schema)
                 or item.encoded_schema_hash != canonical_hash(schema)
@@ -748,8 +585,7 @@ def _resolve_codec_binding(
     if binding is not None:
         return binding
     return UpdateCodecBinding(
-        codec_id="safetensors-v1",
-        codec_version=1,
+        codec_id="safetensors",
         logical_schema=encoded_schema,
     )
 
@@ -780,7 +616,6 @@ __all__ = [
     "NamedUpdateBundleCodec",
     "StateMap",
     "TensorMap",
-    "TopKInt8Codec",
     "UpdateCodecBinding",
     "UpdateCodec",
     "describe_update_codec",

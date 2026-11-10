@@ -19,11 +19,10 @@ from dromeus.manifests.models import (
     RoundId,
     TensorSchema,
 )
-from dromeus.training.base import EvaluationResult
 
 
 class SerializableState(Protocol):
-    """State seam shared by M1 and future algorithm/codec implementations."""
+    """State seam shared by algorithm and codec implementations."""
 
     def state_dict(self) -> dict[str, object]: ...
 
@@ -53,35 +52,6 @@ class AlgorithmObservations:
         for label, value in values:
             if value is not None and (not math.isfinite(value) or value < 0):
                 raise ValueError(f"{label} must be finite and non-negative")
-
-
-@dataclass(frozen=True, slots=True)
-class AlgorithmEvaluation:
-    """Immutable algorithm evaluation result."""
-
-    loss: float | None = None
-    accuracy: float | None = None
-    metrics: Mapping[str, float] | None = None
-
-    def __post_init__(self) -> None:
-        if self.loss is not None and (not math.isfinite(self.loss) or self.loss < 0):
-            raise ValueError("evaluation loss must be finite and non-negative")
-        if self.accuracy is not None and (
-            not math.isfinite(self.accuracy) or not 0 <= self.accuracy <= 1
-        ):
-            raise ValueError("evaluation accuracy must be finite in [0, 1]")
-        if self.metrics is not None:
-            result = EvaluationResult(self.metrics)
-            object.__setattr__(self, "metrics", result.metrics)
-
-    @classmethod
-    def from_result(
-        cls, result: EvaluationResult | tuple[float, float]
-    ) -> AlgorithmEvaluation:
-        if isinstance(result, EvaluationResult):
-            return cls(metrics=result.metrics)
-        loss, accuracy = result
-        return cls(loss=float(loss), accuracy=float(accuracy))
 
 
 def checksum_tensors(tensors: Mapping[str, np.ndarray]) -> str:
@@ -168,7 +138,7 @@ def checksum_artifacts(
 
 @dataclass(frozen=True, slots=True)
 class MaterializedArtifact:
-    """Algorithm-produced bytes plus unchanged v1 transfer metadata."""
+    """Algorithm-produced bytes plus their transfer metadata."""
 
     path: Path
     transfer_codec_id: Identifier

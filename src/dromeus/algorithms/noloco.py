@@ -13,7 +13,6 @@ from typing import Any, cast
 import numpy as np
 
 from dromeus.algorithms.base import (
-    AlgorithmEvaluation,
     AlgorithmObservations,
     AlgorithmSnapshot,
     AlgorithmUpdate,
@@ -36,10 +35,10 @@ from dromeus.manifests.models import (
     TensorSchema,
     UpdateCodecBinding,
 )
-from dromeus.training.base import CheckpointTrainer, WeightTrainer
+from dromeus.training.base import CheckpointTrainer, EvaluationResult, WeightTrainer
 
 _ARTIFACT_NAMES = ("outer_gradient", "slow_weights")
-_STATE_PREFIX = "noloco.v1."
+_STATE_PREFIX = "noloco."
 _PHASES = {
     "created": 0,
     "pre-local": 1,
@@ -50,7 +49,7 @@ _PHASES = {
 
 
 def _identity_codecs() -> dict[str, UpdateCodec]:
-    return {name: IdentityCodec("identity-v1") for name in _ARTIFACT_NAMES}
+    return {name: IdentityCodec("identity") for name in _ARTIFACT_NAMES}
 
 
 @dataclass
@@ -275,11 +274,8 @@ class NoLoCoAlgorithm:
             weights=self._slow_weights,
         )
 
-    def evaluate(self) -> AlgorithmEvaluation | None:
-        result = self.trainer.evaluate()
-        if result is None:
-            return None
-        return AlgorithmEvaluation.from_result(result)
+    def evaluate(self) -> EvaluationResult | None:
+        return self.trainer.evaluate()
 
     def observations(self) -> AlgorithmObservations:
         observations = AlgorithmObservations(local_loss=self.trainer.local_loss)
@@ -440,7 +436,6 @@ class NoLoCoAlgorithm:
         return {
             name: UpdateCodecBinding(
                 codec_id=description.codec_id,
-                codec_version=description.codec_version,
                 logical_schema=self.tensor_schema,
             )
             for name, description in self._codec_descriptions.items()
