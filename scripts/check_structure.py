@@ -10,9 +10,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src" / "dromeus"
 
 ALLOWED: dict[str, frozenset[str]] = {
-    "adapters": frozenset(
-        {"adapters", "manifests", "membership", "persistence", "runtime", "training"}
-    ),
     "application": frozenset(
         {"application", "manifests", "membership", "persistence", "runtime", "training"}
     ),
@@ -34,7 +31,15 @@ ALLOWED: dict[str, frozenset[str]] = {
         {"manifests", "membership", "protocol", "telemetry", "transport"}
     ),
     "node": frozenset(
-        {"manifests", "membership", "protocol", "runtime", "telemetry", "transport"}
+        {
+            "manifests",
+            "membership",
+            "persistence",
+            "protocol",
+            "runtime",
+            "telemetry",
+            "transport",
+        }
     ),
     "persistence": frozenset({"manifests", "persistence"}),
     "protocol": frozenset({"protocol"}),

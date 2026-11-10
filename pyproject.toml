@@ -62,16 +62,9 @@ only-include = ["src", "pyproject.toml", "README.md", "LICENSE"]
 [tool.pyright]
 extraPaths = [".", "src", "tests"]
 include = ["src", "tests", "benchmarks"]
-# Captured run source is immutable evidence, not maintained benchmark code.
-# Maintained benchmark and report modules remain under strict checks.
-exclude = [
-  "benchmarks/results/m3",
-  # W0's standalone Opacus experiment runs in an isolated optional environment.
-  "benchmarks/m3/compatibility_spike.py",
-  "benchmarks/m3/cuda_spike.py",
-  "benchmarks/m3/secure_rng_spike.py",
-  "benchmarks/m3/optimizer_profile_spike.py",
-]
+# Retained results are frozen evidence for their tagged release, not code
+# maintained against the current library.
+exclude = ["benchmarks/results"]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
@@ -79,6 +72,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
+# Lint only the installed library; benchmarks, tests and frozen results are excluded.
+include = ["src/dromeus/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
