@@ -6,6 +6,7 @@ from typing import cast
 
 import numpy as np
 import pytest
+from support.run_store import persist_commit
 from support.sample_manifest import manifest_data
 
 from dromeus.manifests.models import SealedManifest
@@ -14,13 +15,14 @@ from dromeus.persistence.archive import (
     RunArchive,
     RunArchiveError,
 )
-from dromeus.persistence.run_store import RunStore, RunStoreError
+from dromeus.persistence.run_store import RunStore
 
 
 def _write_archive(root: Path, *, complete: bool = True) -> RunStore:
     store = RunStore(root)
     store.initialize(SealedManifest.model_validate(manifest_data()))
-    store.persist_commit(
+    persist_commit(
+        store,
         committed_round=0,
         algorithm_state={"weight": np.array([2.0], dtype=np.float32)},
         state_checksum="a" * 64,
@@ -51,7 +53,6 @@ def test_open_returns_verified_immutable_archive(tmp_path: Path) -> None:
     archive = RunArchive.open(root).require_complete(1)
 
     assert archive.archive_version == ARCHIVE_VERSION
-    assert archive.state.integrity_recorded
     assert archive.algorithm_state is not None
     assert np.array_equal(
         archive.algorithm_state.load_tensors()["weight"],
@@ -79,6 +80,8 @@ def test_open_allows_incomplete_archive_but_completion_check_rejects_it(
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [
+        ("archive_version", 0, "unsupported archive version"),
+        ("archive_version", 1, "unsupported archive version"),
         ("archive_version", 3, "unsupported archive version"),
         ("unexpected", True, "fields are invalid"),
     ],
@@ -142,49 +145,6 @@ def test_open_rejects_checkpoint_symlinks(tmp_path: Path) -> None:
 
     with pytest.raises(RunArchiveError, match="symlink"):
         RunArchive.open(root)
-
-
-def test_legacy_v0_is_read_only_and_has_no_integrity_claim(tmp_path: Path) -> None:
-    root = tmp_path / "run"
-    store = _write_archive(root)
-    state = _read_state(root)
-    del state["archive_version"]
-    del state["prepared_commit"]
-    checkpoint = cast(dict[str, str], state["algorithm_state"])
-    state["algorithm_state"] = checkpoint["path"]
-    state["pre_mix_checkpoints"] = {"0": checkpoint["path"]}
-    state["post_mix_checkpoints"] = {"0": checkpoint["path"]}
-    _write_state(root, state)
-
-    archive = RunArchive.open(root)
-
-    assert archive.archive_version == 0
-    assert not archive.state.integrity_recorded
-    assert archive.algorithm_state is not None
-    assert "weight" in archive.algorithm_state.load_tensors()
-    with pytest.raises(RunArchiveError, match="legacy archive"):
-        archive.verify_checkpoint_integrity()
-    with pytest.raises(RunStoreError, match="read-only"):
-        store.record_terminal("failed")
-
-
-def test_legacy_v1_is_readable_verified_and_read_only(tmp_path: Path) -> None:
-    root = tmp_path / "run"
-    store = _write_archive(root)
-    state = _read_state(root)
-    checkpoint = cast(dict[str, str], state["algorithm_state"])
-    state["archive_version"] = 1
-    state["pre_mix_checkpoints"] = {"0": checkpoint}
-    state["post_mix_checkpoints"] = {"0": checkpoint}
-    _write_state(root, state)
-
-    archive = RunArchive.open(root)
-
-    assert archive.archive_version == 1
-    assert archive.state.integrity_recorded
-    archive.verify_checkpoint_integrity()
-    with pytest.raises(RunStoreError, match="read-only"):
-        store.record_terminal("failed")
 
 
 def test_open_rejects_manifest_hash_mismatch(tmp_path: Path) -> None:

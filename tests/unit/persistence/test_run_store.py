@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from support.run_store import persist_commit
 from support.sample_manifest import manifest_data
 
 from dromeus.manifests.models import SealedManifest
@@ -18,7 +19,8 @@ def test_run_store_persists_round_artifacts_and_terminal_result(tmp_path: Path) 
     store = RunStore(tmp_path / "run")
 
     manifest_hash = store.initialize(manifest)
-    state = store.persist_commit(
+    state = persist_commit(
+        store,
         committed_round=0,
         algorithm_state={"layer.weight": np.array([[2.0]], dtype=np.float32)},
         state_checksum="a" * 64,
@@ -117,7 +119,8 @@ def test_run_store_retains_only_latest_checkpoint_after_hundreds_of_rounds(
     store.initialize(SealedManifest.model_validate(manifest_data()))
 
     for round_id in range(300):
-        store.persist_commit(
+        persist_commit(
+            store,
             committed_round=round_id,
             algorithm_state={
                 "layer.weight": np.array([round_id], dtype=np.float32)
@@ -160,7 +163,8 @@ def test_crash_during_replacement_preserves_valid_checkpoint(
     root = tmp_path / "run"
     store = RunStore(root)
     store.initialize(SealedManifest.model_validate(manifest_data()))
-    store.persist_commit(
+    persist_commit(
+        store,
         committed_round=0,
         algorithm_state={"layer.weight": np.array([1], dtype=np.float32)},
         state_checksum="a" * 64,
@@ -201,7 +205,8 @@ def test_terminal_failure_discards_prepared_checkpoint(tmp_path: Path) -> None:
     root = tmp_path / "run"
     store = RunStore(root)
     store.initialize(SealedManifest.model_validate(manifest_data()))
-    store.persist_commit(
+    persist_commit(
+        store,
         committed_round=0,
         algorithm_state={"layer.weight": np.array([1], dtype=np.float32)},
         state_checksum="a" * 64,
