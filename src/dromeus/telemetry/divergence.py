@@ -10,7 +10,7 @@ from statistics import median
 from threading import RLock
 
 from dromeus.manifests.models import DivergencePolicy
-from dromeus.telemetry.consensus import ConsensusDistance, ConsensusObservation
+from dromeus.telemetry.consensus import ConsensusObservation
 
 
 class DetectorState(StrEnum):
@@ -66,8 +66,8 @@ class DivergenceDetector:
         self.policy = policy
         self._participants = participant_count
         self._lock = RLock()
-        self._pending: dict[int, ConsensusDistance] = {}
-        self._window: deque[ConsensusDistance] = deque(maxlen=policy.window_rounds)
+        self._pending: dict[int, ConsensusObservation] = {}
+        self._window: deque[ConsensusObservation] = deque(maxlen=policy.window_rounds)
         self._next = 0
         self._watermark = -1
         self._last_valid = -1
@@ -95,7 +95,9 @@ class DivergenceDetector:
     def invalid_observations(self) -> int:
         return self._invalid
 
-    def observe(self, observation: ConsensusDistance) -> tuple[DetectorTransition, ...]:
+    def observe(
+        self, observation: ConsensusObservation
+    ) -> tuple[DetectorTransition, ...]:
         with self._lock:
             if (
                 observation.sketch_count != self._participants
@@ -186,7 +188,7 @@ class DivergenceDetector:
         )
         return tuple(transitions)
 
-    def _consume(self, point: ConsensusDistance) -> tuple[DetectorTransition, ...]:
+    def _consume(self, point: ConsensusObservation) -> tuple[DetectorTransition, ...]:
         p = self.policy
         self._last_valid = point.round_id
         candidate = replace(
@@ -196,23 +198,14 @@ class DivergenceDetector:
             age_rounds=max(0, self._watermark - point.round_id),
             observed_participants=point.sketch_count,
             normalized_rms=point.normalized_rms,
-            absolute_rms_spread=point.absolute_rms_spread
-            if isinstance(point, ConsensusObservation)
-            else None,
-            mean_sketch_norm=point.mean_sketch_norm
-            if isinstance(point, ConsensusObservation)
-            else None,
-            scale_warning=point.denominator_degenerate
-            if isinstance(point, ConsensusObservation)
-            else False,
+            absolute_rms_spread=point.absolute_rms_spread,
+            mean_sketch_norm=point.mean_sketch_norm,
+            scale_warning=point.denominator_degenerate,
         )
         if point.round_id < p.warmup_rounds:
             return self._emit(replace(candidate, reason="warmup"))
         self._window.append(point)
-        absolute = any(
-            isinstance(x, ConsensusObservation) and x.denominator_degenerate
-            for x in self._window
-        )
+        absolute = any(x.denominator_degenerate for x in self._window)
         channel = "absolute" if absolute else "normalized"
         if channel != self._snapshot.measurement_channel:
             self._growth = self._severe = self._recovery = 0
@@ -229,13 +222,7 @@ class DivergenceDetector:
             later_median=None,
             log_slope=None,
         )
-        if (
-            floor is None
-            or severe is None
-            or recovery is None
-            or absolute
-            and any(not isinstance(x, ConsensusObservation) for x in self._window)
-        ):
+        if floor is None or severe is None or recovery is None:
             self._growth = self._severe = self._recovery = 0
             return self._emit(
                 replace(
@@ -245,9 +232,7 @@ class DivergenceDetector:
                 )
             )
         values = [
-            x.absolute_rms_spread
-            if absolute and isinstance(x, ConsensusObservation)
-            else x.normalized_rms
+            x.absolute_rms_spread if absolute else x.normalized_rms
             for x in self._window
         ]
         self._severe = self._severe + 1 if values[-1] > severe else 0

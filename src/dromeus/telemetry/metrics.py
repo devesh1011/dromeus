@@ -14,7 +14,6 @@ from dromeus.telemetry.evidence import (
     EvidenceRecord,
     RoundMetricsEvidence,
     RunFailedEvidence,
-    TaskRoundMetricsEvidence,
     append_evidence,
 )
 
@@ -35,8 +34,6 @@ class RoundTiming:
     error_feedback_residual_l2_norm: float | None = None
     error_feedback_signal_l2_norm: float | None = None
     error_feedback_residual_to_signal_ratio: float | None = None
-    evaluation_loss: float | None = None
-    evaluation_accuracy: float | None = None
     evaluation_metrics: Mapping[str, float] | None = None
     transfer_id: str | None = None
     encoded_artifact_bytes: int | None = None
@@ -73,15 +70,6 @@ class RoundTiming:
             raise ValueError(
                 "error-feedback observations must be finite and non-negative"
             )
-        if self.evaluation_loss is not None and (
-            not math.isfinite(self.evaluation_loss) or self.evaluation_loss < 0
-        ):
-            raise ValueError("evaluation_loss must be finite and non-negative")
-        if self.evaluation_accuracy is not None and (
-            not math.isfinite(self.evaluation_accuracy)
-            or not 0 <= self.evaluation_accuracy <= 1
-        ):
-            raise ValueError("evaluation_accuracy must be finite in [0, 1]")
         if self.evaluation_metrics is not None:
             if any(
                 not name.strip() or not math.isfinite(value)
@@ -166,15 +154,8 @@ class JsonlMetricsPublisher(MetricsPublisher):
             node_id=self._node_id,
             message_id=f"metric-{self._node_id[:8]}-{timing.round_id}",
         )
-        record: EvidenceRecord
-        if timing.evaluation_metrics is not None or (
-            timing.local_loss is not None and timing.local_loss < 0
-        ):
-            payload["evaluation_metrics"] = dict(timing.evaluation_metrics or {})
-            record = TaskRoundMetricsEvidence.model_validate(payload)
-        else:
-            record = RoundMetricsEvidence.model_validate(payload)
-        return self._enqueue(record)
+        payload["evaluation_metrics"] = dict(timing.evaluation_metrics or {})
+        return self._enqueue(RoundMetricsEvidence.model_validate(payload))
 
     def submit_failure(self, *, round_id: int, error_type: str, reason: str) -> bool:
         return self._enqueue(

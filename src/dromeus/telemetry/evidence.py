@@ -31,7 +31,7 @@ from dromeus.manifests.models import (
 from dromeus.telemetry.consensus import ConsensusObservation
 from dromeus.telemetry.events import EventSink
 
-EVIDENCE_VERSION = 1
+EVIDENCE_VERSION = 3
 
 
 class EvidenceError(ValueError):
@@ -46,6 +46,7 @@ class _EvidenceBase(BaseModel):
         allow_inf_nan=False,
     )
 
+    evidence_version: Literal[3] = EVIDENCE_VERSION
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     run_id: RunId
     manifest_hash: Sha256
@@ -59,53 +60,19 @@ class _EvidenceBase(BaseModel):
         return value
 
 
-class _EvidenceModel(_EvidenceBase):
-    evidence_version: Literal[1] = EVIDENCE_VERSION
+class RoundMetricsEvidence(_EvidenceBase):
+    """One committed round's timing, local loss and named evaluation metrics."""
 
-
-class BenchmarkNodeReadyEvidence(_EvidenceModel):
-    event: Literal["benchmark_node_ready"] = "benchmark_node_ready"
-    benchmark_seed: int
-    transport: Literal["axl"]
-
-
-class RoundMetricsEvidence(_EvidenceModel):
     event: Literal["round_metrics"] = "round_metrics"
     message_id: MessageId
     transfer_id: TransferId | None = None
     peer_id: PublicKey
     round_id: RoundId
-    local_loss: float | None = Field(default=None, ge=0)
-    error_feedback_residual_l2_norm: float | None = Field(default=None, ge=0)
-    error_feedback_signal_l2_norm: float | None = Field(default=None, ge=0)
-    error_feedback_residual_to_signal_ratio: float | None = Field(default=None, ge=0)
-    evaluation_loss: float | None = Field(default=None, ge=0)
-    evaluation_accuracy: float | None = Field(default=None, ge=0, le=1)
-    local_compute_seconds: float = Field(ge=0)
-    peer_wait_seconds: float = Field(ge=0)
-    transfer_seconds: float = Field(ge=0)
-    mixing_seconds: float = Field(ge=0)
-    evaluation_seconds: float = Field(ge=0)
-    retries: int = Field(ge=0)
-    encoded_artifact_bytes: int | None = Field(default=None, gt=0)
-
-
-class TaskRoundMetricsEvidence(_EvidenceBase):
-    """Task-independent version 2 metrics; benchmark version 1 stays unchanged."""
-
-    evidence_version: Literal[2] = 2
-    evaluation_metrics: dict[str, float] = Field(default_factory=dict)
-    event: Literal["task_round_metrics"] = "task_round_metrics"
-    message_id: MessageId
-    transfer_id: TransferId | None = None
-    peer_id: PublicKey
-    round_id: RoundId
     local_loss: float | None = None
+    evaluation_metrics: dict[str, float] = Field(default_factory=dict)
     error_feedback_residual_l2_norm: float | None = Field(default=None, ge=0)
     error_feedback_signal_l2_norm: float | None = Field(default=None, ge=0)
     error_feedback_residual_to_signal_ratio: float | None = Field(default=None, ge=0)
-    evaluation_loss: float | None = Field(default=None, ge=0)
-    evaluation_accuracy: float | None = Field(default=None, ge=0, le=1)
     local_compute_seconds: float = Field(ge=0)
     peer_wait_seconds: float = Field(ge=0)
     transfer_seconds: float = Field(ge=0)
@@ -122,18 +89,9 @@ class TaskRoundMetricsEvidence(_EvidenceBase):
         return values
 
 
-class ConsensusDistanceEvidence(_EvidenceModel):
-    event: Literal["consensus_distance"] = "consensus_distance"
-    message_id: MessageId
-    round_id: RoundId
-    normalized_rms: float = Field(ge=0)
-    sketch_count: int = Field(ge=1)
-
-
 class ConsensusObservationEvidence(_EvidenceBase):
-    """Scale-aware observation; never reinterpret legacy consensus_distance."""
+    """One complete round's group spread and scale, as measured by this node."""
 
-    evidence_version: Literal[2] = 2
     event: Literal["consensus_observation"] = "consensus_observation"
     message_id: MessageId
     round_id: RoundId
@@ -159,7 +117,6 @@ class ConsensusObservationEvidence(_EvidenceBase):
 class NodeConsensusDistanceEvidence(_EvidenceBase):
     """Local node-to-mean CountSketch distance, independent of detector policy."""
 
-    evidence_version: Literal[2] = 2
     event: Literal["node_consensus_distance"] = "node_consensus_distance"
     measurement_kind: Literal["countsketch"] = "countsketch"
     message_id: MessageId
@@ -196,7 +153,6 @@ DetectorStateName = Literal[
 
 
 class DivergenceStatusEvidence(_EvidenceBase):
-    evidence_version: Literal[2] = 2
     event: Literal["divergence_status"] = "divergence_status"
     policy_hash: Sha256
     threshold_set_id: Identifier
@@ -256,7 +212,7 @@ class DivergenceStatusEvidence(_EvidenceBase):
         return self
 
 
-class ConsensusSketchSentEvidence(_EvidenceModel):
+class ConsensusSketchSentEvidence(_EvidenceBase):
     event: Literal["consensus_sketch_sent"] = "consensus_sketch_sent"
     message_id: MessageId
     round_id: RoundId
@@ -266,7 +222,7 @@ class ConsensusSketchSentEvidence(_EvidenceModel):
     retry_count: int = Field(ge=0)
 
 
-class TransferMessageSentEvidence(_EvidenceModel):
+class TransferMessageSentEvidence(_EvidenceBase):
     event: Literal["transfer_message_sent"] = "transfer_message_sent"
     message_id: MessageId
     transfer_id: TransferId | None = None
@@ -280,7 +236,7 @@ class TransferMessageSentEvidence(_EvidenceModel):
     completion_seconds: float = Field(ge=0)
 
 
-class RunFailedEvidence(_EvidenceModel):
+class RunFailedEvidence(_EvidenceBase):
     event: Literal["run_failed"] = "run_failed"
     message_id: MessageId
     round_id: RoundId
@@ -289,10 +245,7 @@ class RunFailedEvidence(_EvidenceModel):
 
 
 type EvidenceRecord = (
-    BenchmarkNodeReadyEvidence
-    | RoundMetricsEvidence
-    | TaskRoundMetricsEvidence
-    | ConsensusDistanceEvidence
+    RoundMetricsEvidence
     | ConsensusObservationEvidence
     | NodeConsensusDistanceEvidence
     | DivergenceStatusEvidence
@@ -303,10 +256,7 @@ type EvidenceRecord = (
 _EVIDENCE_ADAPTER: TypeAdapter[EvidenceRecord] = TypeAdapter(EvidenceRecord)
 _EVIDENCE_EVENTS = frozenset(
     {
-        "benchmark_node_ready",
         "round_metrics",
-        "task_round_metrics",
-        "consensus_distance",
         "consensus_observation",
         "node_consensus_distance",
         "divergence_status",
@@ -379,8 +329,7 @@ class EvidenceLog:
         if len(node_ids) > 1:
             raise EvidenceError(f"evidence node id mismatch in {path}")
         for record_type in (
-            (RoundMetricsEvidence, TaskRoundMetricsEvidence),
-            ConsensusDistanceEvidence,
+            RoundMetricsEvidence,
             ConsensusObservationEvidence,
             NodeConsensusDistanceEvidence,
             ConsensusSketchSentEvidence,
@@ -423,7 +372,7 @@ def decode_evidence(data: bytes | str) -> EvidenceRecord:
     """Strictly decode one supported evidence record."""
     value = _json_object(data)
     version = value.get("evidence_version")
-    if version not in (EVIDENCE_VERSION, 2):
+    if version != EVIDENCE_VERSION:
         raise EvidenceError(f"unsupported evidence version: {version}")
     try:
         return _EVIDENCE_ADAPTER.validate_json(
@@ -467,9 +416,9 @@ def _reject_json_constant(value: str) -> None:
 
 __all__ = [
     "EVIDENCE_VERSION",
-    "BenchmarkNodeReadyEvidence",
-    "ConsensusDistanceEvidence",
+    "ConsensusObservationEvidence",
     "ConsensusSketchSentEvidence",
+    "DivergenceStatusEvidence",
     "EvidenceError",
     "EvidenceLog",
     "EvidenceRecord",

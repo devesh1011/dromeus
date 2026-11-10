@@ -2,21 +2,18 @@
 
 from dromeus.telemetry.consensus import (
     COUNT_SKETCH_SIZE,
-    ConsensusDistance,
+    ConsensusObservation,
     ConsensusSketchBuffer,
     ConsensusSketchError,
     ConsensusSketchMessage,
     ConsensusSketchPublisher,
     LiveConsensusTelemetry,
     count_sketch,
-    exact_normalized_rms_distance,
-    normalized_rms_consensus_distance,
 )
 from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
 from dromeus.telemetry.evidence import (
     EVIDENCE_VERSION,
-    BenchmarkNodeReadyEvidence,
-    ConsensusDistanceEvidence,
+    ConsensusObservationEvidence,
     ConsensusSketchSentEvidence,
     EvidenceError,
     EvidenceLog,
@@ -37,9 +34,8 @@ from dromeus.telemetry.metrics import (
 __all__ = [
     "COUNT_SKETCH_SIZE",
     "EVIDENCE_VERSION",
-    "BenchmarkNodeReadyEvidence",
-    "ConsensusDistance",
-    "ConsensusDistanceEvidence",
+    "ConsensusObservation",
+    "ConsensusObservationEvidence",
     "ConsensusSketchSentEvidence",
     "ConsensusSketchBuffer",
     "ConsensusSketchError",
@@ -62,6 +58,4 @@ __all__ = [
     "decode_evidence",
     "emit_event",
     "encode_evidence",
-    "exact_normalized_rms_distance",
-    "normalized_rms_consensus_distance",
 ]

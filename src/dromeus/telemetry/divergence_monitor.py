@@ -15,7 +15,6 @@ from dromeus.telemetry.divergence import (
 )
 from dromeus.telemetry.events import BoundedEventSink, EventSink
 from dromeus.telemetry.evidence import (
-    ConsensusObservationEvidence,
     DivergenceStatusEvidence,
     EvidenceRecord,
     append_evidence,
@@ -71,31 +70,9 @@ class DivergenceMonitor:
         append_evidence(self._delivery, record)
 
     def observe(self, observation: ConsensusObservation) -> None:
+        """Feed one observation; the runtime records the observation itself."""
         with self._lock:
-            ignored = (
-                self.detector.ignored_observations + self.detector.invalid_observations
-            )
-            changes = self.detector.observe(observation)
-            if (
-                ignored
-                == self.detector.ignored_observations
-                + self.detector.invalid_observations
-            ):
-                self._enqueue(
-                    ConsensusObservationEvidence(
-                        run_id=self._identity["run_id"],
-                        manifest_hash=self._identity["manifest_hash"],
-                        node_id=self._identity["node_id"],
-                        message_id=f"consensus-observation-{observation.round_id}",
-                        round_id=observation.round_id,
-                        normalized_rms=observation.normalized_rms,
-                        absolute_rms_spread=observation.absolute_rms_spread,
-                        mean_sketch_norm=observation.mean_sketch_norm,
-                        denominator_degenerate=observation.denominator_degenerate,
-                        sketch_count=observation.sketch_count,
-                    )
-                )
-            self._publish(changes)
+            self._publish(self.detector.observe(observation))
 
     def advance(self, committed_round: int) -> None:
         with self._lock:
