@@ -15,7 +15,7 @@ from dromeus.manifests.canonical import (
     validate_sealed_draft,
 )
 from dromeus.manifests.models import (
-    DataContract,
+    ApplicationTaskContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
@@ -57,7 +57,7 @@ def validate_ready(
     manifest: SealedManifest,
     local_public_key: PublicKey,
     environment: EnvironmentFingerprint,
-    dataset: DataContract,
+    dataset: ApplicationTaskContract,
     checkpoint_hash: Sha256,
     local_tensor_schema: TensorSchema | None = None,
 ) -> None:
@@ -151,7 +151,7 @@ class FormationProtocol:
         transport: AsyncTransport,
         draft: DraftRunSpec,
         environment: EnvironmentFingerprint,
-        dataset: DataContract,
+        dataset: ApplicationTaskContract,
         transport_limits: TransportLimits,
         artifact_root: Path,
         local_tensor_schema: TensorSchema | None = None,
@@ -477,6 +477,7 @@ class FormationProtocol:
             receiver=self._receiver,
             sender=self._sender,
             artifact_root=self._artifact_root,
+            max_inflight_bytes=manifest.transport.artifact_store_capacity_limit,
             event_sink=self._event_sink,
         )
         await manager.start()

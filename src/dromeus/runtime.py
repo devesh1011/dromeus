@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -16,9 +17,7 @@ from dromeus.algorithms.codec import (
     BitmapTopKInt8Codec,
     DenseInt8Codec,
     IdentityCodec,
-    TopKInt8Codec,
 )
-from dromeus.algorithms.dpsgd import DPSGDAdapter
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.gossip.axl import (
     AXLFailureBroadcaster,
@@ -34,10 +33,9 @@ from dromeus.gossip.interfaces import (
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.canonical import validate_sealed_expectation
 from dromeus.manifests.models import (
-    DPSGD_ALGORITHM_ID,
     NOLOCO_ALGORITHM_ID,
+    ApplicationTaskContract,
     ConsensusSketchMessage,
-    DataContract,
     DraftRunSpec,
     EnvironmentFingerprint,
     Invitation,
@@ -49,7 +47,6 @@ from dromeus.membership.formation import FormationProtocol, FormationResult
 from dromeus.persistence.run_store import RunStore
 from dromeus.protocol.models import MessageType
 from dromeus.telemetry.consensus import (
-    ConsensusDistance,
     ConsensusObservation,
     LiveConsensusTelemetry,
 )
@@ -57,7 +54,7 @@ from dromeus.telemetry.divergence import DetectorSnapshot
 from dromeus.telemetry.divergence_monitor import DivergenceMonitor
 from dromeus.telemetry.events import BoundedEventSink, EventSink, emit_event
 from dromeus.telemetry.evidence import (
-    ConsensusDistanceEvidence,
+    ConsensusObservationEvidence,
     ConsensusSketchSentEvidence,
     NodeConsensusDistanceEvidence,
     RunFailedEvidence,
@@ -98,6 +95,40 @@ class MetricsService(MetricsPublisher, Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class ConsensusCompletionReceipt:
+    """Local observation bound to one sealed run; not a collective receipt."""
+
+    version: int
+    run_id: str
+    manifest_hash: str
+    node_public_key: str
+    final_round: int
+    participant_keys: tuple[str, ...]
+    received_member_keys: tuple[str, ...]
+    report_completed: bool
+    dropped: int
+
+
+@dataclass(frozen=True, slots=True)
+class ConsensusCompletionPolicy:
+    """Optional application coordination with one bounded completion deadline.
+
+    The barrier must validate all expected participants' bound local-completion
+    receipts before returning. The library does not provide a storage service or
+    treat bridge send completion as peer acknowledgement.
+    """
+
+    timeout_seconds: float
+    barrier: Callable[[ConsensusCompletionReceipt, float], Awaitable[None]]
+
+    def __post_init__(self) -> None:
+        if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
+            raise ValueError("positive finite consensus completion timeout required")
+        if not callable(self.barrier):
+            raise ValueError("consensus completion barrier required")
+
+
+@dataclass(frozen=True, slots=True)
 class TrainingConfig:
     """Dependencies needed to run the formed node's local training."""
 
@@ -107,6 +138,7 @@ class TrainingConfig:
     artifact_root: Path
     metrics_publisher: MetricsService | None = None
     evaluation_interval: int = 5
+    consensus_completion: ConsensusCompletionPolicy | None = None
 
     def __post_init__(self) -> None:
         if self.evaluation_interval <= 0:
@@ -215,37 +247,15 @@ def build_algorithm(
                 "private manifest requires matching prepared private trainer"
             )
         trainer.weights()
-    if manifest.algorithm_id == DPSGD_ALGORITHM_ID:
-        return DPSGDAdapter(
-            trainer=trainer,
-            tensor_schema=manifest.tensor_schema,
-            local_steps=manifest.local_steps,
-            training_round_count=manifest.round_count,
-            manifest_codec_id=manifest.codec_id,
-        )
     if manifest.algorithm_id != NOLOCO_ALGORITHM_ID:
         raise ValueError("unsupported runtime algorithm")
-    config = manifest.algorithm_config
-    codec_settings = manifest.artifact_codecs
-    if config is None or codec_settings is None:
-        raise ValueError("NoLoCo manifest configuration is incomplete")
-    settings = {setting.artifact_name: setting for setting in codec_settings}
+    settings = {setting.artifact_name: setting for setting in manifest.artifact_codecs}
     codec_ids = {name: setting.codec_id for name, setting in settings.items()}
     outer_setting = settings["outer_gradient"]
-    if outer_setting.codec_id == "identity-v1":
+    if outer_setting.codec_id == "identity":
         artifact_codecs = {
-            "outer_gradient": IdentityCodec("identity-v1"),
-            "slow_weights": IdentityCodec("identity-v1"),
-        }
-    elif outer_setting.codec_id == "topk-int8-v1":
-        if outer_setting.top_k_fraction is None:
-            raise ValueError("compressed outer gradient requires top-k fraction")
-        artifact_codecs = {
-            "outer_gradient": TopKInt8Codec(
-                manifest.tensor_schema,
-                top_k_fraction=outer_setting.top_k_fraction,
-            ),
-            "slow_weights": DenseInt8Codec(manifest.tensor_schema),
+            "outer_gradient": IdentityCodec("identity"),
+            "slow_weights": IdentityCodec("identity"),
         }
     else:
         if outer_setting.top_k_fraction is None:
@@ -260,7 +270,7 @@ def build_algorithm(
     return NoLoCoAlgorithm(
         trainer=trainer,
         tensor_schema=manifest.tensor_schema,
-        config=config,
+        config=manifest.algorithm_config,
         artifact_codecs=artifact_codecs,
         manifest_codec_ids=codec_ids,
     )
@@ -275,7 +285,7 @@ class NodeRuntime:
         transport: AsyncTransport,
         draft: DraftRunSpec,
         environment: EnvironmentFingerprint,
-        dataset: DataContract,
+        dataset: ApplicationTaskContract,
         artifact_root: Path,
         event_sink: EventSink | None = None,
         training: TrainingConfig | None = None,
@@ -298,7 +308,7 @@ class NodeRuntime:
         self._transport = transport
         self._event_delivery = (
             BoundedEventSink(event_sink, capacity=256)
-            if draft.manifest_version in (5, 6)
+            if event_sink is not None
             else None
         )
         self._event_sink = (
@@ -325,9 +335,9 @@ class NodeRuntime:
         self._failure = failure
         self._engine: GossipEngine | None = None
         self._consensus_telemetry: LiveConsensusTelemetry | None = None
+        self._consensus_completion_tasks: set[asyncio.Task[None]] = set()
         self._divergence_monitor: DivergenceMonitor | None = None
         self._local_public_key: str | None = None
-        self._commits: tuple[RoundCommit, ...] = ()
         self._run_task: asyncio.Task[tuple[RoundCommit, ...]] | None = None
         self._control_task: asyncio.Task[None] | None = None
         self._remote_failure: PeerRunFailureError | None = None
@@ -362,16 +372,6 @@ class NodeRuntime:
     @property
     def state(self) -> NodeState:
         return self._state
-
-    @property
-    def formation_result(self) -> FormationResult:
-        if self._result is None:
-            raise NodeRuntimeError("node has not completed formation")
-        return self._result
-
-    @property
-    def training_commits(self) -> tuple[RoundCommit, ...]:
-        return self._commits
 
     def configure_training(self, training: TrainingConfig) -> None:
         """Attach the local trainer once fixed membership has formed."""
@@ -642,20 +642,12 @@ class NodeRuntime:
                 on_distance=self._record_consensus,
                 size=self._result.manifest.consensus_sketch.size,
             )
-            policy = self._result.manifest.training
-            final_consensus_rounds = (
-                policy.final_consensus_rounds if policy is not None else 0
-            )
             self._engine = GossipEngine(
                 local_public_key=local_key,
-                round_count=(
-                    self._result.manifest.round_count + final_consensus_rounds
-                ),
+                round_count=self._result.manifest.round_count,
                 scheduler=PeerScheduler(
                     self._result.manifest.participants,
                     seed=self._result.manifest.peer_scheduler_seed,
-                    training_round_count=self._result.manifest.round_count,
-                    final_consensus_rounds=final_consensus_rounds,
                 ),
                 algorithm=self._training.algorithm,
                 redact_failures=self._result.manifest.privacy is not None,
@@ -671,6 +663,8 @@ class NodeRuntime:
             await self._start_metrics()
             await self._consensus_telemetry.start()
             commits = await self._engine.run()
+            if commits:
+                await self._complete_consensus(commits[-1].round_id)
             async with self._terminal_lock:
                 if self._remote_failure is not None:
                     raise self._remote_failure
@@ -685,7 +679,6 @@ class NodeRuntime:
                     await asyncio.shield(write_task)
                 except asyncio.CancelledError:
                     await write_task
-                self._commits = commits
                 self._state = NodeState.COMPLETE
             return commits
         except asyncio.CancelledError as error:
@@ -854,11 +847,92 @@ class NodeRuntime:
         if self._training is not None and self._training.metrics_publisher is not None:
             await self._training.metrics_publisher.stop()
 
+    @property
+    def pending_consensus_completion_tasks(self) -> int:
+        """Late asynchronous barriers; zero is not proof native I/O threads stopped."""
+        return sum(not task.done() for task in self._consensus_completion_tasks)
+
+    def _observe_completion_task(self, task: asyncio.Task[None]) -> None:
+        if not task.cancelled():
+            task.exception()
+        self._consensus_completion_tasks.discard(task)
+
+    async def _complete_consensus(self, final_round: int) -> None:
+        training = self._training
+        policy = training.consensus_completion if training is not None else None
+        if policy is None:
+            return
+        telemetry = self._consensus_telemetry
+        formed = self._result
+        key = self._local_public_key
+        if telemetry is None or formed is None or key is None:
+            raise NodeRuntimeError("consensus completion dependencies unavailable")
+        deadline = asyncio.get_running_loop().time() + policy.timeout_seconds
+        self._consensus_completion_deadline = deadline
+        local = await telemetry.wait_complete(final_round, deadline=deadline)
+        participants = tuple(sorted(p.public_key for p in formed.manifest.participants))
+        if (
+            local.status != "complete"
+            or not local.report_completed
+            or local.dropped
+            or tuple(sorted(local.received_member_keys)) != participants
+        ):
+            raise NodeRuntimeError(f"consensus completion incomplete: {local.status}")
+        receipt = ConsensusCompletionReceipt(
+            version=1,
+            run_id=formed.manifest.run_id,
+            manifest_hash=formed.manifest_hash,
+            node_public_key=key,
+            final_round=final_round,
+            participant_keys=participants,
+            received_member_keys=tuple(sorted(local.received_member_keys)),
+            report_completed=True,
+            dropped=0,
+        )
+        if asyncio.get_running_loop().time() >= deadline:
+            raise NodeRuntimeError("consensus completion deadline expired")
+
+        # wait_for/timeout_at can themselves wait forever if application code
+        # catches cancellation. Keep the barrier as an owned, observed task and
+        # bound only our wait; never turn a late result into run success.
+        async def invoke_barrier() -> None:
+            await policy.barrier(receipt, deadline)
+
+        barrier = asyncio.create_task(invoke_barrier())
+        self._consensus_completion_tasks.add(barrier)
+        barrier.add_done_callback(self._observe_completion_task)
+        try:
+            done, _ = await asyncio.wait(
+                {barrier},
+                timeout=max(0.0, deadline - asyncio.get_running_loop().time()),
+            )
+        except BaseException:
+            if not barrier.done():
+                barrier.cancel()
+            raise
+        if barrier not in done:
+            barrier.cancel()
+            raise TimeoutError("consensus completion barrier deadline exceeded")
+        barrier.result()
+        if asyncio.get_running_loop().time() >= deadline or telemetry.dropped:
+            raise NodeRuntimeError("consensus completion barrier expired or dropped")
+
     async def _stop_consensus(self) -> None:
         telemetry = self._consensus_telemetry
         if telemetry is None:
             return
-        await telemetry.stop()
+        policy = (
+            self._training.consensus_completion if self._training is not None else None
+        )
+        if policy is None:
+            await telemetry.stop()
+        else:
+            deadline = getattr(
+                self,
+                "_consensus_completion_deadline",
+                asyncio.get_running_loop().time(),
+            )
+            await telemetry.stop(deadline=deadline)
         if telemetry.dropped and self._result is not None:
             await asyncio.to_thread(
                 emit_event,
@@ -911,57 +985,56 @@ class NodeRuntime:
         if monitor is not None:
             await asyncio.to_thread(monitor.stop)
 
-    async def _record_consensus(self, distance: ConsensusDistance) -> None:
+    async def _record_consensus(self, distance: ConsensusObservation) -> None:
         if (
             self._training is None
             or self._result is None
             or self._local_public_key is None
         ):
             return
-        if self._divergence_monitor is not None and isinstance(
-            distance, ConsensusObservation
-        ):
+        manifest = self._result.manifest
+        await asyncio.to_thread(
+            append_evidence,
+            self._event_sink,
+            ConsensusObservationEvidence(
+                run_id=manifest.run_id,
+                manifest_hash=self._result.manifest_hash,
+                node_id=self._local_public_key,
+                message_id=f"consensus-observation-{distance.round_id}",
+                round_id=distance.round_id,
+                normalized_rms=distance.normalized_rms,
+                absolute_rms_spread=distance.absolute_rms_spread,
+                mean_sketch_norm=distance.mean_sketch_norm,
+                denominator_degenerate=distance.denominator_degenerate,
+                sketch_count=distance.sketch_count,
+            ),
+        )
+        for member in distance.member_distances:
+            if member.public_key == self._local_public_key:
+                append_evidence(
+                    self._event_sink,
+                    NodeConsensusDistanceEvidence(
+                        run_id=manifest.run_id,
+                        manifest_hash=self._result.manifest_hash,
+                        node_id=member.public_key,
+                        message_id=f"node-consensus-distance-{distance.round_id}",
+                        round_id=distance.round_id,
+                        absolute_distance=member.absolute_distance,
+                        normalized_distance=member.normalized_distance,
+                        group_normalized_rms=distance.normalized_rms,
+                        mean_sketch_norm=distance.mean_sketch_norm,
+                        denominator_degenerate=distance.denominator_degenerate,
+                        sketch_count=distance.sketch_count,
+                    ),
+                )
+                break
+        if self._divergence_monitor is not None:
             self._divergence_monitor.observe(distance)
-        if self._draft.manifest_version in (5, 6) and isinstance(
-            distance, ConsensusObservation
-        ):
-            for member in distance.member_distances:
-                if member.public_key == self._local_public_key:
-                    append_evidence(
-                        self._event_sink,
-                        NodeConsensusDistanceEvidence(
-                            run_id=self._result.manifest.run_id,
-                            manifest_hash=self._result.manifest_hash,
-                            node_id=member.public_key,
-                            message_id=f"node-consensus-distance-{distance.round_id}",
-                            round_id=distance.round_id,
-                            absolute_distance=member.absolute_distance,
-                            normalized_distance=member.normalized_distance,
-                            group_normalized_rms=distance.normalized_rms,
-                            mean_sketch_norm=distance.mean_sketch_norm,
-                            denominator_degenerate=distance.denominator_degenerate,
-                            sketch_count=distance.sketch_count,
-                        ),
-                    )
-                    break
         await asyncio.to_thread(
             self._training.run_store.record_consensus,
             round_id=distance.round_id,
             normalized_rms=distance.normalized_rms,
             sketch_count=distance.sketch_count,
-        )
-        await asyncio.to_thread(
-            append_evidence,
-            self._event_sink,
-            ConsensusDistanceEvidence(
-                run_id=self._result.manifest.run_id,
-                manifest_hash=self._result.manifest_hash,
-                node_id=self._local_public_key,
-                message_id=f"consensus-distance-{distance.round_id}",
-                round_id=distance.round_id,
-                normalized_rms=float(distance.normalized_rms),
-                sketch_count=distance.sketch_count,
-            ),
         )
 
     def _prepare_commit(self, commit: RoundCommit) -> None:
@@ -988,7 +1061,6 @@ class NodeRuntime:
             schedule={
                 "round_id": commit.round_id,
                 "peer": commit.peer_public_key,
-                "phase": commit.phase,
             },
             metrics=metrics,
             transfer_diagnostics={
