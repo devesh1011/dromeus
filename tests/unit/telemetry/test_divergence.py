@@ -1,5 +1,7 @@
 """Behavioral detector seam; synthetic thresholds are not deployment defaults."""
 
+import pytest
+
 from dromeus.manifests.models import DivergencePolicy
 from dromeus.telemetry.consensus import ConsensusObservation
 from dromeus.telemetry.divergence import (
@@ -190,18 +192,14 @@ def test_window_and_pending_memory_stay_bounded() -> None:
     assert detector.buffered_count == 0
 
 
-def test_legacy_replay_does_not_invent_scale_measurements() -> None:
-    from dromeus.telemetry.consensus import ConsensusDistance
-
+def test_observed_scale_is_reported_in_snapshot() -> None:
     detector = DivergenceDetector(policy(), participant_count=4)
     for i in range(5):
         detector.advance(i)
-        detector.observe(
-            ConsensusDistance(round_id=i, normalized_rms=0.2, sketch_count=4)
-        )
+        detector.observe(point(i, 0.2))
     assert detector.snapshot.state == DetectorState.HEALTHY
-    assert detector.snapshot.mean_sketch_norm is None
-    assert detector.snapshot.absolute_rms_spread is None
+    assert detector.snapshot.mean_sketch_norm == 1
+    assert detector.snapshot.absolute_rms_spread == pytest.approx(0.2)
 
 
 def test_absolute_thresholds_are_complete_and_bounded() -> None:

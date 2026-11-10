@@ -1,23 +1,27 @@
 from __future__ import annotations
 
 import asyncio
+import gc
+import hashlib
+import tracemalloc
+import weakref
 from collections.abc import Mapping
 
 import numpy as np
 import pytest
 
 from dromeus.telemetry.consensus import (
-    ConsensusDistance,
+    ConsensusObservation,
     ConsensusSketchBuffer,
     ConsensusSketchError,
     ConsensusSketchMessage,
     ConsensusSketchPublisher,
     LiveConsensusTelemetry,
+    consensus_observation,
     count_sketch,
     decode_sketch,
     encode_sketch,
-    exact_normalized_rms_distance,
-    normalized_rms_consensus_distance,
+    exact_consensus_observation,
 )
 
 
@@ -45,8 +49,8 @@ def test_sketch_distance_matches_exact_distance_without_collisions() -> None:
     ]
     sketches = [count_sketch(model, seed=9) for model in models]
 
-    exact = exact_normalized_rms_distance(models)
-    approximate = normalized_rms_consensus_distance(sketches)
+    exact = exact_consensus_observation(models, round_id=0).normalized_rms
+    approximate = consensus_observation(sketches, round_id=0).normalized_rms
     assert exact == pytest.approx(0.3535533906)
     assert approximate == pytest.approx(exact)
 
@@ -111,9 +115,9 @@ def test_sketch_buffer_matches_direct_reference_with_missing_and_late_arrivals(
     assert result is not None
     assert result.sketch_count == world_size
     assert result.normalized_rms == pytest.approx(
-        normalized_rms_consensus_distance(
-            [sketches[member] for member in sorted(members)]
-        )
+        consensus_observation(
+            [sketches[member] for member in sorted(members)], round_id=3
+        ).normalized_rms
     )
     assert buffer.pending_rounds() == ()
 
@@ -161,7 +165,7 @@ def test_live_consensus_joins_local_and_remote_sketches() -> None:
     async def run() -> None:
         incoming: asyncio.Queue[ConsensusSketchMessage] = asyncio.Queue()
         published: list[int] = []
-        distances: list[ConsensusDistance] = []
+        distances: list[ConsensusObservation] = []
         completed = asyncio.Event()
 
         async def receive(timeout_seconds: float) -> ConsensusSketchMessage:
@@ -171,7 +175,7 @@ def test_live_consensus_joins_local_and_remote_sketches() -> None:
             assert sketch.dtype == np.float32
             published.append(round_id)
 
-        def on_distance(distance: ConsensusDistance) -> None:
+        def on_distance(distance: ConsensusObservation) -> None:
             distances.append(distance)
             completed.set()
 
@@ -215,7 +219,7 @@ def test_live_consensus_joins_local_and_remote_sketches() -> None:
 def test_live_consensus_waits_for_inflight_remote_sketches_on_stop() -> None:
     async def run() -> None:
         incoming: asyncio.Queue[ConsensusSketchMessage] = asyncio.Queue()
-        distances: list[ConsensusDistance] = []
+        distances: list[ConsensusObservation] = []
 
         async def receive(timeout_seconds: float) -> ConsensusSketchMessage:
             return await asyncio.wait_for(incoming.get(), timeout_seconds)
@@ -261,19 +265,14 @@ def test_live_consensus_waits_for_inflight_remote_sketches_on_stop() -> None:
     asyncio.run(run())
 
 
-def test_v2_observation_separates_spread_from_denominator_collapse() -> None:
-    from dromeus.telemetry.consensus import (
-        consensus_observation,
-        exact_consensus_observation,
-    )
-
+def test_observation_separates_spread_from_denominator_collapse() -> None:
     sketches = [np.array([1, 0], dtype=np.float32), np.array([-1, 0], dtype=np.float32)]
     measured = consensus_observation(sketches, round_id=3)
     exact = exact_consensus_observation([{"weight": x} for x in sketches], round_id=3)
     assert measured == exact
     assert measured.absolute_rms_spread == 1 and measured.mean_sketch_norm == 0
     assert measured.denominator_degenerate
-    assert measured.normalized_rms == normalized_rms_consensus_distance(sketches)
+    assert measured.normalized_rms == pytest.approx(1 / 1e-12)
 
 
 def test_individual_distances_bind_members_not_arrival_order() -> None:
@@ -290,8 +289,6 @@ def test_individual_distances_bind_members_not_arrival_order() -> None:
     result = buffer.add(
         round_id=0, sender_public_key="b", sketch=np.array([0.0], dtype=np.float32)
     )
-    from dromeus.telemetry.consensus import ConsensusObservation
-
     assert isinstance(result, ConsensusObservation)
     # Mean=3; distances by member: a=3, b=3, c=1, d=5.
     assert [(m.public_key, m.absolute_distance) for m in result.member_distances] == [
@@ -335,3 +332,137 @@ def test_individual_distances_expose_degenerate_mean() -> None:
     assert result.denominator_degenerate
     assert [m.absolute_distance for m in result.member_distances] == [1, 1]
     assert [m.normalized_distance for m in result.member_distances] == [1e12, 1e12]
+
+
+def _legacy_projection_reference(
+    weights: Mapping[str, np.ndarray], *, seed: int, size: int = 4096
+) -> np.ndarray:
+    """Frozen pre-chunking numerical recipe, independent of new private helpers."""
+    values = np.concatenate(
+        [
+            np.asarray(weights[name]).astype(np.float64, copy=False).reshape(-1)
+            for name in sorted(weights)
+        ]
+    )
+    normalized = int.from_bytes(
+        hashlib.sha256(str(seed).encode()).digest()[:8], "little"
+    )
+    rng = np.random.default_rng(normalized)
+    buckets = rng.integers(0, size, size=values.size)
+    signs = np.where(
+        rng.integers(0, 2, size=values.size, dtype=np.int8) == 0, -1.0, 1.0
+    )
+    result = np.zeros(size, dtype=np.float32)
+    np.add.at(result, buckets, values * signs)
+    return result
+
+
+@pytest.mark.parametrize(
+    "count", [0, 1, 3, 63, 64, 65, 1023, 1024, 1025, 65535, 65536, 65537]
+)
+@pytest.mark.parametrize("size", [1, 17, 4096])
+@pytest.mark.parametrize("seed", [-3, 0, 17, 2**65 + 7])
+def test_count_sketch_preserves_legacy_bytes_across_global_boundaries(
+    count: int,
+    size: int,
+    seed: int,
+) -> None:
+    rng = np.random.default_rng(91)
+    first, second = count // 3, count // 4
+    weights = {
+        "z-f64": rng.standard_normal(count - first - second),
+        "a-strided-f32": rng.standard_normal((first, 2)).astype(np.float32)[:, 0],
+        "m-f16": rng.standard_normal(second).astype(np.float16),
+        "empty": np.empty((0, 2), dtype=np.float32),
+    }
+    expected = _legacy_projection_reference(weights, seed=seed, size=size)
+    actual = count_sketch(weights, seed=seed, size=size)
+    assert actual.dtype == np.float32 and actual.tobytes() == expected.tobytes()
+
+
+def test_count_sketch_scalar_fortran_layout_and_zero_signs_preserve_bytes() -> None:
+    values = {
+        "scalar": np.asarray(-0.0, dtype=np.float32),
+        "matrix": np.asfortranarray(np.arange(35, dtype=np.float64).reshape(5, 7)),
+        "reverse": np.linspace(-1, 1, 129, dtype=np.float32)[::-1],
+    }
+    assert (
+        count_sketch(values, seed=0).tobytes()
+        == _legacy_projection_reference(values, seed=0).tobytes()
+    )
+
+
+def test_count_sketch_projection_temporary_budget_is_bounded() -> None:
+    values = {
+        "b": np.ones(524288, dtype=np.float32),
+        "a": np.arange(524288, dtype=np.float32),
+    }
+    # Exclude lazy imports/RNG setup and input storage from the temporary budget.
+    count_sketch({"warmup": np.ones(1, dtype=np.float32)}, seed=17)
+    expected = _legacy_projection_reference(values, seed=17)
+    tracemalloc.start()
+    try:
+        actual = count_sketch(values, seed=17)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert actual.tobytes() == expected.tobytes()
+    assert peak <= 8 * 1024**2, f"projection temporary allocation exceeded8MiB: {peak}"
+
+
+@pytest.mark.parametrize("failing_callback", ["none", "on_sketch", "publish"])
+def test_open_publisher_releases_completed_snapshot_before_next_input(
+    monkeypatch: pytest.MonkeyPatch,
+    failing_callback: str,
+) -> None:
+    import dromeus.telemetry.consensus as module
+
+    async def exercise() -> None:
+        copied: list[weakref.ReferenceType[np.ndarray]] = []
+        published: list[bytes] = []
+        done = asyncio.Event()
+        original = getattr(module, "_copy_weights")
+
+        def observe_copy(values: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
+            result: dict[str, np.ndarray] = original(values)
+            copied.extend(weakref.ref(value) for value in result.values())
+            return result
+
+        async def on_sketch(_round: int, _sketch: np.ndarray) -> None:
+            if failing_callback == "on_sketch":
+                raise RuntimeError("public fixture callback failure")
+
+        async def publish(_round: int, sketch: np.ndarray) -> None:
+            published.append(sketch.tobytes())
+            done.set()
+            if failing_callback == "publish":
+                raise RuntimeError("public fixture publication failure")
+
+        monkeypatch.setattr(module, "_copy_weights", observe_copy)
+        publisher = ConsensusSketchPublisher(
+            seed=17, publish=publish, on_sketch=on_sketch
+        )
+        await publisher.start()
+        try:
+            weights = {"weight": np.array([1.0], dtype=np.float32)}
+            references = [weakref.ref(value) for value in weights.values()]
+            expected = _legacy_projection_reference(weights, seed=17).tobytes()
+            assert publisher.submit(round_id=0, weights=weights)
+            del weights
+            await asyncio.wait_for(done.wait(), timeout=2)
+            await asyncio.wait_for(getattr(publisher, "_queue").join(), timeout=2)
+            await asyncio.sleep(0.22)
+            gc.collect()
+            assert publisher.pending == 0 and not getattr(publisher, "_task").done()
+            assert not any(ref() is not None for ref in references), (
+                "idle publisher retained input"
+            )
+            assert not any(ref() is not None for ref in copied), (
+                "idle publisher retained snapshot"
+            )
+            assert published == [expected]
+            assert publisher.dropped == int(failing_callback != "none")
+        finally:
+            await publisher.stop(timeout_seconds=2)
+
+    asyncio.run(exercise())

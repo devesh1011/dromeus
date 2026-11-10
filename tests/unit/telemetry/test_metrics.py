@@ -41,8 +41,7 @@ def test_jsonl_metrics_publisher_writes_correlated_round_and_failure_records(
                 error_feedback_residual_l2_norm=0.4,
                 error_feedback_signal_l2_norm=2.0,
                 error_feedback_residual_to_signal_ratio=0.2,
-                evaluation_loss=0.6,
-                evaluation_accuracy=0.8,
+                evaluation_metrics={"loss": 0.6, "accuracy": 0.8},
                 transfer_id="transfer-3",
             )
         )
@@ -55,10 +54,9 @@ def test_jsonl_metrics_publisher_writes_correlated_round_and_failure_records(
 
         records = [json.loads(line) for line in path.read_text().splitlines()]
         assert records[0] == {
-            "evidence_version": 1,
+            "evidence_version": 3,
             "event": "round_metrics",
-            "evaluation_accuracy": 0.8,
-            "evaluation_loss": 0.6,
+            "evaluation_metrics": {"accuracy": 0.8, "loss": 0.6},
             "evaluation_seconds": 0.3,
             "error_feedback_residual_l2_norm": 0.4,
             "error_feedback_residual_to_signal_ratio": 0.2,

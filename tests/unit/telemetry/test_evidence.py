@@ -8,7 +8,6 @@ import pytest
 
 from dromeus.telemetry.events import JsonlEventSink, emit_event
 from dromeus.telemetry.evidence import (
-    BenchmarkNodeReadyEvidence,
     ConsensusSketchSentEvidence,
     EvidenceError,
     EvidenceLog,
@@ -36,8 +35,7 @@ def _round_metrics(**updates: object) -> RoundMetricsEvidence:
         "peer_id": "peer-1",
         "round_id": 3,
         "local_loss": 0.75,
-        "evaluation_loss": 0.6,
-        "evaluation_accuracy": 0.8,
+        "evaluation_metrics": {"loss": 0.6, "accuracy": 0.8},
         "local_compute_seconds": 1.25,
         "peer_wait_seconds": 0.5,
         "transfer_seconds": 0.2,
@@ -85,6 +83,11 @@ def test_consensus_telemetry_bytes_are_separate_strict_evidence() -> None:
     assert decode_evidence(encode_evidence(record)) == record
 
 
+def test_round_metrics_accepts_negative_finite_local_loss() -> None:
+    record = _round_metrics(local_loss=-2.5, evaluation_metrics={})
+    assert decode_evidence(encode_evidence(record)) == record
+
+
 def _invalid_records() -> tuple[dict[str, object], ...]:
     missing = evidence_record(_round_metrics())
     del missing["round_id"]
@@ -93,7 +96,15 @@ def _invalid_records() -> tuple[dict[str, object], ...]:
         {**evidence_record(_round_metrics()), "unexpected": True},
         {**evidence_record(_round_metrics()), "round_id": "3"},
         {**evidence_record(_round_metrics()), "local_loss": float("nan")},
-        {**evidence_record(_round_metrics()), "evaluation_loss": float("inf")},
+        {
+            **evidence_record(_round_metrics()),
+            "evaluation_metrics": {"loss": float("inf")},
+        },
+        {
+            **evidence_record(_round_metrics()),
+            "evaluation_metrics": {" ": 1.0},
+        },
+        {**evidence_record(_round_metrics()), "evaluation_loss": 0.6},
         {**evidence_record(_round_metrics()), "evidence_version": 2},
     )
 
@@ -125,13 +136,7 @@ def test_evidence_log_rejects_identity_changes(tmp_path: Path) -> None:
     sink = JsonlEventSink(path)
     assert append_evidence(
         sink,
-        BenchmarkNodeReadyEvidence(
-            run_id="run-1",
-            manifest_hash="a" * 64,
-            node_id="peer-0",
-            benchmark_seed=17,
-            transport="axl",
-        ),
+        _round_metrics(round_id=2, message_id="metric-peer-0-2"),
     )
     assert append_evidence(
         sink,
@@ -213,7 +218,7 @@ def test_detector_evidence_round_trips_and_rejects_unknown_fields() -> None:
         decode_evidence(json.dumps(value))
 
 
-def test_v2_scale_evidence_rejects_inconsistent_values() -> None:
+def test_consensus_observation_evidence_rejects_inconsistent_values() -> None:
     from dromeus.telemetry.evidence import ConsensusObservationEvidence
 
     value = dict(

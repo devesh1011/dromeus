@@ -45,12 +45,14 @@ def test_blocked_sink_does_not_block_progress_and_reports_drops() -> None:
     )
     monitor.start()
     try:
-        for i in range(10):
+        # Alternating spread produces many status transitions; the monitor
+        # emits only transitions, so this is what fills the blocked queue.
+        for i in range(40):
             monitor.advance(i)
+            spread = [1, 3] * 2 if (i // 2) % 2 == 0 else [1, 1] * 2
             monitor.observe(
                 consensus_observation(
-                    [np.array([1], dtype=np.float32), np.array([3], dtype=np.float32)]
-                    * 2,
+                    [np.array([x], dtype=np.float32) for x in spread],
                     round_id=i,
                 )
             )
@@ -64,12 +66,16 @@ def test_blocked_sink_does_not_block_progress_and_reports_drops() -> None:
         monitor.stop(timeout_seconds=1)
 
 
-def test_duplicate_callbacks_emit_one_transition_and_one_observation_per_round(
+def test_duplicate_callbacks_emit_only_transitions_not_observations(
     tmp_path: Path,
 ) -> None:
 
     from dromeus.telemetry.events import JsonlEventSink
-    from dromeus.telemetry.evidence import DivergenceStatusEvidence, EvidenceLog
+    from dromeus.telemetry.evidence import (
+        ConsensusObservationEvidence,
+        DivergenceStatusEvidence,
+        EvidenceLog,
+    )
 
     policy = DivergencePolicy(
         threshold_set_id="synthetic",
@@ -108,7 +114,11 @@ def test_duplicate_callbacks_emit_one_transition_and_one_observation_per_round(
     log = EvidenceLog.open(sink.path, run_id="test", manifest_hash="a" * 64)
     changes = [r for r in log.records if isinstance(r, DivergenceStatusEvidence)]
     assert [r.state for r in changes] == ["suspect", "diverging"]
-    assert len(log.records) == 7
+    # The runtime, not the monitor, records per-round observations.
+    assert not any(
+        isinstance(r, ConsensusObservationEvidence) for r in log.records
+    )
+    assert len(log.records) == 2
     with sink.path.open("a") as f:
         from dromeus.telemetry.evidence import encode_evidence
 
