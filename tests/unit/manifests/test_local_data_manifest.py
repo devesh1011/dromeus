@@ -15,7 +15,7 @@ from dromeus.manifests.canonical import (
     parse_sealed_json,
 )
 from dromeus.manifests.models import (
-    ClassificationTaskContract,
+    ApplicationTaskContract,
     DraftRunSpec,
     SealedManifest,
     Tensor,
@@ -33,31 +33,19 @@ from dromeus.membership.formation import (
 from dromeus.protocol.codec import decode_envelope
 from dromeus.protocol.models import MessageType
 
-
-def _task() -> ClassificationTaskContract:
-    return ClassificationTaskContract(
-        dataset_id="local-classification-v1",
-        input_shape=(2,),
-        input_dtype="float32",
-        label_names=("cat", "truck"),
-        preprocessing_hash="a" * 64,
-    )
+SEALED_FIELDS = (
+    "draft_hash",
+    "participants",
+    "initial_checkpoint_hash",
+    "tensor_schema",
+)
 
 
 def _draft(participant_count: int = 4) -> DraftRunSpec:
     data = manifest_data()
-    for field in (
-        "draft_hash",
-        "participants",
-        "initial_checkpoint_hash",
-        "tensor_schema",
-    ):
+    for field in SEALED_FIELDS:
         del data[field]
-    data.update(
-        manifest_version=4,
-        expected_participant_count=participant_count,
-        dataset=_task(),
-    )
+    data["expected_participant_count"] = participant_count
     return DraftRunSpec.model_validate(data)
 
 
@@ -72,7 +60,7 @@ def _manifest(participant_count: int = 4) -> SealedManifest:
 
 
 @pytest.mark.parametrize("participant_count", [4, 8, 16])
-def test_v4_task_and_explicit_membership_round_trip(participant_count: int) -> None:
+def test_task_and_explicit_membership_round_trip(participant_count: int) -> None:
     draft = _draft(participant_count)
     manifest = _manifest(participant_count)
     invitation = create_invitation(
@@ -83,6 +71,7 @@ def test_v4_task_and_explicit_membership_round_trip(participant_count: int) -> N
 
     assert parse_draft_yaml(canonical_json(draft)) == draft
     assert parse_sealed_json(canonical_json(manifest)) == manifest
+    assert manifest.manifest_version == 7
     assert manifest.protocol_version == 1
     assert draft.participant_count == manifest.participant_count == participant_count
     assert invitation.expected_participant_count == participant_count
@@ -94,73 +83,40 @@ def test_v4_task_and_explicit_membership_round_trip(participant_count: int) -> N
     assert [member.node_index for member in manifest.participants] == list(
         range(participant_count)
     )
-    assert isinstance(draft.dataset, ClassificationTaskContract)
-    assert draft.dataset.class_count == 2
+    assert isinstance(draft.dataset, ApplicationTaskContract)
     assert draft.dataset.objective == "equal-node"
-    with pytest.raises(ValueError, match="requires.*CIFAR-10"):
-        draft.require_iid_dataset()
 
 
-def test_v4_canonical_identity_remains_frozen() -> None:
+def test_canonical_identity_remains_frozen() -> None:
     """Catch added defaults or encoding changes before extending M3 manifests."""
     assert canonical_hash(_draft()) == (
-        "3731e8b6fa0d405e9a13853c2b644f1975d2dc2fe13b0e7eaab7236b6d47c816"
+        "bf38d7a90cf9d2e8c63c30b5669da6206293a50786b54a83b2a7a8a2c5d3b0b2"
     )
     assert canonical_hash(_manifest()) == (
-        "a42b456aee87af4affd4eea70ba5ccce47fcaa0ed081c404053dc6d4106a82d3"
+        "12ddaac3a7df7b6c98090695eb4ec3555e399b4c78db1eeb1ae4265e74a005e2"
     )
 
 
 @pytest.mark.parametrize("participant_count", [1, 2, 3, 5, 7, 15, 17, 32])
-def test_v4_rejects_invalid_fixed_group_sizes(participant_count: int) -> None:
+def test_invalid_fixed_group_sizes_are_rejected(participant_count: int) -> None:
     with pytest.raises(ValidationError):
         _draft(participant_count)
 
 
-@pytest.mark.parametrize(
-    ("version", "local_data", "explicit_count", "message"),
-    [
-        (3, True, None, "v3 requires the CIFAR-10"),
-        (3, False, 4, "v3 derives membership"),
-        (4, False, 4, "v4 requires a local classification"),
-        (4, True, None, "v4 requires expected participant count"),
-    ],
-)
-def test_versions_do_not_silently_reinterpret_data_or_membership(
-    version: int, local_data: bool, explicit_count: int | None, message: str
-) -> None:
-    data = _draft().model_dump(mode="python")
-    data.update(
-        manifest_version=version,
-        dataset=_task() if local_data else manifest_data()["dataset"],
-        expected_participant_count=explicit_count,
-    )
-    with pytest.raises(ValidationError, match=message):
+def test_expected_participant_count_is_required_and_canonical() -> None:
+    data = manifest_data()
+    for field in SEALED_FIELDS:
+        del data[field]
+    del data["expected_participant_count"]
+    with pytest.raises(ValidationError, match="expected_participant_count"):
         DraftRunSpec.model_validate(data)
 
-
-def test_v3_keeps_legacy_membership_out_of_canonical_bytes() -> None:
     manifest = SealedManifest.model_validate(manifest_data())
-
-    assert manifest.manifest_version == 3
-    assert manifest.participant_count == 4
-    assert manifest.require_iid_dataset().participant_count == 4
-    assert b"expected_participant_count" not in canonical_json(manifest)
+    assert b'"expected_participant_count":4' in canonical_json(manifest)
 
 
 @pytest.mark.parametrize("explicit_none", [False, True])
-def test_v3_requires_retained_container_identity(explicit_none: bool) -> None:
-    data = manifest_data()
-    if explicit_none:
-        data["environment"]["container_image_digest"] = None
-    else:
-        del data["environment"]["container_image_digest"]
-    with pytest.raises(ValidationError, match="v3 requires a container image digest"):
-        SealedManifest.model_validate(data)
-
-
-@pytest.mark.parametrize("explicit_none", [False, True])
-def test_v4_host_execution_can_omit_container_identity(explicit_none: bool) -> None:
+def test_container_identity_is_optional_for_host_execution(explicit_none: bool) -> None:
     data = _draft().model_dump(mode="python")
     if explicit_none:
         data["environment"]["container_image_digest"] = None
@@ -183,43 +139,39 @@ def test_v4_host_execution_can_omit_container_identity(explicit_none: bool) -> N
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("input_shape", ()),
-        ("input_shape", (2, 0)),
-        ("input_dtype", "float64"),
-        ("label_names", ("cat",)),
-        ("label_names", ("cat", "cat")),
-        ("label_names", ("cat", "")),
-        ("label_names", ("cat", "  ")),
+        ("dataset_id", "cifar10"),
+        ("dataset_id", "application-v1"),
         ("objective", "sample-weighted"),
+        ("definition_hash", "not-a-hash"),
+        ("task_id", ""),
         ("sample_count", 10),
         ("dataset_path", "/private/node-0/data"),
         ("fingerprint", "b" * 64),
     ],
 )
-def test_local_task_rejects_invalid_or_private_contract_fields(
+def test_application_task_rejects_invalid_or_private_contract_fields(
     field: str, value: object
 ) -> None:
-    data = _task().model_dump(mode="python")
+    data = dict(manifest_data()["dataset"])
     data[field] = value
     with pytest.raises(ValidationError):
-        ClassificationTaskContract.model_validate(data)
+        ApplicationTaskContract.model_validate(data)
 
 
 @pytest.mark.parametrize(
     "change",
     [
-        {"label_names": ("truck", "cat")},
-        {"preprocessing_hash": "b" * 64},
-        {"input_shape": (3,)},
+        {"task_id": "other-task"},
+        {"definition_hash": "b" * 64},
     ],
 )
 def test_incompatible_task_meaning_changes_identity_and_blocks_ready(
     change: dict[str, object],
 ) -> None:
-    task_data = _task().model_dump(mode="python")
-    task_data.update(change)
-    incompatible = ClassificationTaskContract.model_validate(task_data)
     manifest = _manifest()
+    incompatible = ApplicationTaskContract.model_validate(
+        {**manifest.dataset.model_dump(mode="python"), **change}
+    )
 
     assert canonical_hash(incompatible) != canonical_hash(manifest.dataset)
     with pytest.raises(ReadyValidationError, match="dataset contract"):
@@ -250,7 +202,7 @@ def test_model_schema_mismatch_blocks_ready() -> None:
         )
 
 
-def test_v4_sealing_rejects_missing_participant() -> None:
+def test_sealing_rejects_missing_participant() -> None:
     base = _manifest()
     with pytest.raises(FormationError, match="declared membership"):
         seal_manifest(
@@ -341,8 +293,7 @@ async def _form_local_group(
             )
         )
         tasks.extend(
-            asyncio.create_task(node.join(invitation=invitation))
-            for node in nodes[1:]
+            asyncio.create_task(node.join(invitation=invitation)) for node in nodes[1:]
         )
         if bad_schema:
             with pytest.raises(ReadyValidationError, match="local model tensor schema"):
@@ -353,7 +304,7 @@ async def _form_local_group(
             assert len({result.manifest_hash for result in results}) == 1
             for result in results:
                 assert result.manifest.participant_count == participant_count
-                assert result.manifest.manifest_version == 4
+                assert result.manifest.manifest_version == 7
                 assert result.checkpoint_path.read_bytes() == checkpoint.read_bytes()
             assert all(
                 MessageType.READY in transport.sent_types

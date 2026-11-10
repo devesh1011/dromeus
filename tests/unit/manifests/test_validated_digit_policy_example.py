@@ -17,13 +17,16 @@ from dromeus.manifests.models import DivergencePolicy, DraftRunSpec, SealedManif
 
 def test_validated_digit_policy_survives_deployment_loading(tmp_path: Path) -> None:
     # This synthetic draft checks configuration binding, not workload validation.
-    path = Path(__file__).parents[3] / "examples/m3-digits-divergence-policy.json"
+    path = (
+        Path(__file__).parents[3]
+        / "benchmarks/results/m3/configurations/divergence-policy.json"
+    )
     policy = DivergencePolicy.model_validate_json(path.read_bytes())
     assert canonical_hash(policy) == (
         "d7a815d67ff04c9419231b89a400d63f2e951063c1c37ff67fef699cd407a448"
     )
     values = application_draft().model_dump(mode="python")
-    values.update(manifest_version=5, divergence_detection=policy)
+    values.update(divergence_detection=policy)
     draft = DraftRunSpec.model_validate(values)
     deployment_path = tmp_path / "digits-with-warnings.yaml"
     deployment_path.write_text(

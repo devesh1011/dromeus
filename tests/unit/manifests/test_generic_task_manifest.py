@@ -1,17 +1,14 @@
-"""Generic task contracts bind local implementations without changing old runs."""
+"""Generic task contracts bind local implementations to sealed run identity."""
 
 import pytest
 from pydantic import JsonValue
 from support.application_fixture import application_draft
-from support.sample_manifest import manifest_data
 
 from dromeus.manifests.canonical import canonical_hash, canonical_json
 from dromeus.manifests.models import (
     DraftRunSpec,
     PrivacyPolicy,
     PrivateOptimizerSpec,
-    PrivateTrainingSpec,
-    SealedManifest,
     TaskTrainingSpec,
 )
 
@@ -38,7 +35,6 @@ def task_spec() -> TaskTrainingSpec:
 def task_draft() -> DraftRunSpec:
     values = application_draft().model_dump()
     values.update(
-        manifest_version=6,
         privacy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -60,21 +56,17 @@ def test_generic_private_task_roundtrip_preserves_model_contract() -> None:
     assert canonical_hash(restored) == canonical_hash(draft)
 
 
-def test_task_spec_requires_v6_application_and_private_mechanism() -> None:
+def test_privacy_and_private_training_must_be_set_together() -> None:
     value = task_draft().model_dump()
-    with pytest.raises(ValueError, match="generic tasks require manifest version 6"):
-        DraftRunSpec.model_validate(dict(value, manifest_version=5))
-    with pytest.raises(ValueError, match="requires privacy policy"):
+    message = "privacy policy and private training must be set together"
+    with pytest.raises(ValueError, match=message):
         DraftRunSpec.model_validate(dict(value, privacy=None))
-    legacy = PrivateTrainingSpec(
-        optimizer=task_spec().optimizer, loss="mse", batch_size=2
-    )
-    with pytest.raises(ValueError, match="legacy private training requires version 5"):
-        DraftRunSpec.model_validate(dict(value, private_training=legacy))
+    with pytest.raises(ValueError, match=message):
+        DraftRunSpec.model_validate(dict(value, private_training=None))
     ordinary = DraftRunSpec.model_validate(
         dict(value, private_training=None, privacy=None)
     )
-    assert ordinary.manifest_version == 6
+    assert ordinary.private_training is None
 
 
 @pytest.mark.parametrize(
@@ -105,15 +97,11 @@ def test_ambiguous_parameter_state_rejects(
         TaskTrainingSpec.model_validate(values)
 
 
-def test_private_task_rejects_shuffle_and_requires_complete_task_spec() -> None:
+def test_private_task_rejects_shuffle_sampling() -> None:
     value = task_draft().model_dump()
     shuffled = task_spec().model_copy(update={"sampling": "shuffle"})
     with pytest.raises(ValueError, match="private tasks require Poisson sampling"):
         DraftRunSpec.model_validate(dict(value, private_training=shuffled))
-    with pytest.raises(
-        ValueError, match="version 6 privacy requires a task specification"
-    ):
-        DraftRunSpec.model_validate(dict(value, private_training=None))
 
 
 @pytest.mark.parametrize(
@@ -140,20 +128,11 @@ def test_task_semantics_are_hash_bound(field: str, value: JsonValue) -> None:
     assert canonical_hash(changed) != canonical_hash(original)
 
 
-def test_legacy_manifest_hashes_remain_exact() -> None:
-    assert canonical_hash(SealedManifest.model_validate(manifest_data())) == (
-        "0019f8a0cf68272fffd536d51ddd491d9f80036a3ee3bdcfe008a9fc585b3907"
-    )
+def test_canonical_identities_are_pinned() -> None:
     assert canonical_hash(application_draft()) == (
-        "6d67d8aed45a44e25d9241136b1b774025d52afba646d9771c2d01a845e22e13"
+        "a4c70b59b131dd71ab9168440510c29415eb0409a59468dec114726935235576"
     )
-    values = task_draft().model_dump()
-    values.update(
-        manifest_version=5,
-        private_training=PrivateTrainingSpec(
-            optimizer=task_spec().optimizer, loss="mse", batch_size=2
-        ),
-    )
-    assert canonical_hash(DraftRunSpec.model_validate(values)) == (
-        "82769385773e1d159880e56bb8bf68e9180f91d3ae3854d3efcdc7469433a0aa"
+    assert (
+        canonical_hash(task_draft())
+        == "82914d1051886ce801f048dc9dbcdf9e6ad91fe21eab4918f8b8df341b878139"
     )

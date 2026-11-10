@@ -1,8 +1,9 @@
-"""Default outer algorithm selection must be explicit in sealed run identity."""
+"""Outer algorithm selection must be explicit in sealed run identity."""
 
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 from support.application_fixture import application_draft
 
 from dromeus.manifests.canonical import canonical_hash, canonical_json
@@ -21,35 +22,21 @@ def test_omitted_algorithm_defaults_to_noloco_with_identical_run_identity() -> N
 
 
 @pytest.mark.parametrize("missing", ["algorithm_config", "artifact_codecs"])
-def test_default_noloco_requires_configuration_without_falling_back(
-    missing: str,
-) -> None:
+def test_noloco_configuration_is_required_without_fallback(missing: str) -> None:
     value = application_draft().model_dump(
         mode="python", exclude={"algorithm_id", missing}
     )
-    with pytest.raises(
-        ValueError, match="NoLoCo requires algorithm and artifact codec"
-    ):
+    with pytest.raises(ValidationError, match=missing):
         DraftRunSpec.model_validate(value)
 
 
-@pytest.mark.parametrize("algorithm", [None, "typo-noloco"])
-def test_explicit_invalid_algorithm_is_not_replaced_by_default(
+@pytest.mark.parametrize("algorithm", [None, "typo-noloco", "dpsgd"])
+def test_explicit_non_noloco_algorithm_is_not_replaced_by_default(
     algorithm: str | None,
 ) -> None:
     value = application_draft().model_dump(mode="python")
     value["algorithm_id"] = algorithm
     with pytest.raises(ValueError):
-        DraftRunSpec.model_validate(value)
-
-
-def test_dpsgd_requires_explicit_selection() -> None:
-    explicit = application_draft("dpsgd")
-    assert explicit.algorithm_id == "dpsgd"
-    value = explicit.model_dump(mode="python", exclude={"algorithm_id"})
-    with pytest.raises(
-        ValueError, match="NoLoCo requires algorithm and artifact codec"
-    ):
         DraftRunSpec.model_validate(value)
 
 

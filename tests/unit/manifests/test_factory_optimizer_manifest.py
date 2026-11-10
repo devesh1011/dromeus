@@ -1,4 +1,4 @@
-"""Factory optimizer identity, admission boundaries and legacy compatibility."""
+"""Factory optimizer identity, admission boundaries and private optimizer identity."""
 
 import pytest
 from pydantic import JsonValue, ValidationError
@@ -8,7 +8,7 @@ from dromeus.manifests.models import (
     FactoryOptimizerSpec,
     OptimizerParameterGroup,
     PrivateOptimizerSpec,
-    PrivateTrainingSpec,
+    TaskTrainingSpec,
 )
 
 
@@ -30,15 +30,26 @@ def _optimizer() -> FactoryOptimizerSpec:
     )
 
 
-def test_factory_roundtrip_preserves_group_identity() -> None:
-    spec = PrivateTrainingSpec(
-        optimizer=_optimizer(), loss="cross_entropy", batch_size=64
+def _task(optimizer: PrivateOptimizerSpec | FactoryOptimizerSpec) -> TaskTrainingSpec:
+    return TaskTrainingSpec(
+        optimizer=optimizer,
+        batch_size=64,
+        task_definition_hash="a" * 64,
+        implementation_hash="b" * 64,
+        batch_definition_hash="c" * 64,
+        loss_definition_hash="d" * 64,
+        record_unit="fixed-token-sequence",
+        trainable_parameter_names=optimizer.parameter_names,
     )
-    restored = PrivateTrainingSpec.model_validate_json(canonical_json(spec))
+
+
+def test_factory_roundtrip_preserves_group_identity() -> None:
+    spec = _task(_optimizer())
+    restored = TaskTrainingSpec.model_validate_json(canonical_json(spec))
     assert restored == spec
     assert isinstance(restored.optimizer, FactoryOptimizerSpec)
     assert restored.optimizer.parameter_names == ("weight", "bias")
-    assert b'"kind":"factory-v1"' in canonical_json(spec)
+    assert b'"kind":"factory"' in canonical_json(spec)
 
 
 @pytest.mark.parametrize(
@@ -145,20 +156,16 @@ def test_nested_json_options_roundtrip_without_type_coercion() -> None:
     assert canonical_hash(restored) == canonical_hash(group)
 
 
-def test_legacy_private_training_identity_remains_exact() -> None:
-    spec = PrivateTrainingSpec(
-        optimizer=PrivateOptimizerSpec(
-            name="adam",
-            torch_version="2.13.0",
-            parameter_names=("weight", "bias"),
-            learning_rate=0.001,
-        ),
-        loss="cross_entropy",
-        batch_size=64,
+def test_private_optimizer_identity_roundtrips_exactly() -> None:
+    spec = PrivateOptimizerSpec(
+        name="adam",
+        torch_version="2.13.0",
+        parameter_names=("weight", "bias"),
+        learning_rate=0.001,
     )
-    assert canonical_hash(spec) == (
-        "2c47f4e4ba33937f0b4ac769efde5b4258fe729383212d67ddf311e87e878513"
+    assert (
+        canonical_hash(spec)
+        == "a567e6091ce77e907d04dbc886f81fdf0de531ad2b80cb2858c2a47fb947fc35"
     )
-    restored = PrivateTrainingSpec.model_validate_json(canonical_json(spec))
-    assert isinstance(restored.optimizer, PrivateOptimizerSpec)
+    restored = PrivateOptimizerSpec.model_validate_json(canonical_json(spec))
     assert restored == spec
