@@ -35,9 +35,8 @@ load_safetensors = cast(_LoadSafetensors, _load_file)
 save_safetensors = cast(_SaveSafetensors, _save_file)
 
 
-def canonical_json(model: BaseModel) -> bytes:
-    """Encode a validated model as deterministic UTF-8 JSON."""
-    value = model.model_dump(mode="json", exclude_none=True)
+def canonical_json_bytes(value: object) -> bytes:
+    """Encode a JSON-compatible value as deterministic, strict UTF-8 JSON."""
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -45,6 +44,11 @@ def canonical_json(model: BaseModel) -> bytes:
         separators=(",", ":"),
         sort_keys=True,
     ).encode()
+
+
+def canonical_json(model: BaseModel) -> bytes:
+    """Encode a validated model as deterministic UTF-8 JSON."""
+    return canonical_json_bytes(model.model_dump(mode="json", exclude_none=True))
 
 
 def canonical_hash(model: BaseModel) -> str:

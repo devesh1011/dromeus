@@ -23,8 +23,7 @@ from dromeus.training.private_data import dataset_size, make_task_loader
 from dromeus.training.private_model import (
     ModelStateGuard,
     describe_private_model,
-    registered_model_state,
-    tensor_digest,
+    require_unchanged_public_state,
 )
 from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.task import TrainingTask, validate_record_losses
@@ -393,16 +392,13 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             "logical_steps"
         ):
             raise ValueError("ordinary checkpoint counters disagree")
-        immutable = {
-            **self.specification.public_buffer_hashes,
-            **self.specification.frozen_parameter_hashes,
-        }
-        persistent = registered_model_state(self._raw_model)
-        for name, digest in immutable.items():
-            if name not in persistent:
-                continue
-            values = state.get(f"model.{name}")
-            if values is None or tensor_digest(torch.from_numpy(values)) != digest:  # pyright: ignore[reportUnknownMemberType]
-                raise ValueError("ordinary checkpoint changed immutable public state")
+        require_unchanged_public_state(
+            self._raw_model,
+            state,
+            {
+                **self.specification.public_buffer_hashes,
+                **self.specification.frozen_parameter_hashes,
+            },
+        )
         super().load_checkpoint_tensors(state)
         self._guard.check()

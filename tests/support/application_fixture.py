@@ -6,7 +6,7 @@ import numpy as np
 
 from dromeus.application import definition_hash
 from dromeus.manifests.models import DraftRunSpec
-from support.custom_training import (
+from examples.custom_training import (
     MODEL_DEFINITION,
     TASK_DEFINITION,
     TRAINING_DEFINITION,

@@ -18,8 +18,12 @@ from dromeus.manifests.models import (
     TensorSchema,
 )
 from dromeus.membership.formation import FormationResult
-from dromeus.persistence.run_store import RunStore
-from dromeus.runtime import MetricsService, TrainingConfig, build_algorithm
+from dromeus.runtime import (
+    FailureConfig,
+    MetricsService,
+    TrainingConfig,
+    build_algorithm,
+)
 from dromeus.training.privacy import ReservationStore
 from dromeus.training.private_model import describe_private_model
 from dromeus.training.private_trainer import PrivateTrainer, private_training_definition
@@ -93,6 +97,25 @@ def describe_task(
     )
 
 
+def _require_shared_definitions(
+    draft: DraftRunSpec,
+    *,
+    model_definition: str,
+    task_definition: str,
+    training_definition: str,
+) -> None:
+    for actual, expected in (
+        (definition_hash(model_definition), draft.model_definition_hash),
+        (definition_hash(task_definition), draft.dataset.definition_hash),
+        (
+            definition_hash(training_definition),
+            draft.application_training.definition_hash,
+        ),
+    ):
+        if actual != expected:
+            raise ValueError("application definition does not match shared manifest")
+
+
 def prepare_task(
     *,
     draft: DraftRunSpec,
@@ -109,13 +132,13 @@ def prepare_task(
         raise ValueError("task specification differs from shared private policy")
     task.check_definition(selected)
     training_definition = private_training_definition(selected)
-    if (
-        definition_hash(task.model_definition) != draft.model_definition_hash
-        or definition_hash(task.task_definition) != draft.dataset.definition_hash
-        or definition_hash(training_definition)
-        != draft.application_training.definition_hash
-    ):
-        raise ValueError("application task definitions differ from shared manifest")
+    # Checked before the trainer exists: private trainers bind durable state.
+    _require_shared_definitions(
+        draft,
+        model_definition=task.model_definition,
+        task_definition=task.task_definition,
+        training_definition=training_definition,
+    )
     trainer: PyTorchTrainer
     if draft.privacy is not None:
         if local.reservation_store is None:
@@ -208,11 +231,12 @@ class PreparedApplication:
             member.public_key for member in result.manifest.participants
         }:
             raise ValueError("local key is not a formed participant")
+        durable = FailureConfig.for_run_root(run_root)
         return TrainingConfig(
             algorithm=build_algorithm(manifest=result.manifest, trainer=self._trainer),
             load_checkpoint=self._trainer.load_checkpoint,
-            run_store=RunStore(run_root / "run-store"),
-            artifact_root=run_root / "rounds",
+            run_store=durable.run_store,
+            artifact_root=durable.artifact_root,
             metrics_publisher=metrics_publisher,
             evaluation_interval=self._evaluation_interval,
         )
@@ -245,16 +269,12 @@ def prepare_application(
             raise ValueError("private training definition mismatch")
     elif isinstance(trainer, PrivateTrainer):
         raise ValueError("private adapter requires a private manifest")
-    for actual, expected in (
-        (definition_hash(model_definition), draft.model_definition_hash),
-        (definition_hash(task_definition), draft.dataset.definition_hash),
-        (
-            definition_hash(training_definition),
-            draft.application_training.definition_hash,
-        ),
-    ):
-        if actual != expected:
-            raise ValueError("application definition does not match shared manifest")
+    _require_shared_definitions(
+        draft,
+        model_definition=model_definition,
+        task_definition=task_definition,
+        training_definition=training_definition,
+    )
     if evaluation_interval <= 0:
         raise ValueError("evaluation interval must be positive")
     if trainer.completed_steps:

@@ -23,7 +23,7 @@ from dromeus.training.private_model import (
     ModelStateGuard,
     ensure_grad_samples,
     registered_model_state,
-    tensor_digest,
+    require_unchanged_public_state,
     validate_private_model,
 )
 from dromeus.training.task import TrainingTask, validate_record_losses
@@ -144,17 +144,14 @@ class _ApplicationWorkload:
         }
 
     def validate_checkpoint(self, state: dict[str, np.ndarray]) -> None:
-        immutable = {
-            **self._specification.public_buffer_hashes,
-            **self._specification.frozen_parameter_hashes,
-        }
-        persistent = registered_model_state(self.model)
-        for name, expected in immutable.items():
-            if name not in persistent:
-                continue
-            value = state.get(f"model.{name}")
-            if value is None or tensor_digest(torch.tensor(value.copy())) != expected:
-                raise ValueError("checkpoint changed immutable public model state")
+        require_unchanged_public_state(
+            self.model,
+            state,
+            {
+                **self._specification.public_buffer_hashes,
+                **self._specification.frozen_parameter_hashes,
+            },
+        )
 
 
 class _ApplicationStep:

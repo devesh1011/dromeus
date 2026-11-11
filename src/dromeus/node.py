@@ -106,6 +106,7 @@ async def run_node(
     local_tensor_schema = prepared_training.tensor_schema
     transport = AXLTransport(AXLBridgeConfig(base_url=config.axl_bridge_url))
     local_key = await transport.local_public_key()
+    failure = FailureConfig.for_run_root(config.run_root)
     runtime = NodeRuntime(
         transport=transport,
         draft=draft,
@@ -113,7 +114,7 @@ async def run_node(
         dataset=draft.dataset,
         artifact_root=config.run_root / "formation-artifacts",
         event_sink=event_sink,
-        failure=FailureConfig.for_run_root(config.run_root),
+        failure=failure,
         local_tensor_schema=local_tensor_schema,
         private_trainer=private_trainer,
     )
@@ -144,7 +145,7 @@ async def run_node(
             raise ValueError("invitation bootstrap URI does not match node config")
         formation = ParticipantFormation(invitation=invitation)
 
-    run_store_root = config.run_root / "run-store"
+    run_store_root = failure.run_store.root
 
     def build_training(result: FormationResult) -> TrainingConfig:
         metrics = JsonlMetricsPublisher(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import uuid
 from collections.abc import Mapping
@@ -16,6 +15,7 @@ from safetensors.numpy import save_file  # pyright: ignore[reportUnknownVariable
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
+    canonical_json_bytes,
     file_sha256,
 )
 from dromeus.manifests.models import SealedManifest, Sha256
@@ -47,6 +47,10 @@ class RunStore:
         self._manifest_path = root / "manifest.json"
         self._state_path = root / "state.json"
         self._lock = RLock()
+
+    @property
+    def root(self) -> Path:
+        return self._root
 
     def initialize(self, manifest: SealedManifest) -> Sha256:
         """Write the sealed manifest once and initialize current archive state."""
@@ -318,13 +322,7 @@ def _atomic_save_tensors(
 
 def _atomic_write_json(path: Path, value: object) -> None:
     try:
-        data = json.dumps(
-            value,
-            allow_nan=False,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        ).encode()
+        data = canonical_json_bytes(value)
     except (TypeError, ValueError) as error:
         raise RunStoreError("run state is not JSON serializable") from error
     _atomic_write(path, data)

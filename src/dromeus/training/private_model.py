@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
+import numpy as np
 import torch
 from torch import nn
 
@@ -46,6 +47,21 @@ def tensor_digest(value: torch.Tensor) -> str:
     metadata = json.dumps([str(tensor.dtype), list(tensor.shape)]).encode()
     raw = tensor.reshape(-1).view(torch.uint8).numpy().tobytes()
     return hashlib.sha256(metadata + b"\x00" + raw).hexdigest()
+
+
+def require_unchanged_public_state(
+    model: nn.Module,
+    state: Mapping[str, np.ndarray],
+    expected_hashes: Mapping[str, str],
+) -> None:
+    """Reject a checkpoint whose frozen parameters or public buffers changed."""
+    persistent = registered_model_state(model)
+    for name, expected in expected_hashes.items():
+        if name not in persistent:
+            continue
+        value = state.get(f"model.{name}")
+        if value is None or tensor_digest(torch.from_numpy(value.copy())) != expected:  # pyright: ignore[reportUnknownMemberType]
+            raise ValueError("checkpoint changed immutable public model state")
 
 
 def registered_model_state(model: nn.Module) -> dict[str, torch.Tensor]:

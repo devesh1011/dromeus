@@ -11,12 +11,6 @@ import pytest
 import torch
 from pydantic import ValidationError
 from support.application_fixture import application_draft, local_file
-from support.custom_training import (
-    MODEL_DEFINITION,
-    TASK_DEFINITION,
-    TRAINING_DEFINITION,
-    LocalRegression,
-)
 from support.in_memory_transport import InMemoryNetwork, InMemoryTransport
 from torch import nn
 
@@ -43,6 +37,12 @@ from dromeus.telemetry.metrics import JsonlMetricsPublisher, RoundTiming
 from dromeus.training.base import EvaluationResult
 from dromeus.training.trainer import PyTorchTrainer
 from dromeus.transport.axl import AXLBridgeConfig
+from examples.custom_training import (
+    MODEL_DEFINITION,
+    TASK_DEFINITION,
+    TRAINING_DEFINITION,
+    LocalRegression,
+)
 
 
 def prepared(draft: DraftRunSpec, local: LocalRegression) -> PreparedApplication:

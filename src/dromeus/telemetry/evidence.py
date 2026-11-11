@@ -19,6 +19,7 @@ from pydantic import (
     model_validator,
 )
 
+from dromeus.manifests.canonical import canonical_json_bytes
 from dromeus.manifests.models import (
     Identifier,
     MessageId,
@@ -359,13 +360,7 @@ def evidence_record(record: EvidenceRecord) -> dict[str, object]:
 
 def encode_evidence(record: EvidenceRecord) -> bytes:
     """Encode one evidence record as deterministic strict JSON."""
-    return json.dumps(
-        evidence_record(record),
-        allow_nan=False,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode()
+    return canonical_json_bytes(evidence_record(record))
 
 
 def decode_evidence(data: bytes | str) -> EvidenceRecord:
