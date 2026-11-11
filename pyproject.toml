@@ -27,11 +27,6 @@ dependencies = [
 
 [project.optional-dependencies]
 privacy = ["opacus==1.6.0"]
-benchmark = [
-    "datasets>=3,<5",
-    "pillow>=10,<13",
-    "tiktoken==0.14.0",
-]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
@@ -43,13 +38,9 @@ explicit = true
 
 [dependency-groups]
 dev = [
-  "datasets>=3,<5",
-  "pillow>=10,<13",
-  "matplotlib>=3.9,<4",
   "pyright>=1.1.400",
   "pytest>=8.4",
   "ruff>=0.12",
-  "tiktoken==0.14.0",
 ]
 
 [tool.hatch.build.targets.wheel]
