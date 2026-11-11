@@ -25,7 +25,7 @@ PINNED_COMMIT = "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
 UPSTREAM_SOURCE = Path("src/noloco/sparse_optimizer_c.py")
 DEFAULT_OUTPUT = (
     Path(__file__).resolve().parents[1]
-    / "tests/golden/noloco_upstream_outer_step_v1.json"
+    / "tests/golden/noloco_upstream_outer_step.json"
 )
 OUTER_LR = 0.7
 OUTER_MOMENTUM = 0.5

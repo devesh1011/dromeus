@@ -51,7 +51,6 @@ from dromeus.protocol.models import (  # noqa: E402
     ChunkAck,
     MessageType,
     TransferBegin,
-    TransferComplete,
 )  # noqa: E402
 from dromeus.runtime import NodeRuntime, NodeState  # noqa: E402
 from dromeus.telemetry.events import JsonlEventSink  # noqa: E402
@@ -232,18 +231,6 @@ class FaultInjectingTransport:
                     "transfer_id": ack.transfer_id,
                     "chunk_index": ack.chunk_index,
                     "chunk_sha256": ack.chunk_sha256,
-                }
-            )
-        elif envelope.message_type is MessageType.TRANSFER_COMPLETE:
-            complete = decode_message(
-                envelope.payload,
-                TransferComplete,
-                max_bytes=self._max_payload_bytes,
-            )
-            details.update(
-                {
-                    "transfer_id": complete.transfer_id,
-                    "total_sha256": complete.total_sha256,
                 }
             )
         return details
