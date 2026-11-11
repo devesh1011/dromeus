@@ -148,7 +148,7 @@ def test_two_instances_match_hand_computed_noloco_trace(tmp_path: Path) -> None:
 def test_identity_path_matches_pinned_upstream_outer_step_fixture(
     tmp_path: Path,
 ) -> None:
-    fixture_path = TESTS_ROOT / "golden" / "noloco_upstream_outer_step_v1.json"
+    fixture_path = TESTS_ROOT / "golden" / "noloco_upstream_outer_step.json"
     fixture = cast(dict[str, Any], json.loads(fixture_path.read_text(encoding="utf-8")))
     assert fixture["authority"]["commit"] == (
         "a1b4a425bdc4050a356cf9f4bae7c383419703ab"
