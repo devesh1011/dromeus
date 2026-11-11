@@ -46,8 +46,8 @@ MODEL_DEFINITION = "w1-smoke-linear-2-1-fp32-public-init-v1"
 TASK_DEFINITION = "w1-smoke-fixed-public-synthetic-mse-v1"
 
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("DROMEUS_PRIVATE_AXL_BINARY"),
-    reason="set DROMEUS_PRIVATE_AXL_BINARY to run the real custom training test",
+    not os.environ.get("DROMEUS_AXL_BINARY"),
+    reason="set DROMEUS_AXL_BINARY to run the real custom training test",
 )
 
 
@@ -85,8 +85,8 @@ def synthetic_task(rank: int) -> TrainingTask:
 
 
 def prepare_training(draft: DraftRunSpec) -> PreparedApplication:
-    root = Path(os.environ["DROMEUS_W1_LOCAL_ROOT"])
-    rank = int(os.environ["DROMEUS_W1_RANK"])
+    root = Path(os.environ["DROMEUS_PRIVATE_NODE_ROOT"])
+    rank = int(os.environ["DROMEUS_PRIVATE_NODE_RANK"])
     # All records are public synthetic data. This bootstrap must never be copied
     # into a deployment that recreates a missing existing private-data ledger.
     ledger = PrivacyLedger.create(
@@ -131,7 +131,7 @@ def private_specification(
 def test_four_private_python_processes_over_axl(
     tmp_path: Path, optimizer_name: Literal["sgd", "adam", "adamw"]
 ) -> None:
-    binary = Path(os.environ["DROMEUS_PRIVATE_AXL_BINARY"])
+    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
     root = REPO_ROOT
     spec = private_specification(optimizer_name)
     base = application_draft(compressed=True).model_dump(mode="python")
@@ -191,8 +191,8 @@ def test_four_private_python_processes_over_axl(
                     config_path.write_text(config.model_dump_json())
                     env = dict(
                         os.environ,
-                        DROMEUS_W1_LOCAL_ROOT=str(tmp_path / f"node-{rank}"),
-                        DROMEUS_W1_RANK=str(rank),
+                        DROMEUS_PRIVATE_NODE_ROOT=str(tmp_path / f"node-{rank}"),
+                        DROMEUS_PRIVATE_NODE_RANK=str(rank),
                         PYTHONPATH=python_path,
                         OMP_NUM_THREADS="1",
                         MKL_NUM_THREADS="1",
@@ -281,7 +281,7 @@ def test_four_private_python_processes_over_axl(
             }
         )
     assert len(hashes) == 1
-    evidence_root = os.environ.get("DROMEUS_W1_EVIDENCE_ROOT")
+    evidence_root = os.environ.get("DROMEUS_PRIVATE_EVIDENCE_ROOT")
     if evidence_root:
         destination = Path(evidence_root)
         destination.mkdir(parents=True, exist_ok=True)

@@ -41,14 +41,14 @@ def test_local_axl_preserves_existing_logs(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(
-    not os.environ.get("DROMEUS_FEDERATED_AXL_BINARY"),
-    reason="set DROMEUS_FEDERATED_AXL_BINARY for real local AXL lifecycle checks",
+    not os.environ.get("DROMEUS_AXL_BINARY"),
+    reason="set DROMEUS_AXL_BINARY for real local AXL lifecycle checks",
 )
 @pytest.mark.parametrize("exit_kind", ("exception", "cancellation"))
 def test_real_local_axl_full_mesh_and_cleanup(
     tmp_path: Path, exit_kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    binary = Path(os.environ["DROMEUS_FEDERATED_AXL_BINARY"])
+    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
     bridges: list[str] = []
     private_roots: list[Path] = []
     temporary_directory = tempfile.TemporaryDirectory

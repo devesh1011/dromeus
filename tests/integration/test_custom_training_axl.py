@@ -18,15 +18,15 @@ from dromeus.persistence.archive import RunArchive
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("DROMEUS_CUSTOM_AXL_BINARY"),
-    reason="set DROMEUS_CUSTOM_AXL_BINARY to run the real custom training test",
+    not os.environ.get("DROMEUS_AXL_BINARY"),
+    reason="set DROMEUS_AXL_BINARY to run the real custom training test",
 )
 
 
 def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> None:
-    binary = Path(os.environ["DROMEUS_CUSTOM_AXL_BINARY"])
+    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
     root = REPO_ROOT
-    python_path = str(root / "tests")
+    python_path = os.pathsep.join((str(root), str(root / "tests")))
     if inherited_python_path := os.environ.get("PYTHONPATH"):
         python_path += os.pathsep + inherited_python_path
     draft = application_draft(compressed=True)
@@ -74,7 +74,7 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
                                 "--config",
                                 str(config_path),
                                 "--factory",
-                                "support.custom_training:prepare_training",
+                                "examples.custom_training:prepare_training",
                                 cwd=root,
                                 env=env,
                                 stdout=log,
