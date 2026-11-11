@@ -29,11 +29,10 @@ from dromeus.protocol.models import (
     Tensor,
     TensorSchema,
     TransferBegin,
-    TransferComplete,
     create_envelope,
 )
 
-GOLDEN = TESTS_ROOT / "golden" / "protocol_v1.json"
+GOLDEN = TESTS_ROOT / "golden" / "protocol.json"
 
 
 def _models() -> dict[str, DomainModel]:
@@ -51,7 +50,7 @@ def _models() -> dict[str, DomainModel]:
             total_size_bytes=4,
             total_sha256="5" * 64,
             chunk_count=1,
-            codec_id="safetensors-v1",
+            codec_id="safetensors",
             tensor_schema=schema,
         ),
         "chunk": Chunk(
@@ -66,10 +65,6 @@ def _models() -> dict[str, DomainModel]:
             chunk_index=0,
             chunk_sha256="6" * 64,
         ),
-        "transfer_complete": TransferComplete(
-            transfer_id="transfer-1",
-            total_sha256="5" * 64,
-        ),
         "pair_commit": PairCommitMessage(round_id=7, checksum="7" * 64),
         "run_failed": RunFailedMessage(
             round_id=7,
@@ -79,7 +74,7 @@ def _models() -> dict[str, DomainModel]:
     }
 
 
-def test_protocol_v1_payload_bytes_match_golden_fixture() -> None:
+def test_protocol_payload_bytes_match_golden_fixture() -> None:
     golden = json.loads(GOLDEN.read_text())
 
     assert {
@@ -87,7 +82,7 @@ def test_protocol_v1_payload_bytes_match_golden_fixture() -> None:
     } == {name: value for name, value in golden.items() if name != "envelope"}
 
 
-def test_protocol_v1_envelope_bytes_match_golden_fixture() -> None:
+def test_protocol_envelope_bytes_match_golden_fixture() -> None:
     golden = json.loads(GOLDEN.read_text())
     envelope = create_envelope(
         message_type=MessageType.CHUNK,
@@ -95,7 +90,7 @@ def test_protocol_v1_envelope_bytes_match_golden_fixture() -> None:
         run_id="run-001",
         manifest_hash="a" * 64,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
+        algorithm_id="noloco",
         round_id=2,
         correlation_id="transfer-1",
         payload=b"weights",
@@ -107,8 +102,8 @@ def test_protocol_v1_envelope_bytes_match_golden_fixture() -> None:
 @pytest.mark.parametrize(
     "encoded",
     (
-        "8ba56d61676963c40444524d31b070726f746f636f6c5f76657273696f6e02ac6d6573736167655f74797065a54348554e4baa6d6573736167655f6964a96d6573736167652d31a672756e5f6964a772756e2d303031ad6d616e69666573745f68617368d94061616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161b173656e6465725f7075626c69635f6b6579a6706565722d30ac616c676f726974686d5f6964a56470736764ae7061796c6f61645f6c656e67746800ae7061796c6f61645f736861323536d94065336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535a77061796c6f6164c400",
-        "8ba56d61676963c40444524d31b070726f746f636f6c5f76657273696f6e01ac6d6573736167655f74797065a7554e4b4e4f574eaa6d6573736167655f6964a96d6573736167652d31a672756e5f6964a772756e2d303031ad6d616e69666573745f68617368d94061616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161b173656e6465725f7075626c69635f6b6579a6706565722d30ac616c676f726974686d5f6964a56470736764ae7061796c6f61645f6c656e67746800ae7061796c6f61645f736861323536d94065336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535a77061796c6f6164c400",
+        "8ba56d61676963c40444524d31b070726f746f636f6c5f76657273696f6e02ac6d6573736167655f74797065a54348554e4baa6d6573736167655f6964a96d6573736167652d31a672756e5f6964a772756e2d303031ad6d616e69666573745f68617368d94061616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161b173656e6465725f7075626c69635f6b6579a6706565722d30ac616c676f726974686d5f6964a66e6f6c6f636fae7061796c6f61645f6c656e67746800ae7061796c6f61645f736861323536d94065336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535a77061796c6f6164c400",
+        "8ba56d61676963c40444524d31b070726f746f636f6c5f76657273696f6e01ac6d6573736167655f74797065a7554e4b4e4f574eaa6d6573736167655f6964a96d6573736167652d31a672756e5f6964a772756e2d303031ad6d616e69666573745f68617368d94061616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161b173656e6465725f7075626c69635f6b6579a6706565722d30ac616c676f726974686d5f6964a66e6f6c6f636fae7061796c6f61645f6c656e67746800ae7061796c6f61645f736861323536d94065336230633434323938666331633134396166626634633839393666623932343237616534316534363439623933346361343935393931623738353262383535a77061796c6f6164c400",
     ),
 )
 def test_unknown_protocol_version_and_message_type_are_rejected(
@@ -157,7 +152,7 @@ def test_transfer_begin_supports_resnet32_tensor_count() -> None:
         total_size_bytes=1,
         total_sha256="5" * 64,
         chunk_count=1,
-        codec_id="safetensors-v1",
+        codec_id="safetensors",
         tensor_schema=schema,
     )
     encoded = encode_message(begin)
@@ -165,7 +160,7 @@ def test_transfer_begin_supports_resnet32_tensor_count() -> None:
     assert decode_message(encoded, TransferBegin, max_bytes=len(encoded)) == begin
 
 
-def test_transfer_begin_retains_exact_wire_v1_shape() -> None:
+def test_transfer_begin_retains_exact_wire_shape() -> None:
     manifest = SealedManifest.model_validate(manifest_data())
     begin = TransferBegin(
         transfer_id="transfer-1",
@@ -173,7 +168,7 @@ def test_transfer_begin_retains_exact_wire_v1_shape() -> None:
         total_size_bytes=4,
         total_sha256="1" * 64,
         chunk_count=1,
-        codec_id="safetensors-v1",
+        codec_id="safetensors",
         tensor_schema=manifest.tensor_schema,
     )
 
@@ -186,3 +181,19 @@ def test_transfer_begin_retains_exact_wire_v1_shape() -> None:
         "codec_id",
         "tensor_schema",
     }
+
+
+def test_chunk_framing_bound_covers_largest_chunk_header() -> None:
+    from dromeus.protocol.codec import encode_message
+    from dromeus.protocol.models import CHUNK_FRAMING_BYTES, Chunk
+
+    data = b"x" * 70_000  # large enough to need a 32-bit binary length
+    chunk = Chunk(
+        transfer_id="t" * 128,
+        chunk_index=2**63 - 1,
+        chunk_count=2**63 - 1,
+        chunk_sha256="f" * 64,
+        data=data,
+    )
+
+    assert len(encode_message(chunk)) - len(data) <= CHUNK_FRAMING_BYTES

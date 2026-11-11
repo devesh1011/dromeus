@@ -33,7 +33,6 @@ CONTROL_TYPES = {
 TRANSFER_TYPES = {
     MessageType.TRANSFER_BEGIN,
     MessageType.CHUNK,
-    MessageType.TRANSFER_COMPLETE,
 }
 ACK_TYPES = {MessageType.CHUNK_ACK}
 TELEMETRY_TYPES = {MessageType.CONSENSUS_SKETCH}
@@ -89,8 +88,12 @@ class Receiver:
         self._queues = {
             channel: asyncio.Queue[Envelope](maxsize=64) for channel in MessageChannel
         }
-        self._seen_messages: set[MessageId] = set()
-        self._seen_idempotent_messages: set[tuple[PublicKey, MessageId]] = set()
+        # Values are the message round for round-tracked types, else None.
+        # Round-tracked entries are pruned once the round window rejects them.
+        self._seen_messages: dict[MessageId, RoundId | None] = {}
+        self._seen_idempotent_messages: dict[
+            tuple[PublicKey, MessageId], RoundId | None
+        ] = {}
         self._future_round_messages: list[Envelope] = []
         self._future_round_transfer_by_sender: dict[PublicKey, MessageId] = {}
         self._task: asyncio.Task[None] | None = None
@@ -165,6 +168,11 @@ class Receiver:
             and envelope.algorithm_id != self._policy.algorithm_id
         ):
             raise ReceiverError("unexpected algorithm id")
+        tracked_round = (
+            envelope.round_id
+            if envelope.message_type in ROUND_TRACKED_TYPES
+            else None
+        )
         idempotent_key: tuple[PublicKey, MessageId] | None = None
         if envelope.message_type in IDEMPOTENT_TYPES:
             idempotent_key = (envelope.sender_public_key, envelope.message_id)
@@ -173,17 +181,17 @@ class Receiver:
         elif envelope.message_type not in TRANSFER_TYPES | ACK_TYPES:
             if envelope.message_id in self._seen_messages:
                 raise ReceiverError("replayed message id")
-            self._seen_messages.add(envelope.message_id)
+            self._seen_messages[envelope.message_id] = tracked_round
         if (
             envelope.message_type in ROUND_TRACKED_TYPES
             and envelope.round_id is not None
         ):
             should_route = self._validate_round_window(envelope)
             if idempotent_key is not None:
-                self._seen_idempotent_messages.add(idempotent_key)
+                self._seen_idempotent_messages[idempotent_key] = tracked_round
             return should_route
         if idempotent_key is not None:
-            self._seen_idempotent_messages.add(idempotent_key)
+            self._seen_idempotent_messages[idempotent_key] = tracked_round
         return True
 
     def _validate_round_window(self, envelope: Envelope) -> bool:
@@ -300,6 +308,10 @@ class Receiver:
     def set_current_round(self, round_id: RoundId) -> None:
         """Advance round validation after a pair commit is durable."""
         self._policy.current_round = lambda: round_id
+        # Every round-tracked type is rejected once older than the telemetry age.
+        oldest_routable = round_id - MAX_TELEMETRY_ROUND_AGE
+        _forget_rounds_before(self._seen_messages, oldest_routable)
+        _forget_rounds_before(self._seen_idempotent_messages, oldest_routable)
 
     async def advance_round(self, next_round: RoundId) -> None:
         ready = [
@@ -320,3 +332,13 @@ class Receiver:
         }
         for envelope in ready:
             await self._route(envelope)
+
+
+def _forget_rounds_before[K](seen: dict[K, RoundId | None], round_id: int) -> None:
+    expired = [
+        key
+        for key, seen_round in seen.items()
+        if seen_round is not None and seen_round < round_id
+    ]
+    for key in expired:
+        del seen[key]

@@ -16,6 +16,7 @@ from pydantic import (
 )
 
 from dromeus.protocol.models import (
+    CHUNK_FRAMING_BYTES,
     AlgorithmId,
     DomainModel,
     Identifier,
@@ -121,8 +122,10 @@ class TransportLimits(DomainModel):
 
     @model_validator(mode="after")
     def valid_transfer_bounds(self) -> Self:
-        if self.effective_chunk_size > self.message_payload_limit:
-            raise ValueError("chunk size must not exceed message payload limit")
+        if self.effective_chunk_size + CHUNK_FRAMING_BYTES > self.message_payload_limit:
+            raise ValueError(
+                "chunk size plus chunk framing must not exceed message payload limit"
+            )
         if self.message_payload_limit > self.max_payload_bytes:
             raise ValueError("message payload limit must not exceed bundle limit")
         if self.artifact_size_limit > self.max_payload_bytes:
@@ -156,7 +159,15 @@ class TransportLimits(DomainModel):
 
     @property
     def effective_chunk_size(self) -> int:
-        return self.chunk_size_bytes or self.artifact_size_limit
+        if self.chunk_size_bytes is not None:
+            return self.chunk_size_bytes
+        return max(
+            1,
+            min(
+                self.artifact_size_limit,
+                self.message_payload_limit - CHUNK_FRAMING_BYTES,
+            ),
+        )
 
     @property
     def effective_window_size(self) -> int:
@@ -600,8 +611,6 @@ class DraftRunSpec(DomainModel):
             or self.transport.window_size is None
         ):
             raise ValueError("NoLoCo requires chunk size and window size")
-        if self.transport.chunk_size_bytes > self.transport.message_payload_limit:
-            raise ValueError("chunk size must not exceed message payload limit")
         return self
 
 

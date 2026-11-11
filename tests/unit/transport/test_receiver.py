@@ -510,7 +510,7 @@ async def _test_future_round_transfer_sequence_is_buffered() -> None:
             (
                 MessageType.TRANSFER_BEGIN,
                 MessageType.CHUNK,
-                MessageType.TRANSFER_COMPLETE,
+                MessageType.CHUNK,
             )
         )
     ]
@@ -549,3 +549,50 @@ async def _test_future_round_transfer_sequence_is_buffered() -> None:
         ]
     finally:
         await receiver.stop()
+
+
+def test_replay_memory_stays_bounded_across_rounds() -> None:
+    """Remembered message IDs are pruned once their round can no longer be routed."""
+    from dromeus.transport.receiver import MAX_TELEMETRY_ROUND_AGE
+
+    rounds = 3 * MAX_TELEMETRY_ROUND_AGE
+
+    async def run() -> None:
+        receiver, inbound, senders, sink = _setup(world_size=4, current_round=0)
+        await receiver.start()
+        try:
+            for round_id in range(rounds):
+                receiver.set_current_round(round_id)
+                await _send(
+                    senders[0],
+                    MessageType.CONSENSUS_SKETCH,
+                    f"sketch-{round_id}",
+                    round_id=round_id,
+                )
+                await _send(
+                    senders[0],
+                    MessageType.UPDATE_READY,
+                    f"ready-{round_id}",
+                    round_id=round_id,
+                )
+                await inbound.wait_for_received(2 * (round_id + 1))
+                await receiver.receive(MessageChannel.PAIR_COMMIT, timeout_seconds=1)
+                await receiver.receive(MessageChannel.TELEMETRY, timeout_seconds=1)
+            remembered = len(
+                receiver._seen_messages  # pyright: ignore[reportPrivateUsage]
+            ) + len(
+                receiver._seen_idempotent_messages  # pyright: ignore[reportPrivateUsage]
+            )
+            assert remembered <= 2 * (MAX_TELEMETRY_ROUND_AGE + 2)
+
+            # A replay of a forgotten message is still refused by the round window.
+            await _send(senders[0], MessageType.UPDATE_READY, "ready-0", round_id=0)
+            await inbound.wait_for_received(2 * rounds + 1)
+            async with asyncio.timeout(1):
+                while sink.records[-1]["event"] != "message_rejected":
+                    await asyncio.sleep(0.01)
+            assert sink.records[-1]["error"] == "stale message"
+        finally:
+            await _cleanup(receiver)
+
+    asyncio.run(run())

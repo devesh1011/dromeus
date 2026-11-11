@@ -134,7 +134,7 @@ def _envelope_from(sender: str) -> bytes:
             run_id="run-001",
             manifest_hash="a" * 64,
             sender_public_key=sender,
-            algorithm_id="dpsgd",
+            algorithm_id="noloco",
             payload=b"",
         )
     )

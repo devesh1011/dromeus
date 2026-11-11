@@ -14,6 +14,8 @@ from support.in_memory_transport import (
 from support.transfer import wait_for_artifact
 
 from dromeus.manifests.models import Tensor, TensorSchema, TransportLimits
+from dromeus.protocol.models import CHUNK_FRAMING_BYTES
+from dromeus.transport.envelope_sender import EnvelopeSender
 from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver, ReceiverPolicy
 from dromeus.transport.transfer import (
@@ -100,23 +102,27 @@ async def _transfer(
         per_peer_in_flight=limits.effective_window_size,
     )
     sender_manager = TransferManager(
-        local_public_key="peer-0",
-        run_id="multi-chunk",
-        manifest_hash="1" * 64,
-        algorithm_id="noloco",
-        transport_limits=limits,
+        sender=EnvelopeSender(
+            scheduler=sender_scheduler,
+            local_public_key="peer-0",
+            run_id="multi-chunk",
+            manifest_hash="1" * 64,
+            algorithm_id="noloco",
+            transport_limits=limits,
+        ),
         receiver=sender_receiver,
-        sender=sender_scheduler,
         artifact_root=root / "sender",
     )
     receiver_manager = TransferManager(
-        local_public_key="peer-1",
-        run_id="multi-chunk",
-        manifest_hash="1" * 64,
-        algorithm_id="noloco",
-        transport_limits=limits,
+        sender=EnvelopeSender(
+            scheduler=receiver_scheduler,
+            local_public_key="peer-1",
+            run_id="multi-chunk",
+            manifest_hash="1" * 64,
+            algorithm_id="noloco",
+            transport_limits=limits,
+        ),
         receiver=receiver_receiver,
-        sender=receiver_scheduler,
         artifact_root=root / "receiver",
     )
     services = (
@@ -252,3 +258,66 @@ def test_interrupted_multichunk_transfer_cleans_temporary_state(
         )
     )
     assert recovered.payload == payload
+
+
+def _single_message_limits(*, chunk_size: int) -> TransportLimits:
+    return TransportLimits(
+        max_payload_bytes=64 * 1024,
+        max_retries=1,
+        retry_timeout_seconds=0.05,
+        chunk_size_bytes=chunk_size,
+        window_size=1,
+        max_message_payload_bytes=4096,
+        max_artifact_bytes=64 * 1024,
+        max_concurrent_transfers=1,
+        max_inflight_bytes=64 * 1024,
+        transfer_lifetime_seconds=2.0,
+        artifact_store_capacity_bytes=64 * 1024,
+    )
+
+
+def test_limits_reject_chunk_without_room_for_framing() -> None:
+    with pytest.raises(ValidationError, match="chunk framing"):
+        _single_message_limits(chunk_size=4096)
+
+
+def test_largest_allowed_chunk_fits_message_payload_limit(tmp_path: Path) -> None:
+    limits = _single_message_limits(chunk_size=4096 - CHUNK_FRAMING_BYTES)
+    payload = bytes(range(256)) * 32
+
+    result = asyncio.run(_transfer(tmp_path, payload=payload, limits=limits))
+
+    assert result.payload == payload
+
+
+def test_lost_transfer_completion_is_recovered(tmp_path: Path) -> None:
+    """Dropping the final control message must not lose a fully sent artifact."""
+    payload = bytes(range(200))
+    # Sender calls: 1 begin, 2 the only chunk, 3 completion.
+    result = asyncio.run(
+        _transfer(
+            tmp_path,
+            payload=payload,
+            limits=_limits(),
+            sender_faults=InMemoryFaults(drop_send_calls=frozenset({3})),
+        )
+    )
+
+    assert result.payload == payload
+
+
+def test_lost_final_chunk_ack_is_resent_after_completion(tmp_path: Path) -> None:
+    """A retried final chunk for a finished transfer is acknowledged again."""
+    payload = bytes(range(200))
+    # Receiver call 1 is the ack of the only chunk, sent after finalizing.
+    result = asyncio.run(
+        _transfer(
+            tmp_path,
+            payload=payload,
+            limits=_limits(),
+            receiver_faults=InMemoryFaults(drop_send_calls=frozenset({1})),
+        )
+    )
+
+    assert result.payload == payload
+    assert result.timing.retry_count > 0

@@ -47,15 +47,11 @@ class PeerScheduler:
     ) -> None:
         self._members = self._normalise_members(participants)
         self._seed = seed
-        self._cache: dict[RoundId, Pairing] = {}
 
     def schedule(self, round_id: RoundId) -> Pairing:
         """Return the deterministic perfect matching for one round."""
         if round_id < 0:
             raise ValueError("round_id must be non-negative")
-        cached = self._cache.get(round_id)
-        if cached is not None:
-            return cached
         ordered = sorted(
             self._members,
             key=lambda key: (
@@ -69,9 +65,7 @@ class PeerScheduler:
         for index in range(0, len(ordered), 2):
             left, right = sorted((ordered[index], ordered[index + 1]))
             pairs.append((left, right))
-        pairing = Pairing(round_id=round_id, pairs=tuple(pairs))
-        self._cache[round_id] = pairing
-        return pairing
+        return Pairing(round_id=round_id, pairs=tuple(pairs))
 
     @staticmethod
     def _normalise_members(

@@ -12,21 +12,17 @@ from pathlib import Path
 
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
-    AlgorithmId,
     Identifier,
     MessageId,
     PublicKey,
     RoundId,
-    RunId,
     Sha256,
     TensorSchema,
     TransferId,
-    TransportLimits,
 )
 from dromeus.protocol.codec import (
     ProtocolDecodeError,
     decode_message,
-    encode_envelope,
     encode_message,
 )
 from dromeus.protocol.models import (
@@ -35,19 +31,14 @@ from dromeus.protocol.models import (
     Envelope,
     MessageType,
     TransferBegin,
-    TransferComplete,
-    create_envelope,
 )
 from dromeus.telemetry.events import EventSink, emit_event
 from dromeus.telemetry.evidence import (
     TransferMessageSentEvidence,
     append_evidence,
 )
-from dromeus.transport.outbound_scheduler import (
-    OutboundScheduler,
-    Priority,
-    SendTiming,
-)
+from dromeus.transport.envelope_sender import EnvelopeSender
+from dromeus.transport.outbound_scheduler import Priority, SendTiming
 from dromeus.transport.receiver import MessageChannel, Receiver
 
 
@@ -220,6 +211,16 @@ class _IncomingTransfer:
     started_at: float
 
 
+@dataclass(frozen=True)
+class _FinishedTransfer:
+    """Kept for one transfer lifetime so retried messages are acknowledged."""
+
+    sender_public_key: PublicKey
+    begin: TransferBegin
+    chunk_hashes: dict[int, Sha256]
+    finished_at: float
+
+
 def _artifact_metadata(path: Path) -> tuple[int, Sha256]:
     try:
         size_bytes = path.stat().st_size
@@ -245,33 +246,25 @@ class TransferManager:
     def __init__(
         self,
         *,
-        local_public_key: PublicKey,
-        run_id: RunId,
-        manifest_hash: Sha256,
-        algorithm_id: AlgorithmId,
-        transport_limits: TransportLimits,
+        sender: EnvelopeSender,
         receiver: Receiver,
-        sender: OutboundScheduler,
         artifact_root: Path,
         max_inflight_bytes: int = 128 * 1024 * 1024,
         event_sink: EventSink | None = None,
     ) -> None:
-        self._local_public_key = local_public_key
-        self._run_id = run_id
-        self._manifest_hash = manifest_hash
-        self._algorithm_id = algorithm_id
-        self._transport_limits = transport_limits
-        self._receiver = receiver
         self._sender = sender
+        self._transport_limits = sender.transport_limits
+        self._receiver = receiver
         self._artifact_store = _ArtifactStore(
             artifact_root,
-            max_bytes=transport_limits.artifact_store_capacity_limit,
+            max_bytes=self._transport_limits.artifact_store_capacity_limit,
         )
         self._max_incoming_reservation_bytes = max_inflight_bytes
         self._incoming_reserved_bytes = 0
         self._event_sink = event_sink
         self._incoming: dict[TransferId, _IncomingTransfer] = {}
         self._completed: dict[TransferId, ArtifactReceipt] = {}
+        self._finished: dict[TransferId, _FinishedTransfer] = {}
         self._completed_queue: asyncio.Queue[ArtifactReceipt] = asyncio.Queue(
             maxsize=64
         )
@@ -315,6 +308,7 @@ class TransferManager:
         for transfer_id in tuple(self._completed):
             await asyncio.to_thread(self._artifact_store.abort, transfer_id)
         self._completed.clear()
+        self._finished.clear()
         while True:
             try:
                 self._completed_queue.get_nowait()
@@ -388,21 +382,9 @@ class TransferManager:
                         task.cancel()
                 await asyncio.gather(*chunk_tasks, return_exceptions=True)
                 raise
+            # The receiver acknowledges the last chunk only after verifying and
+            # materializing the whole artifact, so every ack means delivered.
             retry_count += sum(chunk_retries)
-            complete_timing = await self._send_message(
-                destination=destination,
-                message_type=MessageType.TRANSFER_COMPLETE,
-                message_id=f"{transfer_id}-complete",
-                correlation_id=transfer_id,
-                payload=encode_message(
-                    TransferComplete(
-                        transfer_id=transfer_id, total_sha256=total_sha256
-                    )
-                ),
-                round_id=round_id,
-                priority=Priority.CONTROL,
-            )
-            retry_count += complete_timing.retry_count
             self._last_timing = TransferTiming(
                 elapsed_seconds=time.perf_counter() - started,
                 retry_count=retry_count,
@@ -635,8 +617,14 @@ class TransferManager:
                 ):
                     raise TransferError("conflicting duplicate transfer begin")
                 return
-            if begin.transfer_id in self._completed:
-                raise TransferError("transfer is already complete")
+            finished = self._finished.get(begin.transfer_id)
+            if finished is not None:
+                if (
+                    finished.sender_public_key != envelope.sender_public_key
+                    or finished.begin != begin
+                ):
+                    raise TransferError("conflicting duplicate transfer begin")
+                return
             if len(self._incoming) >= self._transport_limits.concurrent_transfer_limit:
                 raise TransferError("concurrent transfer limit exceeded")
             if (
@@ -664,7 +652,19 @@ class TransferManager:
             )
             incoming = self._incoming.get(chunk.transfer_id)
             if incoming is None:
-                raise TransferError("received chunk without transfer begin")
+                finished = self._finished.get(chunk.transfer_id)
+                if finished is None:
+                    raise TransferError("received chunk without transfer begin")
+                if (
+                    finished.sender_public_key != envelope.sender_public_key
+                    or finished.chunk_hashes.get(chunk.chunk_index)
+                    != chunk.chunk_sha256
+                ):
+                    raise TransferError("conflicting duplicate transfer chunk")
+                await self._acknowledge_chunk(
+                    envelope.sender_public_key, chunk, envelope.round_id
+                )
+                return
             if envelope.sender_public_key != incoming.sender_public_key:
                 raise TransferError("transfer sender changed")
             if (
@@ -718,32 +718,24 @@ class TransferManager:
                 self._abort_incoming(chunk.transfer_id)
                 raise
             incoming.written_chunk_hashes[chunk.chunk_index] = chunk.chunk_sha256
+            if len(incoming.written_chunk_hashes) == incoming.begin.chunk_count:
+                await self._finish_incoming(chunk.transfer_id, incoming)
             await self._acknowledge_chunk(
                 envelope.sender_public_key, chunk, envelope.round_id
             )
             return
-        complete = decode_message(
-            envelope.payload,
-            TransferComplete,
-            max_bytes=self._transport_limits.message_payload_limit,
-        )
-        incoming = self._incoming.get(complete.transfer_id)
-        if incoming is None:
-            if complete.transfer_id in self._completed:
-                return
-            raise TransferError("received completion without transfer begin")
-        if complete.total_sha256 != incoming.begin.total_sha256:
-            self._abort_incoming(complete.transfer_id)
-            raise TransferError("completion checksum does not match transfer begin")
-        if len(incoming.written_chunk_hashes) != incoming.begin.chunk_count:
-            raise TransferError("transfer completed before all chunks arrived")
+        raise TransferError(f"unexpected transfer message {envelope.message_type}")
+
+    async def _finish_incoming(
+        self, transfer_id: TransferId, incoming: _IncomingTransfer
+    ) -> None:
         finalize_task = asyncio.create_task(
             asyncio.to_thread(
                 self._artifact_store.finalize,
-                complete.transfer_id,
+                transfer_id,
                 incoming.begin.artifact_name,
                 incoming.begin.total_size_bytes,
-                complete.total_sha256,
+                incoming.begin.total_sha256,
             )
         )
         try:
@@ -752,13 +744,13 @@ class TransferManager:
             try:
                 await finalize_task
             finally:
-                self._abort_incoming(complete.transfer_id)
+                self._abort_incoming(transfer_id)
             raise
         except TransferError:
-            self._abort_incoming(complete.transfer_id)
+            self._abort_incoming(transfer_id)
             raise
         receipt = ArtifactReceipt(
-            transfer_id=complete.transfer_id,
+            transfer_id=transfer_id,
             sender_public_key=incoming.sender_public_key,
             artifact_name=incoming.begin.artifact_name,
             path=final_path,
@@ -768,10 +760,16 @@ class TransferManager:
             codec_id=incoming.begin.codec_id,
             tensor_schema=incoming.begin.tensor_schema,
         )
-        self._artifact_store.commit(complete.transfer_id)
-        self._incoming.pop(complete.transfer_id, None)
+        self._artifact_store.commit(transfer_id)
+        self._incoming.pop(transfer_id, None)
         self._incoming_reserved_bytes -= incoming.begin.total_size_bytes
-        self._completed[complete.transfer_id] = receipt
+        self._finished[transfer_id] = _FinishedTransfer(
+            sender_public_key=incoming.sender_public_key,
+            begin=incoming.begin,
+            chunk_hashes=dict(incoming.written_chunk_hashes),
+            finished_at=time.monotonic(),
+        )
+        self._completed[transfer_id] = receipt
         await self._completed_queue.put(receipt)
 
     def _expire_incoming(self) -> None:
@@ -780,6 +778,9 @@ class TransferManager:
         for transfer_id, incoming in tuple(self._incoming.items()):
             if now - incoming.started_at >= lifetime:
                 self._abort_incoming(transfer_id)
+        for transfer_id, finished in tuple(self._finished.items()):
+            if now - finished.finished_at >= lifetime:
+                del self._finished[transfer_id]
 
     def _abort_incoming(self, transfer_id: TransferId) -> None:
         incoming = self._incoming.pop(transfer_id, None)
@@ -822,30 +823,21 @@ class TransferManager:
         round_id: RoundId | None,
         priority: Priority,
     ) -> SendTiming:
-        envelope = create_envelope(
-            message_type=message_type,
-            message_id=message_id,
-            run_id=self._run_id,
-            manifest_hash=self._manifest_hash,
-            sender_public_key=self._local_public_key,
-            algorithm_id=self._algorithm_id,
-            round_id=round_id,
-            correlation_id=correlation_id,
-            payload=payload,
-        )
         timing = await self._sender.send(
             destination,
-            encode_envelope(envelope),
+            message_type=message_type,
+            message_id=message_id,
+            payload=payload,
             priority=priority,
-            retries=self._transport_limits.max_retries,
-            retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+            round_id=round_id,
+            correlation_id=correlation_id,
         )
         append_evidence(
             self._event_sink,
             TransferMessageSentEvidence(
-                run_id=self._run_id,
-                manifest_hash=self._manifest_hash,
-                node_id=self._local_public_key,
+                run_id=self._sender.run_id,
+                manifest_hash=self._sender.manifest_hash,
+                node_id=self._sender.local_public_key,
                 message_id=message_id,
                 transfer_id=correlation_id,
                 peer_id=destination,

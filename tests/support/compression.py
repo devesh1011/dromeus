@@ -21,7 +21,6 @@ from dromeus.protocol.models import (
     ChunkAck,
     MessageType,
     TransferBegin,
-    TransferComplete,
     create_envelope,
 )
 
@@ -189,18 +188,6 @@ def _measure_transfer(
                 ),
                 sender_public_key="measurement-peer",
             )
-    total += _envelope_size(
-        bundle,
-        message_type=MessageType.TRANSFER_COMPLETE,
-        message_id=f"{transfer_id}-complete",
-        correlation_id=transfer_id,
-        payload=encode_message(
-            TransferComplete(
-                transfer_id=transfer_id,
-                total_sha256=total_sha256,
-            )
-        ),
-    )
     return total, chunk_count
 
 

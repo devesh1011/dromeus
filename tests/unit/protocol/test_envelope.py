@@ -20,7 +20,7 @@ def envelope_bytes(payload: bytes = b"weights") -> bytes:
         run_id="run-001",
         manifest_hash=HASH,
         sender_public_key="peer-0",
-        algorithm_id="dpsgd",
+        algorithm_id="noloco",
         round_id=2,
         correlation_id="transfer-1",
         payload=payload,
@@ -46,7 +46,7 @@ def test_control_envelope_round_trip_without_round_id() -> None:
             run_id="run-001",
             manifest_hash=HASH,
             sender_public_key="peer-1",
-            algorithm_id="dpsgd",
+            algorithm_id="noloco",
             correlation_id="message-1",
             payload=b"ready",
         )
@@ -79,7 +79,7 @@ def test_sender_prefix_does_not_authenticate_a_different_identity() -> None:
             run_id="run-001",
             manifest_hash=HASH,
             sender_public_key=sender,
-            algorithm_id="dpsgd",
+            algorithm_id="noloco",
             payload=b"weights",
         )
     )

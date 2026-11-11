@@ -24,6 +24,8 @@ PublicKey = Annotated[
 ]
 
 MAGIC: Final = b"DRM1"
+# Upper bound on the encoded size of a chunk message beyond its data bytes.
+CHUNK_FRAMING_BYTES: Final = 512
 
 
 class DomainModel(BaseModel):
@@ -61,7 +63,6 @@ class MessageType(StrEnum):
     TRANSFER_BEGIN = "TRANSFER_BEGIN"
     CHUNK = "CHUNK"
     CHUNK_ACK = "CHUNK_ACK"
-    TRANSFER_COMPLETE = "TRANSFER_COMPLETE"
     UPDATE_READY = "UPDATE_READY"
     ROUND_COMMITTED = "ROUND_COMMITTED"
     CONSENSUS_SKETCH = "CONSENSUS_SKETCH"
@@ -131,11 +132,6 @@ class ChunkAck(DomainModel):
     chunk_sha256: Sha256
 
 
-class TransferComplete(DomainModel):
-    transfer_id: TransferId
-    total_sha256: Sha256
-
-
 class PairCommitMessage(DomainModel):
     round_id: RoundId
     checksum: Sha256
@@ -175,6 +171,7 @@ def create_envelope(
 
 
 __all__ = [
+    "CHUNK_FRAMING_BYTES",
     "AlgorithmId",
     "Chunk",
     "ChunkAck",
@@ -197,7 +194,6 @@ __all__ = [
     "Tensor",
     "TensorSchema",
     "TransferBegin",
-    "TransferComplete",
     "TransferId",
     "create_envelope",
 ]

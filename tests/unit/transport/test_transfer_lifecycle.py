@@ -16,11 +16,11 @@ from support.transfer import wait_for_artifact
 from dromeus.manifests.models import SealedManifest
 from dromeus.protocol.codec import encode_envelope, encode_message
 from dromeus.protocol.models import (
-    Chunk,
     MessageType,
     TransferBegin,
     create_envelope,
 )
+from dromeus.transport.envelope_sender import EnvelopeSender
 from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver, ReceiverPolicy
 from dromeus.transport.transfer import (
@@ -82,23 +82,27 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
     await sender_scheduler.start()
     await receiver_scheduler.start()
     sender_manager = TransferManager(
-        local_public_key="peer-0",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=transfer_limits,
+        sender=EnvelopeSender(
+            scheduler=sender_scheduler,
+            local_public_key="peer-0",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=transfer_limits,
+        ),
         receiver=sender_receiver,
-        sender=sender_scheduler,
         artifact_root=tmp_path / "sender",
     )
     receiver_manager = TransferManager(
-        local_public_key="peer-1",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=transfer_limits,
+        sender=EnvelopeSender(
+            scheduler=receiver_scheduler,
+            local_public_key="peer-1",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=transfer_limits,
+        ),
         receiver=receiver_receiver,
-        sender=receiver_scheduler,
         artifact_root=tmp_path / "receiver",
         max_inflight_bytes=artifact_size,
     )
@@ -147,13 +151,13 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         destination="peer-1",
         artifact_name="opaque-update",
         artifact_path=opaque_artifact,
-        codec_id="opaque-v2",
+        codec_id="opaque",
         tensor_schema=manifest.tensor_schema,
     )
     opaque_receipt = await wait_for_artifact(
         receiver_manager, opaque_transfer_id, timeout_seconds=2.0
     )
-    assert opaque_receipt.codec_id == "opaque-v2"
+    assert opaque_receipt.codec_id == "opaque"
     assert opaque_receipt.path.read_bytes() == opaque_artifact.read_bytes()
     await receiver_manager.release_receipt(opaque_receipt)
 
@@ -180,16 +184,9 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         codec_id=manifest.codec_id,
         tensor_schema=manifest.tensor_schema,
     )
-    pending_chunk = Chunk(
-        transfer_id=pending_id,
-        chunk_index=0,
-        chunk_count=1,
-        chunk_sha256=partial_sha256,
-        data=partial_bytes,
-    )
+    # A begin alone reserves the partial artifact; its only chunk never arrives.
     for message_type, message_id, model in (
         (MessageType.TRANSFER_BEGIN, "pending-begin", pending_begin),
-        (MessageType.CHUNK, "pending-chunk", pending_chunk),
     ):
         payload = encode_message(model)
         await sender_transport.send(
@@ -221,10 +218,8 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
     timeout_begin = pending_begin.model_copy(
         update={"transfer_id": timeout_id, "artifact_name": "timeout-update"}
     )
-    timeout_chunk = pending_chunk.model_copy(update={"transfer_id": timeout_id})
     for message_type, message_id, model in (
         (MessageType.TRANSFER_BEGIN, "timeout-begin", timeout_begin),
-        (MessageType.CHUNK, "timeout-chunk", timeout_chunk),
     ):
         await sender_transport.send(
             "peer-1",
@@ -292,23 +287,27 @@ async def _test_transfer_retries_duplicate_and_exhaustion(tmp_path: Path) -> Non
         update={"max_retries": 0, "retry_timeout_seconds": 0.05}
     )
     corrupt_sender_manager = TransferManager(
-        local_public_key="peer-2",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=transport_limits,
+        sender=EnvelopeSender(
+            scheduler=corrupt_sender_scheduler,
+            local_public_key="peer-2",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=transport_limits,
+        ),
         receiver=corrupt_sender_receiver,
-        sender=corrupt_sender_scheduler,
         artifact_root=tmp_path / "corrupt-sender",
     )
     corrupt_receiver_manager = TransferManager(
-        local_public_key="peer-3",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=transport_limits,
+        sender=EnvelopeSender(
+            scheduler=corrupt_receiver_scheduler,
+            local_public_key="peer-3",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=transport_limits,
+        ),
         receiver=corrupt_receiver_receiver,
-        sender=corrupt_receiver_scheduler,
         artifact_root=tmp_path / "corrupt-receiver",
         max_inflight_bytes=manifest.transport.max_payload_bytes,
     )
@@ -405,23 +404,27 @@ async def _test_transfer_cancellation_and_shutdown_release_capacity(
     sender_scheduler = OutboundScheduler(sender_transport)
     receiver_scheduler = OutboundScheduler(receiver_transport)
     sender_manager = TransferManager(
-        local_public_key="peer-0",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=limits,
+        sender=EnvelopeSender(
+            scheduler=sender_scheduler,
+            local_public_key="peer-0",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=limits,
+        ),
         receiver=sender_receiver,
-        sender=sender_scheduler,
         artifact_root=tmp_path / "sender",
     )
     receiver_manager = TransferManager(
-        local_public_key="peer-1",
-        run_id=manifest.run_id,
-        manifest_hash=manifest.draft_hash,
-        algorithm_id=manifest.algorithm_id,
-        transport_limits=limits,
+        sender=EnvelopeSender(
+            scheduler=receiver_scheduler,
+            local_public_key="peer-1",
+            run_id=manifest.run_id,
+            manifest_hash=manifest.draft_hash,
+            algorithm_id=manifest.algorithm_id,
+            transport_limits=limits,
+        ),
         receiver=receiver_receiver,
-        sender=receiver_scheduler,
         artifact_root=tmp_path / "receiver",
         max_inflight_bytes=artifact.stat().st_size,
     )
@@ -440,7 +443,7 @@ async def _test_transfer_cancellation_and_shutdown_release_capacity(
             destination="peer-1",
             artifact_name="canceled",
             artifact_path=artifact,
-            codec_id="opaque-v2",
+            codec_id="opaque",
             tensor_schema=manifest.tensor_schema,
         )
     )
@@ -454,7 +457,7 @@ async def _test_transfer_cancellation_and_shutdown_release_capacity(
         destination="peer-1",
         artifact_name="after-cancel",
         artifact_path=artifact,
-        codec_id="opaque-v2",
+        codec_id="opaque",
         tensor_schema=manifest.tensor_schema,
     )
     recovered = await wait_for_artifact(
@@ -471,19 +474,12 @@ async def _test_transfer_cancellation_and_shutdown_release_capacity(
         total_size_bytes=len(payload),
         total_sha256=digest,
         chunk_count=1,
-        codec_id="opaque-v2",
+        codec_id="opaque",
         tensor_schema=manifest.tensor_schema,
     )
-    pending_chunk = Chunk(
-        transfer_id=pending_id,
-        chunk_index=0,
-        chunk_count=1,
-        chunk_sha256=digest,
-        data=payload,
-    )
+    # A begin alone reserves the partial artifact; its only chunk never arrives.
     for message_type, message_id, model in (
         (MessageType.TRANSFER_BEGIN, "shutdown-begin", pending_begin),
-        (MessageType.CHUNK, "shutdown-chunk", pending_chunk),
     ):
         await sender_transport.send(
             "peer-1",
