@@ -81,9 +81,13 @@ benchmarks/results/local-data-validation/
 !/benchmarks/results/m3/verification/verify-retained-logs.py
 
 # Local application samples; maintained fixtures and workloads live elsewhere.
-/examples/
+/examples/*
+!/examples/README.md
+!/examples/__init__.py
+!/examples/custom_training.py
+!/examples/custom-regression-draft.yaml
+!/examples/node.yaml
 
-guides
 releases
 
 benchmarks/results/history-reports-2026-10-29

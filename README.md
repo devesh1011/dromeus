@@ -103,16 +103,16 @@ for retained metrics, charts and frozen settings. The owner permanently retired
 the old local raw-result trees; unique deleted logs and models are no longer
 available for re-audit from this checkout.
 
-Earlier-milestone benchmark runners have been retired from this checkout.
-Their compact historical reports remain available; current experiments share the
-[local AXL harness](benchmarks/support/README.md).
+The [M3 team review](https://github.com/devesh1011/dromeus/blob/v0.3.0/benchmarks/results/m3/README.md)
+maps the proposal requirements to numeric results, runtime and privacy checks, and
+the validated digit-warning policy. It also includes the completed language-model
+study as additional evidence. The folder omits report charts and large training
+artifacts. Read the [criteria check](https://github.com/devesh1011/dromeus/blob/v0.3.0/benchmarks/results/m3/milestone-requirements.md)
+for verified scope, publication status, and evidence-retention limits.
 
-The [M3 team review](benchmarks/results/m3/README.md) maps the proposal requirements to
-numeric results, runtime and privacy checks, and the validated digit-warning
-policy. It also includes the completed language-model study as additional
-evidence. The folder omits report charts and large training artifacts.
-Read the [criteria check](benchmarks/results/m3/milestone-requirements.md) for verified scope,
-publication status, and evidence-retention limits.
+Each milestone's benchmark code and evidence are verified at its release tag
+(`v0.1.0`, `v0.2.0`, `v0.3.0`). `main` carries only the current library and its
+tests; the benchmark runners used for those milestones are not maintained here.
 
 ## Development
 
