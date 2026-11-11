@@ -33,6 +33,7 @@ from dromeus.protocol.models import (
     PairCommitMessage,
     create_envelope,
 )
+from dromeus.transport.envelope_sender import EnvelopeSender
 from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver
 from dromeus.transport.transfer import TransferManager
@@ -49,23 +50,25 @@ def test_round_committed_rejects_payload_round_mismatch(tmp_path: Path) -> None:
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-1",
-            algorithm_id="d-psgd",
+            algorithm_id="noloco",
             round_id=0,
             correlation_id="pair-round-0",
             payload=payload,
         )
         transport = AXLPairTransport(
-            local_public_key="peer-0",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            algorithm_id="d-psgd",
-            transport_limits=TransportLimits(
-                max_payload_bytes=1024,
-                max_retries=0,
-                retry_timeout_seconds=0.1,
+            sender=EnvelopeSender(
+                scheduler=cast(OutboundScheduler, StubPairSender()),
+                local_public_key="peer-0",
+                run_id="test-run",
+                manifest_hash="0" * 64,
+                algorithm_id="noloco",
+                transport_limits=TransportLimits(
+                    max_payload_bytes=1024,
+                    max_retries=0,
+                    retry_timeout_seconds=0.1,
+                ),
             ),
             receiver=cast(Receiver, StubPairReceiver(envelope)),
-            sender=cast(OutboundScheduler, StubPairSender()),
             transfer_manager=cast(TransferManager, object()),
             metadata_root=tmp_path,
         )
@@ -93,25 +96,27 @@ def test_update_ready_uses_transfer_lifetime_for_round_entry_skew(
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-1",
-            algorithm_id="d-psgd",
+            algorithm_id="noloco",
             round_id=0,
             correlation_id="pair-round-0",
             payload=payload,
         )
         receiver = DelayedPairReceiver(envelope, timeout_count=2)
         transport = AXLPairTransport(
-            local_public_key="peer-0",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            algorithm_id="d-psgd",
-            transport_limits=TransportLimits(
-                max_payload_bytes=1024,
-                max_retries=1,
-                retry_timeout_seconds=0.01,
-                transfer_lifetime_seconds=0.05,
+            sender=EnvelopeSender(
+                scheduler=cast(OutboundScheduler, StubPairSender()),
+                local_public_key="peer-0",
+                run_id="test-run",
+                manifest_hash="0" * 64,
+                algorithm_id="noloco",
+                transport_limits=TransportLimits(
+                    max_payload_bytes=1024,
+                    max_retries=1,
+                    retry_timeout_seconds=0.01,
+                    transfer_lifetime_seconds=0.05,
+                ),
             ),
             receiver=cast(Receiver, receiver),
-            sender=cast(OutboundScheduler, StubPairSender()),
             transfer_manager=cast(TransferManager, object()),
             metadata_root=tmp_path,
         )
@@ -148,13 +153,15 @@ def test_round_committed_recovers_from_silent_message_loss(tmp_path: Path) -> No
         )
         transports = tuple(
             AXLPairTransport(
-                local_public_key=f"peer-{index}",
-                run_id="test-run",
-                manifest_hash="0" * 64,
-                algorithm_id="d-psgd",
-                transport_limits=limits,
+                sender=EnvelopeSender(
+                    scheduler=senders[index],
+                    local_public_key=f"peer-{index}",
+                    run_id="test-run",
+                    manifest_hash="0" * 64,
+                    algorithm_id="noloco",
+                    transport_limits=limits,
+                ),
                 receiver=receivers[index],
-                sender=senders[index],
                 transfer_manager=cast(TransferManager, object()),
                 metadata_root=tmp_path / f"peer-{index}",
             )
@@ -204,7 +211,7 @@ def test_transport_cancellation_waits_for_active_bundle_validation(
             run_id="test-run",
             manifest_hash="0" * 64,
             sender_public_key="peer-0",
-            algorithm_id="d-psgd",
+            algorithm_id="noloco",
             artifact_schemas={"trained_weights": schema},
         )
         bundle = codec.encode(
@@ -227,17 +234,19 @@ def test_transport_cancellation_waits_for_active_bundle_validation(
 
         monkeypatch.setattr(UpdateBundle, "validate_materialized", blocking_validate)
         transport = AXLPairTransport(
-            local_public_key="peer-0",
-            run_id="test-run",
-            manifest_hash="0" * 64,
-            algorithm_id="d-psgd",
-            transport_limits=TransportLimits(
-                max_payload_bytes=1024,
-                max_retries=0,
-                retry_timeout_seconds=0.1,
+            sender=EnvelopeSender(
+                scheduler=cast(OutboundScheduler, object()),
+                local_public_key="peer-0",
+                run_id="test-run",
+                manifest_hash="0" * 64,
+                algorithm_id="noloco",
+                transport_limits=TransportLimits(
+                    max_payload_bytes=1024,
+                    max_retries=0,
+                    retry_timeout_seconds=0.1,
+                ),
             ),
             receiver=cast(Receiver, object()),
-            sender=cast(OutboundScheduler, object()),
             transfer_manager=cast(TransferManager, object()),
             metadata_root=tmp_path / "metadata",
         )

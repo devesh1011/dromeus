@@ -467,7 +467,7 @@ class NodeRuntime:
             try:
                 local_key = await self._transport.local_public_key()
                 self._local_public_key = local_key
-                failure_broadcaster = self._create_failure_broadcaster(local_key)
+                failure_broadcaster = self._create_failure_broadcaster()
                 await failure_broadcaster.broadcast_run_failed(
                     RunFailure(
                         round_id=0,
@@ -572,7 +572,6 @@ class NodeRuntime:
             )
             services = self._formation.services
             pair_transport = await self._create_pair_transport(
-                local_key,
                 metadata_root=self._training.artifact_root / "bundle-metadata",
             )
             formed_result = self._result
@@ -741,9 +740,7 @@ class NodeRuntime:
         if self._training is not None and self._training.metrics_publisher is not None:
             await self._training.metrics_publisher.start()
 
-    async def _create_pair_transport(
-        self, local_key: str, *, metadata_root: Path
-    ) -> AXLPairTransport:
+    async def _create_pair_transport(self, *, metadata_root: Path) -> AXLPairTransport:
         assert self._result is not None
         participants = frozenset(
             participant.public_key for participant in self._result.manifest.participants
@@ -751,29 +748,19 @@ class NodeRuntime:
         services = self._formation.services
         return await asyncio.to_thread(
             AXLPairTransport,
-            local_public_key=local_key,
-            run_id=self._result.manifest.run_id,
-            manifest_hash=self._result.manifest_hash,
-            algorithm_id=self._result.manifest.algorithm_id,
-            transport_limits=self._result.manifest.transport,
-            receiver=services.receiver,
             sender=services.sender,
+            receiver=services.receiver,
             transfer_manager=services.transfer_manager,
             metadata_root=metadata_root,
             participant_keys=participants,
         )
 
-    def _create_failure_broadcaster(self, local_key: str) -> AXLFailureBroadcaster:
+    def _create_failure_broadcaster(self) -> AXLFailureBroadcaster:
         assert self._result is not None
         participants = frozenset(
             participant.public_key for participant in self._result.manifest.participants
         )
         return AXLFailureBroadcaster(
-            local_public_key=local_key,
-            run_id=self._result.manifest.run_id,
-            manifest_hash=self._result.manifest_hash,
-            algorithm_id=self._result.manifest.algorithm_id,
-            transport_limits=self._result.manifest.transport,
             sender=self._formation.services.sender,
             participant_keys=participants,
         )

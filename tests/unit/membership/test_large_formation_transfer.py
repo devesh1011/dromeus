@@ -27,9 +27,9 @@ from dromeus.protocol.models import (
     Chunk,
     MessageType,
     TransferBegin,
-    TransferComplete,
     create_envelope,
 )
+from dromeus.transport.envelope_sender import EnvelopeSender
 from dromeus.transport.outbound_scheduler import OutboundScheduler
 from dromeus.transport.receiver import Receiver, ReceiverPolicy
 from dromeus.transport.transfer import TransferManager
@@ -84,7 +84,7 @@ class _Harness:
     async def send(
         self,
         message_type: MessageType,
-        model: TransferBegin | Chunk | TransferComplete,
+        model: TransferBegin | Chunk,
     ) -> None:
         await self.peer.send(
             "peer-1",
@@ -184,13 +184,15 @@ async def _harness(
         else {"max_inflight_bytes": explicit_incoming_bytes}
     )
     manager = TransferManager(
-        local_public_key="peer-1",
-        run_id=draft.run_id,
-        manifest_hash=canonical_hash(manifest),
-        algorithm_id=draft.algorithm_id,
-        transport_limits=limits,
+        sender=EnvelopeSender(
+            scheduler=sender,
+            local_public_key="peer-1",
+            run_id=draft.run_id,
+            manifest_hash=canonical_hash(manifest),
+            algorithm_id=draft.algorithm_id,
+            transport_limits=limits,
+        ),
         receiver=receiver,
-        sender=sender,
         artifact_root=root,
         event_sink=events,
         **arguments,
@@ -287,10 +289,6 @@ def test_completed_artifacts_still_consume_sealed_store_capacity(
                     chunk_sha256=digest,
                     data=payload,
                 ),
-            )
-            await harness.send(
-                MessageType.TRANSFER_COMPLETE,
-                TransferComplete(transfer_id="retained", total_sha256=digest),
             )
             receipt = await wait_for_artifact(
                 harness.manager, "retained", timeout_seconds=2

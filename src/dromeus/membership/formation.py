@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import cast
 
 from dromeus.manifests.canonical import (
     canonical_hash,
@@ -26,7 +25,7 @@ from dromeus.manifests.models import (
     TensorSchema,
     TransportLimits,
 )
-from dromeus.protocol.codec import decode_message, encode_envelope, encode_message
+from dromeus.protocol.codec import decode_message, encode_message
 from dromeus.protocol.models import (
     Envelope,
     JoinAccepted,
@@ -35,9 +34,9 @@ from dromeus.protocol.models import (
     MessageType,
     ReadyMessage,
     StartMessage,
-    create_envelope,
 )
 from dromeus.telemetry.events import EventSink, emit_event
+from dromeus.transport.envelope_sender import UNSEALED_MANIFEST_HASH, EnvelopeSender
 from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.outbound_scheduler import OutboundScheduler, Priority
 from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
@@ -138,7 +137,7 @@ class FormationServices:
     """Validated services retained for post-formation runtime work."""
 
     receiver: Receiver
-    sender: OutboundScheduler
+    sender: EnvelopeSender
     transfer_manager: TransferManager
 
 
@@ -174,33 +173,38 @@ class FormationProtocol:
             ),
             event_sink=event_sink,
         )
-        self._sender = OutboundScheduler(
+        self._scheduler = OutboundScheduler(
             transport,
             per_peer_in_flight=transport_limits.effective_window_size,
         )
         self._transfer_manager: TransferManager | None = None
+        self._sealed_sender: EnvelopeSender | None = None
         self._formation_complete = False
 
     @property
     def services(self) -> FormationServices:
         """Return transport services after sealed formation completes."""
-        if not self._formation_complete or self._transfer_manager is None:
+        if (
+            not self._formation_complete
+            or self._transfer_manager is None
+            or self._sealed_sender is None
+        ):
             raise FormationError("formation has not completed")
         return FormationServices(
             receiver=self._receiver,
-            sender=self._sender,
+            sender=self._sealed_sender,
             transfer_manager=self._transfer_manager,
         )
 
     async def start(self) -> None:
         await self._receiver.start()
-        await self._sender.start()
+        await self._scheduler.start()
 
     async def stop(self) -> None:
         self._formation_complete = False
         if self._transfer_manager is not None:
             await self._transfer_manager.stop()
-        await self._sender.stop()
+        await self._scheduler.stop()
         await self._receiver.stop()
 
     async def initiate(
@@ -468,20 +472,24 @@ class FormationProtocol:
         manifest: SealedManifest,
         manifest_hash: Sha256,
     ) -> TransferManager:
-        manager = TransferManager(
+        sender = EnvelopeSender(
+            scheduler=self._scheduler,
             local_public_key=local_public_key,
             run_id=manifest.run_id,
             manifest_hash=manifest_hash,
             algorithm_id=manifest.algorithm_id,
             transport_limits=manifest.transport,
+        )
+        manager = TransferManager(
+            sender=sender,
             receiver=self._receiver,
-            sender=self._sender,
             artifact_root=self._artifact_root,
             max_inflight_bytes=manifest.transport.artifact_store_capacity_limit,
             event_sink=self._event_sink,
         )
         await manager.start()
         self._transfer_manager = manager
+        self._sealed_sender = sender
         return manager
 
     async def _next_control(self) -> Envelope:
@@ -519,19 +527,18 @@ class FormationProtocol:
         payload: bytes,
         manifest_hash: Sha256 | None = None,
     ) -> None:
-        envelope = create_envelope(
+        sender = EnvelopeSender(
+            scheduler=self._scheduler,
+            local_public_key=await self._transport.local_public_key(),
+            run_id=self._draft.run_id,
+            manifest_hash=manifest_hash or UNSEALED_MANIFEST_HASH,
+            algorithm_id=self._draft.algorithm_id,
+            transport_limits=self._transport_limits,
+        )
+        await sender.send(
+            destination,
             message_type=message_type,
             message_id=message_id,
-            run_id=self._draft.run_id,
-            manifest_hash=manifest_hash or cast(Sha256, "0" * 64),
-            sender_public_key=await self._transport.local_public_key(),
-            algorithm_id=self._draft.algorithm_id,
             payload=payload,
-        )
-        await self._sender.send(
-            destination,
-            encode_envelope(envelope),
             priority=Priority.CONTROL,
-            retries=self._transport_limits.max_retries,
-            retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
         )

@@ -21,29 +21,21 @@ from dromeus.manifests.canonical import (
     parse_bundle_metadata,
 )
 from dromeus.manifests.models import (
-    AlgorithmId,
     MessageId,
     OpaqueUpdateBundleMetadata,
     PublicKey,
     RoundId,
-    RunId,
-    Sha256,
-    TransportLimits,
 )
-from dromeus.protocol.codec import decode_message, encode_envelope, encode_message
+from dromeus.protocol.codec import decode_message, encode_message
 from dromeus.protocol.models import (
     Envelope,
     MessageType,
     PairCommitMessage,
     RunFailedMessage,
-    create_envelope,
 )
 from dromeus.telemetry.consensus import encode_sketch
-from dromeus.transport.outbound_scheduler import (
-    OutboundScheduler,
-    Priority,
-    SendTiming,
-)
+from dromeus.transport.envelope_sender import EnvelopeSender
+from dromeus.transport.outbound_scheduler import Priority, SendTiming
 from dromeus.transport.receiver import MessageChannel, Receiver
 from dromeus.transport.transfer import ArtifactReceipt, TransferError, TransferManager
 
@@ -68,25 +60,15 @@ class AXLFailureBroadcaster:
     def __init__(
         self,
         *,
-        local_public_key: PublicKey,
-        run_id: RunId,
-        manifest_hash: Sha256,
-        algorithm_id: AlgorithmId,
-        transport_limits: TransportLimits,
-        sender: OutboundScheduler,
+        sender: EnvelopeSender,
         participant_keys: frozenset[PublicKey],
     ) -> None:
-        self._local_public_key = local_public_key
-        self._run_id = run_id
-        self._manifest_hash = manifest_hash
-        self._algorithm_id = algorithm_id
-        self._transport_limits = transport_limits
         self._sender = sender
         self._participant_keys = participant_keys
 
     async def broadcast_run_failed(self, failure: RunFailure) -> None:
         """Best-effort failure broadcast using manifest-bounded sender retries."""
-        peers = self._participant_keys - {self._local_public_key}
+        peers = self._participant_keys - {self._sender.local_public_key}
         if not peers:
             return
         payload = encode_message(
@@ -97,27 +79,22 @@ class AXLFailureBroadcaster:
             )
         )
 
-        async def send(peer: PublicKey) -> None:
-            envelope = create_envelope(
-                message_type=MessageType.RUN_FAILED,
-                message_id=f"run-failed-{failure.round_id}-{self._local_public_key[:8]}",
-                run_id=self._run_id,
-                manifest_hash=self._manifest_hash,
-                sender_public_key=self._local_public_key,
-                algorithm_id=self._algorithm_id,
-                round_id=failure.round_id,
-                correlation_id=f"run-failure-{failure.round_id}",
-                payload=payload,
-            )
-            await self._sender.send(
-                peer,
-                encode_envelope(envelope),
-                priority=Priority.CONTROL,
-                retries=self._transport_limits.max_retries,
-                retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
-            )
-
-        await asyncio.gather(*(send(peer) for peer in peers), return_exceptions=True)
+        local_key = self._sender.local_public_key
+        await asyncio.gather(
+            *(
+                self._sender.send(
+                    peer,
+                    message_type=MessageType.RUN_FAILED,
+                    message_id=f"run-failed-{failure.round_id}-{local_key[:8]}",
+                    payload=payload,
+                    priority=Priority.CONTROL,
+                    round_id=failure.round_id,
+                    correlation_id=f"run-failure-{failure.round_id}",
+                )
+                for peer in peers
+            ),
+            return_exceptions=True,
+        )
 
 
 class AXLPairTransport:
@@ -126,33 +103,19 @@ class AXLPairTransport:
     def __init__(
         self,
         *,
-        local_public_key: PublicKey,
-        run_id: RunId,
-        manifest_hash: Sha256,
-        algorithm_id: AlgorithmId,
-        transport_limits: TransportLimits,
+        sender: EnvelopeSender,
         receiver: Receiver,
-        sender: OutboundScheduler,
         transfer_manager: TransferManager,
         metadata_root: Path,
         participant_keys: frozenset[PublicKey] | None = None,
     ) -> None:
-        self._local_public_key = local_public_key
-        self._run_id = run_id
-        self._manifest_hash = manifest_hash
-        self._algorithm_id = algorithm_id
-        self._transport_limits = transport_limits
-        self._receiver = receiver
         self._sender = sender
+        self._transport_limits = sender.transport_limits
+        self._receiver = receiver
         self._transfer_manager = transfer_manager
         self._metadata_root = metadata_root
         self._participant_keys = participant_keys or frozenset()
         self._failure_broadcaster = AXLFailureBroadcaster(
-            local_public_key=local_public_key,
-            run_id=run_id,
-            manifest_hash=manifest_hash,
-            algorithm_id=algorithm_id,
-            transport_limits=transport_limits,
             sender=sender,
             participant_keys=self._participant_keys,
         )
@@ -166,7 +129,7 @@ class AXLPairTransport:
         self, *, round_id: RoundId, sketch: np.ndarray
     ) -> ConsensusBroadcastResult:
         """Best-effort low-priority broadcast of one FP32 consensus sketch."""
-        peers = self._participant_keys - {self._local_public_key}
+        peers = self._participant_keys - {self._sender.local_public_key}
         payload = encode_sketch(sketch)
         if not peers:
             return ConsensusBroadcastResult(
@@ -177,25 +140,17 @@ class AXLPairTransport:
             )
 
         async def send(peer: PublicKey) -> SendTiming:
-            envelope = create_envelope(
-                message_type=MessageType.CONSENSUS_SKETCH,
-                message_id=(
-                    f"consensus-sketch-{round_id}-{self._local_public_key[:8]}"
-                ),
-                run_id=self._run_id,
-                manifest_hash=self._manifest_hash,
-                sender_public_key=self._local_public_key,
-                algorithm_id=self._algorithm_id,
-                round_id=round_id,
-                correlation_id=f"consensus-round-{round_id}",
-                payload=payload,
-            )
             return await self._sender.send(
                 peer,
-                encode_envelope(envelope),
+                message_type=MessageType.CONSENSUS_SKETCH,
+                message_id=(
+                    f"consensus-sketch-{round_id}-"
+                    f"{self._sender.local_public_key[:8]}"
+                ),
+                payload=payload,
                 priority=Priority.TELEMETRY,
-                retries=self._transport_limits.max_retries,
-                retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+                round_id=round_id,
+                correlation_id=f"consensus-round-{round_id}",
             )
 
         results = await asyncio.gather(
@@ -219,7 +174,7 @@ class AXLPairTransport:
     ) -> PairExchangeResult:
         self._validate_bundle(
             bundle.metadata,
-            sender=self._local_public_key,
+            sender=self._sender.local_public_key,
             round_id=round_id,
         )
         await _run_blocking(
@@ -363,9 +318,9 @@ class AXLPairTransport:
         round_id: RoundId,
     ) -> None:
         if (
-            metadata.run_id != self._run_id
-            or metadata.manifest_hash != self._manifest_hash
-            or metadata.algorithm_id != self._algorithm_id
+            metadata.run_id != self._sender.run_id
+            or metadata.manifest_hash != self._sender.manifest_hash
+            or metadata.algorithm_id != self._sender.algorithm_id
             or metadata.sender_public_key != sender
             or metadata.round_id != round_id
         ):
@@ -453,23 +408,14 @@ class AXLPairTransport:
         payload: PairCommitMessage,
         round_id: RoundId,
     ) -> None:
-        envelope = create_envelope(
-            message_type=message_type,
-            message_id=message_id,
-            run_id=self._run_id,
-            manifest_hash=self._manifest_hash,
-            sender_public_key=self._local_public_key,
-            algorithm_id=self._algorithm_id,
-            round_id=round_id,
-            correlation_id=f"pair-round-{round_id}",
-            payload=encode_message(payload),
-        )
         await self._sender.send(
             destination,
-            encode_envelope(envelope),
+            message_type=message_type,
+            message_id=message_id,
+            payload=encode_message(payload),
             priority=Priority.CONTROL,
-            retries=self._transport_limits.max_retries,
-            retry_delay_seconds=self._transport_limits.retry_timeout_seconds,
+            round_id=round_id,
+            correlation_id=f"pair-round-{round_id}",
         )
 
     async def _exchange_pair_message(
