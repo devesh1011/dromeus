@@ -24,6 +24,7 @@ from dromeus.manifests.models import (
     PrivateOptimizerSpec,
 )
 from dromeus.training.private_state import decode_state, encode_state
+from dromeus.training.versions import torch_release
 
 
 def build_private_optimizer(
@@ -219,7 +220,7 @@ class OptimizerRegistration:
         spec = FactoryOptimizerSpec(
             implementation_id=_implementation_id(self.optimizer_type),
             implementation_hash=self.implementation_hash,
-            torch_version=torch.__version__,
+            torch_version=torch_release(),
             groups=tuple(
                 OptimizerParameterGroup(
                     parameter_names=g.parameter_names, options=g.options
@@ -272,7 +273,7 @@ class OptimizerRegistration:
         if (
             spec.implementation_id != _implementation_id(self.optimizer_type)
             or spec.implementation_hash != self.implementation_hash
-            or spec.torch_version != torch.__version__
+            or spec.torch_version != torch_release()
         ):
             raise TaskError(
                 "optimizer implementation differs from shared specification"
@@ -306,7 +307,7 @@ class OptimizerRegistration:
         if (
             spec.implementation_id != _implementation_id(self.optimizer_type)
             or spec.implementation_hash != self.implementation_hash
-            or spec.torch_version != torch.__version__
+            or spec.torch_version != torch_release()
         ):
             raise TaskError("optimizer checkpoint implementation mismatch")
         actual = _groups(optimizer, model)

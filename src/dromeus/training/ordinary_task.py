@@ -29,6 +29,7 @@ from dromeus.training.private_model import (
 from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.task import TrainingTask, validate_record_losses
 from dromeus.training.trainer import PyTorchTrainer
+from dromeus.training.versions import torch_release
 
 
 class _ShuffleBatches(Sampler[list[int]]):
@@ -77,7 +78,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             not local_data_identity.strip()
             or max_logical_steps <= 0
             or max_physical_batch_size <= 0
-            or specification.optimizer.torch_version != torch.__version__
+            or specification.optimizer.torch_version != torch_release()
         ):
             raise TaskError(
                 "ordinary task requires valid identity, limits and Torch version"

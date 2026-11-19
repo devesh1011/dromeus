@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Annotated, Self, cast
 from urllib.parse import urlparse
 
+import torch
 import yaml
 from pydantic import (
     BaseModel,
@@ -24,11 +25,10 @@ from pydantic import (
     model_validator,
 )
 
-from dromeus.application import LocalData, check_environment, prepare_task
+from dromeus.application import LocalData, check_environment, load_draft, prepare_task
 from dromeus.errors import ConfigError, FormationError
 from dromeus.manifests.canonical import (
     canonical_json,
-    parse_draft_yaml,
 )
 from dromeus.manifests.models import (
     DraftRunSpec,
@@ -292,7 +292,7 @@ def _write_invitation(path: Path, invitation: Invitation) -> None:
 def _prepare_node_start(
     config: NodeConfig,
 ) -> tuple[DraftRunSpec, JsonlEventSink]:
-    draft = parse_draft_yaml(config.draft_path)
+    draft = load_draft(config.draft_path)
     config.run_root.mkdir(parents=True, exist_ok=True)
     event_sink = JsonlEventSink(event_log_path(config.run_root))
     emit_event(
@@ -300,6 +300,7 @@ def _prepare_node_start(
         run_id=draft.run_id,
         sink=event_sink,
         role=config.role,
+        pytorch_build=torch.__version__,  # drafts pin the release, not the build
     )
     return draft, event_sink
 

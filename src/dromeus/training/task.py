@@ -27,6 +27,7 @@ from dromeus.manifests.models import (
     TaskTrainingSpec,
 )
 from dromeus.training.optimizer_factory import OptimizerRegistration
+from dromeus.training.versions import torch_release
 
 Batch = Any
 CollateRecords = Callable[[Sequence[Any]], Batch]
@@ -329,7 +330,7 @@ class Optimizer:
         try:
             return PrivateOptimizerSpec(
                 name=self.name,
-                torch_version=torch.__version__,
+                torch_version=torch_release(),
                 parameter_names=parameter_names,
                 learning_rate=self.learning_rate,
                 weight_decay=self.weight_decay,

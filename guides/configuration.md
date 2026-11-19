@@ -59,6 +59,9 @@ map to the draft like this:
 The `training` block records the task's optimizer, batch size, sampling and the
 hashes of its definitions and code. `environment` records the Dromeus and PyTorch
 versions of the machine that wrote the draft; every node must install the same
-versions, and a node refuses a draft written for different ones.
+versions, and a node refuses a draft written for different ones. PyTorch is
+matched by release, so `2.13.0` on macOS, `2.13.0+cpu` on Linux and `2.13.0+cu130`
+on a CUDA machine can share one group; each node logs its exact build in its
+`node_start` event.
 
 The draft uses manifest version 7, the only version this release accepts.

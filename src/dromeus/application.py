@@ -11,7 +11,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Literal
 
-import torch
 import yaml
 from pydantic import ValidationError
 from torch.utils.data import Dataset
@@ -48,6 +47,7 @@ from dromeus.training.private_trainer import PrivateTrainer
 from dromeus.training.state import InitialCheckpoint
 from dromeus.training.task import Optimizer, TrainingTask
 from dromeus.training.trainer import PyTorchTrainer
+from dromeus.training.versions import torch_release
 
 DEFAULT_TRANSPORT = TransportLimits(
     max_payload_bytes=8 * 1024 * 1024,
@@ -170,7 +170,7 @@ class LocalData:
 
 def installed_versions() -> tuple[str, str]:
     """Dromeus and PyTorch versions installed on this machine."""
-    return importlib.metadata.version("dromeus"), torch.__version__
+    return importlib.metadata.version("dromeus"), torch_release()
 
 
 def describe_task(

@@ -42,6 +42,7 @@ from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.private_workload import prepare_private_workload
 from dromeus.training.task import TrainingTask
 from dromeus.training.trainer import PyTorchTrainer
+from dromeus.training.versions import torch_release
 
 
 def private_training_definition(specification: TaskTrainingSpec) -> str:
@@ -64,7 +65,7 @@ class PrivateTrainer(PyTorchTrainer):
         max_physical_batch_size: int,
         research_seed: int | None = None,
     ) -> None:
-        if specification.optimizer.torch_version != torch.__version__:
+        if specification.optimizer.torch_version != torch_release():
             raise PrivacyError("private optimizer Torch version mismatch")
         if max_physical_batch_size <= 0 or not local_data_identity.strip():
             raise PrivacyError(
