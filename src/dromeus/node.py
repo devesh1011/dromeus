@@ -1,4 +1,4 @@
-"""Internal Dromeus node entry point."""
+"""Run one Dromeus node: the public `Node` and its command-line entry point."""
 
 from __future__ import annotations
 
@@ -9,14 +9,17 @@ import inspect
 import json
 import time
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, cast
 from urllib.parse import urlparse
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from dromeus.application import LocalData, check_environment, prepare_task
+from dromeus.errors import ConfigError, FormationError
 from dromeus.manifests.canonical import (
     canonical_json,
     parse_draft_yaml,
@@ -40,6 +43,7 @@ from dromeus.runtime import (
 )
 from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
+from dromeus.training.task import TrainingTask
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
 
 
@@ -83,8 +87,53 @@ TrainingDecorator = Callable[
 
 def load_node_config(path: Path) -> NodeConfig:
     """Load one closed node configuration from YAML."""
-    value = cast(object, yaml.safe_load(path.read_text(encoding="utf-8")))
-    return NodeConfig.model_validate(value)
+    try:
+        value = cast(object, yaml.safe_load(path.read_text(encoding="utf-8")))
+        return NodeConfig.model_validate(value)
+    except (OSError, yaml.YAMLError, ValidationError) as error:
+        raise ConfigError(f"invalid node config {path}: {error}") from error
+
+
+@dataclass(frozen=True)
+class RunResult:
+    """What a node reports after the group finishes every round."""
+
+    run_id: str
+    manifest_hash: str
+    committed_rounds: int
+
+
+class Node:
+    """One participant in a run, set up from its node config file.
+
+    The config names this machine's AXL bridge, role, draft and run directory.
+    Create it with `Node.from_file`, then `await node.run(task, local=...)`.
+    """
+
+    def __init__(self, config: NodeConfig) -> None:
+        self._config = config
+
+    @classmethod
+    def from_file(cls, path: Path | str) -> Node:
+        return cls(load_node_config(Path(path)))
+
+    async def run(self, task: TrainingTask, *, local: LocalData) -> RunResult:
+        """Join the group, train every round, and return when the run completes.
+
+        Before contacting AXL, checks the draft against this task and against
+        the installed Dromeus and PyTorch versions.
+        """
+        result = await run_node(
+            self._config,
+            prepare_training=lambda draft: prepare_task(
+                draft=draft, task=task, local=local
+            ),
+        )
+        return RunResult(
+            run_id=result.formation.manifest.run_id,
+            manifest_hash=result.formation.manifest_hash,
+            committed_rounds=len(result.commits),
+        )
 
 
 async def run_node(
@@ -94,12 +143,13 @@ async def run_node(
     training_decorator: TrainingDecorator | None = None,
     on_ready: Callable[[FormationResult, str, EventSink], None | Awaitable[None]]
     | None = None,
-) -> None:
+) -> NodeRunResult:
     """Run a developer-supplied workload; this module never selects models or data."""
     draft, event_sink = await asyncio.to_thread(
         _prepare_node_start,
         config,
     )
+    check_environment(draft)
     prepared_training = await asyncio.to_thread(prepare_training, draft)
     prepared_training.validate_draft(draft)
     private_trainer = private_preparation_for_node(draft, prepared_training)
@@ -142,7 +192,7 @@ async def run_node(
             timeout_seconds=config.invitation_timeout_seconds,
         )
         if invitation.bootstrap_uri != config.bootstrap_uri:
-            raise ValueError("invitation bootstrap URI does not match node config")
+            raise ConfigError("invitation bootstrap URI does not match node config")
         formation = ParticipantFormation(invitation=invitation)
 
     run_store_root = failure.run_store.root
@@ -197,7 +247,7 @@ async def run_node(
             committed_rounds=len(result.commits),
         )
 
-    await runtime.run_to_completion(
+    return await runtime.run_to_completion(
         formation=formation,
         training_factory=build_training,
         manifest_expectation=config.manifest_expectation,
@@ -226,15 +276,23 @@ def _prepare_node_start(
 
 
 async def _read_invitation(path: Path, *, timeout_seconds: float) -> Invitation:
+    """Wait for a complete invitation file.
+
+    Users deliver the invitation by copying it, so the file can exist before all
+    of its bytes arrive. An empty or unparseable file means "not yet".
+    """
     deadline = time.monotonic() + timeout_seconds
+    problem = "file does not exist"
     while time.monotonic() < deadline:
         try:
             data = await asyncio.to_thread(path.read_bytes)
+            return Invitation.model_validate_json(data)
         except FileNotFoundError:
-            await asyncio.sleep(0.2)
-            continue
-        return Invitation.model_validate_json(data)
-    raise TimeoutError(f"timed out waiting for invitation: {path}")
+            problem = "file does not exist"
+        except ValidationError as error:
+            problem = f"file is incomplete or invalid: {error.errors()[0]['msg']}"
+        await asyncio.sleep(0.2)
+    raise FormationError(f"timed out waiting for invitation {path}: {problem}")
 
 
 async def _write_topology_snapshot(transport: AXLTransport, path: Path) -> None:
@@ -250,13 +308,29 @@ def _atomic_write(path: Path, payload: bytes) -> None:
     atomic_write_bytes(path, payload)
 
 
+TaskSetup = Callable[[], tuple[TrainingTask, LocalData]]
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run a Dromeus node")
     parser.add_argument("--config", required=True, type=Path)
     parser.add_argument(
-        "--factory", required=True, help="Local module:callable preparing the workload"
+        "--task",
+        required=True,
+        help="module:callable returning this node's (TrainingTask, LocalData)",
     )
     return parser
+
+
+def load_task_setup(reference: str) -> TaskSetup:
+    """Import a `module:callable` that returns a task and this node's data."""
+    module_name, separator, name = reference.partition(":")
+    if not separator or not module_name or not name:
+        raise ConfigError("task must be given as module:callable")
+    setup = getattr(importlib.import_module(module_name), name, None)
+    if not callable(setup):
+        raise ConfigError(f"task setup is not callable: {reference}")
+    return cast(TaskSetup, setup)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -264,15 +338,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     config_path: Path = args.config
     if not config_path.is_file():
         _parser().error(f"config file does not exist: {config_path}")
-
-    config = load_node_config(config_path)
-    module_name, separator, factory_name = str(args.factory).partition(":")
-    if not separator or not module_name or not factory_name:
-        raise ValueError("factory must be a local module:callable")
-    factory = getattr(importlib.import_module(module_name), factory_name)
-    if not callable(factory):
-        raise ValueError("workload factory must be callable")
-    asyncio.run(run_node(config, prepare_training=cast(WorkloadFactory, factory)))
+    node = Node.from_file(config_path)
+    task, local = load_task_setup(str(args.task))()
+    asyncio.run(node.run(task, local=local))
     return 0
 
 

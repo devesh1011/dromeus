@@ -18,6 +18,7 @@ from safetensors.numpy import (
     load as _load,  # pyright: ignore[reportUnknownVariableType]
 )
 
+from dromeus.errors import RunError
 from dromeus.manifests.canonical import canonical_hash, parse_sealed_json
 from dromeus.manifests.models import SealedManifest, Sha256
 
@@ -43,7 +44,7 @@ _LOAD_SAFETENSORS = cast(
 )
 
 
-class RunArchiveError(ValueError):
+class RunArchiveError(RunError, ValueError):
     """A persisted run archive is unsafe, inconsistent, or corrupt."""
 
 

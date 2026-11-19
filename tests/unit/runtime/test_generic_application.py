@@ -4,28 +4,28 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 import numpy as np
 import pytest
 import torch
-from support.application_fixture import application_draft
 from torch import nn
 from torch.utils.data import Dataset
 
 from dromeus.application import (
-    LocalTrainingOptions,
+    LocalData,
     PreparedApplication,
-    definition_hash,
-    describe_task,
+    Privacy,
+    draft_for_task,
     prepare_task,
 )
+from dromeus.errors import DraftError
 from dromeus.manifests.canonical import load_safetensors
-from dromeus.manifests.models import DraftRunSpec, PrivacyPolicy, PrivateOptimizerSpec
+from dromeus.manifests.models import DraftRunSpec
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.training.private_data import make_task_loader
-from dromeus.training.private_trainer import PrivateTrainer, private_training_definition
-from dromeus.training.task import TensorBatchAdapter, TrainingTask
+from dromeus.training.private_trainer import PrivateTrainer
+from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
 pytest.importorskip("opacus")
 
@@ -83,10 +83,11 @@ def sequence_loss(model: nn.Module, batch: Any) -> torch.Tensor:
     return (token_loss * mask).sum(1) / mask.sum(1).clamp(min=1)
 
 
-def task_for(dataset: LocalTokens | None = None) -> TrainingTask:
+def task_for(
+    *, batch_size: int = 4, optimizer: Optimizer | None = None
+) -> TrainingTask:
     return TrainingTask(
         model_factory=model_factory,
-        dataset=dataset if dataset is not None else LocalTokens(),
         batch_adapter=TensorBatchAdapter(
             example={
                 "tokens": torch.tensor([[0, 1, 2], [3, 4, 5]]),
@@ -100,73 +101,50 @@ def task_for(dataset: LocalTokens | None = None) -> TrainingTask:
         task_definition="masked-next-token-seven-token-public-synthetic-v1",
         loss_definition="mean-valid-token-loss-per-sequence-zero-all-masked-v1",
         implementation_hash="a" * 64,
+        optimizer=optimizer if optimizer is not None else Optimizer.sgd(0.01),
+        batch_size=batch_size,
         record_unit="fixed-three-token-sequence",
     )
 
 
-def draft_for(
-    task: TrainingTask,
-    *,
-    private: bool = True,
-    batch_size: int = 4,
-    optimizer_name: Literal["sgd", "adam"] = "sgd",
-) -> DraftRunSpec:
-    model = task.model_factory()
-    specification = describe_task(
+def draft_for(task: TrainingTask, *, private: bool = True) -> DraftRunSpec:
+    return draft_for_task(
         task,
-        batch_size=batch_size,
-        optimizer=PrivateOptimizerSpec(
-            name=optimizer_name,
-            torch_version=torch.__version__,
-            parameter_names=tuple(
-                name
-                for name, parameter in model.named_parameters()
-                if parameter.requires_grad
-            ),
-            learning_rate=0.01,
-        ),
-    )
-    values = application_draft().model_dump(mode="python")
-    values.update(
-        model_id="custom-language-model",
-        model_definition_hash=definition_hash(task.model_definition),
-        private_training=specification if private else None,
-        privacy=PrivacyPolicy(
+        run_id="run-001",
+        participants=4,
+        rounds=3,
+        local_steps=3,
+        axl_version="1.0.0",
+        privacy=Privacy(
             max_grad_norm=0.5,
             noise_multiplier=1,
             delta=1e-5,
-            max_logical_steps=9,
-            randomness_profile="reproducible_public_benchmark",
+            randomness="reproducible_public_benchmark",
         )
         if private
         else None,
+        seed=8,
     )
-    values["environment"]["model_definition_hash"] = values["model_definition_hash"]
-    values["dataset"]["definition_hash"] = definition_hash(task.task_definition)
-    values["application_training"]["definition_hash"] = definition_hash(
-        private_training_definition(specification)
-    )
-    return DraftRunSpec.model_validate(values)
 
 
 def prepared_task(
     tmp_path: Path,
     task: TrainingTask,
+    records: Dataset[Any] | None = None,
     *,
     physical: int = 2,
     seed: int = 31,
-    batch_size: int = 4,
-    optimizer_name: Literal["sgd", "adam"] = "sgd",
 ) -> tuple[PreparedApplication, PrivateTrainer, PrivacyLedger]:
-    draft = draft_for(task, batch_size=batch_size, optimizer_name=optimizer_name)
+    draft = draft_for(task)
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="local-text")
     prepared = prepare_task(
         draft=draft,
         task=task,
-        local=LocalTrainingOptions(
+        local=LocalData(
+            dataset=records if records is not None else LocalTokens(),
             data_identity="fixed-local-token-records-v1",
-            reservation_store=ledger,
-            max_physical_batch_size=physical,
+            ledger=ledger,
+            physical_batch_size=physical,
             research_seed=seed,
         ),
     )
@@ -179,8 +157,8 @@ def test_custom_text_task_preserves_ties_frozen_state_and_private_exports(
     tmp_path: Path,
 ) -> None:
     records = LocalTokens()
-    task = task_for(records)
-    prepared, trainer, ledger = prepared_task(tmp_path, task)
+    task = task_for()
+    prepared, trainer, ledger = prepared_task(tmp_path, task, records)
     assert records.reads == 0
     prepared.validate_draft(draft_for(task))
     initial = trainer.weights()
@@ -214,17 +192,14 @@ def test_same_application_factory_selects_ordinary_or_private_from_policy(
 ) -> None:
     task = task_for()
     private_draft = draft_for(task)
-    specification = private_draft.private_training
-    from dromeus.manifests.models import TaskTrainingSpec
-
-    assert isinstance(specification, TaskTrainingSpec)
     ordinary_draft = draft_for(task, private=False)
     ordinary = prepare_task(
         draft=ordinary_draft,
         task=task,
-        specification=specification,
-        local=LocalTrainingOptions(
-            data_identity="ordinary-local-records", research_seed=31
+        local=LocalData(
+            dataset=LocalTokens(),
+            data_identity="ordinary-local-records",
+            research_seed=31,
         ),
     )
     private, _, _ = prepared_task(tmp_path / "private", task)
@@ -244,23 +219,33 @@ def test_same_application_factory_selects_ordinary_or_private_from_policy(
 
 
 @pytest.mark.parametrize(
-    "field", ["task_definition", "loss_definition", "model_definition", "record_unit"]
+    ("field", "message"),
+    [
+        ("task_definition", "task_definition_hash"),
+        ("loss_definition", "loss_definition_hash"),
+        ("model_definition", "model definition differs"),
+        ("record_unit", "record_unit"),
+    ],
 )
 def test_changed_task_semantics_fail_before_any_record_read_or_reservation(
     tmp_path: Path,
     field: str,
+    message: str,
 ) -> None:
     records = LocalTokens()
-    task = task_for(records)
+    task = task_for()
     draft = draft_for(task)
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="local-text")
     altered = replace(task, **{field: "different-semantics"})
-    with pytest.raises(ValueError, match="definition|contract|manifest"):
+    with pytest.raises(DraftError, match=message):
         prepare_task(
             draft=draft,
             task=altered,
-            local=LocalTrainingOptions(
-                data_identity="local-text", reservation_store=ledger, research_seed=31
+            local=LocalData(
+                dataset=records,
+                data_identity="local-text",
+                ledger=ledger,
+                research_seed=31,
             ),
         )
     assert records.reads == 0
@@ -268,12 +253,8 @@ def test_changed_task_semantics_fail_before_any_record_read_or_reservation(
 
 
 def test_split_and_unsplit_private_token_updates_match(tmp_path: Path) -> None:
-    _, split, _ = prepared_task(
-        tmp_path / "split", task_for(), physical=1, batch_size=8
-    )
-    _, whole, _ = prepared_task(
-        tmp_path / "whole", task_for(), physical=8, batch_size=8
-    )
+    _, split, _ = prepared_task(tmp_path / "split", task_for(batch_size=8), physical=1)
+    _, whole, _ = prepared_task(tmp_path / "whole", task_for(batch_size=8), physical=8)
     split.train_local_steps(3)
     whole.train_local_steps(3)
     assert split.accounting_history == whole.accounting_history == ((1.0, 1.0, 3),)
@@ -289,9 +270,9 @@ def test_empty_draw_performs_noise_only_step_without_application_callback(
     # Find a known empty public Poisson draw through the same public data interface.
     seed = None
     for candidate in range(20):
-        fixture = task_for(LocalTokens(64))
+        fixture = task_for(batch_size=1)
         loader = make_task_loader(
-            fixture.dataset,
+            LocalTokens(64),
             fixture.batch_adapter,
             batch_size=1,
             generator=torch.Generator().manual_seed(candidate),
@@ -302,14 +283,14 @@ def test_empty_draw_performs_noise_only_step_without_application_callback(
     assert seed is not None
     calls: list[int] = []
     records = LocalTokens(64)
-    task = task_for(records)
+    task = task_for(batch_size=1)
 
     def observed_loss(model: nn.Module, batch: Any) -> torch.Tensor:
         calls.append(len(batch["tokens"]))
         return sequence_loss(model, batch)
 
     task = replace(task, loss_per_record=observed_loss)
-    _, trainer, ledger = prepared_task(tmp_path, task, seed=seed, batch_size=1)
+    _, trainer, ledger = prepared_task(tmp_path, task, records, seed=seed)
     # Public compatibility probes ran during preparation; actual draws start now.
     calls.clear()
     before = trainer.weights()
@@ -369,8 +350,8 @@ def test_failed_private_callback_retains_reservation_and_blocks_export(
             raise RuntimeError("private-text-must-not-appear-in-error")
         return sequence_loss(model, batch)
 
-    task = replace(task_for(), loss_per_record=failing_loss)
-    prepared, trainer, ledger = prepared_task(tmp_path, task, batch_size=8)
+    task = replace(task_for(batch_size=8), loss_per_record=failing_loss)
+    prepared, trainer, ledger = prepared_task(tmp_path, task)
     enabled = True
     with pytest.raises(ValueError, match="private local training failed") as error:
         trainer.train_local_steps(1)
@@ -394,12 +375,15 @@ def test_undeclared_evaluation_callback_is_rejected_before_reservation(
 
     altered = replace(task, public_evaluate=undeclared_evaluation)
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="local-text")
-    with pytest.raises(ValueError, match="evaluation"):
+    with pytest.raises(DraftError, match="evaluation"):
         prepare_task(
             draft=draft,
             task=altered,
-            local=LocalTrainingOptions(
-                data_identity="local-text", reservation_store=ledger, research_seed=31
+            local=LocalData(
+                dataset=LocalTokens(),
+                data_identity="local-text",
+                ledger=ledger,
+                research_seed=31,
             ),
         )
     assert ledger.reservations() == ()
@@ -408,7 +392,9 @@ def test_undeclared_evaluation_callback_is_rejected_before_reservation(
 def test_outer_weight_copy_preserves_adam_accountant_and_sampler_state(
     tmp_path: Path,
 ) -> None:
-    _, trainer, _ = prepared_task(tmp_path, task_for(), optimizer_name="adam")
+    _, trainer, _ = prepared_task(
+        tmp_path, task_for(optimizer=Optimizer.adam(0.01))
+    )
     trainer.train_local_steps(2)
     before = trainer.checkpoint_tensors()
     exchanged = {
@@ -434,8 +420,8 @@ def test_runtime_buffer_mutation_cannot_be_released(tmp_path: Path) -> None:
             next(model.buffers()).add_(1)
         return sequence_loss(model, batch)
 
-    task = replace(task_for(), loss_per_record=mutating_loss)
-    prepared, trainer, ledger = prepared_task(tmp_path, task, batch_size=8)
+    task = replace(task_for(batch_size=8), loss_per_record=mutating_loss)
+    prepared, trainer, ledger = prepared_task(tmp_path, task)
     enabled = True
     with pytest.raises(ValueError, match="private local training failed"):
         trainer.train_local_steps(1)
@@ -450,7 +436,7 @@ def test_undeclared_runtime_randomness_fails_without_releasing_model(
     tmp_path: Path,
     where: str,
 ) -> None:
-    task = task_for()
+    task = task_for(batch_size=8)
     if where == "record_loss":
 
         def stochastic_loss(model: nn.Module, batch: Any) -> torch.Tensor:
@@ -476,7 +462,7 @@ def test_undeclared_runtime_randomness_fails_without_releasing_model(
                 collate_fn=stochastic_collation,
             ),
         )
-    prepared, trainer, ledger = prepared_task(tmp_path, task, batch_size=8)
+    prepared, trainer, ledger = prepared_task(tmp_path, task)
     with pytest.raises(ValueError, match="private local training failed"):
         trainer.train_local_steps(1)
     assert len(ledger.reservations()) == 1
@@ -515,7 +501,7 @@ def test_extra_serialized_application_state_fails_before_data_or_spending(
             return torch.tensor([42.0])
 
     records = LocalTokens()
-    task = task_for(records)
+    task = task_for()
     draft = draft_for(task)
     altered = replace(task, model_factory=ExtraStateModel)
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="local-text")
@@ -523,8 +509,11 @@ def test_extra_serialized_application_state_fails_before_data_or_spending(
         prepare_task(
             draft=draft,
             task=altered,
-            local=LocalTrainingOptions(
-                data_identity="local-text", reservation_store=ledger, research_seed=31
+            local=LocalData(
+                dataset=records,
+                data_identity="local-text",
+                ledger=ledger,
+                research_seed=31,
             ),
         )
     assert records.reads == 0

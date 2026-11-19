@@ -9,19 +9,19 @@ from typing import Any, Literal
 
 import pytest
 import torch
-from support.application_fixture import application_draft
 from support.factory_optimizer import optimizer_registration, public_model
 from support.in_memory_transport import InMemoryNetwork, InMemoryTransport
 from torch import nn
 from torch.utils.data import TensorDataset
 
 from dromeus.application import (
-    LocalTrainingOptions,
-    definition_hash,
-    describe_task,
+    LocalData,
+    Privacy,
+    draft_for_task,
     prepare_task,
 )
-from dromeus.manifests.models import DraftRunSpec, PrivacyPolicy
+from dromeus.errors import DraftError
+from dromeus.manifests.models import DraftRunSpec
 from dromeus.membership.formation import FormationResult, create_invitation
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.runtime import (
@@ -31,8 +31,7 @@ from dromeus.runtime import (
     ParticipantFormation,
     TrainingConfig,
 )
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
-from dromeus.training.private_trainer import private_training_definition
+from dromeus.training.optimizer_factory import OptimizerRegistration
 from dromeus.training.task import TensorBatchAdapter, TrainingTask
 
 pytest.importorskip("opacus")
@@ -43,12 +42,15 @@ def squared_error(model: nn.Module, batch: Any) -> torch.Tensor:
     return (model(inputs) - targets).square().flatten(1).mean(1)
 
 
-def task_for(registration: PrivateOptimizerFactory, rank: int = 0) -> TrainingTask:
+def records(rank: int = 0) -> TensorDataset:
+    return TensorDataset(torch.ones(8, 2) * (rank + 1), torch.zeros(8, 1))
+
+
+def task_for(registration: OptimizerRegistration, rank: int = 0) -> TrainingTask:
     inputs = torch.ones(8, 2) * (rank + 1)
     targets = torch.zeros(8, 1)
     return TrainingTask(
         model_factory=public_model,
-        dataset=TensorDataset(inputs, targets),
         batch_adapter=TensorBatchAdapter(
             example=(inputs[:2], targets[:2]),
             definition="public-two-record-pairs-v1",
@@ -58,30 +60,28 @@ def task_for(registration: PrivateOptimizerFactory, rank: int = 0) -> TrainingTa
         task_definition="public-mse-v1",
         loss_definition="mean-squared-error-per-record-v1",
         implementation_hash="b" * 64,
-        optimizer_registration=registration,
+        optimizer=registration,
+        batch_size=4,
+        schedule="linear_decay",
     )
 
 
 def draft_for(task: TrainingTask) -> DraftRunSpec:
-    specification = describe_task(task, batch_size=4, schedule="linear_decay")
-    values = application_draft().model_dump(mode="python")
-    values.update(
-        model_definition_hash=definition_hash(task.model_definition),
-        private_training=specification,
-        privacy=PrivacyPolicy(
+    return draft_for_task(
+        task,
+        run_id="run-001",
+        participants=4,
+        rounds=3,
+        local_steps=3,
+        axl_version="1.0.0",
+        privacy=Privacy(
             max_grad_norm=1,
             noise_multiplier=1,
             delta=1e-5,
-            max_logical_steps=9,
-            randomness_profile="reproducible_public_benchmark",
+            randomness="reproducible_public_benchmark",
         ),
+        seed=8,
     )
-    values["environment"]["model_definition_hash"] = values["model_definition_hash"]
-    values["dataset"]["definition_hash"] = definition_hash(task.task_definition)
-    values["application_training"]["definition_hash"] = definition_hash(
-        private_training_definition(specification)
-    )
-    return DraftRunSpec.model_validate(values)
 
 
 @pytest.mark.parametrize("kind", ["custom", "rmsprop"])
@@ -94,12 +94,13 @@ def test_factory_private_noloco_runs_four_nodes(
         prepare_task(
             draft=draft,
             task=task_for(registration, rank),
-            local=LocalTrainingOptions(
+            local=LocalData(
+                dataset=records(rank),
                 data_identity=f"public-node-{rank}",
-                reservation_store=PrivacyLedger.create(
+                ledger=PrivacyLedger.create(
                     tmp_path / f"ledger-{rank}.json", lineage=f"public-{rank}"
                 ),
-                max_physical_batch_size=2,
+                physical_batch_size=2,
                 research_seed=17 + rank,
             ),
         )
@@ -159,14 +160,15 @@ def test_factory_identity_mismatch_fails_before_reservation(tmp_path: Path) -> N
     draft = draft_for(task_for(registration))
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="public")
     altered = replace(registration, implementation_hash="f" * 64)
-    with pytest.raises(ValueError, match="implementation"):
+    with pytest.raises(DraftError, match="optimizer"):
         prepare_task(
             draft=draft,
             task=task_for(altered),
-            local=LocalTrainingOptions(
+            local=LocalData(
+                dataset=records(),
                 data_identity="public",
-                reservation_store=ledger,
-                max_physical_batch_size=2,
+                ledger=ledger,
+                physical_batch_size=2,
                 research_seed=17,
             ),
         )

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from dromeus.errors import FormationError
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
@@ -43,12 +44,8 @@ from dromeus.transport.receiver import MessageChannel, Receiver, ReceiverPolicy
 from dromeus.transport.transfer import TransferManager
 
 
-class ReadyValidationError(ValueError):
+class ReadyValidationError(FormationError, ValueError):
     """The local node cannot enter the READY barrier."""
-
-
-class FormationError(RuntimeError):
-    """Fixed-membership startup failed."""
 
 
 def validate_ready(

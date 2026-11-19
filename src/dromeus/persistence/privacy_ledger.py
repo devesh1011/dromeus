@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
 
+from dromeus.errors import PrivacyError
 from dromeus.manifests.canonical import canonical_json
 from dromeus.manifests.models import DomainModel, PrivacyReservation, Sha256
 from dromeus.persistence.files import atomic_write_bytes
@@ -29,20 +30,20 @@ class _LedgerState(DomainModel):
 class PrivacyLedger:
     """Atomic, locked storage independent of run/model checkpoints."""
 
-    def __init__(self, path: Path, *, lineage: str) -> None:
+    def __init__(self, path: Path | str, *, lineage: str) -> None:
         if not lineage.strip():
-            raise ValueError("local dataset lineage is required")
-        self.path = path
+            raise PrivacyError("local dataset lineage is required")
+        self.path = Path(path)
         self._lineage_hash = hashlib.sha256(lineage.encode()).hexdigest()
 
     @classmethod
-    def create(cls, path: Path, *, lineage: str) -> PrivacyLedger:
+    def create(cls, path: Path | str, *, lineage: str) -> PrivacyLedger:
         """Explicit bootstrap for a new controlled lineage; never overwrite."""
         ledger = cls(path, lineage=lineage)
-        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        ledger.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         with ledger._locked():
-            if path.exists() or path.is_symlink():
-                raise ValueError("privacy ledger already exists")
+            if ledger.path.exists() or ledger.path.is_symlink():
+                raise PrivacyError("privacy ledger already exists")
             ledger._write(_LedgerState(lineage_hash=ledger._lineage_hash))
         return ledger
 
@@ -59,16 +60,16 @@ class PrivacyLedger:
 
     def _read(self) -> _LedgerState:
         if not self.path.is_file() or self.path.is_symlink():
-            raise ValueError("privacy ledger missing or unsafe")
+            raise PrivacyError("privacy ledger missing or unsafe")
         try:
             state = _LedgerState.model_validate_json(self.path.read_bytes())
         except Exception:
-            raise ValueError("privacy ledger corrupt") from None
+            raise PrivacyError("privacy ledger corrupt") from None
         if state.lineage_hash != self._lineage_hash:
-            raise ValueError("privacy ledger lineage mismatch")
+            raise PrivacyError("privacy ledger lineage mismatch")
         ids = [r.run_id for r in state.reservations]
         if len(ids) != len(set(ids)):
-            raise ValueError("privacy ledger has duplicate reservations")
+            raise PrivacyError("privacy ledger has duplicate reservations")
         return state
 
     def _write(self, state: _LedgerState) -> None:
@@ -89,15 +90,15 @@ class PrivacyLedger:
         with self._locked():
             state = self._read()
             if any(r.run_id == reservation.run_id for r in state.reservations):
-                raise ValueError("run already reserved; use a new run identity")
+                raise PrivacyError("run already reserved; use a new run identity")
             history = (*state.reservations, reservation)
             expenditure = forecast(history)
             if not math.isfinite(expenditure) or expenditure < 0:
-                raise ValueError("invalid privacy budget forecast")
+                raise PrivacyError("invalid privacy budget forecast")
             if epsilon_limit is not None and expenditure > epsilon_limit:
-                raise ValueError("composed privacy budget exceeds limit")
+                raise PrivacyError("composed privacy budget exceeds limit")
             self._write(state.model_copy(update={"reservations": history}))
 
     def check(self, reservation: PrivacyReservation) -> None:
         if reservation not in self.reservations():
-            raise ValueError("privacy reservation missing or changed")
+            raise PrivacyError("privacy reservation missing or changed")

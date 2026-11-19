@@ -4,6 +4,7 @@ import asyncio
 import subprocess
 import sys
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -18,8 +19,10 @@ from dromeus import node as node_module
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
 from dromeus.application import (
     PreparedApplication,
-    prepare_application,
+    prepare_task,
+    prepare_trainer,
 )
+from dromeus.errors import DraftError
 from dromeus.manifests.canonical import canonical_hash, canonical_json
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import (
@@ -35,24 +38,37 @@ from dromeus.telemetry.events import JsonlEventSink
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 from dromeus.telemetry.metrics import JsonlMetricsPublisher, RoundTiming
 from dromeus.training.base import EvaluationResult
+from dromeus.training.ordinary_task import OrdinaryTaskTrainer
 from dromeus.training.trainer import PyTorchTrainer
 from dromeus.transport.axl import AXLBridgeConfig
-from examples.custom_training import (
-    MODEL_DEFINITION,
-    TASK_DEFINITION,
-    TRAINING_DEFINITION,
-    LocalRegression,
-)
+from examples.custom_training import MODEL_DEFINITION, local_data
+from examples.custom_training import task as example_task
 
 
-def prepared(draft: DraftRunSpec, local: LocalRegression) -> PreparedApplication:
-    return prepare_application(
-        draft=draft,
-        trainer=local.trainer,
-        model_definition=MODEL_DEFINITION,
-        task_definition=TASK_DEFINITION,
-        training_definition=TRAINING_DEFINITION,
-    )
+class LocalRegression:
+    """This node's trainer for the example task over its own NPZ records.
+
+    Builds the ordinary trainer the way `prepare_task` does, but keeps the trainer
+    so tests can inspect weights and checkpoints directly.
+    """
+
+    def __init__(self, draft: DraftRunSpec, path: Path) -> None:
+        local = local_data(path)
+        self.data_identity = local.data_identity
+        self.trainer = OrdinaryTaskTrainer(
+            task=example_task(),
+            dataset=local.dataset,
+            specification=draft.training,
+            local_data_identity=local.data_identity,
+            max_logical_steps=draft.local_steps * draft.round_count,
+            research_seed=0,
+            max_physical_batch_size=local.physical_batch_size,
+        )
+
+    def prepare(self, draft: DraftRunSpec) -> PreparedApplication:
+        return prepare_trainer(
+            draft=draft, trainer=self.trainer, model_definition=MODEL_DEFINITION
+        )
 
 
 @pytest.mark.parametrize(
@@ -90,7 +106,7 @@ def test_custom_regression_through_public_node_api(
     else:
         draft_path.write_bytes(canonical_json(draft))
     locals_ = [
-        LocalRegression(local_file(tmp_path / f"data-{rank}.npz", rank))
+        LocalRegression(draft, local_file(tmp_path / f"data-{rank}.npz", rank))
         for rank in range(4)
     ]
     initial = [
@@ -99,7 +115,7 @@ def test_custom_regression_through_public_node_api(
     ]
 
     def factory_for(rank: int) -> Callable[[DraftRunSpec], PreparedApplication]:
-        return lambda actual: prepared(actual, locals_[rank])
+        return locals_[rank].prepare
 
     async def run() -> None:
         await asyncio.wait_for(
@@ -157,8 +173,8 @@ def test_custom_regression_through_public_node_api(
         assert archive.algorithm_state is not None
         checkpoint = archive.algorithm_state.load_tensors()
         assert int(checkpoint["noloco.completed_outer_steps"][0]) == 3
-        restored = LocalRegression(tmp_path / f"data-{rank}.npz")
-        prepared(draft, restored)
+        restored = LocalRegression(draft, tmp_path / f"data-{rank}.npz")
+        restored.prepare(draft)
         restored_algorithm = build_algorithm(
             manifest=archive.manifest, trainer=restored.trainer
         )
@@ -168,8 +184,7 @@ def test_custom_regression_through_public_node_api(
             np.testing.assert_array_equal(
                 value, restored.trainer.checkpoint_tensors()[name]
             )
-        local.trainer.train_local_steps(1)
-        restored.trainer.train_local_steps(1)
+        # The run used the whole horizon, so no further local step is allowed here.
         for name, value in local.trainer.weights().items():
             np.testing.assert_array_equal(value, restored.trainer.weights()[name])
 
@@ -191,23 +206,22 @@ assert not any('resnet' in name.lower() or 'cifar10' in name for name in sys.mod
 
 
 @pytest.mark.parametrize(
-    "definition", ["model_definition", "task_definition", "training_definition"]
+    ("change", "message"),
+    [
+        ({"model_definition": "wrong"}, "model definition differs"),
+        ({"task_definition": "wrong"}, "task_definition_hash"),
+        ({"loss_definition": "wrong"}, "loss_definition_hash"),
+    ],
 )
-def test_shared_definition_mismatch_rejected(tmp_path: Path, definition: str) -> None:
-    local = LocalRegression(local_file(tmp_path / "data.npz"))
-    definitions = dict(
-        model_definition=MODEL_DEFINITION,
-        task_definition=TASK_DEFINITION,
-        training_definition=TRAINING_DEFINITION,
-    )
-    definitions[definition] = "wrong"
-    with pytest.raises(ValueError, match="definition"):
-        prepare_application(
+def test_shared_definition_mismatch_rejected(
+    tmp_path: Path, change: dict[str, str], message: str
+) -> None:
+    local = local_data(local_file(tmp_path / "data.npz"))
+    with pytest.raises(DraftError, match=message):
+        prepare_task(
             draft=application_draft(),
-            trainer=local.trainer,
-            model_definition=definitions["model_definition"],
-            task_definition=definitions["task_definition"],
-            training_definition=definitions["training_definition"],
+            task=replace(example_task(), **change),
+            local=local,
         )
 
 
@@ -260,16 +274,17 @@ def test_signed_loss_and_named_metrics_are_retained(tmp_path: Path) -> None:
 def test_checkpoint_failure_rolls_back_and_rejects_other_local_data(
     tmp_path: Path,
 ) -> None:
-    local = LocalRegression(local_file(tmp_path / "data.npz"))
+    draft = application_draft()
+    local = LocalRegression(draft, local_file(tmp_path / "data.npz"))
     local.trainer.train_local_steps(3)
     old = local.trainer.checkpoint_tensors()
     bad = {key: value.copy() for key, value in old.items()}
-    bad["application.cursor"] = np.array([-1], dtype=np.int64)
-    with pytest.raises(ValueError, match="cursor"):
+    bad["meta.steps"] = np.array([2], dtype=np.int64)
+    with pytest.raises(ValueError, match="counters"):
         local.trainer.load_checkpoint_tensors(bad)
     for key, value in old.items():
         np.testing.assert_array_equal(value, local.trainer.checkpoint_tensors()[key])
-    other = LocalRegression(local_file(tmp_path / "other.npz", rank=1))
+    other = LocalRegression(draft, local_file(tmp_path / "other.npz", rank=1))
     with pytest.raises(ValueError, match="identity"):
         other.trainer.load_checkpoint_tensors(old)
 
@@ -331,11 +346,14 @@ def test_integer_buffers_are_local_and_checkpointed() -> None:
     assert checkpoint["model.counter"].shape == ()
 
 
-@pytest.mark.parametrize("field", ["training", "optimizer", "learning_rate"])
+@pytest.mark.parametrize(
+    "field", ["application_training", "private_training", "optimizer", "learning_rate"]
+)
 def test_application_manifest_rejects_recipe_fields(field: str) -> None:
-    # Removed v6 recipe fields are extra inputs; the application owns its recipe.
+    # Removed recipe fields are extra inputs; the task owns the training recipe.
     value = application_draft().model_dump(mode="python")
-    value[field] = {"training": {}, "optimizer": "adam", "learning_rate": 0.1}[field]
+    replacement: dict[str, object] = {"optimizer": "adam", "learning_rate": 0.1}
+    value[field] = replacement.get(field, {})
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
         DraftRunSpec.model_validate(value)
 
@@ -384,8 +402,8 @@ def test_actual_sealed_policy_is_checked_before_ready_and_build(
     tmp_path: Path, change: str
 ) -> None:
     draft = application_draft()
-    local = LocalRegression(local_file(tmp_path / "data.npz"))
-    workload = prepared(draft, local)
+    local = LocalRegression(draft, local_file(tmp_path / "data.npz"))
+    workload = local.prepare(draft)
     result = _formed_application(draft, local, tmp_path)
     value = result.manifest.model_dump(mode="python")
     if change == "beta":
@@ -420,8 +438,8 @@ def test_application_checkpoint_rejects_different_outer_policy(
 ) -> None:
     path = local_file(tmp_path / "data.npz")
     draft = application_draft(compressed=True)
-    local = LocalRegression(path)
-    prepared(draft, local)
+    local = LocalRegression(draft, path)
+    local.prepare(draft)
     result = _formed_application(draft, local, tmp_path)
     original = build_algorithm(manifest=result.manifest, trainer=local.trainer)
     checkpoint = original.checkpoint_tensors()
@@ -436,8 +454,8 @@ def test_application_checkpoint_rejects_different_outer_policy(
     else:
         value["artifact_codecs"][0]["top_k_fraction"] = 0.25
     changed = DraftRunSpec.model_validate(value)
-    fresh = LocalRegression(path)
-    prepared(changed, fresh)
+    fresh = LocalRegression(changed, path)
+    fresh.prepare(changed)
     other = _formed_application(changed, fresh, tmp_path / "other")
     algorithm = build_algorithm(manifest=other.manifest, trainer=fresh.trainer)
     assert isinstance(algorithm, NoLoCoAlgorithm)
@@ -533,27 +551,29 @@ def test_older_application_context_is_rejected_and_same_policy_new_run_is_valid(
 ) -> None:
     draft = application_draft()
     path = local_file(tmp_path / "data.npz")
-    old = LocalRegression(path)
-    assert draft.application_training is not None
+    old = LocalRegression(draft, path)
+    # An older context bound only the model, dataset and training recipe, without
+    # the outer NoLoCo policy that the current contract also binds.
     old.trainer.bind_contract(
         ":".join(
             (
+                "application-restore",
                 draft.model_definition_hash,
                 canonical_hash(draft.dataset),
-                canonical_hash(draft.application_training),
+                canonical_hash(draft.training),
             )
         )
     )
     checkpoint = old.trainer.checkpoint_tensors()
-    current = LocalRegression(path)
-    prepared(draft, current)
+    current = LocalRegression(draft, path)
+    current.prepare(draft)
     with pytest.raises(ValueError, match="identity"):
         current.trainer.load_checkpoint_tensors(checkpoint)
     current.trainer.train_local_steps(2)
     checkpoint = current.trainer.checkpoint_tensors()
     other_run = draft.model_copy(update={"run_id": "explicit-offline-continuation"})
-    fresh = LocalRegression(path)
-    prepared(other_run, fresh)
+    fresh = LocalRegression(other_run, path)
+    fresh.prepare(other_run)
     fresh.trainer.load_checkpoint_tensors(checkpoint)
     current.trainer.train_local_steps(1)
     fresh.trainer.train_local_steps(1)

@@ -1,7 +1,7 @@
 """Run four private Python task processes over real AXL (opt-in, public synthetic data).
 
-The subprocess factory lives in this module, so each node imports it as
-``test_private_training_axl:prepare_training`` with this directory on PYTHONPATH.
+The subprocess task setup lives in this module, so each node imports it as
+``test_private_training_axl:setup`` with this directory on PYTHONPATH.
 """
 
 from __future__ import annotations
@@ -16,31 +16,23 @@ from typing import Any, Literal
 
 import pytest
 import torch
-from support.application_fixture import application_draft
+from support.application_fixture import FIXTURE_TRANSPORT
 from support.local_axl import local_axl_cluster
 from support.paths import REPO_ROOT
 from torch import nn
 from torch.utils.data import TensorDataset
 
 from dromeus.application import (
-    LocalTrainingOptions,
-    PreparedApplication,
-    definition_hash,
-    describe_task,
-    prepare_task,
-)
-from dromeus.manifests.models import (
-    DraftRunSpec,
-    PrivacyPolicy,
-    PrivateOptimizerSpec,
-    TaskTrainingSpec,
+    LocalData,
+    NoLoCo,
+    Privacy,
+    draft_for_task,
 )
 from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
-from dromeus.training.private_trainer import private_training_definition
-from dromeus.training.task import TensorBatchAdapter, TrainingTask
+from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
 MODEL_DEFINITION = "w1-smoke-linear-2-1-fp32-public-init-v1"
 TASK_DEFINITION = "w1-smoke-fixed-public-synthetic-mse-v1"
@@ -64,13 +56,16 @@ def squared_error(model: nn.Module, batch: Any) -> torch.Tensor:
     return (model(inputs) - targets).square().flatten(1).mean(1)
 
 
-def synthetic_task(rank: int) -> TrainingTask:
+def synthetic_pairs(rank: int) -> tuple[torch.Tensor, torch.Tensor]:
     """Public synthetic records; every node's offset is fixed by its rank."""
     inputs = torch.arange(16, dtype=torch.float32).reshape(8, 2) / 16 + rank * 0.01
-    targets = inputs[:, :1] * 0.3
+    return inputs, inputs[:, :1] * 0.3
+
+
+def synthetic_task(rank: int, optimizer: Optimizer) -> TrainingTask:
+    inputs, targets = synthetic_pairs(rank)
     return TrainingTask(
         model_factory=public_model,
-        dataset=TensorDataset(inputs, targets),
         batch_adapter=TensorBatchAdapter(
             example=(inputs[:2], targets[:2]),
             definition="w1-public-two-record-pairs-v1",
@@ -80,50 +75,40 @@ def synthetic_task(rank: int) -> TrainingTask:
         task_definition=TASK_DEFINITION,
         loss_definition="w1-smoke-mean-squared-error-per-record-v1",
         implementation_hash="5" * 64,
+        optimizer=optimizer,
+        batch_size=4,
+        schedule="linear_decay",
         record_unit="example",
     )
 
 
-def prepare_training(draft: DraftRunSpec) -> PreparedApplication:
+def optimizer_for(name: str) -> Optimizer:
+    if name == "sgd":
+        return Optimizer.sgd(0.01, momentum=0.9, nesterov=True)
+    if name == "adam":
+        return Optimizer.adam(0.01)
+    if name == "adamw":
+        return Optimizer.adamw(0.01, weight_decay=0.0)
+    raise ValueError(f"unknown optimizer: {name}")
+
+
+def setup() -> tuple[TrainingTask, LocalData]:
+    """Entry point for `python -m dromeus.node --task` in each private process."""
     root = Path(os.environ["DROMEUS_PRIVATE_NODE_ROOT"])
     rank = int(os.environ["DROMEUS_PRIVATE_NODE_RANK"])
+    optimizer = optimizer_for(os.environ["DROMEUS_PRIVATE_OPTIMIZER"])
     # All records are public synthetic data. This bootstrap must never be copied
     # into a deployment that recreates a missing existing private-data ledger.
     ledger = PrivacyLedger.create(
         root / "privacy-ledger.json", lineage=f"w1-public-synthetic-{rank}"
     )
-    return prepare_task(
-        draft=draft,
-        task=synthetic_task(rank),
-        local=LocalTrainingOptions(
-            data_identity=f"w1-public-tensors-rank-{rank}-v1",
-            reservation_store=ledger,
-            max_physical_batch_size=2,
-            research_seed=101 + rank,
-        ),
-    )
-
-
-def private_specification(
-    optimizer_name: Literal["sgd", "adam", "adamw"],
-) -> TaskTrainingSpec:
-    model = public_model()
-    return describe_task(
-        synthetic_task(0),
-        batch_size=4,
-        schedule="linear_decay",
-        optimizer=PrivateOptimizerSpec(
-            name=optimizer_name,
-            torch_version=torch.__version__,
-            parameter_names=tuple(
-                name
-                for name, parameter in model.named_parameters()
-                if parameter.requires_grad
-            ),
-            learning_rate=0.01,
-            momentum=0.9 if optimizer_name == "sgd" else 0,
-            nesterov=optimizer_name == "sgd",
-        ),
+    inputs, targets = synthetic_pairs(rank)
+    return synthetic_task(rank, optimizer), LocalData(
+        dataset=TensorDataset(inputs, targets),
+        data_identity=f"w1-public-tensors-rank-{rank}-v1",
+        ledger=ledger,
+        physical_batch_size=2,
+        research_seed=101 + rank,
     )
 
 
@@ -133,35 +118,28 @@ def test_four_private_python_processes_over_axl(
 ) -> None:
     binary = Path(os.environ["DROMEUS_AXL_BINARY"])
     root = REPO_ROOT
-    spec = private_specification(optimizer_name)
-    base = application_draft(compressed=True).model_dump(mode="python")
-    base.update(
-        model_definition_hash=definition_hash(MODEL_DEFINITION),
-        private_training=spec,
-        privacy=PrivacyPolicy(
+    draft = draft_for_task(
+        synthetic_task(0, optimizer_for(optimizer_name)),
+        run_id="run-001",
+        participants=4,
+        rounds=3,
+        local_steps=3,
+        axl_version="1.0.0",
+        noloco=NoLoCo(alpha=0.4, beta=0.3, gamma=0.2, top_k_fraction=0.5),
+        privacy=Privacy(
             max_grad_norm=1,
             noise_multiplier=1,
             delta=1e-5,
-            max_logical_steps=9,
-            randomness_profile="reproducible_public_benchmark",
+            randomness="reproducible_public_benchmark",
         ),
-    )
-    base["environment"]["model_definition_hash"] = base["model_definition_hash"]
-    base["dataset"]["definition_hash"] = definition_hash(TASK_DEFINITION)
-    base["application_training"]["definition_hash"] = definition_hash(
-        private_training_definition(spec)
-    )
-    draft = DraftRunSpec.model_validate(base)
-    draft = draft.model_copy(
-        update={
-            "environment": draft.environment.model_copy(
-                update={"pytorch_version": torch.__version__}
-            )
-        }
+        transport=FIXTURE_TRANSPORT,
+        seed=8,
     )
     draft_path = tmp_path / "draft.json"
     # Exercise the actual CLI default in each independent Python process.
-    draft_path.write_text(draft.model_dump_json(exclude={"algorithm_id"}))
+    draft_path.write_text(
+        draft.model_dump_json(exclude={"algorithm_id"}, exclude_none=True)
+    )
     # Each node imports the factory above from this file by module path.
     integration_root = Path(__file__).resolve().parent
     python_path = os.pathsep.join(
@@ -193,6 +171,7 @@ def test_four_private_python_processes_over_axl(
                         os.environ,
                         DROMEUS_PRIVATE_NODE_ROOT=str(tmp_path / f"node-{rank}"),
                         DROMEUS_PRIVATE_NODE_RANK=str(rank),
+                        DROMEUS_PRIVATE_OPTIMIZER=optimizer_name,
                         PYTHONPATH=python_path,
                         OMP_NUM_THREADS="1",
                         MKL_NUM_THREADS="1",
@@ -205,8 +184,8 @@ def test_four_private_python_processes_over_axl(
                                 "dromeus.node",
                                 "--config",
                                 str(config_path),
-                                "--factory",
-                                "test_private_training_axl:prepare_training",
+                                "--task",
+                                "test_private_training_axl:setup",
                                 cwd=root,
                                 env=env,
                                 stdout=log,

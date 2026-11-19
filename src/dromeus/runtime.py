@@ -19,6 +19,7 @@ from dromeus.algorithms.codec import (
     IdentityCodec,
 )
 from dromeus.algorithms.noloco import NoLoCoAlgorithm
+from dromeus.errors import RunError
 from dromeus.gossip.axl import (
     AXLFailureBroadcaster,
     AXLPairTransport,
@@ -68,11 +69,11 @@ from dromeus.transport.interface import AsyncTransport
 from dromeus.transport.receiver import MessageChannel
 
 
-class NodeRuntimeError(RuntimeError):
+class NodeRuntimeError(RunError):
     """The node runtime lifecycle was used out of order."""
 
 
-class PeerRunFailureError(RuntimeError):
+class PeerRunFailureError(RunError):
     """A sealed peer announced terminal run failure."""
 
 
@@ -226,7 +227,7 @@ def private_preparation_for_node(
     if (
         not isinstance(trainer, PrivateTrainer)
         or trainer.policy != draft.privacy
-        or trainer.specification != draft.private_training
+        or trainer.specification != draft.training
     ):
         raise ValueError("private node requires owned preparation before AXL startup")
     trainer.weights()
@@ -241,7 +242,7 @@ def build_algorithm(
         if (
             not isinstance(trainer, PrivateTrainer)
             or trainer.policy != manifest.privacy
-            or trainer.specification != manifest.private_training
+            or trainer.specification != manifest.training
         ):
             raise ValueError(
                 "private manifest requires matching prepared private trainer"
@@ -297,7 +298,7 @@ class NodeRuntime:
             if (
                 private_trainer is None
                 or private_trainer.policy != draft.privacy
-                or private_trainer.specification != draft.private_training
+                or private_trainer.specification != draft.training
             ):
                 raise ValueError(
                     "private runtime requires owned preflight before formation"

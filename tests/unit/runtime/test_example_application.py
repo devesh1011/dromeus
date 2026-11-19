@@ -1,29 +1,27 @@
-"""The published example draft must stay valid and match the example application."""
+"""The published example draft must stay valid and match the example task."""
 
 from __future__ import annotations
 
+import torch
 from support.paths import REPO_ROOT
 
-from dromeus.application import definition_hash
-from dromeus.manifests.canonical import parse_draft_yaml
+from dromeus.application import load_draft, require_task_matches
 from dromeus.node import load_node_config
-from examples.custom_training import (
-    MODEL_DEFINITION,
-    TASK_DEFINITION,
-    TRAINING_DEFINITION,
-)
+from examples.custom_training import task
 
 EXAMPLES = REPO_ROOT / "examples"
 
 
-def test_example_draft_matches_example_application_definitions() -> None:
-    draft = parse_draft_yaml(EXAMPLES / "custom-regression-draft.yaml")
-
-    assert draft.model_definition_hash == definition_hash(MODEL_DEFINITION)
-    assert draft.dataset.definition_hash == definition_hash(TASK_DEFINITION)
-    assert draft.application_training.definition_hash == definition_hash(
-        TRAINING_DEFINITION
+def test_example_draft_matches_example_task() -> None:
+    draft = load_draft(EXAMPLES / "custom-regression-draft.yaml")
+    # The committed draft records the PyTorch build it was written with; a real
+    # group pins one build, but this check is about the task, not the machine.
+    optimizer = draft.training.optimizer.model_copy(
+        update={"torch_version": torch.__version__}
     )
+    training = draft.training.model_copy(update={"optimizer": optimizer})
+
+    require_task_matches(draft.model_copy(update={"training": training}), task())
 
 
 def test_example_node_config_loads_and_points_at_example_draft() -> None:

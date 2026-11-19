@@ -12,6 +12,7 @@ from typing import cast
 import numpy as np
 from safetensors.numpy import save_file  # pyright: ignore[reportUnknownVariableType]
 
+from dromeus.errors import RunError
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
@@ -28,7 +29,7 @@ from dromeus.persistence.archive import (
 from dromeus.persistence.files import atomic_write_bytes, fsync_directory
 
 
-class RunStoreError(RuntimeError):
+class RunStoreError(RunError):
     """A durable run-state operation could not be completed safely."""
 
 

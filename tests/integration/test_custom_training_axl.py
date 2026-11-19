@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pytest
-import torch
 from support.application_fixture import application_draft, local_file
 from support.local_axl import local_axl_cluster
 from support.paths import REPO_ROOT
@@ -30,16 +29,11 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
     if inherited_python_path := os.environ.get("PYTHONPATH"):
         python_path += os.pathsep + inherited_python_path
     draft = application_draft(compressed=True)
-    draft = draft.model_copy(
-        update={
-            "environment": draft.environment.model_copy(
-                update={"pytorch_version": torch.__version__}
-            )
-        }
-    )
     draft_path = tmp_path / "draft.json"
     # Exercise the actual CLI default in each independent Python process.
-    draft_path.write_text(draft.model_dump_json(exclude={"algorithm_id"}))
+    draft_path.write_text(
+        draft.model_dump_json(exclude={"algorithm_id"}, exclude_none=True)
+    )
 
     async def run() -> None:
         async with local_axl_cluster(binary=binary, log_root=tmp_path / "axl") as nodes:
@@ -73,8 +67,8 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
                                 "dromeus.node",
                                 "--config",
                                 str(config_path),
-                                "--factory",
-                                "examples.custom_training:prepare_training",
+                                "--task",
+                                "examples.custom_training:setup",
                                 cwd=root,
                                 env=env,
                                 stdout=log,

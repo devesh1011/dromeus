@@ -1,19 +1,22 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
 import pytest
-from pydantic import ValidationError
 from support.sample_manifest import manifest_data
 
 from dromeus import node as node_module
+from dromeus.application import LocalData, installed_versions
+from dromeus.errors import ConfigError
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import FormationResult, create_invitation
 from dromeus.node import NodeRole, load_node_config, main
 from dromeus.runtime import ParticipantFormation, TrainingConfig
 from dromeus.training.state import InitialCheckpoint
+from dromeus.training.task import TrainingTask
 
 
 def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> None:
@@ -42,7 +45,7 @@ def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> N
         config_path.read_text(encoding="utf-8") + "\nextra: rejected\n",
         encoding="utf-8",
     )
-    with pytest.raises(ValidationError, match="extra"):
+    with pytest.raises(ConfigError, match="extra"):
         load_node_config(config_path)
 
 
@@ -62,7 +65,7 @@ def test_load_node_config_rejects_non_loopback_axl_bridge(tmp_path: Path) -> Non
         encoding="utf-8",
     )
 
-    with pytest.raises(ValidationError, match="loopback"):
+    with pytest.raises(ConfigError, match="loopback"):
         load_node_config(config_path)
 
 
@@ -79,6 +82,13 @@ def test_run_node_uses_deep_runtime_lifecycle(
         "tensor_schema",
     ):
         del draft_data[field]
+    # run_node refuses drafts made for another Dromeus or PyTorch version.
+    dromeus_version, pytorch_version = installed_versions()
+    draft_data["environment"] = {
+        **draft_data["environment"],
+        "dromeus_version": dromeus_version,
+        "pytorch_version": pytorch_version,
+    }
     draft = DraftRunSpec.model_validate(draft_data)
     draft_path = tmp_path / "draft.yaml"
     draft_path.write_text(draft.model_dump_json(), encoding="utf-8")
@@ -185,6 +195,7 @@ def test_run_node_uses_deep_runtime_lifecycle(
 
 def test_main_executes_config_instead_of_exiting_after_start_event(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = tmp_path / "node.yaml"
     config_path.write_text(
@@ -201,12 +212,69 @@ def test_main_executes_config_instead_of_exiting_after_start_event(
         encoding="utf-8",
     )
 
+    loaded_tasks: list[str] = []
+
+    def fake_load_task_setup(
+        reference: str,
+    ) -> Callable[[], tuple[TrainingTask, LocalData]]:
+        loaded_tasks.append(reference)
+        return lambda: (cast(TrainingTask, object()), cast(LocalData, object()))
+
+    monkeypatch.setattr(node_module, "load_task_setup", fake_load_task_setup)
     with pytest.raises(FileNotFoundError):
         main(
             [
                 "--config",
                 str(config_path),
-                "--factory",
-                "dromeus.application:prepare_application",
+                "--task",
+                "my_app.task:setup",
             ]
         )
+    assert loaded_tasks == ["my_app.task:setup"]
+
+
+def test_participant_waits_for_a_completely_copied_invitation(tmp_path: Path) -> None:
+    """Copying the invitation (scp, cp) creates the file before its bytes arrive."""
+    from support.sample_manifest import manifest_data
+
+    from dromeus.manifests.canonical import canonical_json
+    from dromeus.manifests.models import DraftRunSpec
+    from dromeus.membership.formation import create_invitation
+    from dromeus.node import _read_invitation  # pyright: ignore[reportPrivateUsage]
+
+    values = manifest_data()
+    for field in ("participants", "draft_hash", "initial_checkpoint_hash", "tensor_schema"):
+        del values[field]
+    invitation = create_invitation(
+        draft=DraftRunSpec.model_validate(values),
+        initiator_public_key="peer-0",
+        bootstrap_uri="axl://bootstrap",
+    )
+    path = tmp_path / "invitation.json"
+    path.write_bytes(b"")  # created, not yet written
+    payload = canonical_json(invitation)
+
+    async def deliver_later() -> None:
+        await asyncio.sleep(0.3)
+        path.write_bytes(payload[: len(payload) // 2])  # partly written
+        await asyncio.sleep(0.3)
+        path.write_bytes(payload)
+
+    async def scenario() -> object:
+        writer = asyncio.create_task(deliver_later())
+        received = await _read_invitation(path, timeout_seconds=5)
+        await writer
+        return received
+
+    assert asyncio.run(scenario()) == invitation
+
+
+def test_unreadable_invitation_times_out_as_formation_error(tmp_path: Path) -> None:
+    from dromeus.errors import FormationError
+    from dromeus.node import _read_invitation  # pyright: ignore[reportPrivateUsage]
+
+    path = tmp_path / "invitation.json"
+    path.write_text("{not json")
+
+    with pytest.raises(FormationError, match="invitation"):
+        asyncio.run(_read_invitation(path, timeout_seconds=0.5))
