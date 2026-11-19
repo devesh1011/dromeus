@@ -1,0 +1,8 @@
+# Quickstart node 2; its AXL node is axl-2.json.
+role: participant
+draft_path: runs/quickstart/draft.yaml
+axl_bridge_url: http://127.0.0.1:9203
+run_root: runs/quickstart/node-2
+invitation_path: runs/quickstart/invitation.json
+bootstrap_uri: axl://quickstart
+invitation_timeout_seconds: 120

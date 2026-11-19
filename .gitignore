@@ -16,6 +16,9 @@ reference
 # Logs
 logs/*.log
 
+# Quickstart and local run output
+/runs/
+
 # Local formation dashboard runtime
 .demo-cache/
 
@@ -87,6 +90,7 @@ benchmarks/results/local-data-validation/
 !/examples/custom_training.py
 !/examples/custom-regression-draft.yaml
 !/examples/node.yaml
+!/examples/quickstart/
 
 releases
 
