@@ -28,10 +28,11 @@ The [example](../examples/custom_training.py) has both: `task()` and `setup()`.
 
 ```bash
 dromeus draft draft.yaml --task my_training:task --run-id regression-2026-11 \
-  --participants 4 --rounds 20 --local-steps 10 --axl-version your-axl-version
+  --participants 4 --rounds 20 --local-steps 10
 ```
 
-Prints the draft hash. Uses the default NoLoCo and transport settings, without
+Prints the draft hash. The draft pins the AXL build bundled with Dromeus; pass
+`--axl-version` to name another (required where no AXL is bundled). Uses the default NoLoCo and transport settings, without
 privacy or divergence warnings. For those, call `dromeus.make_draft` from Python
 (see [Write the shared draft](application-training.md#write-the-shared-draft)).
 
@@ -57,6 +58,7 @@ Runs these checks and prints one line for each, with a fix for anything not OK:
 | --- | --- |
 | `config` | The node configuration is invalid (no other check runs) |
 | `draft` | The draft can't be read, or names other Dromeus or PyTorch versions |
+| `axl build` | Warning only: the draft pins an AXL build other than the bundled one, or none is bundled. Doctor can't see which build the running bridge is. |
 | `task` | With `--task`: the draft was made from a different task |
 | `axl bridge` | Nothing answers at `axl_bridge_url` |
 | `node key` | The AXL bridge doesn't report this node's public key |

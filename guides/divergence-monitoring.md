@@ -49,7 +49,6 @@ dromeus.make_draft(
     participants=4,
     rounds=75,
     local_steps=10,
-    axl_version="your-pinned-axl-version",
     divergence=policy,
 )
 ```

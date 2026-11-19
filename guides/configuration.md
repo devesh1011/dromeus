@@ -26,7 +26,10 @@ enrollment_window_seconds: 900          # initiator only, optional: when joining
 The initiator writes the invitation to `invitation_path`. Copy that file to the
 same path on every participant; participants wait up to
 `invitation_timeout_seconds` for it. The AXL bridge must already be running and
-connected to the group's peers. `dromeus doctor --config node.yaml` checks all of
+connected to the group's peers. On Linux (x86_64, aarch64) and Apple-silicon
+macOS, `pip install dromeus` also installs the pinned AXL build as the
+`dromeus-axl` command (`dromeus-axl -config axl.json`); elsewhere, build AXL at
+the commit the draft names. `dromeus doctor --config node.yaml` checks all of
 this before you start.
 
 With `enrollment_window_seconds`, the invitation expires that many seconds after
@@ -49,7 +52,7 @@ map to the draft like this:
 | `participants` | `expected_participant_count` | Even, 4 to 16 |
 | `rounds` | `round_count` | |
 | `local_steps` | `local_steps`, `algorithm_config.inner_steps` | Optimizer steps per round |
-| `axl_version` | `environment.axl_version` | The AXL build the group pins |
+| `axl_version` | `environment.axl_version` | The AXL build the group pins; defaults to the bundled AXL commit |
 | `noloco` | `algorithm_config`, `artifact_codecs` | `top_k_fraction` turns on int8 compression |
 | `privacy` | `privacy`, `training.sampling` | Private runs use Poisson sampling |
 | `transport` | `transport` | Retry, chunk and window limits for the network |

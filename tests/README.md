@@ -41,17 +41,20 @@ uv sync --frozen --extra privacy
 uv run --frozen --no-sync pytest tests/unit/training tests/unit/runtime/test_private_application.py tests/unit/runtime/test_factory_private_application.py tests/unit/persistence/test_privacy_ledger.py tests/unit/manifests/test_privacy_policy.py -q
 ```
 
-The CI `privacy` job runs these checks on public synthetic data. Secure-RNG cases
+CI runs these checks, as part of the full gate, on public synthetic data. Secure-RNG cases
 also need a source-built `torchcsprng`; they are skipped when it is missing, and a
 skip does not certify secure mode.
 
 ## Real AXL integration
 
-Integration tests skip unless their environment is set. A skip is not evidence
-that the deployment path was exercised.
+The harness, doctor, custom-application and private-task tests start four local
+AXL nodes from the AXL bundled with Dromeus (`dromeus-axl`), so they run in the
+normal gate on Linux x86_64/aarch64 and Apple-silicon macOS. Elsewhere they skip
+unless `DROMEUS_AXL_BINARY` names an AXL binary, which also overrides the bundled
+one. A skip is not evidence that the deployment path was exercised.
 
 ```bash
-# Harness, custom-application and private-task runs over four local AXL nodes
+# Real AXL tests against another AXL build
 DROMEUS_AXL_BINARY=/absolute/path/to/axl-node \
 uv run --frozen --no-sync pytest tests/integration -q
 

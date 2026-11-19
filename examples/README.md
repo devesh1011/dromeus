@@ -14,18 +14,18 @@ holdout defined in the example, never a node's records.
 
 Before running:
 
-1. Start an AXL node on each machine and connect the group's peers.
-2. On one machine, write a fresh draft with your AXL version and give the same file
-   to every node:
+1. Start an AXL node on each machine (`dromeus-axl -config axl.json`) and connect
+   the group's peers.
+2. On one machine, write a fresh draft and give the same file to every node:
 
    ```bash
    uv run dromeus draft examples/custom-regression-draft.yaml \
      --task examples.custom_training:task --run-id custom-regression \
-     --participants 4 --rounds 20 --local-steps 10 --axl-version YOUR-AXL-VERSION
+     --participants 4 --rounds 20 --local-steps 10
    ```
 
-   The committed draft records the Dromeus and PyTorch versions it
-   was written with; each node must have those versions installed.
+   The committed draft records the Dromeus, PyTorch and AXL versions it was
+   written with; each node must have those versions installed.
 3. Adapt `node.yaml` per machine: set one node's `role` to `initiator`, the rest to
    `participant`, and deliver the initiator's invitation file to each
    participant's `invitation_path`.

@@ -77,12 +77,13 @@ dromeus.make_draft(
     participants=4,
     rounds=20,
     local_steps=10,
-    axl_version="your-pinned-axl-version",
 )
 ```
 
 `make_draft` fills in every hash, plus the Dromeus and PyTorch versions installed
-on this machine. Every node must install those same versions. Optional settings:
+on this machine and the AXL build bundled with Dromeus. Every node must install
+those same versions. Where no AXL is bundled, pass `axl_version` naming the AXL
+build every node runs. Optional settings:
 `noloco=dromeus.NoLoCo(alpha=..., beta=..., gamma=..., top_k_fraction=...)` for the
 outer step and update compression, `privacy=dromeus.Privacy(...)` for private
 training, `transport=dromeus.TransportLimits(...)` for WAN tuning and
@@ -92,7 +93,7 @@ The same draft, without the optional settings, from the command line:
 
 ```bash
 dromeus draft draft.yaml --task my_training:task --run-id regression-2026-11 \
-  --participants 4 --rounds 20 --local-steps 10 --axl-version your-pinned-axl-version
+  --participants 4 --rounds 20 --local-steps 10
 ```
 
 Each node can check the draft before starting:

@@ -17,7 +17,6 @@ dromeus.make_draft(
     participants=4,
     rounds=20,
     local_steps=10,
-    axl_version="your-pinned-axl-version",
     privacy=dromeus.Privacy(max_grad_norm=1.0, noise_multiplier=1.1, delta=1e-5),
 )
 ```

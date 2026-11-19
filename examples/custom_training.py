@@ -4,7 +4,7 @@ Write the shared draft once, on one machine:
 
     dromeus draft examples/custom-regression-draft.yaml \\
         --task examples.custom_training:task --run-id custom-regression \\
-        --participants 4 --rounds 20 --local-steps 10 --axl-version YOUR-AXL-VERSION
+        --participants 4 --rounds 20 --local-steps 10
 
 Then run every node, each with its own data file:
 

@@ -50,13 +50,14 @@ import dromeus
 
 task = dromeus.TrainingTask(...)  # model, batches, loss, optimizer; same on every node
 dromeus.make_draft(task, "draft.yaml", run_id="my-run", participants=4,
-                   rounds=20, local_steps=10, axl_version="your-axl-version")
+                   rounds=20, local_steps=10)
 # on each node, with its own records:
 await dromeus.Node.from_file("node.yaml").run(task, local=dromeus.LocalData(...))
 ```
 
-Before launching, configure an AXL node on each machine and connect the group's
-peers. The [configuration guide](guides/configuration.md) covers each node's
+Before launching, start an AXL node on each machine and connect the group's
+peers. On Linux (x86_64, aarch64) and Apple-silicon macOS, Dromeus installs a
+pinned AXL build: run it with `dromeus-axl -config axl.json`. The [configuration guide](guides/configuration.md) covers each node's
 `node.yaml`. One participant initiates group formation; share its invitation file
 with the other participants. From the command line, each node runs:
 

@@ -14,7 +14,7 @@ environment:
   dromeus_version: 0.4.0.dev1
   protocol_version: 1
   pytorch_version: 2.13.0
-  axl_version: replace-with-your-axl-version
+  axl_version: 628e28ace077f26dfe8d0259009b357216a9d8d4
   model_definition_hash: a91b2d0f4139b7920e7d22ca3c35d602a77ca0112d7c8a47c65034032fc67aa5
 local_steps: 10
 round_count: 20
@@ -59,7 +59,7 @@ training:
   initialization: public_untrained
   evaluation_provenance: public_fixed_holdout
   task_definition_hash: c96f38ae74f6ef8df649dba7ccff05c18fcfb769016f96223ec504b43cad980c
-  implementation_hash: be3157a791cf1f919edc8c64a32d583d8c882a374d7e3e87b41ee16cc8b61f0f
+  implementation_hash: 99cf677735757e542892304852a3dd8c7dad173a628498a75a7b0c722f1ab8b2
   batch_definition_hash: f6ad28b5a4fbf4c67fe74b4541ba6a546bf568b37496d94ac4a65b7ca7b04dbb
   loss_definition_hash: b819ec524688f81c83df34cc5fc656504b8c5bf5351c452d9708708c709a6465
   record_unit: example
