@@ -11,10 +11,10 @@ from torch import nn
 from torch.utils.data import TensorDataset
 
 from dromeus.application import describe_task
-from dromeus.manifests.models import PrivacyPolicy, PrivateOptimizerSpec
+from dromeus.manifests.models import PrivacyPolicy
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.training.private_trainer import PrivateTrainer
-from dromeus.training.task import TensorBatchAdapter, TrainingTask
+from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
 pytest.importorskip("opacus")
 
@@ -23,18 +23,40 @@ def linear_model() -> nn.Module:
     return nn.Linear(2, 1)
 
 
+def optimizer_for(
+    name: Literal["sgd", "adam", "adamw"],
+    learning_rate: float,
+    *,
+    weight_decay: float = 0.0,
+    momentum: float = 0.0,
+    nesterov: bool = False,
+) -> Optimizer:
+    if name == "sgd":
+        return Optimizer.sgd(
+            learning_rate,
+            momentum=momentum,
+            nesterov=nesterov,
+            weight_decay=weight_decay,
+        )
+    if name == "adam":
+        return Optimizer.adam(learning_rate, weight_decay=weight_decay)
+    return Optimizer.adamw(learning_rate, weight_decay=weight_decay)
+
+
 def make_task(
     inputs: torch.Tensor,
     targets: torch.Tensor,
     model_factory: Callable[[], nn.Module] = linear_model,
-) -> TrainingTask:
+    *,
+    optimizer: Optimizer,
+    batch_size: int,
+) -> tuple[TrainingTask, TensorDataset]:
     def loss(model: nn.Module, batch: Any) -> torch.Tensor:
         x, y = batch
         return (model(x) - y).square().flatten(1).mean(1)
 
-    return TrainingTask(
+    task = TrainingTask(
         model_factory=model_factory,
-        dataset=TensorDataset(inputs, targets),
         batch_adapter=TensorBatchAdapter(
             (inputs[:2].clone(), targets[:2].clone()),
             "synthetic regression records",
@@ -44,7 +66,10 @@ def make_task(
         task_definition="squared error on fixed synthetic records",
         loss_definition="one mean squared error per record",
         implementation_hash="b" * 64,
+        optimizer=optimizer,
+        batch_size=batch_size,
     )
+    return task, TensorDataset(inputs, targets)
 
 
 def make_trainer(
@@ -62,22 +87,19 @@ def make_trainer(
         max_logical_steps=4,
         randomness_profile="secure" if secure else "reproducible_public_benchmark",
     )
-    task = make_task(torch.ones(sample_count, 2), torch.zeros(sample_count, 1))
-    spec = describe_task(
-        task,
-        batch_size=4,
-        optimizer=PrivateOptimizerSpec(
-            name=name,
-            torch_version=torch.__version__,
-            parameter_names=("weight", "bias"),
-            learning_rate=0.01,
-            momentum=0.9 if nesterov else 0,
-            nesterov=nesterov,
+    task, dataset = make_task(
+        torch.ones(sample_count, 2),
+        torch.zeros(sample_count, 1),
+        optimizer=optimizer_for(
+            name, 0.01, momentum=0.9 if nesterov else 0, nesterov=nesterov
         ),
+        batch_size=4,
     )
+    spec = describe_task(task, sampling="poisson")
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="public-synthetic")
     return PrivateTrainer(
         task=task,
+        dataset=dataset,
         policy=policy,
         specification=spec,
         run_id="synthetic-run",
@@ -257,20 +279,17 @@ def test_analytic_clipped_gradient_preserves_optimizer_rule(
             model.weight.zero_()
         return model
 
-    task = make_task(torch.eye(2), torch.ones(2, 1), model_factory=model_factory)
-    spec = describe_task(
-        task,
+    task, dataset = make_task(
+        torch.eye(2),
+        torch.ones(2, 1),
+        model_factory=model_factory,
+        optimizer=optimizer_for(name, 0.1, weight_decay=0.05),
         batch_size=2,
-        optimizer=PrivateOptimizerSpec(
-            name=name,
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=0.1,
-            weight_decay=0.05,
-        ),
     )
+    spec = describe_task(task, sampling="poisson")
     trainer = PrivateTrainer(
         task=task,
+        dataset=dataset,
         policy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -407,21 +426,19 @@ def test_custom_forward_mutation_rejected_before_reservation(tmp_path: Path) -> 
                 self.linear.weight.add_(inputs.sum())
             return self.linear(inputs)
 
-    task = make_task(torch.ones(8, 2), torch.zeros(8, 1), model_factory=RawMutation)
+    task, dataset = make_task(
+        torch.ones(8, 2),
+        torch.zeros(8, 1),
+        model_factory=RawMutation,
+        optimizer=Optimizer.sgd(0.01),
+        batch_size=2,
+    )
     ledger = PrivacyLedger.create(tmp_path / "ledger.json", lineage="synthetic")
     with pytest.raises(ValueError, match="mutated public model state"):
-        spec = describe_task(
-            task,
-            batch_size=2,
-            optimizer=PrivateOptimizerSpec(
-                name="sgd",
-                torch_version=torch.__version__,
-                parameter_names=("linear.weight", "linear.bias"),
-                learning_rate=0.01,
-            ),
-        )
+        spec = describe_task(task, sampling="poisson")
         PrivateTrainer(
             task=task,
+            dataset=dataset,
             policy=PrivacyPolicy(
                 max_grad_norm=1,
                 noise_multiplier=1,
@@ -574,19 +591,17 @@ def test_seeded_gaussian_noise_variance_and_expected_batch_normalization(
             module.weight.zero_()
         return module
 
-    task = make_task(torch.zeros(32, 1), torch.zeros(32, 4096), model_factory=model)
-    spec = describe_task(
-        task,
+    task, dataset = make_task(
+        torch.zeros(32, 1),
+        torch.zeros(32, 4096),
+        model_factory=model,
+        optimizer=Optimizer.sgd(1),
         batch_size=32,
-        optimizer=PrivateOptimizerSpec(
-            name="sgd",
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=1,
-        ),
     )
+    spec = describe_task(task, sampling="poisson")
     trainer = PrivateTrainer(
         task=task,
+        dataset=dataset,
         policy=PrivacyPolicy(
             max_grad_norm=3,
             noise_multiplier=2,

@@ -12,6 +12,7 @@ import pytest
 import torch
 from torch import nn
 
+from dromeus.errors import TaskError
 from dromeus.training.privacy import opacus_module
 from dromeus.training.private_model import ensure_grad_samples
 
@@ -78,15 +79,15 @@ def test_valid_fp32_sequence_gradients_are_not_rejected_as_missing_coverage() ->
     assert torch.equal(samples, independent)
     assert bool(torch.isfinite(samples).all())
     assert not torch.allclose(samples.mean(0), aggregate, rtol=1e-4, atol=1e-6)
-    # No generic ValueError is expected: a different failure remains a hard FAIL.
+    # No other TaskError is expected: a different failure remains a hard FAIL.
     try:
         ensure_grad_samples(model, 2)
-    except ValueError as error:
+    except TaskError as error:
         traceback = error.__traceback__
         while traceback is not None and traceback.tb_next is not None:
             traceback = traceback.tb_next
         if (
-            type(error) is ValueError
+            type(error) is TaskError
             and str(error)
             == "weight: per-record gradients do not cover aggregate gradient"
             and traceback is not None

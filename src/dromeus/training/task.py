@@ -13,22 +13,27 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import torch
 from torch import nn
-from torch.utils.data import Dataset
 
+from dromeus.errors import TaskError
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
     AccountedInitializationProvenance,
+    GradientBackend,
+    PrivateOptimizerSpec,
     TaskTrainingSpec,
 )
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
+from dromeus.training.optimizer_factory import OptimizerRegistration
 
 Batch = Any
 CollateRecords = Callable[[Sequence[Any]], Batch]
 RecordLoss = Callable[[nn.Module, Batch], torch.Tensor]
+Initialization = Literal[
+    "public_untrained", "public_pretrained", "accounted_private_pretrained"
+]
 
 
 def _collate_tensors(records: Sequence[Any]) -> Batch:
@@ -36,22 +41,22 @@ def _collate_tensors(records: Sequence[Any]) -> Batch:
     first = records[0]
     if isinstance(first, torch.Tensor):
         if not all(isinstance(item, torch.Tensor) for item in records):
-            raise ValueError("record tensor structure changed")
+            raise TaskError("record tensor structure changed")
         return torch.stack(cast(list[torch.Tensor], list(records)))
     if type(first) is dict:
         keys = tuple(cast(dict[str, Any], first))
         if not all(type(item) is dict and tuple(item) == keys for item in records):
-            raise ValueError("record mapping structure changed")
+            raise TaskError("record mapping structure changed")
         return {key: _collate_tensors([item[key] for item in records]) for key in keys}
     if type(first) in (tuple, list):
         count = len(first)
         if not all(
             type(item) is type(first) and len(item) == count for item in records
         ):
-            raise ValueError("record sequence structure changed")
+            raise TaskError("record sequence structure changed")
         values = [_collate_tensors([item[i] for item in records]) for i in range(count)]
         return tuple(values) if type(first) is tuple else values
-    raise ValueError("records must be tensor trees; constants need a task adapter")
+    raise TaskError("records must be tensor trees; constants need a task adapter")
 
 
 def _map_tensors(
@@ -71,16 +76,16 @@ def _map_tensors(
 def _batch_tensors(value: Batch, *, path: str = "batch") -> list[torch.Tensor]:
     if isinstance(value, torch.Tensor):
         if value.ndim == 0:
-            raise ValueError(f"{path}: tensor requires record axis 0")
+            raise TaskError(f"{path}: tensor requires record axis 0")
         if value.layout != torch.strided or value.is_complex():
-            raise ValueError(f"{path}: dense real tensors required")
+            raise TaskError(f"{path}: dense real tensors required")
         if not torch.isfinite(value).all():
-            raise ValueError(f"{path}: nonfinite batch tensor")
+            raise TaskError(f"{path}: nonfinite batch tensor")
         return [value]
     if type(value) is dict:
         mapping = cast(dict[Any, Any], value)
         if not mapping or not all(type(k) is str for k in mapping):
-            raise ValueError(f"{path}: nonempty string-keyed mapping required")
+            raise TaskError(f"{path}: nonempty string-keyed mapping required")
         leaves: list[torch.Tensor] = []
         for key, item in mapping.items():
             leaves.extend(_batch_tensors(item, path=f"{path}.{key}"))
@@ -90,7 +95,7 @@ def _batch_tensors(value: Batch, *, path: str = "batch") -> list[torch.Tensor]:
         for index, item in enumerate(value):
             leaves.extend(_batch_tensors(item, path=f"{path}[{index}]"))
         return leaves
-    raise ValueError(
+    raise TaskError(
         f"{path}: only tensor trees supported; declare constants in task code"
     )
 
@@ -123,11 +128,11 @@ class TensorBatchAdapter:
 
     def __post_init__(self) -> None:
         if not self.definition.strip():
-            raise ValueError("batch definition is required")
+            raise TaskError("batch definition is required")
         tensors = _batch_tensors(self.example)
         count = len(tensors[0])
         if count < 2 or any(len(tensor) != count for tensor in tensors):
-            raise ValueError(
+            raise TaskError(
                 "public batch fixture requires at least two aligned records"
             )
         copied = _map_tensors(self.example, lambda t: t.detach().clone())
@@ -147,16 +152,16 @@ class TensorBatchAdapter:
     def size(self, batch: Batch) -> int:
         tensors = _batch_tensors(batch)
         if _schema(batch) != self._schema:
-            raise ValueError("batch structure, dtype or trailing shape changed")
+            raise TaskError("batch structure, dtype or trailing shape changed")
         count = len(tensors[0])
         if any(len(tensor) != count for tensor in tensors):
-            raise ValueError("batch tensors disagree on record axis")
+            raise TaskError("batch tensors disagree on record axis")
         return count
 
     def collate(self, records: Sequence[Any]) -> Batch:
         batch = self.collate_fn(records) if records else self.empty()
         if self.size(batch) != len(records):
-            raise ValueError("collation changed the sampled record count")
+            raise TaskError("collation changed the sampled record count")
         return batch
 
     def to_device(self, batch: Batch, device: torch.device | str) -> Batch:
@@ -166,7 +171,7 @@ class TensorBatchAdapter:
     def slice(self, batch: Batch, start: int, end: int) -> Batch:
         count = self.size(batch)
         if not 0 <= start <= end <= count:
-            raise ValueError("invalid physical batch record range")
+            raise TaskError("invalid physical batch record range")
         return _map_tensors(batch, lambda t: t[start:end])
 
     def empty(self) -> Batch:
@@ -182,7 +187,7 @@ def validate_record_losses(losses: object, count: int) -> torch.Tensor:
         or not torch.isfinite(losses).all()
         or (count > 0 and not losses.requires_grad)
     ):
-        raise ValueError(
+        raise TaskError(
             "task loss requires finite differentiable per-record values [B]"
         )
     return losses
@@ -205,20 +210,20 @@ class AccountedInitializationEvidence:
 
     def verify_source(self) -> None:
         if self.verify_parent(self.provenance) is not True:
-            raise ValueError("accounted initialization ancestry was not verified")
+            raise TaskError("accounted initialization ancestry was not verified")
         if (
             not self.model_path.is_file()
             or self.model_path.is_symlink()
             or file_sha256(self.model_path) != self.provenance.parent_model_sha256
         ):
-            raise ValueError("accounted initialization model source differs")
+            raise TaskError("accounted initialization model source differs")
 
     def verify_model(self, model: nn.Module) -> None:
         from dromeus.training.private_model import registered_model_state
 
         safe_open: Any = importlib.import_module("safetensors").safe_open
         if file_sha256(self.model_path) != self.provenance.parent_model_sha256:
-            raise ValueError(
+            raise TaskError(
                 "accounted initialization source changed during preparation"
             )
 
@@ -245,7 +250,7 @@ class AccountedInitializationEvidence:
         state = registered_model_state(model)
         with safe_open(self.model_path, framework="pt", device="cpu") as source:
             if set(source.keys()) != set(state):
-                raise ValueError("accounted initialization tensor inventory differs")
+                raise TaskError("accounted initialization tensor inventory differs")
             for name, actual in state.items():
                 expected = cast(torch.Tensor, source.get_tensor(name))
                 if (
@@ -253,30 +258,118 @@ class AccountedInitializationEvidence:
                     or actual.shape != expected.shape
                     or not equal_chunks(actual, expected)
                 ):
-                    raise ValueError("accounted initialization model tensors differ")
+                    raise TaskError("accounted initialization model tensors differ")
         # Detect source replacement or mutation during the factory invocation.
         if file_sha256(self.model_path) != self.provenance.parent_model_sha256:
-            raise ValueError(
+            raise TaskError(
                 "accounted initialization source changed during preparation"
             )
 
 
 @dataclass(frozen=True)
+class Optimizer:
+    """A built-in PyTorch optimizer, identical on every node.
+
+    Build one with `Optimizer.sgd`, `Optimizer.adam` or `Optimizer.adamw`. For any
+    other optimizer, pass an `OptimizerRegistration` to `TrainingTask` instead.
+    """
+
+    name: Literal["sgd", "adam", "adamw"]
+    learning_rate: float
+    weight_decay: float = 0.0
+    momentum: float = 0.0
+    dampening: float = 0.0
+    nesterov: bool = False
+    betas: tuple[float, float] = (0.9, 0.999)
+    eps: float = 1e-8
+
+    @classmethod
+    def sgd(
+        cls,
+        learning_rate: float,
+        *,
+        momentum: float = 0.0,
+        dampening: float = 0.0,
+        nesterov: bool = False,
+        weight_decay: float = 0.0,
+    ) -> Optimizer:
+        return cls(
+            "sgd",
+            learning_rate,
+            weight_decay=weight_decay,
+            momentum=momentum,
+            dampening=dampening,
+            nesterov=nesterov,
+        )
+
+    @classmethod
+    def adam(
+        cls,
+        learning_rate: float,
+        *,
+        betas: tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+    ) -> Optimizer:
+        return cls("adam", learning_rate, weight_decay, betas=betas, eps=eps)
+
+    @classmethod
+    def adamw(
+        cls,
+        learning_rate: float,
+        *,
+        betas: tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.01,
+    ) -> Optimizer:
+        return cls("adamw", learning_rate, weight_decay, betas=betas, eps=eps)
+
+    def specification(self, parameter_names: tuple[str, ...]) -> PrivateOptimizerSpec:
+        """Bind this optimizer to the model's trainable parameters and Torch."""
+        try:
+            return PrivateOptimizerSpec(
+                name=self.name,
+                torch_version=torch.__version__,
+                parameter_names=parameter_names,
+                learning_rate=self.learning_rate,
+                weight_decay=self.weight_decay,
+                momentum=self.momentum,
+                dampening=self.dampening,
+                nesterov=self.nesterov,
+                betas=self.betas,
+                numerical_epsilon=self.eps,
+            )
+        except ValueError as error:
+            raise TaskError(f"invalid {self.name} optimizer: {error}") from error
+
+
+@dataclass(frozen=True, kw_only=True)
 class TrainingTask:
-    """Small application description; no private gradient mechanism lives here."""
+    """What every node trains: the model, batches, loss and optimizer.
+
+    Every node builds an identical task. It holds shared definitions only; each
+    node's own records are passed separately when the node runs. The callbacks
+    are trusted code: they compute the forward pass and per-record loss, while
+    Dromeus owns sampling, backward and optimizer steps.
+    """
 
     model_factory: Callable[[], nn.Module]
-    dataset: Dataset[Any]
     batch_adapter: TensorBatchAdapter
     loss_per_record: RecordLoss
     model_definition: str
     task_definition: str
     loss_definition: str
     implementation_hash: str
-    optimizer_registration: PrivateOptimizerFactory | None = None
+    optimizer: Optimizer | OptimizerRegistration
+    batch_size: int
     record_unit: str = "example"
+    schedule: Literal["constant", "linear_decay"] = "constant"
+    initialization: Literal["public_untrained", "public_pretrained"] = (
+        "public_untrained"
+    )
     public_evaluate: Callable[[nn.Module], Mapping[str, float]] | None = None
     initialization_evidence: AccountedInitializationEvidence | None = None
+    gradient_backend: GradientBackend = "opacus_hooks"
 
     def __post_init__(self) -> None:
         if any(
@@ -288,11 +381,13 @@ class TrainingTask:
                 self.record_unit,
             )
         ):
-            raise ValueError(
+            raise TaskError(
                 "model, task, loss and protected record definitions required"
             )
         if re.fullmatch(r"[0-9a-f]{64}", self.implementation_hash) is None:
-            raise ValueError("task implementation requires a SHA-256 identity")
+            raise TaskError("task implementation requires a SHA-256 identity")
+        if self.batch_size <= 0:
+            raise TaskError("batch size must be positive")
         evidence = self.initialization_evidence
         if evidence is not None:
             factory = self.model_factory
@@ -304,6 +399,18 @@ class TrainingTask:
                 return model
 
             object.__setattr__(self, "model_factory", verified_factory)
+
+    @property
+    def optimizer_registration(self) -> OptimizerRegistration | None:
+        """The custom optimizer registration, or None for a built-in optimizer."""
+        optimizer = self.optimizer
+        return optimizer if isinstance(optimizer, OptimizerRegistration) else None
+
+    @property
+    def initialization_mode(self) -> Initialization:
+        if self.initialization_evidence is not None:
+            return "accounted_private_pretrained"
+        return self.initialization
 
     def check_initialization(
         self,
@@ -317,11 +424,11 @@ class TrainingTask:
                 or provenance is None
                 or evidence.provenance != provenance
             ):
-                raise ValueError(
+                raise TaskError(
                     "matching locally verified initialization evidence required"
                 )
         elif evidence is not None or provenance is not None:
-            raise ValueError("accounted initialization cannot be declared public")
+            raise TaskError("accounted initialization cannot be declared public")
 
     def check_definition(self, specification: TaskTrainingSpec) -> None:
         """Bind trusted stateless task callbacks to the group's declared semantics.
@@ -353,4 +460,4 @@ class TrainingTask:
         }
         for name, (actual, declared) in expected.items():
             if actual != declared:
-                raise ValueError(f"task {name} definition differs from shared contract")
+                raise TaskError(f"task {name} definition differs from shared contract")

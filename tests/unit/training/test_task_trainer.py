@@ -56,10 +56,10 @@ def test_generic_private_task_supports_token_tree_and_frozen_tied_model(
     from torch.utils.data import Dataset
 
     from dromeus.application import describe_task
-    from dromeus.manifests.models import PrivacyPolicy, PrivateOptimizerSpec
+    from dromeus.manifests.models import PrivacyPolicy
     from dromeus.persistence.privacy_ledger import PrivacyLedger
     from dromeus.training.private_trainer import PrivateTrainer
-    from dromeus.training.task import TensorBatchAdapter, TrainingTask
+    from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
     class Tokens(Dataset[dict[str, torch.Tensor]]):
         def __len__(self) -> int:
@@ -91,7 +91,6 @@ def test_generic_private_task_supports_token_tree_and_frozen_tied_model(
 
     task = TrainingTask(
         model_factory=factory,
-        dataset=Tokens(),
         batch_adapter=TensorBatchAdapter(
             example={"tokens": torch.tensor([[0, 1], [1, 2]])}, definition="tokens-v1"
         ),
@@ -101,19 +100,13 @@ def test_generic_private_task_supports_token_tree_and_frozen_tied_model(
         loss_definition="mean-logit-square-v1",
         implementation_hash="a" * 64,
         record_unit="token-sequence",
-    )
-    spec = describe_task(
-        task,
-        optimizer=PrivateOptimizerSpec(
-            name="sgd",
-            torch_version=torch.__version__,
-            parameter_names=("embedding.weight",),
-            learning_rate=0.01,
-        ),
+        optimizer=Optimizer.sgd(0.01),
         batch_size=4,
     )
+    spec = describe_task(task, sampling="poisson")
     trainer = PrivateTrainer(
         task=task,
+        dataset=Tokens(),
         policy=PrivacyPolicy(
             noise_multiplier=1,
             max_grad_norm=1,

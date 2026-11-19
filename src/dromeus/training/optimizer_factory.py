@@ -17,6 +17,7 @@ from typing import Any, cast
 import torch
 from torch import nn
 
+from dromeus.errors import TaskError
 from dromeus.manifests.models import (
     FactoryOptimizerSpec,
     OptimizerParameterGroup,
@@ -30,7 +31,7 @@ def build_private_optimizer(
 ) -> torch.optim.Optimizer:
     """Build the declared ordinary update rule, before optional Opacus wrapping."""
     if isinstance(spec, FactoryOptimizerSpec):
-        raise ValueError("factory optimizer requires a local optimizer registration")
+        raise TaskError("factory optimizer requires a local optimizer registration")
     parameters = [p for p in model.parameters() if p.requires_grad]
     common: dict[str, Any] = dict(
         lr=spec.learning_rate,
@@ -75,16 +76,16 @@ def validate_builtin_optimizer_checkpoint(
     before scheduling. Factory-defined state uses its registered validator.
     """
     if set(state) != {"state", "param_groups"}:
-        raise ValueError("optimizer checkpoint fields mismatch")
+        raise TaskError("optimizer checkpoint fields mismatch")
     groups = state["param_groups"]
     if len(groups) != len(initial_groups):
-        raise ValueError("optimizer checkpoint groups mismatch")
+        raise TaskError("optimizer checkpoint groups mismatch")
     for group, initial in zip(groups, initial_groups, strict=True):
         expected = dict(initial)
         if schedule == "linear_decay":
             expected["lr"] *= 1 - logical_steps / horizon
         if group != expected:
-            raise ValueError("optimizer checkpoint options or schedule mismatch")
+            raise TaskError("optimizer checkpoint options or schedule mismatch")
     fields: set[str] = (
         ({"momentum_buffer"} if spec.momentum else set())
         if spec.name == "sgd"
@@ -92,11 +93,11 @@ def validate_builtin_optimizer_checkpoint(
     )
     ids: set[int] = set(range(len(parameters))) if logical_steps and fields else set()
     if set(state["state"]) != ids:
-        raise ValueError("optimizer checkpoint state coverage mismatch")
+        raise TaskError("optimizer checkpoint state coverage mismatch")
     for index in ids:
         values = state["state"][index]
         if set(values) != fields:
-            raise ValueError("optimizer checkpoint state fields mismatch")
+            raise TaskError("optimizer checkpoint state fields mismatch")
         for name, tensor in values.items():
             shape = () if name == "step" else parameters[index].shape
             if (
@@ -104,14 +105,14 @@ def validate_builtin_optimizer_checkpoint(
                 or tensor.shape != shape
                 or tensor.dtype != torch.float32
             ):
-                raise ValueError("optimizer checkpoint tensor mismatch")
+                raise TaskError("optimizer checkpoint tensor mismatch")
             if name == "step" and float(tensor) != logical_steps:
-                raise ValueError("optimizer checkpoint step mismatch")
+                raise TaskError("optimizer checkpoint step mismatch")
 
 
 def _json_option(value: Any, depth: int = 0) -> Any:
     if depth > 32:
-        raise ValueError("optimizer option nesting exceeds bound")
+        raise TaskError("optimizer option nesting exceeds bound")
     if value is None or type(value) in (str, bool, int):
         return value
     if type(value) is float and math.isfinite(value):
@@ -125,7 +126,7 @@ def _json_option(value: Any, depth: int = 0) -> Any:
             key: _json_option(item, depth + 1)
             for key, item in cast(dict[str, Any], value).items()
         }
-    raise ValueError("optimizer options must contain finite JSON values")
+    raise TaskError("optimizer options must contain finite JSON values")
 
 
 def _canonical_options(value: Any) -> str:
@@ -154,7 +155,7 @@ def _groups(
         for parameter in group["params"]:
             identity = id(parameter)
             if identity not in names or identity in seen:
-                raise ValueError(
+                raise TaskError(
                     "optimizer parameters must cover the model exactly once"
                 )
             seen.add(identity)
@@ -162,7 +163,7 @@ def _groups(
         options = _json_option({k: v for k, v in group.items() if k != "params"})
         result.append(_ActualGroup(parameter_names=tuple(members), options=options))
     if seen != set(names):
-        raise ValueError("optimizer parameters must cover the model exactly once")
+        raise TaskError("optimizer parameters must cover the model exactly once")
     return tuple(result)
 
 
@@ -171,7 +172,7 @@ def _numeric_copy(state: dict[str, Any]) -> dict[str, Any]:
 
     def bounded(value: Any, depth: int = 0) -> None:
         if depth > 32:
-            raise ValueError("optimizer state nesting exceeds bound")
+            raise TaskError("optimizer state nesting exceeds bound")
         if isinstance(value, dict):
             for key, item in cast(dict[Any, Any], value).items():
                 bounded(key, depth + 1)
@@ -185,7 +186,7 @@ def _numeric_copy(state: dict[str, Any]) -> dict[str, Any]:
 
 
 @dataclass(frozen=True)
-class PrivateOptimizerFactory:
+class OptimizerRegistration:
     """Attested optimizer construction and optimizer-specific restore validation.
 
     ``validate_state`` receives a detached numeric state dictionary, parameters in
@@ -203,11 +204,11 @@ class PrivateOptimizerFactory:
         if not issubclass(cast(Any, self.optimizer_type), torch.optim.Optimizer) or (
             type(optimizer) is not self.optimizer_type
         ):
-            raise ValueError("optimizer factory returned a different class")
+            raise TaskError("optimizer factory returned a different class")
         try:
             inspect.signature(optimizer.step).bind()
         except (TypeError, ValueError):
-            raise ValueError(
+            raise TaskError(
                 "optimizer step must work without closures or arguments"
             ) from None
 
@@ -273,19 +274,19 @@ class PrivateOptimizerFactory:
             or spec.implementation_hash != self.implementation_hash
             or spec.torch_version != torch.__version__
         ):
-            raise ValueError(
+            raise TaskError(
                 "optimizer implementation differs from shared specification"
             )
         actual = _groups(optimizer, model)
         if len(actual) != len(spec.groups):
-            raise ValueError("optimizer parameter groups changed")
+            raise TaskError("optimizer parameter groups changed")
         for group, expected in zip(actual, spec.groups, strict=True):
             rate = _rate(expected, logical_steps, horizon, schedule)
             if (
                 group.parameter_names != expected.parameter_names
                 or not _matching_options(group.options, expected, rate)
             ):
-                raise ValueError(
+                raise TaskError(
                     "optimizer groups or options differ from shared specification"
                 )
 
@@ -307,21 +308,21 @@ class PrivateOptimizerFactory:
             or spec.implementation_hash != self.implementation_hash
             or spec.torch_version != torch.__version__
         ):
-            raise ValueError("optimizer checkpoint implementation mismatch")
+            raise TaskError("optimizer checkpoint implementation mismatch")
         actual = _groups(optimizer, model)
         if tuple(g.parameter_names for g in actual) != tuple(
             g.parameter_names for g in spec.groups
         ):
-            raise ValueError("optimizer checkpoint model mapping mismatch")
+            raise TaskError("optimizer checkpoint model mapping mismatch")
         candidate = _numeric_copy(state)
         if set(candidate) != {"state", "param_groups"}:
-            raise ValueError("invalid optimizer checkpoint fields")
+            raise TaskError("invalid optimizer checkpoint fields")
         groups = candidate["param_groups"]
         reference = optimizer.state_dict()["param_groups"]
         if not isinstance(groups, list) or len(cast(list[Any], groups)) != len(
             spec.groups
         ):
-            raise ValueError("optimizer checkpoint group count mismatch")
+            raise TaskError("optimizer checkpoint group count mismatch")
         known: set[int] = set()
         for group, current, expected in zip(
             cast(list[Any], groups), reference, spec.groups, strict=True
@@ -329,7 +330,7 @@ class PrivateOptimizerFactory:
             if not isinstance(group, dict) or set(cast(dict[str, Any], group)) != set(
                 current
             ):
-                raise ValueError("optimizer checkpoint group fields mismatch")
+                raise TaskError("optimizer checkpoint group fields mismatch")
             group = cast(dict[str, Any], group)
             ids = group["params"]
             if (
@@ -337,19 +338,19 @@ class PrivateOptimizerFactory:
                 or any(type(index) is not int for index in cast(list[Any], ids))
                 or ids != current["params"]
             ):
-                raise ValueError("optimizer checkpoint parameter mapping mismatch")
+                raise TaskError("optimizer checkpoint parameter mapping mismatch")
             known.update(cast(list[int], ids))
             rate = _rate(expected, logical_steps, horizon, schedule)
             if not _matching_options(
                 {k: v for k, v in group.items() if k != "params"}, expected, rate
             ):
-                raise ValueError("optimizer checkpoint options or schedule mismatch")
+                raise TaskError("optimizer checkpoint options or schedule mismatch")
         saved_state = candidate["state"]
         if not isinstance(saved_state, dict) or any(
             type(index) is not int or index not in known
             for index in cast(dict[Any, Any], saved_state)
         ):
-            raise ValueError("optimizer checkpoint state references unknown parameters")
+            raise TaskError("optimizer checkpoint state references unknown parameters")
         parameters = tuple(
             parameter.detach().clone()
             for group in optimizer.param_groups
@@ -375,9 +376,9 @@ def _rate(
     group: OptimizerParameterGroup, steps: int, horizon: int, schedule: str
 ) -> float:
     if type(steps) is not int or not 0 <= steps <= horizon or horizon <= 0:
-        raise ValueError("invalid optimizer schedule counters")
+        raise TaskError("invalid optimizer schedule counters")
     if schedule not in {"constant", "linear_decay"}:
-        raise ValueError("unsupported optimizer schedule")
+        raise TaskError("unsupported optimizer schedule")
     rate = cast(float, group.options["lr"])
     return rate * (1 - steps / horizon) if schedule == "linear_decay" else rate
 
@@ -398,7 +399,7 @@ class SanitizedOptimizer(torch.optim.Optimizer):
 
     def step(self, closure: Callable[[], float] | None = None) -> Any:
         if closure is not None:
-            raise ValueError("private optimizers cannot evaluate closures")
+            raise TaskError("private optimizers cannot evaluate closures")
         hidden: list[tuple[torch.Tensor, str, Any]] = []
         try:
             for group in self.param_groups:

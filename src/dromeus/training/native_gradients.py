@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, cast
 
+from dromeus.errors import TaskError
+
 if TYPE_CHECKING:
     from torch import nn
 
@@ -24,14 +26,14 @@ Sampler = Callable[[Any, list[Any], Any], dict[Any, Any]]
 
 def _require(value: bool, message: str) -> None:
     if not value:
-        raise ValueError(message)
+        raise TaskError(message)
 
 
 def _runtime() -> tuple[Any, Any]:
     try:
         torch = importlib.import_module("torch")
     except ImportError:
-        raise ValueError("native B1 requires pinned Torch 2.13.0") from None
+        raise TaskError("native B1 requires pinned Torch 2.13.0") from None
     _require(
         torch.__version__ in {"2.13.0", "2.13.0+cpu", "2.13.0+cu130"},
         "native B1 requires Torch 2.13.0 CPU or cu130",

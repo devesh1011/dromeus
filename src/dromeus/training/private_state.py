@@ -8,6 +8,8 @@ from typing import Any, cast
 import numpy as np
 import torch
 
+from dromeus.errors import PrivacyError
+
 
 # Keep recursive walkers at module scope: a recursive closure capturing arrays
 # retains entire optimizer checkpoints until cyclic GC, even after owner release.
@@ -29,7 +31,7 @@ def _encode(item: Any, arrays: dict[str, np.ndarray]) -> Any:
         return {"list": [_encode(x, arrays) for x in cast(list[Any], item)]}
     if item is None or type(item) in (str, bool, int, float):
         return item
-    raise ValueError("unsupported research state value")
+    raise PrivacyError("unsupported research state value")
 
 
 def encode_state(value: Any) -> dict[str, np.ndarray]:
@@ -39,7 +41,7 @@ def encode_state(value: Any) -> dict[str, np.ndarray]:
         _encode(value, arrays), allow_nan=False, separators=(",", ":")
     ).encode()
     if len(payload) > 1024 * 1024:
-        raise ValueError("research state metadata exceeds bound")
+        raise PrivacyError("research state metadata exceeds bound")
     arrays["structure"] = np.frombuffer(payload, dtype=np.uint8).copy()
     return arrays
 
@@ -48,18 +50,18 @@ def _decode(
     item: Any, arrays: dict[str, np.ndarray], used: set[str], depth: int = 0
 ) -> Any:
     if depth > 32:
-        raise ValueError("research state nesting exceeds bound")
+        raise PrivacyError("research state nesting exceeds bound")
     if isinstance(item, dict):
         if len(cast(dict[Any, Any], item)) != 1:
-            raise ValueError("invalid research state tag")
+            raise PrivacyError("invalid research state tag")
         tag, values = next(iter(cast(dict[Any, Any], item).items()))
         if tag == "tensor":
             if values not in arrays or values in used:
-                raise ValueError("invalid research state tensor")
+                raise PrivacyError("invalid research state tensor")
             used.add(values)
             value = arrays[values]
             if value.dtype.kind not in "biuf" or not np.isfinite(value).all():
-                raise ValueError("invalid research state array")
+                raise PrivacyError("invalid research state array")
             return torch.from_numpy(value.copy())  # pyright: ignore[reportUnknownMemberType]
         if tag == "dict":
             return {
@@ -69,10 +71,10 @@ def _decode(
         if tag in ("tuple", "list"):
             result = [_decode(x, arrays, used, depth + 1) for x in values]
             return tuple(result) if tag == "tuple" else result
-        raise ValueError("invalid research state tag")
+        raise PrivacyError("invalid research state tag")
     if item is None or type(item) in (str, bool, int, float):
         return item
-    raise ValueError("invalid research state value")
+    raise PrivacyError("invalid research state value")
 
 
 def decode_state(arrays: dict[str, np.ndarray]) -> Any:
@@ -83,13 +85,13 @@ def decode_state(arrays: dict[str, np.ndarray]) -> Any:
         or metadata.ndim != 1
         or metadata.size > 1024 * 1024
     ):
-        raise ValueError("invalid research state structure")
+        raise PrivacyError("invalid research state structure")
     used = {"structure"}
 
     try:
         result = _decode(json.loads(metadata.tobytes()), arrays, used)
     except Exception:
-        raise ValueError("invalid research checkpoint encoding") from None
+        raise PrivacyError("invalid research checkpoint encoding") from None
     if set(arrays) != used:
-        raise ValueError("unexpected research checkpoint arrays")
+        raise PrivacyError("unexpected research checkpoint arrays")
     return result

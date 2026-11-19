@@ -12,12 +12,13 @@ from typing import Any, Protocol, cast
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
+from dromeus.errors import PrivacyError
 from dromeus.manifests.models import (
     TaskTrainingSpec,
 )
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
+from dromeus.training.optimizer_factory import OptimizerRegistration
 from dromeus.training.private_data import make_task_loader
 from dromeus.training.private_model import (
     ModelStateGuard,
@@ -43,7 +44,7 @@ class PrivateWorkloadStep(Protocol):
 class PrivateWorkload(Protocol):
     model: nn.Module
     evaluate: PublicEvaluation | None
-    optimizer_registration: PrivateOptimizerFactory | None
+    optimizer_registration: OptimizerRegistration | None
     exchange_names: tuple[str, ...] | None
     poisson_sampling: bool
 
@@ -61,18 +62,18 @@ class PrivateWorkload(Protocol):
 
 
 def prepare_private_workload(
-    *, specification: TaskTrainingSpec, task: TrainingTask
+    *, specification: TaskTrainingSpec, task: TrainingTask, dataset: Dataset[Any]
 ) -> PrivateWorkload:
     """Bind one application task to the group's private training specification."""
     if specification.sampling != "poisson":
-        raise ValueError("private tasks require Poisson sampling")
+        raise PrivacyError("private tasks require Poisson sampling")
     task.check_definition(specification)
     if (
         task.public_evaluate is not None
         and specification.evaluation_provenance != "public_fixed_holdout"
     ):
-        raise ValueError("evaluation requires public fixed holdout provenance")
-    return _ApplicationWorkload(task, specification)
+        raise PrivacyError("evaluation requires public fixed holdout provenance")
+    return _ApplicationWorkload(task, specification, dataset)
 
 
 class _ApplicationWorkload:
@@ -80,8 +81,14 @@ class _ApplicationWorkload:
 
     poisson_sampling = False  # TaskDataLoader already owns its Poisson sampler.
 
-    def __init__(self, task: TrainingTask, specification: TaskTrainingSpec) -> None:
+    def __init__(
+        self,
+        task: TrainingTask,
+        specification: TaskTrainingSpec,
+        dataset: Dataset[Any],
+    ) -> None:
         self._task, self._specification = task, specification
+        self._dataset = dataset
         self._native_private_model: Any = None
         self._native_sampler_token: Any = None
         self.evaluate = task.public_evaluate
@@ -105,12 +112,14 @@ class _ApplicationWorkload:
             "gradient_backend",
         ):
             if getattr(report, name) != getattr(specification, name):
-                raise ValueError(f"model {name} differs from shared task specification")
+                raise PrivacyError(
+                    f"model {name} differs from shared task specification"
+                )
         self._guard = ModelStateGuard(self.model, report)
 
     def make_loader(self, generator: torch.Generator | None) -> DataLoader[Any]:
         return make_task_loader(
-            self._task.dataset,
+            self._dataset,
             self._task.batch_adapter,
             batch_size=self._specification.batch_size,
             generator=generator,
@@ -186,7 +195,7 @@ class _ApplicationStep:
 
     def prepare_gradients(self, private_model: nn.Module, batch: Any) -> None:
         if self._parameters_changed():
-            raise ValueError("task data callback mutated model parameters")
+            raise PrivacyError("task data callback mutated model parameters")
         device = next(self._model.parameters()).device
         batch = self._task.batch_adapter.to_device(batch, device)
         count = self._task.batch_adapter.size(batch)
@@ -195,7 +204,7 @@ class _ApplicationStep:
             validate_record_losses(losses, count)
             cast(Any, losses.mean()).backward()
             if self._parameters_changed():
-                raise ValueError("task forward/backward mutated model parameters")
+                raise PrivacyError("task forward/backward mutated model parameters")
         ensure_grad_samples(self._model, count)
         self._guard.check()
 
@@ -205,4 +214,4 @@ class _ApplicationStep:
             self._cuda_rng is not None
             and not torch.equal(self._cuda_rng, torch.cuda.get_rng_state(self._device))
         ):
-            raise ValueError("task data/model callbacks consumed undeclared RNG")
+            raise PrivacyError("task data/model callbacks consumed undeclared RNG")

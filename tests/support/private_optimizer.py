@@ -13,7 +13,7 @@ from typing import Any, cast
 import torch
 from torch import nn
 
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
+from dromeus.training.optimizer_factory import OptimizerRegistration
 
 
 def create_optimizer(model: nn.Module) -> torch.optim.Optimizer:
@@ -63,11 +63,11 @@ def validate_optimizer_state(
             raise ValueError("RMSprop accumulator mismatch")
 
 
-def registration() -> PrivateOptimizerFactory:
+def registration() -> OptimizerRegistration:
     digest = hashlib.sha256(
         Path(__file__).read_bytes() + torch.__version__.encode()
     ).hexdigest()
-    return PrivateOptimizerFactory(
+    return OptimizerRegistration(
         optimizer_type=torch.optim.RMSprop,
         implementation_hash=digest,
         create=create_optimizer,

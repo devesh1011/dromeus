@@ -15,7 +15,9 @@ from typing import Any, cast
 import numpy as np
 import torch
 from torch import nn
+from torch.utils.data import Dataset
 
+from dromeus.errors import PrivacyError
 from dromeus.manifests.canonical import canonical_hash, canonical_json, save_safetensors
 from dromeus.manifests.models import (
     FactoryOptimizerSpec,
@@ -53,6 +55,7 @@ class PrivateTrainer(PyTorchTrainer):
         self,
         *,
         task: TrainingTask,
+        dataset: Dataset[Any],
         policy: PrivacyPolicy,
         specification: TaskTrainingSpec,
         run_id: str,
@@ -62,25 +65,25 @@ class PrivateTrainer(PyTorchTrainer):
         research_seed: int | None = None,
     ) -> None:
         if specification.optimizer.torch_version != torch.__version__:
-            raise ValueError("private optimizer Torch version mismatch")
+            raise PrivacyError("private optimizer Torch version mismatch")
         if max_physical_batch_size <= 0 or not local_data_identity.strip():
-            raise ValueError(
+            raise PrivacyError(
                 "physical batch limit and local data identity are required"
             )
         if (
             specification.gradient_backend == "opacus_native_b1"
             and max_physical_batch_size != 1
         ):
-            raise ValueError("native B1 backend requires physical batch limit 1")
+            raise PrivacyError("native B1 backend requires physical batch limit 1")
         secure = policy.randomness_profile == "secure"
         if secure and research_seed is not None:
-            raise ValueError("secure mode cannot accept a research seed")
+            raise PrivacyError("secure mode cannot accept a research seed")
         if not secure and research_seed is None:
-            raise ValueError("public research mode requires an explicit local seed")
+            raise PrivacyError("public research mode requires an explicit local seed")
         # Freeze identity before application model construction can run callbacks.
         self._specification_hash = canonical_hash(specification)
         self._workload = prepare_private_workload(
-            specification=specification, task=task
+            specification=specification, task=task, dataset=dataset
         )
         optimizer_registration = self._workload.optimizer_registration
         self.policy = policy
@@ -95,11 +98,11 @@ class PrivateTrainer(PyTorchTrainer):
         self._optimizer_registration = optimizer_registration
         if isinstance(spec, FactoryOptimizerSpec):
             if optimizer_registration is None:
-                raise ValueError("factory optimizer requires a local registration")
+                raise PrivacyError("factory optimizer requires a local registration")
             self._base_optimizer = optimizer_registration.build(self._raw_model, spec)
         else:
             if optimizer_registration is not None:
-                raise ValueError(
+                raise PrivacyError(
                     "optimizer registration requires a factory specification"
                 )
             self._base_optimizer = build_private_optimizer(self._raw_model, spec)
@@ -144,7 +147,7 @@ class PrivateTrainer(PyTorchTrainer):
             )
             self._workload.configure_private_model(self._private_model)
         except Exception:
-            raise ValueError(
+            raise PrivacyError(
                 "private preparation failed; verify model and secure RNG installation"
             ) from None
         self._accountant_hook = self._optimizer.step_hook
@@ -194,7 +197,7 @@ class PrivateTrainer(PyTorchTrainer):
             return
         expected = build_private_optimizer(self._raw_model, spec)
         if type(actual) is not type(expected) or len(actual.param_groups) != 1:
-            raise ValueError("unsupported private optimizer class or groups")
+            raise PrivacyError("unsupported private optimizer class or groups")
         group = actual.param_groups[0]
         expected_group = expected.param_groups[0]
         if set(group) != set(expected_group) or any(
@@ -202,13 +205,13 @@ class PrivateTrainer(PyTorchTrainer):
             for key in expected_group
             if key != "params"
         ):
-            raise ValueError(
+            raise PrivacyError(
                 "private optimizer options differ from shared specification"
             )
         if [id(p) for p in group["params"]] != [
             id(p) for p in self._raw_model.parameters() if p.requires_grad
         ]:
-            raise ValueError(
+            raise PrivacyError(
                 "private optimizer must cover the complete ordered parameter group"
             )
         self._parameter_ids = tuple(id(p) for p in self._raw_model.parameters())
@@ -219,9 +222,9 @@ class PrivateTrainer(PyTorchTrainer):
     def _check_execution(self) -> None:
         self._reservation_store.check(self._reservation)
         if self._failed:
-            raise ValueError("private trainer failed; start a new accounted run")
+            raise PrivacyError("private trainer failed; start a new accounted run")
         if canonical_hash(self.specification) != self._specification_hash:
-            raise ValueError("private optimizer specification changed")
+            raise PrivacyError("private optimizer specification changed")
         group = self._base_optimizer.param_groups
         spec = self.specification.optimizer
         if isinstance(spec, FactoryOptimizerSpec):
@@ -237,31 +240,31 @@ class PrivateTrainer(PyTorchTrainer):
         elif len(group) != 1 or tuple(id(p) for p in group[0]["params"]) != tuple(
             id(p) for p in self._raw_model.parameters() if p.requires_grad
         ):
-            raise ValueError("private optimizer parameter groups changed")
+            raise PrivacyError("private optimizer parameter groups changed")
         if (
             isinstance(spec, PrivateOptimizerSpec)
             and {k: v for k, v in group[0].items() if k not in {"params", "lr"}}
             != self._optimizer_options
         ):
-            raise ValueError("private optimizer options changed")
+            raise PrivacyError("private optimizer options changed")
         for current, initial in zip(group, self._initial_learning_rates, strict=True):
             expected_lr = initial
             if self.specification.schedule == "linear_decay":
                 expected_lr *= 1 - self._logical_steps / self.policy.max_logical_steps
             if current["lr"] != expected_lr:
-                raise ValueError("private optimizer learning rate changed")
+                raise PrivacyError("private optimizer learning rate changed")
         if (
             self._optimizer.noise_multiplier != self.policy.noise_multiplier
             or self._optimizer.max_grad_norm != self.policy.max_grad_norm
         ):
-            raise ValueError("private mechanism changed")
+            raise PrivacyError("private mechanism changed")
         if (
             1 / len(self._loader) != self._sample_rate
             or len(self._loader.dataset) != self._population_size
             or self._optimizer.expected_batch_size
             != int(len(self._loader.dataset) * self._sample_rate)
         ):
-            raise ValueError("private sampling changed")
+            raise PrivacyError("private sampling changed")
         if (
             self._optimizer.step_hook is not self._accountant_hook
             or self._optimizer.generator is not self._noise_stream
@@ -272,19 +275,21 @@ class PrivateTrainer(PyTorchTrainer):
             != (self.policy.randomness_profile == "secure")
             or self._optimizer.loss_reduction != "mean"
         ):
-            raise ValueError("private randomness, sampling or accountant hook changed")
+            raise PrivacyError(
+                "private randomness, sampling or accountant hook changed"
+            )
         if tuple(id(p) for p in self._raw_model.parameters()) != self._parameter_ids:
-            raise ValueError("private model parameters changed")
+            raise PrivacyError("private model parameters changed")
         self._workload.check()
         if any(
             s != self.policy.noise_multiplier or q != self._sample_rate
             for s, q, _ in self.accounting_history
         ):
-            raise ValueError("accountant mechanism changed")
+            raise PrivacyError("accountant mechanism changed")
         if self._steps != self._logical_steps:
-            raise ValueError("trainer and logical step count disagree")
+            raise PrivacyError("trainer and logical step count disagree")
         if sum(n for _, _, n in self.accounting_history) != self._logical_steps:
-            raise ValueError("accountant and logical step count disagree")
+            raise PrivacyError("accountant and logical step count disagree")
 
     @property
     def accounting_history(self) -> tuple[tuple[float, float, int], ...]:
@@ -318,17 +323,17 @@ class PrivateTrainer(PyTorchTrainer):
             step_count <= 0
             or self._logical_steps + step_count > self.policy.max_logical_steps
         ):
-            raise ValueError("private horizon exhausted or invalid step count")
+            raise PrivacyError("private horizon exhausted or invalid step count")
         try:
             super().train_local_steps(step_count)
         except Exception:
             self._failed = True
-            raise ValueError("private local training failed") from None
+            raise PrivacyError("private local training failed") from None
 
     def _owned_step(self, _: nn.Module) -> None:
         self._check_execution()
         if self._logical_steps >= self.policy.max_logical_steps:
-            raise ValueError("private horizon exhausted")
+            raise PrivacyError("private horizon exhausted")
         self._private_model.train()
         manager = opacus_module("opacus.utils.batch_memory_manager").BatchMemoryManager
         # Each logical call consumes one independent Poisson draw. No partially
@@ -364,9 +369,9 @@ class PrivateTrainer(PyTorchTrainer):
                     self._optimizer.zero_grad(set_to_none=True)
                     break
                 if completed != self._logical_steps:
-                    raise ValueError("invalid logical mechanism boundary")
+                    raise PrivacyError("invalid logical mechanism boundary")
         if self._logical_steps != before + 1:
-            raise ValueError("private logical step did not complete")
+            raise PrivacyError("private logical step did not complete")
         return None
 
     def weights(self) -> dict[str, np.ndarray]:
@@ -378,7 +383,7 @@ class PrivateTrainer(PyTorchTrainer):
         try:
             return super().evaluate()
         except Exception:
-            raise ValueError("public evaluation failed") from None
+            raise PrivacyError("public evaluation failed") from None
 
     def export_model(self, path: Path) -> None:
         """Release only sanitized model tensors; no training state or metadata."""
@@ -436,13 +441,13 @@ class PrivateTrainer(PyTorchTrainer):
             or set(cast(dict[str, Any], state)) != expected
             or state["version"] != 1
         ):
-            raise ValueError("research checkpoint schema mismatch")
+            raise PrivacyError("research checkpoint schema mismatch")
         if (
             state["specification"] != canonical_hash(self.specification)
             or state["policy"] != canonical_hash(self.policy)
             or state["sample_rate"] != self._sample_rate
         ):
-            raise ValueError(
+            raise PrivacyError(
                 "research checkpoint mechanism or optimizer identity mismatch"
             )
         state = cast(dict[str, Any], state)
@@ -453,7 +458,7 @@ class PrivateTrainer(PyTorchTrainer):
             or type(state["physical_steps"]) is not int
             or state["physical_steps"] < steps
         ):
-            raise ValueError("invalid research checkpoint counters")
+            raise PrivacyError("invalid research checkpoint counters")
         history = state["accountant"]
         if (
             any(
@@ -465,7 +470,7 @@ class PrivateTrainer(PyTorchTrainer):
             )
             or sum(n for _, _, n in history) != steps
         ):
-            raise ValueError("research checkpoint accountant history mismatch")
+            raise PrivacyError("research checkpoint accountant history mismatch")
         spec = self.specification.optimizer
         if isinstance(spec, FactoryOptimizerSpec):
             assert self._optimizer_registration is not None
@@ -500,14 +505,16 @@ class PrivateTrainer(PyTorchTrainer):
                 or state[key].dtype != torch.uint8
                 or state[key].shape != generator.get_state().shape
             ):
-                raise ValueError("research checkpoint RNG mismatch")
+                raise PrivacyError("research checkpoint RNG mismatch")
             probe = torch.Generator(device=generator.device)
             probe.set_state(state[key])
 
     def load_checkpoint_tensors(self, state: dict[str, np.ndarray]) -> None:
         self._check_execution()
         if self.policy.randomness_profile == "secure":
-            raise ValueError("secure private runs are fresh-start only; resume refused")
+            raise PrivacyError(
+                "secure private runs are fresh-start only; resume refused"
+            )
         payload = {
             k.removeprefix("application."): v
             for k, v in state.items()
@@ -519,8 +526,8 @@ class PrivateTrainer(PyTorchTrainer):
             "meta.steps" not in state
             or int(state["meta.steps"][0]) != decoded["logical_steps"]
         ):
-            raise ValueError("checkpoint counters disagree")
+            raise PrivacyError("checkpoint counters disagree")
         if "meta.loss" not in state or state["meta.loss"].size:
-            raise ValueError("private checkpoint contains raw loss")
+            raise PrivacyError("private checkpoint contains raw loss")
         self._workload.validate_checkpoint(state)
         super().load_checkpoint_tensors(state)

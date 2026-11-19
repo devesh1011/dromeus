@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from dromeus.application import describe_task
 from dromeus.manifests.models import PrivacyPolicy, TaskTrainingSpec
 from dromeus.persistence.privacy_ledger import PrivacyLedger
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
+from dromeus.training.optimizer_factory import OptimizerRegistration
 from dromeus.training.privacy import opacus_module
 from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.private_trainer import PrivateTrainer
@@ -30,9 +30,18 @@ pytest.importorskip("opacus")
 Kind = Literal["custom", "rmsprop", "adagrad"]
 
 
-def make_task(registration: PrivateOptimizerFactory) -> TrainingTask:
+def records() -> tuple[torch.Tensor, torch.Tensor]:
     inputs = torch.arange(16, dtype=torch.float32).reshape(8, 2) / 8
     targets = torch.ones(8, 1)
+    return inputs, targets
+
+
+def make_task(
+    registration: OptimizerRegistration,
+    *,
+    schedule: Literal["constant", "linear_decay"] = "linear_decay",
+) -> TrainingTask:
+    inputs, targets = records()
 
     def loss(model: torch.nn.Module, batch: Any) -> torch.Tensor:
         x, y = batch
@@ -40,7 +49,6 @@ def make_task(registration: PrivateOptimizerFactory) -> TrainingTask:
 
     return TrainingTask(
         model_factory=public_model,
-        dataset=TensorDataset(inputs, targets),
         batch_adapter=TensorBatchAdapter(
             (inputs[:2].clone(), targets[:2].clone()),
             "synthetic regression records",
@@ -50,33 +58,39 @@ def make_task(registration: PrivateOptimizerFactory) -> TrainingTask:
         task_definition="squared error on fixed synthetic records",
         loss_definition="one mean squared error per record",
         implementation_hash="c" * 64,
-        optimizer_registration=registration,
+        optimizer=registration,
+        batch_size=4,
+        schedule=schedule,
     )
 
 
 def make_specification(
-    registration: PrivateOptimizerFactory,
+    registration: OptimizerRegistration,
     *,
     schedule: Literal["constant", "linear_decay"] = "linear_decay",
 ) -> TaskTrainingSpec:
-    return describe_task(make_task(registration), batch_size=4, schedule=schedule)
+    return describe_task(make_task(registration, schedule=schedule), sampling="poisson")
 
 
 def make_trainer(
     path: Path,
-    registration: PrivateOptimizerFactory,
+    registration: OptimizerRegistration,
     *,
     physical: int = 2,
     specification: TaskTrainingSpec | None = None,
-    trainer_registration: PrivateOptimizerFactory | None = None,
+    trainer_registration: OptimizerRegistration | None = None,
 ) -> PrivateTrainer:
     """Shared contract comes from ``registration``; the trainer may receive another.
 
     Passing a different ``trainer_registration`` exercises mismatch rejection
     between the group specification and the locally supplied task.
     """
+    spec = (
+        specification if specification is not None else make_specification(registration)
+    )
     return PrivateTrainer(
-        task=make_task(trainer_registration or registration),
+        task=make_task(trainer_registration or registration, schedule=spec.schedule),
+        dataset=TensorDataset(*records()),
         policy=PrivacyPolicy(
             max_grad_norm=1,
             noise_multiplier=1,
@@ -84,9 +98,7 @@ def make_trainer(
             max_logical_steps=4,
             randomness_profile="reproducible_public_benchmark",
         ),
-        specification=specification
-        if specification is not None
-        else make_specification(registration),
+        specification=spec,
         run_id="factory-conformance",
         local_data_identity="public-synthetic",
         reservation_store=PrivacyLedger.create(path / "ledger.json", lineage="public"),
@@ -389,7 +401,8 @@ def test_secure_factory_uses_same_mechanism_and_refuses_resume(tmp_path: Path) -
     pytest.importorskip("torchcsprng")
     registration = optimizer_registration()
     trainer = PrivateTrainer(
-        task=make_task(registration),
+        task=make_task(registration, schedule="constant"),
+        dataset=TensorDataset(*records()),
         specification=make_specification(registration, schedule="constant"),
         policy=PrivacyPolicy(
             max_grad_norm=1,

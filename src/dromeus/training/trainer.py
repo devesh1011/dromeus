@@ -17,6 +17,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from dromeus.errors import TaskError
 from dromeus.manifests.canonical import load_safetensors
 from dromeus.manifests.models import TensorSchema
 from dromeus.training.base import EvaluationResult
@@ -39,7 +40,7 @@ def _copy_state(state: Mapping[str, np.ndarray]) -> dict[str, np.ndarray]:
     result: dict[str, np.ndarray] = {}
     for name, value in state.items():
         if not name or value.dtype.kind not in "biuf" or not np.isfinite(value).all():
-            raise ValueError("checkpoint state needs named finite numeric arrays")
+            raise TaskError("checkpoint state needs named finite numeric arrays")
         result[name] = value.copy(order="C")
     return result
 
@@ -64,7 +65,7 @@ class PyTorchTrainer:
         exchange_names: tuple[str, ...] | None = None,
     ) -> None:
         if not state_identity.strip():
-            raise ValueError(
+            raise TaskError(
                 "state identity must bind local data and training configuration"
             )
         self._model = model
@@ -79,11 +80,11 @@ class PyTorchTrainer:
         self._contract_identity: str | None = None
         values = floating_model_state(model, exchange_names)
         if not values:
-            raise ValueError("model must expose floating exchangeable state")
+            raise TaskError("model must expose floating exchangeable state")
         if any(
             value.dtype != torch.float32 or value.ndim == 0 for value in values.values()
         ):
-            raise ValueError(
+            raise TaskError(
                 "exchange requires non-scalar FP32 state; use shape [1] for scalars"
             )
         self._schema = tensor_schema_for_model(model, exchange_names)
@@ -105,10 +106,10 @@ class PyTorchTrainer:
         """Bind durable state to shared application semantics before formation."""
         if self._contract_identity is not None:
             if identity != self._contract_identity:
-                raise ValueError("trainer is already bound to another application")
+                raise TaskError("trainer is already bound to another application")
             return
         if self._steps:
-            raise ValueError("bind the application contract before training")
+            raise TaskError("bind the application contract before training")
         self._identity = np.frombuffer(
             hashlib.sha256(self._identity.tobytes() + identity.encode()).digest(),
             dtype=np.uint8,
@@ -122,7 +123,7 @@ class PyTorchTrainer:
     def weights(self) -> dict[str, np.ndarray]:
         self._validate_alias_layout()
         if tensor_schema_for_model(self._model, self._exchange_names) != self._schema:
-            raise ValueError("application changed its model tensor schema")
+            raise TaskError("application changed its model tensor schema")
         return _copy_state(
             {
                 name: value.detach().cpu().numpy()
@@ -144,11 +145,11 @@ class PyTorchTrainer:
 
     def train_local_steps(self, step_count: int) -> None:
         if step_count <= 0:
-            raise ValueError("local step count must be positive")
+            raise TaskError("local step count must be positive")
         for _ in range(step_count):
             loss = self._train_step(self._model)
             if loss is not None and not math.isfinite(loss):
-                raise ValueError("application returned non-finite local loss")
+                raise TaskError("application returned non-finite local loss")
             self._local_loss = None if loss is None else float(loss)
             self._steps += 1
         self.weights()  # Detect non-finite or structurally changed model state.
@@ -222,7 +223,7 @@ class PyTorchTrainer:
         if {
             name for name in candidate if not name.startswith("application.")
         } != model_keys | meta_keys:
-            raise ValueError("checkpoint model or metadata keys mismatch")
+            raise TaskError("checkpoint model or metadata keys mismatch")
         self._validate_like(
             {k: candidate[k] for k in model_keys}, {k: old[k] for k in model_keys}
         )
@@ -234,12 +235,12 @@ class PyTorchTrainer:
         if not np.array_equal(
             candidate["meta.version"], old["meta.version"]
         ) or not np.array_equal(candidate["meta.identity"], self._identity):
-            raise ValueError("checkpoint version or local state identity mismatch")
+            raise TaskError("checkpoint version or local state identity mismatch")
         if candidate["meta.steps"][0] < 0:
-            raise ValueError("checkpoint step count must be non-negative")
+            raise TaskError("checkpoint step count must be non-negative")
         loss = candidate["meta.loss"]
         if loss.dtype != np.float64 or loss.shape not in ((0,), (1,)):
-            raise ValueError("invalid checkpoint loss")
+            raise TaskError("invalid checkpoint loss")
         try:
             self._restore(candidate)
         except Exception:
@@ -267,7 +268,7 @@ class PyTorchTrainer:
 
     def _validate_alias_layout(self) -> None:
         if model_state_alias_groups(self._model) != self._aliases:
-            raise ValueError("application changed its model alias layout")
+            raise TaskError("application changed its model alias layout")
 
     def _validate_alias_values(self, values: Mapping[str, np.ndarray]) -> None:
         for group in self._aliases:
@@ -276,18 +277,18 @@ class PyTorchTrainer:
                 not np.array_equal(values[present[0]], values[name])
                 for name in present[1:]
             ):
-                raise ValueError(f"conflicting values for tied model aliases: {group}")
+                raise TaskError(f"conflicting values for tied model aliases: {group}")
 
     @staticmethod
     def _validate_like(
         state: Mapping[str, np.ndarray], expected: Mapping[str, np.ndarray]
     ) -> dict[str, np.ndarray]:
         if state.keys() != expected.keys():
-            raise ValueError("model state keys mismatch")
+            raise TaskError("model state keys mismatch")
         candidate = _copy_state(state)
         if any(
             candidate[name].shape != value.shape or candidate[name].dtype != value.dtype
             for name, value in expected.items()
         ):
-            raise ValueError("model state shape or dtype mismatch")
+            raise TaskError("model state shape or dtype mismatch")
         return candidate

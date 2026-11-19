@@ -11,8 +11,9 @@ from typing import Any, cast
 import numpy as np
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Sampler
+from torch.utils.data import DataLoader, Dataset, Sampler
 
+from dromeus.errors import TaskError
 from dromeus.manifests.canonical import canonical_hash, canonical_json
 from dromeus.manifests.models import FactoryOptimizerSpec, TaskTrainingSpec
 from dromeus.training.optimizer_factory import (
@@ -65,6 +66,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
         self,
         *,
         task: TrainingTask,
+        dataset: Dataset[Any],
         specification: TaskTrainingSpec,
         local_data_identity: str,
         max_logical_steps: int,
@@ -77,7 +79,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             or max_physical_batch_size <= 0
             or specification.optimizer.torch_version != torch.__version__
         ):
-            raise ValueError(
+            raise TaskError(
                 "ordinary task requires valid identity, limits and Torch version"
             )
         task.check_definition(specification)
@@ -85,13 +87,14 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             task.public_evaluate is not None
             and specification.evaluation_provenance != "public_fixed_holdout"
         ):
-            raise ValueError("ordinary task evaluation provenance is undeclared")
+            raise TaskError("ordinary task evaluation provenance is undeclared")
         self.task, self.specification = task, specification
+        self._dataset = dataset
         self._specification_hash = canonical_hash(specification)
         self._horizon, self._physical_limit = max_logical_steps, max_physical_batch_size
         self._logical_steps = self._physical_steps = 0
         self._failed = False
-        self._population = dataset_size(task.dataset)
+        self._population = dataset_size(self._dataset)
         self._raw_model = task.model_factory()
         report = describe_private_model(self._raw_model)
         if (
@@ -100,18 +103,18 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             or report.public_buffer_hashes != specification.public_buffer_hashes
             or report.frozen_parameter_hashes != specification.frozen_parameter_hashes
         ):
-            raise ValueError("ordinary model differs from shared task specification")
+            raise TaskError("ordinary model differs from shared task specification")
         self._guard = ModelStateGuard(self._raw_model, report)
         optimizer_spec = specification.optimizer
         if isinstance(optimizer_spec, FactoryOptimizerSpec):
             if task.optimizer_registration is None:
-                raise ValueError("factory optimizer requires its local registration")
+                raise TaskError("factory optimizer requires its local registration")
             self._optimizer = task.optimizer_registration.build(
                 self._raw_model, optimizer_spec
             )
         else:
             if task.optimizer_registration is not None:
-                raise ValueError(
+                raise TaskError(
                     "optimizer registration requires factory specification"
                 )
             self._optimizer = build_private_optimizer(self._raw_model, optimizer_spec)
@@ -134,7 +137,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
         self._shuffle: _ShuffleBatches | None = None
         if specification.sampling == "poisson":
             self._loader = make_task_loader(
-                task.dataset,
+                self._dataset,
                 task.batch_adapter,
                 batch_size=specification.batch_size,
                 generator=self._sampling_rng,
@@ -145,7 +148,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
                 self._population, specification.batch_size, self._sampling_rng
             )
             self._loader = DataLoader(  # pyright: ignore[reportUnknownMemberType]
-                task.dataset,
+                self._dataset,
                 batch_sampler=self._shuffle,
                 collate_fn=task.batch_adapter.collate,
                 generator=self._sampling_rng,
@@ -187,11 +190,11 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
 
     def _check(self) -> None:
         if self._failed:
-            raise ValueError("ordinary trainer failed")
+            raise TaskError("ordinary trainer failed")
         if canonical_hash(self.specification) != self._specification_hash:
-            raise ValueError("ordinary task specification changed")
-        if dataset_size(self.task.dataset) != self._population:
-            raise ValueError("ordinary dataset population changed")
+            raise TaskError("ordinary task specification changed")
+        if dataset_size(self._dataset) != self._population:
+            raise TaskError("ordinary dataset population changed")
         self._guard.check()
         actual = tuple(
             p for group in self._optimizer.param_groups for p in group["params"]
@@ -199,13 +202,13 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
         if len(actual) != len(self._parameters) or {id(p) for p in actual} != {
             id(p) for p in self._parameters
         }:
-            raise ValueError("ordinary optimizer parameter ownership changed")
+            raise TaskError("ordinary optimizer parameter ownership changed")
         self._validate_optimizer(self._optimizer.state_dict(), self._logical_steps)
 
     def train_local_steps(self, step_count: int) -> None:
         self._check()
         if step_count <= 0 or self._logical_steps + step_count > self._horizon:
-            raise ValueError(
+            raise TaskError(
                 "ordinary training horizon exhausted or invalid step count"
             )
         try:
@@ -314,10 +317,10 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             or set(cast(dict[str, Any], state)) != expected
             or state["version"] != 1
         ):
-            raise ValueError("ordinary task checkpoint schema mismatch")
+            raise TaskError("ordinary task checkpoint schema mismatch")
         state = cast(dict[str, Any], state)
         if state["specification"] != self._specification_hash:
-            raise ValueError("ordinary task checkpoint specification mismatch")
+            raise TaskError("ordinary task checkpoint specification mismatch")
         steps, physical = state["logical_steps"], state["physical_steps"]
         if (
             type(steps) is not int
@@ -325,7 +328,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             or type(physical) is not int
             or physical < steps
         ):
-            raise ValueError("ordinary task checkpoint counters mismatch")
+            raise TaskError("ordinary task checkpoint counters mismatch")
         self._validate_optimizer(state["optimizer"], steps)
         for key, current in (
             ("sampling_rng", self._sampling_rng.get_state()),
@@ -335,13 +338,13 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
             saved = state[key]
             if current is None:
                 if saved is not None:
-                    raise ValueError("ordinary task checkpoint RNG device mismatch")
+                    raise TaskError("ordinary task checkpoint RNG device mismatch")
             elif (
                 not isinstance(saved, torch.Tensor)
                 or saved.dtype != torch.uint8
                 or saved.shape != current.shape
             ):
-                raise ValueError("ordinary task checkpoint RNG mismatch")
+                raise TaskError("ordinary task checkpoint RNG mismatch")
         probe = torch.Generator()
         probe.set_state(state["sampling_rng"])
         probe.set_state(state["model_rng"])
@@ -356,7 +359,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
                 or order.ndim != 1
                 or type(position) is not int
             ):
-                raise ValueError("ordinary shuffle checkpoint mismatch")
+                raise TaskError("ordinary shuffle checkpoint mismatch")
             if (not len(order) and position != 0) or (
                 len(order)
                 and (
@@ -367,11 +370,11 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
                     )
                 )
             ):
-                raise ValueError("ordinary shuffle permutation mismatch")
+                raise TaskError("ordinary shuffle permutation mismatch")
         elif (
             state["shuffle_order"] is not None or state["shuffle_position"] is not None
         ):
-            raise ValueError("ordinary sampler checkpoint mismatch")
+            raise TaskError("ordinary sampler checkpoint mismatch")
         self._optimizer.load_state_dict(state["optimizer"])
         self._sampling_rng.set_state(state["sampling_rng"])
         self._model_rng, self._cuda_rng = state["model_rng"], state["cuda_rng"]
@@ -391,7 +394,7 @@ class OrdinaryTaskTrainer(PyTorchTrainer):
         if "meta.steps" not in state or int(state["meta.steps"][0]) != decoded.get(
             "logical_steps"
         ):
-            raise ValueError("ordinary checkpoint counters disagree")
+            raise TaskError("ordinary checkpoint counters disagree")
         require_unchanged_public_state(
             self._raw_model,
             state,

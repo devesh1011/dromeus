@@ -8,6 +8,7 @@ from collections import Counter
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from dromeus.errors import PrivacyError
 from dromeus.manifests.models import PrivacyPolicy, PrivacyReservation
 
 
@@ -28,10 +29,10 @@ def opacus_module(name: str = "opacus") -> Any:
     try:
         module = importlib.import_module(name)
         if importlib.import_module("opacus").__version__ != "1.6.0":
-            raise ValueError("private training requires Opacus 1.6.0")
+            raise PrivacyError("private training requires Opacus 1.6.0")
         return module
     except ImportError:
-        raise ValueError(
+        raise PrivacyError(
             "install dromeus[privacy] and secure RNG when required"
         ) from None
 
@@ -74,7 +75,7 @@ def privacy_epsilon(
     )
     value = float(engine.get_epsilon(delta=policy.delta, **kwargs))
     if not math.isfinite(value) or value < 0:
-        raise ValueError("privacy accounting failed")
+        raise PrivacyError("privacy accounting failed")
     return value
 
 

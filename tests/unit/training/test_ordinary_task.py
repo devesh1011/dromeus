@@ -15,7 +15,7 @@ from dromeus.manifests.models import PrivateOptimizerSpec, TaskTrainingSpec
 from dromeus.training.ordinary_task import OrdinaryTaskTrainer
 from dromeus.training.private_model import describe_private_model
 from dromeus.training.private_state import decode_state, encode_state
-from dromeus.training.task import TensorBatchAdapter, TrainingTask
+from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
 
 def model() -> nn.Module:
@@ -30,18 +30,39 @@ def losses(module: nn.Module, batch: Any) -> torch.Tensor:
     return (module(x) - y).square().flatten(1).mean(1)
 
 
-def make_task() -> TrainingTask:
+def records() -> tuple[torch.Tensor, torch.Tensor]:
     x = torch.tensor([[1.0], [2.0], [3.0], [4.0]])
-    y = torch.zeros_like(x)
+    return x, torch.zeros_like(x)
+
+
+def builtin_optimizer(
+    name: Literal["sgd", "adam", "adamw"],
+    *,
+    momentum: float = 0,
+    weight_decay: float = 0,
+) -> Optimizer:
+    """The built-in optimizer matching the learning rate used by `specification`."""
+    if name == "sgd":
+        return Optimizer.sgd(0.01, momentum=momentum, weight_decay=weight_decay)
+    if name == "adam":
+        return Optimizer.adam(0.01, weight_decay=weight_decay)
+    return Optimizer.adamw(0.01, weight_decay=weight_decay)
+
+
+def make_task(
+    optimizer: Optimizer = Optimizer.sgd(0.01), batch_size: int = 4
+) -> TrainingTask:
+    x, y = records()
     return TrainingTask(
         model_factory=model,
-        dataset=TensorDataset(x, y),
         batch_adapter=TensorBatchAdapter((x[:2], y[:2]), "scalar regression"),
         loss_per_record=losses,
         model_definition="scalar linear without bias; initial weight one",
         task_definition="squared prediction error",
         loss_definition="one mean squared error per record",
         implementation_hash="a" * 64,
+        optimizer=optimizer,
+        batch_size=batch_size,
     )
 
 
@@ -85,7 +106,10 @@ def trainer(
     optimizer_name: Literal["sgd", "adam", "adamw"] = "sgd",
     weight_decay: float = 0,
 ) -> OrdinaryTaskTrainer:
-    task = make_task()
+    task = make_task(
+        builtin_optimizer(optimizer_name, momentum=momentum, weight_decay=weight_decay),
+        batch_size,
+    )
     spec = specification(
         task,
         sampling,
@@ -98,6 +122,7 @@ def trainer(
         spec = spec.model_copy(update={"schedule": "linear_decay"})
     return OrdinaryTaskTrainer(
         task=task,
+        dataset=TensorDataset(*records()),
         specification=spec,
         local_data_identity="public-four-records-v1",
         max_logical_steps=8,
@@ -272,6 +297,7 @@ def test_undeclared_evaluation_rejects_before_preparation() -> None:
     with pytest.raises(ValueError, match="evaluation provenance"):
         OrdinaryTaskTrainer(
             task=task,
+            dataset=TensorDataset(*records()),
             specification=specification(task),
             local_data_identity="public-four-records-v1",
             max_logical_steps=2,
@@ -298,13 +324,14 @@ def test_tied_frozen_and_public_buffer_state_survives_weight_exchange() -> None:
     live = TiedModel()
     task = TrainingTask(
         model_factory=lambda: live,
-        dataset=source.dataset,
         batch_adapter=source.batch_adapter,
         loss_per_record=losses,
         model_definition="tied two-use scalar with frozen bias and public scale",
         task_definition=source.task_definition,
         loss_definition=source.loss_definition,
         implementation_hash=source.implementation_hash,
+        optimizer=source.optimizer,
+        batch_size=source.batch_size,
     )
     description = describe_private_model(TiedModel())
     spec = specification(task).model_copy(
@@ -316,6 +343,7 @@ def test_tied_frozen_and_public_buffer_state_survives_weight_exchange() -> None:
     )
     ordinary = OrdinaryTaskTrainer(
         task=task,
+        dataset=TensorDataset(*records()),
         specification=spec,
         local_data_identity="public-tied-task",
         max_logical_steps=3,

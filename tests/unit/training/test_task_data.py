@@ -186,20 +186,21 @@ def test_task_definition_matches_shared_contract_and_rejects_loss_change() -> No
     import hashlib
 
     from dromeus.manifests.models import PrivateOptimizerSpec, TaskTrainingSpec
-    from dromeus.training.task import TrainingTask
+    from dromeus.training.task import Optimizer, TrainingTask
 
     adapter = TensorBatchAdapter(
         example={"tokens": torch.tensor([[0, 1], [1, 2]])}, definition="tokens-v1"
     )
     task = TrainingTask(
         model_factory=lambda: torch.nn.Linear(2, 1),
-        dataset=Records(),
         batch_adapter=adapter,
         loss_per_record=lambda model, batch: model(batch["tokens"].float()).sum(1),
         model_definition="linear-v1",
         task_definition="next-token-v1",
         loss_definition="sum-v1",
         implementation_hash="1" * 64,
+        optimizer=Optimizer.sgd(0.01),
+        batch_size=2,
     )
     spec = TaskTrainingSpec(
         optimizer=PrivateOptimizerSpec(

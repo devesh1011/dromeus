@@ -17,6 +17,7 @@ import numpy as np
 import torch
 from torch import nn
 
+from dromeus.errors import TaskError
 from dromeus.manifests.models import GradientBackend
 from dromeus.training.model_state import model_state_alias_groups
 from dromeus.training.privacy import opacus_module
@@ -61,7 +62,7 @@ def require_unchanged_public_state(
             continue
         value = state.get(f"model.{name}")
         if value is None or tensor_digest(torch.from_numpy(value.copy())) != expected:  # pyright: ignore[reportUnknownMemberType]
-            raise ValueError("checkpoint changed immutable public model state")
+            raise TaskError("checkpoint changed immutable public model state")
 
 
 def registered_model_state(model: nn.Module) -> dict[str, torch.Tensor]:
@@ -88,11 +89,11 @@ def describe_private_model(
 ) -> ModelCompatibility:
     """Inspect structure without running the model or reading a local dataset."""
     if gradient_backend not in ("opacus_hooks", "opacus_native_b1"):
-        raise ValueError("unsupported private gradient backend")
+        raise TaskError("unsupported private gradient backend")
     registered = registered_model_state(model)
     state: Mapping[str, Any] = model.state_dict()
     if set(state) != set(registered):
-        raise ValueError(
+        raise TaskError(
             "private serialization must contain exactly registered parameters "
             "and buffers"
         )
@@ -105,11 +106,11 @@ def describe_private_model(
             or actual.device != expected.device
             or not torch.equal(actual, expected.detach())
         ):
-            raise ValueError(
+            raise TaskError(
                 f"{name}: serialized state differs from its registered tensor"
             )
     if len({p.device for p in model.parameters()}) != 1:
-        raise ValueError("private model parameters require one device")
+        raise TaskError("private model parameters require one device")
     names: list[str] = []
     frozen: dict[str, str] = {}
     for name, parameter in model.named_parameters():
@@ -119,13 +120,13 @@ def describe_private_model(
             or parameter.ndim == 0
             or not bool(torch.isfinite(parameter).all())
         ):
-            raise ValueError(f"{name}: private parameters require finite dense FP32")
+            raise TaskError(f"{name}: private parameters require finite dense FP32")
         if parameter.requires_grad:
             names.append(name)
         else:
             frozen[name] = tensor_digest(parameter)
     if not names:
-        raise ValueError("private model requires trainable parameters")
+        raise TaskError("private model requires trainable parameters")
     aliases = model_state_alias_groups(model)
     parameter_objects = {
         name: id(parameter)
@@ -137,7 +138,7 @@ def describe_private_model(
             len(parameter_names) != len(group)
             or len({parameter_objects[name] for name in parameter_names}) != 1
         ):
-            raise ValueError("parameter aliases must share one Parameter object")
+            raise TaskError("parameter aliases must share one Parameter object")
     return ModelCompatibility(
         gradient_backend=gradient_backend,
         trainable_parameter_names=tuple(names),
@@ -157,7 +158,7 @@ def _backend_structure(model: nn.Module) -> None:
         if isinstance(
             module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d, nn.SyncBatchNorm)
         ):
-            raise ValueError(f"{label}: batch-dependent normalization is unsupported")
+            raise TaskError(f"{label}: batch-dependent normalization is unsupported")
         if (
             isinstance(
                 module,
@@ -172,18 +173,18 @@ def _backend_structure(model: nn.Module) -> None:
             )
             and module.p
         ):
-            raise ValueError(f"{label}: stochastic layer requires a model RNG profile")
+            raise TaskError(f"{label}: stochastic layer requires a model RNG profile")
         if isinstance(module, nn.RReLU):
-            raise ValueError(f"{label}: stochastic layer requires a model RNG profile")
+            raise TaskError(f"{label}: stochastic layer requires a model RNG profile")
         if isinstance(module, nn.Embedding) and (
             module.sparse or module.scale_grad_by_freq or module.max_norm is not None
         ):
-            raise ValueError(f"{label}: embedding gradient/state options unsupported")
+            raise TaskError(f"{label}: embedding gradient/state options unsupported")
         direct = any(p.requires_grad for p in module.parameters(recurse=False))
         if direct and type(module) not in samplers:
-            raise ValueError(f"{label}: no registered Opacus gradient sampler")
+            raise TaskError(f"{label}: no registered Opacus gradient sampler")
         if direct and any(True for _ in module.buffers()):
-            raise ValueError(
+            raise TaskError(
                 f"{label}: Opacus hooks cannot handle trainable-layer buffers"
             )
         if (
@@ -191,7 +192,7 @@ def _backend_structure(model: nn.Module) -> None:
             or getattr(module, "_forward_pre_hooks")
             or getattr(module, "_backward_hooks")
         ):
-            raise ValueError(
+            raise TaskError(
                 f"{label}: pre-existing model hooks need an explicit profile"
             )
     opacus_module("opacus.validators").ModuleValidator.validate(model, strict=True)
@@ -204,16 +205,16 @@ def ensure_grad_samples(model: nn.Module, batch_size: int) -> None:
     with an ordinary gradient or an incomplete backward cannot be guessed.
     """
     if batch_size < 0:
-        raise ValueError("invalid record count")
+        raise TaskError("invalid record count")
     for name, parameter in model.named_parameters():
         if not parameter.requires_grad:
             continue
         if getattr(parameter, "_forward_counter", 0):
-            raise ValueError(f"{name}: unresolved per-record backward coverage")
+            raise TaskError(f"{name}: unresolved per-record backward coverage")
         sample = getattr(parameter, "grad_sample", None)
         if sample is None:
             if parameter.grad is not None:
-                raise ValueError(f"{name}: missing per-record gradient sampler result")
+                raise TaskError(f"{name}: missing per-record gradient sampler result")
             sample = parameter.new_zeros((batch_size, *parameter.shape))
             cast(Any, parameter).grad_sample = sample
         if (
@@ -221,13 +222,13 @@ def ensure_grad_samples(model: nn.Module, batch_size: int) -> None:
             or sample.shape != (batch_size, *parameter.shape)
             or not bool(torch.isfinite(sample).all())
         ):
-            raise ValueError(f"{name}: invalid per-record gradient shape or values")
+            raise TaskError(f"{name}: invalid per-record gradient shape or values")
         if (
             batch_size
             and parameter.grad is not None
             and not torch.allclose(sample.mean(0), parameter.grad, rtol=1e-4, atol=1e-6)
         ):
-            raise ValueError(
+            raise TaskError(
                 f"{name}: per-record gradients do not cover aggregate gradient"
             )
 
@@ -246,7 +247,7 @@ def _losses(
         or not bool(torch.isfinite(result).all())
         or not result.requires_grad
     ):
-        raise ValueError(
+        raise TaskError(
             "loss callback must return finite differentiable record losses [B]"
         )
     return result
@@ -280,7 +281,7 @@ def validate_private_model(
     batch = batch_adapter.to_device(copy.deepcopy(public_batch), device)
     count = batch_adapter.size(batch)
     if count < 2:
-        raise ValueError("public compatibility fixture requires at least two records")
+        raise TaskError("public compatibility fixture requires at least two records")
     devices = [device.index or 0] if device.type == "cuda" else []
     with cast(Any, torch.random).fork_rng(devices=devices):
         rng = torch.get_rng_state().clone()
@@ -308,7 +309,7 @@ def validate_private_model(
                     else gradient.detach()
                 )
         if _state_hashes(probe) != original:
-            raise ValueError("model/loss mutated public model state during forward")
+            raise TaskError("model/loss mutated public model state during forward")
         hooked = copy.deepcopy(model).train()
         wrapper: Any = opacus_module("opacus.grad_sample").GradSampleModule(
             hooked, batch_first=True, loss_reduction="mean", strict=True
@@ -318,7 +319,7 @@ def validate_private_model(
             if not torch.allclose(
                 values.detach(), torch.cat(record_values), rtol=1e-4, atol=1e-6
             ):
-                raise ValueError(
+                raise TaskError(
                     "loss depends on other records or changes with batch size"
                 )
             cast(Any, values.mean()).backward()
@@ -329,7 +330,7 @@ def validate_private_model(
                 observed = cast(torch.Tensor, getattr(parameter, "grad_sample"))
                 expected = torch.stack(references[name])
                 if not torch.allclose(observed, expected, rtol=1e-4, atol=1e-6):
-                    raise ValueError(
+                    raise TaskError(
                         f"{name}: per-record gradient differs from autograd"
                     )
             if gradient_backend == "opacus_native_b1":
@@ -354,18 +355,18 @@ def validate_private_model(
                         if not torch.allclose(
                             sample[0], references[name][index], rtol=1e-4, atol=1e-6
                         ):
-                            raise ValueError(
+                            raise TaskError(
                                 f"{name}: native B1 gradient differs from autograd"
                             )
             if _state_hashes(hooked) != original:
-                raise ValueError("model/loss mutated public model state during forward")
+                raise TaskError("model/loss mutated public model state during forward")
         finally:
             wrapper.remove_hooks()
         if not torch.equal(rng, torch.get_rng_state()) or (
             cuda_rng is not None
             and not torch.equal(cuda_rng, torch.cuda.get_rng_state(device))
         ):
-            raise ValueError(
+            raise TaskError(
                 "model/loss consumed global randomness without an RNG profile"
             )
     return report
@@ -379,7 +380,7 @@ class ModelStateGuard:
             describe_private_model(model, gradient_backend=report.gradient_backend)
             != report
         ):
-            raise ValueError("model differs from declared compatibility report")
+            raise TaskError("model differs from declared compatibility report")
         self._model = model
         self._report = copy.deepcopy(report)
         self._parameters = tuple(
@@ -394,20 +395,20 @@ class ModelStateGuard:
             for name, p in self._model.named_parameters()
         )
         if actual != self._parameters:
-            raise ValueError(
+            raise TaskError(
                 "private model parameter identity/schema/trainability changed"
             )
         if (
             tuple((name, id(b)) for name, b in self._model.named_buffers())
             != self._buffers
         ):
-            raise ValueError("private model buffer identity changed")
+            raise TaskError("private model buffer identity changed")
         if (
             describe_private_model(
                 self._model, gradient_backend=self._report.gradient_backend
             )
             != self._report
         ):
-            raise ValueError(
+            raise TaskError(
                 "private model aliases, public buffers or frozen parameters changed"
             )

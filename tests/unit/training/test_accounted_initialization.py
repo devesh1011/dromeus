@@ -16,11 +16,12 @@ from dromeus.manifests.models import (
     AccountedInitializationProvenance,
     PrivacyPolicy,
     PrivacyReservation,
-    PrivateOptimizerSpec,
+    TaskTrainingSpec,
 )
 from dromeus.training.private_trainer import PrivateTrainer
 from dromeus.training.task import (
     AccountedInitializationEvidence,
+    Optimizer,
     TensorBatchAdapter,
     TrainingTask,
 )
@@ -44,7 +45,9 @@ def model_factory() -> nn.Module:
     return model
 
 
-def fixture(tmp_path: Path) -> tuple[TrainingTask, AccountedInitializationProvenance]:
+def fixture(
+    tmp_path: Path,
+) -> tuple[TrainingTask, AccountedInitializationProvenance, UnreadDataset]:
     path = tmp_path / "parent.safetensors"
     save_safetensors(
         {k: v.detach().numpy() for k, v in model_factory().state_dict().items()},
@@ -65,7 +68,6 @@ def fixture(tmp_path: Path) -> tuple[TrainingTask, AccountedInitializationProven
     )
     task = TrainingTask(
         model_factory=model_factory,
-        dataset=UnreadDataset(),
         batch_adapter=TensorBatchAdapter(
             example=torch.tensor([[1.0, 2.0], [2.0, 3.0]]),
             definition="public-two-feature-v1",
@@ -75,59 +77,53 @@ def fixture(tmp_path: Path) -> tuple[TrainingTask, AccountedInitializationProven
         task_definition="tiny-fixed-record-task-v1",
         loss_definition="mean-square-per-record-v1",
         implementation_hash="c" * 64,
+        optimizer=Optimizer.adamw(1e-4, weight_decay=0),
+        batch_size=2,
         initialization_evidence=AccountedInitializationEvidence(
             provenance=provenance, model_path=path, verify_parent=lambda _: True
         ),
     )
-    return task, provenance
+    return task, provenance, UnreadDataset()
 
 
-def describe(task: TrainingTask, provenance: AccountedInitializationProvenance):
-    return describe_task(
-        task,
-        batch_size=2,
-        optimizer=PrivateOptimizerSpec(
-            name="adamw",
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=1e-4,
-        ),
-        initialization="accounted_private_pretrained",
-        initialization_provenance=provenance,
-    )
+def describe(task: TrainingTask) -> TaskTrainingSpec:
+    return describe_task(task, sampling="poisson")
 
 
 def test_matching_evidence_constructs_exact_parent_model(tmp_path: Path) -> None:
-    task, provenance = fixture(tmp_path)
-    specification = describe(task, provenance)
+    task, provenance, dataset = fixture(tmp_path)
+    specification = describe(task)
     task.check_definition(specification)
     torch.testing.assert_close(task.model_factory().weight, torch.full((1, 2), 0.25))
     assert specification.initialization_provenance == provenance
-    assert cast(UnreadDataset, task.dataset).reads == 0
+    assert dataset.reads == 0
 
 
 @pytest.mark.parametrize("public_mode", ["public_untrained", "public_pretrained"])
 def test_accounted_evidence_cannot_be_declared_public(
     tmp_path: Path, public_mode: Any
 ) -> None:
-    task, _ = fixture(tmp_path)
+    task, _, _ = fixture(tmp_path)
     with pytest.raises(ValueError, match="cannot be declared public"):
-        describe_task(task, batch_size=2, initialization=public_mode)
+        task.check_initialization(public_mode, None)
 
 
 def test_missing_or_different_evidence_fails_before_factory(tmp_path: Path) -> None:
-    task, provenance = fixture(tmp_path)
+    task, provenance, _ = fixture(tmp_path)
+    specification = describe(task)
     missing = replace(task, initialization_evidence=None)
     with pytest.raises(ValueError, match="matching locally verified"):
-        describe(missing, provenance)
+        missing.check_definition(specification)
     other = provenance.model_copy(update={"parent_audit_sha256": "d" * 64})
     with pytest.raises(ValueError, match="matching locally verified"):
-        describe(task, other)
+        task.check_definition(
+            specification.model_copy(update={"initialization_provenance": other})
+        )
 
 
 def test_every_factory_call_rechecks_actual_values(tmp_path: Path) -> None:
-    task, provenance = fixture(tmp_path)
-    describe(task, provenance)
+    task, _, dataset = fixture(tmp_path)
+    describe(task)
 
     def changed_factory() -> nn.Module:
         model = model_factory()
@@ -138,14 +134,14 @@ def test_every_factory_call_rechecks_actual_values(tmp_path: Path) -> None:
     changed = replace(task, model_factory=changed_factory)
     with pytest.raises(ValueError, match="model tensors differ"):
         changed.model_factory()
-    assert cast(UnreadDataset, task.dataset).reads == 0
+    assert dataset.reads == 0
 
 
 @pytest.mark.parametrize("kind", ["values", "inventory", "dtype"])
 def test_factory_cannot_substitute_same_schema_or_inventory(
     tmp_path: Path, kind: str
 ) -> None:
-    task, _ = fixture(tmp_path)
+    task, _, _ = fixture(tmp_path)
 
     def changed_factory() -> nn.Module:
         model = model_factory()
@@ -165,7 +161,7 @@ def test_factory_cannot_substitute_same_schema_or_inventory(
 
 
 def test_changed_parent_file_rejected(tmp_path: Path) -> None:
-    task, _ = fixture(tmp_path)
+    task, _, _ = fixture(tmp_path)
     assert task.initialization_evidence is not None
     task.initialization_evidence.model_path.write_bytes(b"changed")
     with pytest.raises(ValueError, match="model source differs"):
@@ -173,7 +169,7 @@ def test_changed_parent_file_rejected(tmp_path: Path) -> None:
 
 
 def test_source_mutation_inside_factory_rejected(tmp_path: Path) -> None:
-    task, _ = fixture(tmp_path)
+    task, _, _ = fixture(tmp_path)
     assert task.initialization_evidence is not None
     path = task.initialization_evidence.model_path
 
@@ -189,8 +185,8 @@ def test_source_mutation_inside_factory_rejected(tmp_path: Path) -> None:
 def test_unverified_ancestry_prevents_construction_and_reservation(
     tmp_path: Path,
 ) -> None:
-    task, provenance = fixture(tmp_path)
-    specification = describe(task, provenance)
+    task, _, dataset = fixture(tmp_path)
+    specification = describe(task)
     assert task.initialization_evidence is not None
 
     def reject_parent(_: AccountedInitializationProvenance) -> bool:
@@ -217,6 +213,7 @@ def test_unverified_ancestry_prevents_construction_and_reservation(
     with pytest.raises(ValueError, match="ancestry was not verified"):
         PrivateTrainer(
             task=rejected,
+            dataset=dataset,
             specification=specification,
             policy=PrivacyPolicy(
                 max_grad_norm=1,
@@ -231,14 +228,14 @@ def test_unverified_ancestry_prevents_construction_and_reservation(
             max_physical_batch_size=1,
             research_seed=17,
         )
-    assert store.calls == cast(UnreadDataset, task.dataset).reads == 0
+    assert store.calls == dataset.reads == 0
 
 
 def test_verified_parent_prepares_fresh_optimizer_without_getters(
     tmp_path: Path,
 ) -> None:
-    task, provenance = fixture(tmp_path)
-    specification = describe(task, provenance)
+    task, _, dataset = fixture(tmp_path)
+    specification = describe(task)
 
     class Store:
         reserved: list[PrivacyReservation] = []
@@ -252,6 +249,7 @@ def test_verified_parent_prepares_fresh_optimizer_without_getters(
     store = Store()
     trainer = PrivateTrainer(
         task=task,
+        dataset=dataset,
         specification=specification,
         policy=PrivacyPolicy(
             max_grad_norm=1,
@@ -271,13 +269,13 @@ def test_verified_parent_prepares_fresh_optimizer_without_getters(
     state = trainer.checkpoint_tensors()
     assert int(state["meta.steps"][0]) == 0
     assert store.reserved[0].logical_steps == 4
-    assert cast(UnreadDataset, task.dataset).reads == 0
+    assert dataset.reads == 0
 
 
 def test_registered_alias_frozen_and_buffer_values_are_all_checked(
     tmp_path: Path,
 ) -> None:
-    task, provenance = fixture(tmp_path)
+    task, provenance, _ = fixture(tmp_path)
 
     class Shared(nn.Module):
         def __init__(self) -> None:

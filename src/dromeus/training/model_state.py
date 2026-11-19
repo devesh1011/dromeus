@@ -7,6 +7,7 @@ from typing import Literal
 import torch
 from torch import Tensor, nn
 
+from dromeus.errors import TaskError
 from dromeus.manifests.models import Tensor as TensorSpec
 from dromeus.manifests.models import TensorSchema
 
@@ -34,7 +35,7 @@ def floating_model_state(
     # override's serialization output or mutable auxiliary model state.
     state = dict(model.named_parameters(remove_duplicate=False))
     if not names or len(set(names)) != len(names) or not set(names) <= state.keys():
-        raise ValueError("invalid declared exchange state")
+        raise TaskError("invalid declared exchange state")
     return {name: state[name] for name in names}
 
 
@@ -46,7 +47,7 @@ def tensor_schema_for_model(
     for name, value in floating_model_state(model, names).items():
         dtype = _TORCH_TO_SCHEMA_DTYPE.get(value.dtype)
         if dtype is None:
-            raise ValueError(f"unsupported model state dtype: {value.dtype}")
+            raise TaskError(f"unsupported model state dtype: {value.dtype}")
         tensors.append(
             TensorSpec(
                 name=name,
@@ -76,7 +77,7 @@ def model_state_alias_groups(model: nn.Module) -> tuple[tuple[str, ...], ...]:
             if size <= 1:
                 continue
             if stride < span:
-                raise ValueError(f"unsupported overlapping model state: {name}")
+                raise TaskError(f"unsupported overlapping model state: {name}")
             span += (size - 1) * stride
         start = (
             value.untyped_storage().data_ptr()
@@ -94,7 +95,7 @@ def model_state_alias_groups(model: nn.Module) -> tuple[tuple[str, ...], ...]:
         ):
             if previous is not None and layout[0] < previous[1]:
                 if layout != previous:
-                    raise ValueError(
+                    raise TaskError(
                         f"unsupported overlapping model state: {group[0]} and {name}"
                     )
                 group.append(name)

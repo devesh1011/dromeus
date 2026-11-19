@@ -14,10 +14,10 @@ from torch.utils.data import Dataset
 
 from dromeus.application import describe_task
 from dromeus.manifests.canonical import canonical_hash
-from dromeus.manifests.models import PrivacyPolicy, PrivateOptimizerSpec
+from dromeus.manifests.models import PrivacyPolicy, TaskTrainingSpec
 from dromeus.persistence.privacy_ledger import PrivacyLedger
 from dromeus.training.private_trainer import PrivateTrainer
-from dromeus.training.task import TensorBatchAdapter, TrainingTask
+from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 
 
 class PublicCancellationRecords(Dataset[torch.Tensor]):
@@ -34,7 +34,9 @@ class PublicCancellationRecords(Dataset[torch.Tensor]):
         return torch.tensor([1000.0, 0.001, -1000.0, 0.001] * 256).reshape(1024, 1)
 
 
-def public_task() -> tuple[TrainingTask, PublicCancellationRecords]:
+def public_task(
+    *, name: str = "sgd", batch_size: int = 2
+) -> tuple[TrainingTask, PublicCancellationRecords]:
     records = PublicCancellationRecords()
 
     def model() -> nn.Module:
@@ -49,7 +51,6 @@ def public_task() -> tuple[TrainingTask, PublicCancellationRecords]:
 
     return TrainingTask(
         model_factory=model,
-        dataset=records,
         batch_adapter=TensorBatchAdapter(
             example=torch.ones(2, 1024, 1), definition="public-sequence-fixture-v1"
         ),
@@ -58,27 +59,23 @@ def public_task() -> tuple[TrainingTask, PublicCancellationRecords]:
         task_definition="public-token-reduction",
         loss_definition="mean-output-per-record",
         implementation_hash="1" * 64,
+        optimizer=optimizer(name),
+        batch_size=batch_size,
     ), records
 
 
-def optimizer(name: str = "sgd") -> PrivateOptimizerSpec:
-    if name in ("adam", "adamw"):
-        return PrivateOptimizerSpec(
-            name=cast(Any, name),
-            torch_version=torch.__version__,
-            parameter_names=("weight",),
-            learning_rate=0.01,
-            betas=(0.9, 0.999),
-            numerical_epsilon=1e-8,
-            weight_decay=0,
-        )
-    return PrivateOptimizerSpec(
-        name="sgd",
-        torch_version=torch.__version__,
-        parameter_names=("weight",),
-        learning_rate=0.01,
-        momentum=0,
-        weight_decay=0,
+def optimizer(name: str = "sgd") -> Optimizer:
+    if name == "adam":
+        return Optimizer.adam(0.01, weight_decay=0)
+    if name == "adamw":
+        return Optimizer.adamw(0.01, weight_decay=0)
+    return Optimizer.sgd(0.01, momentum=0, weight_decay=0)
+
+
+def native_spec(task: TrainingTask) -> TaskTrainingSpec:
+    """The task's spec with the native B1 backend selected on the spec itself."""
+    return describe_task(task, sampling="poisson").model_copy(
+        update={"gradient_backend": "opacus_native_b1"}
     )
 
 
@@ -94,13 +91,8 @@ def policy() -> PrivacyPolicy:
 
 def test_default_and_native_specs_are_explicitly_distinct() -> None:
     task, records = public_task()
-    original = describe_task(task, batch_size=2, optimizer=optimizer())
-    native = describe_task(
-        task,
-        batch_size=2,
-        optimizer=optimizer(),
-        gradient_backend="opacus_native_b1",
-    )
+    original = describe_task(task, sampling="poisson")
+    native = native_spec(task)
     assert original.gradient_backend == "opacus_hooks"
     assert native.gradient_backend == "opacus_native_b1"
     assert canonical_hash(original) != canonical_hash(native)
@@ -114,16 +106,12 @@ def test_default_and_native_specs_are_explicitly_distinct() -> None:
 def test_owned_private_update_handles_public_token_cancellation(
     tmp_path: Path, name: str
 ) -> None:
-    task, records = public_task()
-    spec = describe_task(
-        task,
-        batch_size=2,
-        optimizer=optimizer(name),
-        gradient_backend="opacus_native_b1",
-    )
+    task, records = public_task(name=name)
+    spec = native_spec(task)
     ledger = PrivacyLedger.create(tmp_path / "owner.json", lineage="public-native-b1")
     trainer = PrivateTrainer(
         task=task,
+        dataset=records,
         policy=policy(),
         specification=spec,
         run_id="public-native-b1",
@@ -168,17 +156,13 @@ def test_owned_private_update_handles_public_token_cancellation(
 def test_native_empty_draw_keeps_noise_accounting_and_no_record_access(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    task, records = public_task()
+    task, records = public_task(batch_size=1)
     ledger = PrivacyLedger.create(tmp_path / "owner.json", lineage="public-empty")
     trainer = PrivateTrainer(
         task=task,
+        dataset=records,
         policy=policy(),
-        specification=describe_task(
-            task,
-            batch_size=1,
-            optimizer=optimizer(),
-            gradient_backend="opacus_native_b1",
-        ),
+        specification=native_spec(task),
         run_id="public-empty",
         local_data_identity="public-empty",
         reservation_store=ledger,
@@ -208,8 +192,9 @@ def test_default_backend_retains_its_strict_coverage_guard(tmp_path: Path) -> No
     ledger = PrivacyLedger.create(tmp_path / "owner.json", lineage="public-default")
     trainer = PrivateTrainer(
         task=task,
+        dataset=records,
         policy=policy(),
-        specification=describe_task(task, batch_size=2, optimizer=optimizer()),
+        specification=describe_task(task, sampling="poisson"),
         run_id="public-default",
         local_data_identity="public-default",
         reservation_store=ledger,
@@ -224,16 +209,12 @@ def test_default_backend_retains_its_strict_coverage_guard(tmp_path: Path) -> No
 
 def test_native_rejects_larger_physical_cap_before_reservation(tmp_path: Path) -> None:
     task, records = public_task()
-    spec = describe_task(
-        task,
-        batch_size=2,
-        optimizer=optimizer(),
-        gradient_backend="opacus_native_b1",
-    )
+    spec = native_spec(task)
     ledger = PrivacyLedger.create(tmp_path / "owner.json", lineage="public-cap")
     with pytest.raises(ValueError, match="physical"):
         PrivateTrainer(
             task=task,
+            dataset=records,
             policy=policy(),
             specification=spec,
             run_id="public-cap",
@@ -260,15 +241,11 @@ def test_sampler_replacement_in_loss_stops_before_optimizer(
         return result
 
     task = replace(task, loss_per_record=loss)
-    spec = describe_task(
-        task,
-        batch_size=2,
-        optimizer=optimizer(),
-        gradient_backend="opacus_native_b1",
-    )
+    spec = native_spec(task)
     ledger = PrivacyLedger.create(tmp_path / "owner.json", lineage="public-mutation")
     trainer = PrivateTrainer(
         task=task,
+        dataset=records,
         policy=policy(),
         specification=spec,
         run_id="public-mutation",
@@ -304,16 +281,12 @@ def test_research_restore_cannot_cross_gradient_backends(tmp_path: Path) -> None
     paths = [tmp_path / f"owner-{index}.json" for index in range(2)]
     ledgers = [PrivacyLedger.create(p, lineage="public-restore") for p in paths]
     assert paths[0].read_bytes() == paths[1].read_bytes()
-    original = describe_task(task, batch_size=2, optimizer=optimizer())
-    native = describe_task(
-        task,
-        batch_size=2,
-        optimizer=optimizer(),
-        gradient_backend="opacus_native_b1",
-    )
+    original = describe_task(task, sampling="poisson")
+    native = native_spec(task)
     trainers = [
         PrivateTrainer(
             task=task,
+            dataset=records,
             policy=policy(),
             specification=spec,
             run_id="public-restore",

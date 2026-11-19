@@ -10,6 +10,8 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+from dromeus.errors import TaskError
+
 
 @dataclass(frozen=True, slots=True)
 class EvaluationResult:
@@ -22,7 +24,7 @@ class EvaluationResult:
             not name.strip() or not math.isfinite(value)
             for name, value in self.metrics.items()
         ):
-            raise ValueError("evaluation metrics need nonblank names and finite values")
+            raise TaskError("evaluation metrics need nonblank names and finite values")
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
 
 

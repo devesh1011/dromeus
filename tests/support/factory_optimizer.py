@@ -8,7 +8,7 @@ from typing import Any, Literal, cast
 import torch
 from torch import nn
 
-from dromeus.training.optimizer_factory import PrivateOptimizerFactory
+from dromeus.training.optimizer_factory import OptimizerRegistration
 
 
 def public_model() -> nn.Module:
@@ -102,7 +102,7 @@ def _state_validator(kind: str) -> Callable[..., None]:
 
 def optimizer_registration(
     kind: Literal["custom", "rmsprop", "adagrad"] = "custom",
-) -> PrivateOptimizerFactory:
+) -> OptimizerRegistration:
     factories: dict[
         str,
         tuple[
@@ -124,7 +124,7 @@ def optimizer_registration(
         ),
     }
     optimizer_type, create = factories[kind]
-    return PrivateOptimizerFactory(
+    return OptimizerRegistration(
         optimizer_type=optimizer_type,
         implementation_hash={"custom": "a", "rmsprop": "b", "adagrad": "c"}[kind] * 64,
         create=create,
