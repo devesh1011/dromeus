@@ -1,9 +1,10 @@
 """Check whether this machine is ready to run a node, without training.
 
 `dromeus doctor` prints the findings from `diagnose`. Each check looks at one
-thing (the node config, the draft, the AXL bridge, peer links, the invitation,
-the clock) and records what it saw. A finding that is not OK carries one line
-telling the user what to do. Nothing here joins a group or trains a model.
+thing (the node config, the draft, the AXL build and bridge, peer links, the
+invitation, the clock) and records what it saw. A finding that is not OK
+carries one line telling the user what to do. Nothing here joins a group or
+trains a model.
 """
 
 from __future__ import annotations
@@ -21,7 +22,12 @@ from typing import cast
 import yaml
 from pydantic import ValidationError
 
-from dromeus.application import check_environment, load_draft, require_task_matches
+from dromeus.application import (
+    bundled_axl_version,
+    check_environment,
+    load_draft,
+    require_task_matches,
+)
 from dromeus.errors import ConfigError, DraftError, DromeusError, TaskError, one_line
 from dromeus.manifests.canonical import canonical_hash
 from dromeus.manifests.models import DraftRunSpec, Invitation
@@ -148,6 +154,8 @@ async def diagnose(
     findings.append(draft_finding)
     if draft is not None and task is not None:
         findings.append(_check_task(draft, task))
+    if draft is not None:
+        findings.append(_check_axl_build(draft))
 
     bridge_finding, topology = await _check_bridge(config.axl_bridge_url)
     findings.append(bridge_finding)
@@ -188,6 +196,25 @@ def _check_task(draft: DraftRunSpec, task: TrainingTask) -> Finding:
             "Fix the task definition in the --task module so it can be described.",
         )
     return Finding("task", Status.OK, "draft matches this task")
+
+
+def _check_axl_build(draft: DraftRunSpec) -> Finding:
+    pinned = draft.environment.axl_version
+    bundled = bundled_axl_version()
+    if bundled == pinned:
+        return Finding(
+            "axl build", Status.OK, f"draft pins AXL {pinned}, the bundled build"
+        )
+    detail = (
+        f"draft pins AXL {pinned}; "
+        + ("no AXL is bundled here" if bundled is None else f"bundled is {bundled}")
+    )
+    return Finding(
+        "axl build",
+        Status.WARN,
+        detail,
+        f"make sure the AXL at axl_bridge_url is build {pinned}",
+    )
 
 
 async def _check_bridge(base_url: str) -> tuple[Finding, dict[str, object] | None]:

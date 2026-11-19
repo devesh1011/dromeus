@@ -34,6 +34,7 @@ HEALTHY_TOPOLOGY: dict[str, object] = {
 PARTICIPANT_CHECKS = [
     "config",
     "draft",
+    "axl build",
     "axl bridge",
     "node key",
     "peers",
@@ -45,6 +46,12 @@ NO_DRAFT_CHECKS = ["config", "draft", "axl bridge", "node key", "peers", "clock"
 
 def _clock_ok() -> bool | None:
     return True
+
+
+@pytest.fixture(autouse=True)
+def bundled_axl(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The bundled AXL is the build the test drafts pin."""
+    monkeypatch.setattr(diagnostics, "bundled_axl_version", lambda: "1.0.0")
 
 
 def _write_draft(path: Path, *, rounds: int = 2) -> None:
@@ -282,6 +289,7 @@ def test_unreachable_bridge_fails_and_skips_node_key_and_peers(
     assert _checks(findings) == [
         "config",
         "draft",
+        "axl build",
         "axl bridge",
         "invitation",
         "clock",
@@ -464,3 +472,28 @@ def test_system_clock_is_unknown_when_timedatectl_times_out(
     monkeypatch.setattr(diagnostics.subprocess, "run", timed_out)
 
     assert system_clock_synchronized() is None
+
+
+@pytest.mark.parametrize(
+    ("bundled", "expected"),
+    [
+        pytest.param("2.0.0", "bundled is 2.0.0", id="other-build"),
+        pytest.param(None, "no AXL is bundled here", id="none-bundled"),
+    ],
+)
+def test_draft_pinning_another_axl_build_warns(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    bundled: str | None,
+    expected: str,
+) -> None:
+    config_path = _ready(tmp_path)
+    _bridge(monkeypatch, HEALTHY_TOPOLOGY)
+    monkeypatch.setattr(diagnostics, "bundled_axl_version", lambda: bundled)
+
+    findings = _diagnose(config_path)
+
+    finding = _problem(findings, "axl build")
+    assert finding.status is Status.WARN
+    assert finding.detail == f"draft pins AXL 1.0.0; {expected}"
+    assert "1.0.0" in (finding.fix or "")
