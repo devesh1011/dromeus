@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, IterableDataset
 
 from dromeus.training.private_data import make_task_loader
 from dromeus.training.task import TensorBatchAdapter
+from dromeus.training.versions import torch_release
 
 
 def fixture() -> dict[str, Any]:
@@ -205,7 +206,7 @@ def test_task_definition_matches_shared_contract_and_rejects_loss_change() -> No
     spec = TaskTrainingSpec(
         optimizer=PrivateOptimizerSpec(
             name="sgd",
-            torch_version=torch.__version__,
+            torch_version=torch_release(),
             parameter_names=("weight", "bias"),
             learning_rate=0.01,
         ),

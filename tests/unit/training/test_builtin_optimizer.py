@@ -8,6 +8,7 @@ from torch import nn
 
 from dromeus.manifests.models import PrivateOptimizerSpec
 from dromeus.training.optimizer_factory import build_private_optimizer
+from dromeus.training.versions import torch_release
 
 
 @pytest.mark.parametrize("name", ["sgd", "adam", "adamw"])
@@ -21,7 +22,7 @@ def test_builtin_optimizer_matches_torch_updates(
         reference.weight.fill_(1)
     spec = PrivateOptimizerSpec(
         name=name,
-        torch_version=torch.__version__,
+        torch_version=torch_release(),
         parameter_names=("weight",),
         learning_rate=0.1,
         weight_decay=0.2,

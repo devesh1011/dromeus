@@ -16,6 +16,7 @@ from dromeus.training.ordinary_task import OrdinaryTaskTrainer
 from dromeus.training.private_model import describe_private_model
 from dromeus.training.private_state import decode_state, encode_state
 from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
+from dromeus.training.versions import torch_release
 
 
 def model() -> nn.Module:
@@ -78,7 +79,7 @@ def specification(
     return TaskTrainingSpec(
         optimizer=PrivateOptimizerSpec(
             name=optimizer_name,
-            torch_version=torch.__version__,
+            torch_version=torch_release(),
             parameter_names=("weight",),
             learning_rate=0.01,
             momentum=momentum,

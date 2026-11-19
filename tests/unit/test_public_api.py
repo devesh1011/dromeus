@@ -12,6 +12,7 @@ from torch import nn
 import dromeus
 from dromeus import application
 from dromeus.application import installed_versions, load_draft
+from dromeus.training.versions import torch_release
 
 PUBLIC_API = (
     "ConfigError",
@@ -130,7 +131,7 @@ def test_check_draft_refuses_other_installed_versions(tmp_path: Path) -> None:
     path = tmp_path / "draft.yaml"
     _draft(path, _task())
     text = path.read_text().replace(
-        f"pytorch_version: {torch.__version__}", "pytorch_version: 0.0.1"
+        f"pytorch_version: {torch_release()}", "pytorch_version: 0.0.1"
     )
     path.write_text(text)
 
