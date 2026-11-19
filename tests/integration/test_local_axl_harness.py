@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path
 from urllib.request import urlopen
 
 import pytest
-from support.local_axl import local_axl_cluster
+from support.local_axl import AXL_SKIP_REASON, axl_binary, local_axl_cluster
 
 
 @pytest.mark.parametrize("node_count", (0, 1, 3, 5, True))
@@ -40,15 +39,13 @@ def test_local_axl_preserves_existing_logs(tmp_path: Path) -> None:
     assert retained.read_bytes() == b"original execution record"
 
 
-@pytest.mark.skipif(
-    not os.environ.get("DROMEUS_AXL_BINARY"),
-    reason="set DROMEUS_AXL_BINARY for real local AXL lifecycle checks",
-)
+@pytest.mark.skipif(axl_binary() is None, reason=AXL_SKIP_REASON)
 @pytest.mark.parametrize("exit_kind", ("exception", "cancellation"))
 def test_real_local_axl_full_mesh_and_cleanup(
     tmp_path: Path, exit_kind: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
+    binary = axl_binary()
+    assert binary is not None
     bridges: list[str] = []
     private_roots: list[Path] = []
     temporary_directory = tempfile.TemporaryDirectory

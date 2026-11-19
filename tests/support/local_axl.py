@@ -37,6 +37,23 @@ class LocalAXLNode:
     bridge_url: str
 
 
+def axl_binary() -> Path | None:
+    """`DROMEUS_AXL_BINARY` if set, else the AXL bundled with Dromeus, else None."""
+    override = os.environ.get("DROMEUS_AXL_BINARY")
+    if override:
+        return Path(override)
+    try:
+        import dromeus_axl
+    except ImportError:
+        return None
+    return dromeus_axl.binary()
+
+
+AXL_SKIP_REASON = (
+    "no AXL binary: dromeus-axl is not installed and DROMEUS_AXL_BINARY is unset"
+)
+
+
 def _file_sha256(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()

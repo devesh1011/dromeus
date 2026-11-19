@@ -9,21 +9,19 @@ from pathlib import Path
 
 import pytest
 from support.application_fixture import application_draft, local_file
-from support.local_axl import local_axl_cluster
+from support.local_axl import AXL_SKIP_REASON, axl_binary, local_axl_cluster
 from support.paths import REPO_ROOT
 
 from dromeus.node import NodeConfig, NodeRole
 from dromeus.persistence.archive import RunArchive
 from dromeus.telemetry.evidence import EvidenceLog, RoundMetricsEvidence
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("DROMEUS_AXL_BINARY"),
-    reason="set DROMEUS_AXL_BINARY to run the real custom training test",
-)
+pytestmark = pytest.mark.skipif(axl_binary() is None, reason=AXL_SKIP_REASON)
 
 
 def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> None:
-    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
+    binary = axl_binary()
+    assert binary is not None
     root = REPO_ROOT
     python_path = os.pathsep.join((str(root), str(root / "tests")))
     if inherited_python_path := os.environ.get("PYTHONPATH"):

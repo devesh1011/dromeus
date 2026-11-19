@@ -17,7 +17,7 @@ from typing import Any, Literal
 import pytest
 import torch
 from support.application_fixture import FIXTURE_TRANSPORT
-from support.local_axl import local_axl_cluster
+from support.local_axl import AXL_SKIP_REASON, axl_binary, local_axl_cluster
 from support.paths import REPO_ROOT
 from torch import nn
 from torch.utils.data import TensorDataset
@@ -37,10 +37,7 @@ from dromeus.training.task import Optimizer, TensorBatchAdapter, TrainingTask
 MODEL_DEFINITION = "w1-smoke-linear-2-1-fp32-public-init-v1"
 TASK_DEFINITION = "w1-smoke-fixed-public-synthetic-mse-v1"
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("DROMEUS_AXL_BINARY"),
-    reason="set DROMEUS_AXL_BINARY to run the real custom training test",
-)
+pytestmark = pytest.mark.skipif(axl_binary() is None, reason=AXL_SKIP_REASON)
 
 
 def public_model() -> nn.Module:
@@ -116,7 +113,8 @@ def setup() -> tuple[TrainingTask, LocalData]:
 def test_four_private_python_processes_over_axl(
     tmp_path: Path, optimizer_name: Literal["sgd", "adam", "adamw"]
 ) -> None:
-    binary = Path(os.environ["DROMEUS_AXL_BINARY"])
+    binary = axl_binary()
+    assert binary is not None
     root = REPO_ROOT
     draft = draft_for_task(
         synthetic_task(0, optimizer_for(optimizer_name)),
