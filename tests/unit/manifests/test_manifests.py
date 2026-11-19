@@ -24,7 +24,7 @@ from dromeus.manifests.models import (
 )
 
 GOLDEN = TESTS_ROOT / "golden" / "sealed_manifest.json"
-GOLDEN_HASH = "12ddaac3a7df7b6c98090695eb4ec3555e399b4c78db1eeb1ae4265e74a005e2"
+GOLDEN_HASH = "8dec8cd1df510991029998684bca0db6f17d84676fb490460db45175a301a719"
 SEALED_FIELDS = (
     "draft_hash",
     "participants",
@@ -140,9 +140,9 @@ def test_manifest_supports_deterministic_even_membership(
     participant_count: int,
 ) -> None:
     expected_hashes = {
-        4: "12ddaac3a7df7b6c98090695eb4ec3555e399b4c78db1eeb1ae4265e74a005e2",
-        8: "5d15598a8d9c7f2d5c4b71e7a1c43c784c39c4a0adb183097b198091cdab4158",
-        16: "3c20861100322a9d1159c9e0b326d7e908888c2969f1c71be321e8c026b6ec8d",
+        4: "8dec8cd1df510991029998684bca0db6f17d84676fb490460db45175a301a719",
+        8: "b36dbed812f70991bf5d6161414f471b8c9dd8182a246f8b978769d607c0b264",
+        16: "1ff488f0c3dfc7f258a125172c183bfd20716ac54c6f1b2dacdda1cc7348f34e",
     }
     first = SealedManifest.model_validate(_membership_manifest_data(participant_count))
     second = SealedManifest.model_validate(_membership_manifest_data(participant_count))

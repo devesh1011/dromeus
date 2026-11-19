@@ -15,8 +15,9 @@ from dromeus.manifests.models import (
 
 
 def _private_values() -> dict[str, object]:
-    """Application draft carrying the privacy policy and its paired task spec."""
-    value: dict[str, object] = dict(application_draft().model_dump(mode="python"))
+    """Application draft carrying the privacy policy and its Poisson training spec."""
+    base = application_draft()
+    value: dict[str, object] = dict(base.model_dump(mode="python"))
     value.update(
         privacy=PrivacyPolicy(
             max_grad_norm=1,
@@ -25,7 +26,7 @@ def _private_values() -> dict[str, object]:
             max_logical_steps=9,
             randomness_profile="reproducible_public_benchmark",
         ),
-        private_training=TaskTrainingSpec(
+        training=TaskTrainingSpec(
             optimizer=PrivateOptimizerSpec(
                 name="sgd",
                 torch_version="2.13.0",
@@ -33,7 +34,7 @@ def _private_values() -> dict[str, object]:
                 learning_rate=0.01,
             ),
             batch_size=2,
-            task_definition_hash="a" * 64,
+            task_definition_hash=base.dataset.definition_hash,
             implementation_hash="b" * 64,
             batch_definition_hash="c" * 64,
             loss_definition_hash="d" * 64,

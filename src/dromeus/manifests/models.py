@@ -15,6 +15,7 @@ from pydantic import (
     model_validator,
 )
 
+from dromeus.errors import DraftError
 from dromeus.protocol.models import (
     CHUNK_FRAMING_BYTES,
     AlgorithmId,
@@ -49,7 +50,7 @@ PackageVersion = Annotated[
 NodeIndex = Annotated[int, Field(ge=0, lt=MAX_PARTICIPANT_COUNT)]
 
 
-class ParticipantCountError(ValueError):
+class ParticipantCountError(DraftError):
     """A run member count is outside the supported fixed-group range."""
 
 
@@ -86,18 +87,8 @@ class ApplicationTaskContract(DomainModel):
     objective: Literal["equal-node"] = "equal-node"
 
 
-class ApplicationTrainingPolicy(DomainModel):
-    """Identity of the application's local step, optimizer, and batching policy."""
-
-    policy_id: Identifier
-    definition_hash: Sha256
-
-
 class EnvironmentFingerprint(DomainModel):
     dromeus_version: Identifier
-    dromeus_commit: Annotated[
-        str, StringConstraints(min_length=7, max_length=64, pattern=r"^[0-9a-f]+$")
-    ]
     protocol_version: Literal[1] = PROTOCOL_VERSION
     pytorch_version: PackageVersion
     axl_version: Identifier
@@ -559,12 +550,11 @@ class DraftRunSpec(DomainModel):
     codec_id: Literal["safetensors"]
     transport: TransportLimits
     consensus_sketch: ConsensusSketchConfig
-    application_training: ApplicationTrainingPolicy
+    training: TaskTrainingSpec
     algorithm_config: NoLoCoConfig
     artifact_codecs: tuple[ArtifactCodec, ...]
 
     privacy: PrivacyPolicy | None = None
-    private_training: TaskTrainingSpec | None = None
     divergence_detection: DivergencePolicy | None = None
 
     @property
@@ -578,11 +568,10 @@ class DraftRunSpec(DomainModel):
             raise ValueError("manifest requires the noloco algorithm")
         if self.environment.model_definition_hash != self.model_definition_hash:
             raise ValueError("environment model hash does not match draft")
-        if (self.privacy is None) != (self.private_training is None):
-            raise ValueError("privacy policy and private training must be set together")
+        if self.training.task_definition_hash != self.dataset.definition_hash:
+            raise ValueError("training task definition must match dataset contract")
         if self.privacy is not None:
-            assert self.private_training is not None
-            if self.private_training.sampling != "poisson":
+            if self.training.sampling != "poisson":
                 raise ValueError("private tasks require Poisson sampling")
             if self.privacy.max_logical_steps != self.local_steps * self.round_count:
                 raise ValueError("privacy horizon must match local steps and rounds")

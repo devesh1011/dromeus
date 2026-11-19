@@ -90,10 +90,10 @@ def test_task_and_explicit_membership_round_trip(participant_count: int) -> None
 def test_canonical_identity_remains_frozen() -> None:
     """Catch added defaults or encoding changes before extending M3 manifests."""
     assert canonical_hash(_draft()) == (
-        "bf38d7a90cf9d2e8c63c30b5669da6206293a50786b54a83b2a7a8a2c5d3b0b2"
+        "e651d6eef9e18a16a311da785706adc6706cfceb1718f0f901b74545c46e1737"
     )
     assert canonical_hash(_manifest()) == (
-        "12ddaac3a7df7b6c98090695eb4ec3555e399b4c78db1eeb1ae4265e74a005e2"
+        "8dec8cd1df510991029998684bca0db6f17d84676fb490460db45175a301a719"
     )
 
 

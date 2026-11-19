@@ -28,7 +28,6 @@ def manifest_data() -> dict[str, Any]:
         "expected_participant_count": 4,
         "environment": {
             "dromeus_version": "0.1.0",
-            "dromeus_commit": "abcdef0",
             "protocol_version": 1,
             "pytorch_version": "2.7.0",
             "axl_version": "1.0.0",
@@ -48,9 +47,21 @@ def manifest_data() -> dict[str, Any]:
             "max_inflight_bytes": 4194304,
         },
         "consensus_sketch": {"size": 4096, "seed": 9},
-        "application_training": {
-            "policy_id": "sample-training",
-            "definition_hash": "3" * 64,
+        "training": {
+            "optimizer": {
+                "name": "sgd",
+                "torch_version": "2.7.0",
+                "parameter_names": ["layer.weight"],
+                "learning_rate": 0.1,
+            },
+            "batch_size": 4,
+            "sampling": "shuffle",
+            "task_definition_hash": one,
+            "implementation_hash": "3" * 64,
+            "batch_definition_hash": "4" * 64,
+            "loss_definition_hash": "5" * 64,
+            "record_unit": "example",
+            "trainable_parameter_names": ["layer.weight"],
         },
         "algorithm_config": {
             "alpha": 0.5,

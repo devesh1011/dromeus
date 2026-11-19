@@ -20,6 +20,7 @@ from safetensors.numpy import (
     save_file as _save_file,  # pyright: ignore[reportUnknownVariableType]
 )
 
+from dromeus.errors import DraftError
 from dromeus.manifests.models import (
     DraftRunSpec,
     OpaqueUpdateBundleMetadata,
@@ -66,9 +67,9 @@ def validate_sealed_draft(
     )
     actual = canonical_hash(draft)
     if actual != manifest.draft_hash:
-        raise ValueError("sealed draft fields do not match the claimed draft hash")
+        raise DraftError("sealed draft fields do not match the claimed draft hash")
     if expected_draft_hash is not None and actual != expected_draft_hash:
-        raise ValueError("sealed draft does not match the expected local draft")
+        raise DraftError("sealed draft does not match the expected local draft")
 
 
 def update_bundle_digest(metadata: OpaqueUpdateBundleMetadata) -> str:
@@ -120,7 +121,7 @@ def parse_bundle_metadata(path: Path) -> OpaqueUpdateBundleMetadata:
     """Decode and validate current bundle metadata from its carrier artifact."""
     values = load_safetensors(str(path))
     if set(values) != {"metadata"} or values["metadata"].dtype != np.dtype(np.int8):
-        raise ValueError("invalid update bundle metadata artifact")
+        raise DraftError("invalid update bundle metadata artifact")
     payload = np.ascontiguousarray(values["metadata"]).view(np.uint8).tobytes()
     return OpaqueUpdateBundleMetadata.model_validate_json(payload)
 
@@ -141,10 +142,10 @@ def validate_sealed_expectation(
 ) -> None:
     """Reject a formed manifest that differs from machine-local preflight input."""
     if manifest.draft_hash != expectation.draft_hash:
-        raise ValueError("sealed manifest draft does not match expectation")
+        raise DraftError("sealed manifest draft does not match expectation")
     if manifest.participants != expectation.participants:
-        raise ValueError("sealed manifest membership does not match expectation")
+        raise DraftError("sealed manifest membership does not match expectation")
     if manifest.initial_checkpoint_hash != expectation.initial_checkpoint_hash:
-        raise ValueError("sealed manifest checkpoint does not match expectation")
+        raise DraftError("sealed manifest checkpoint does not match expectation")
     if canonical_hash(manifest.tensor_schema) != expectation.tensor_schema_hash:
-        raise ValueError("sealed manifest tensor schema does not match expectation")
+        raise DraftError("sealed manifest tensor schema does not match expectation")
