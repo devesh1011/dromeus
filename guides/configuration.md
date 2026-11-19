@@ -29,8 +29,8 @@ same path on every participant; participants wait up to
 connected to the group's peers. On Linux (x86_64, aarch64) and Apple-silicon
 macOS, `pip install dromeus` also installs the pinned AXL build as the
 `dromeus-axl` command (`dromeus-axl -config axl.json`); elsewhere, build AXL at
-the commit the draft names. `dromeus doctor --config node.yaml` checks all of
-this before you start.
+the commit the draft names. [AXL setup](axl.md) covers the AXL side.
+`dromeus doctor --config node.yaml` checks all of this before you start.
 
 With `enrollment_window_seconds`, the invitation expires that many seconds after
 the initiator writes it. Participants refuse an expired invitation, and the
