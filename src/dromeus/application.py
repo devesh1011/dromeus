@@ -173,6 +173,28 @@ def installed_versions() -> tuple[str, str]:
     return importlib.metadata.version("dromeus"), torch_release()
 
 
+def bundled_axl_version() -> str | None:
+    """Commit of the AXL build installed with Dromeus (`dromeus-axl`).
+
+    None on platforms that have no bundled build; nodes there run their own AXL.
+    """
+    try:
+        import dromeus_axl
+    except ImportError:
+        return None
+    return dromeus_axl.AXL_COMMIT
+
+
+def _axl_version(requested: str | None) -> str:
+    version = requested or bundled_axl_version()
+    if version is None:
+        raise DraftError(
+            "no AXL is bundled for this platform; pass axl_version naming the AXL "
+            "build every node runs"
+        )
+    return version
+
+
 def describe_task(
     task: TrainingTask, *, sampling: Literal["poisson", "shuffle"]
 ) -> TaskTrainingSpec:
@@ -220,7 +242,7 @@ def draft_for_task(
     participants: int,
     rounds: int,
     local_steps: int,
-    axl_version: str,
+    axl_version: str | None = None,
     noloco: NoLoCo | None = None,
     privacy: Privacy | None = None,
     transport: TransportLimits | None = None,
@@ -245,7 +267,7 @@ def draft_for_task(
             environment=EnvironmentFingerprint(
                 dromeus_version=dromeus_version,
                 pytorch_version=pytorch_version,
-                axl_version=axl_version,
+                axl_version=_axl_version(axl_version),
                 model_definition_hash=model_hash,
             ),
             local_steps=local_steps,
@@ -277,7 +299,7 @@ def make_draft(
     participants: int,
     rounds: int,
     local_steps: int,
-    axl_version: str,
+    axl_version: str | None = None,
     noloco: NoLoCo | None = None,
     privacy: Privacy | None = None,
     transport: TransportLimits | None = None,
@@ -287,7 +309,8 @@ def make_draft(
     """Write the group's shared draft for `task` to `path`; return its hash.
 
     Run once, by one person, then give the file to every node. Every hash and
-    the Dromeus and PyTorch versions are filled in from this machine.
+    the Dromeus and PyTorch versions are filled in from this machine, and the
+    AXL version from the bundled AXL unless `axl_version` names another build.
     """
     draft = draft_for_task(
         task,

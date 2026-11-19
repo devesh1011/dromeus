@@ -145,7 +145,8 @@ def _parser() -> argparse.ArgumentParser:
     draft.add_argument("--rounds", required=True, type=int)
     draft.add_argument("--local-steps", required=True, type=int)
     draft.add_argument(
-        "--axl-version", required=True, help="AXL revision every node runs"
+        "--axl-version",
+        help="AXL build every node runs (default: the AXL bundled with Dromeus)",
     )
     draft.add_argument("--seed", type=int, default=0)
     draft.set_defaults(command=_draft)
@@ -222,7 +223,7 @@ def _draft(args: argparse.Namespace) -> ExitCode:
         participants=cast(int, args.participants),
         rounds=cast(int, args.rounds),
         local_steps=cast(int, args.local_steps),
-        axl_version=cast(str, args.axl_version),
+        axl_version=cast(str | None, args.axl_version),
         seed=cast(int, args.seed),
     )
     print(f"wrote {path}; draft hash {digest}")

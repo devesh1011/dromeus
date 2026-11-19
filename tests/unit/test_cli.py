@@ -174,8 +174,14 @@ def test_run_requires_local_data(
 
 
 def test_draft_then_check_round_trip(
-    in_repo: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    in_repo: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
+    from dromeus import application
+
+    monkeypatch.setattr(application, "bundled_axl_version", lambda: "bundled-axl")
     draft = tmp_path / "draft.yaml"
 
     code = main(
@@ -192,13 +198,13 @@ def test_draft_then_check_round_trip(
             "3",
             "--local-steps",
             "2",
-            "--axl-version",
-            "test-axl",
         ]
     )
     assert code == ExitCode.OK
     drafted = capsys.readouterr().out
-    assert yaml.safe_load(draft.read_text())["run_id"] == "cli-test"
+    values = yaml.safe_load(draft.read_text())
+    assert values["run_id"] == "cli-test"
+    assert values["environment"]["axl_version"] == "bundled-axl"
 
     code = main(["check", "--draft", str(draft), "--task", EXAMPLE_TASK])
 
