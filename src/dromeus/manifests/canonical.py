@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import numpy as np
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from safetensors.numpy import (
     load_file as _load_file,  # pyright: ignore[reportUnknownVariableType]
 )
@@ -127,9 +127,15 @@ def parse_bundle_metadata(path: Path) -> OpaqueUpdateBundleMetadata:
 
 
 def parse_draft_yaml(source: str | bytes | Path) -> DraftRunSpec:
-    """Parse and validate a draft from YAML text or a file path."""
+    """Parse and validate a draft from YAML text or a file path.
+
+    Raises `DraftError` for malformed YAML or invalid draft fields.
+    """
     text = source.read_text() if isinstance(source, Path) else source
-    return DraftRunSpec.model_validate(yaml.safe_load(text))
+    try:
+        return DraftRunSpec.model_validate(yaml.safe_load(text))
+    except (yaml.YAMLError, ValidationError) as error:
+        raise DraftError(f"invalid draft: {error}") from error
 
 
 def parse_sealed_json(data: str | bytes) -> SealedManifest:

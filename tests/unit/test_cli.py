@@ -254,8 +254,9 @@ def _write_log(run_root: Path, *, fail: bool) -> None:
         evaluation_seconds=0.25,
         sink=sink,
     )
-    emit_event("consensus_observation", run_id="r", round_id=0, normalized_rms=0.01,
-               sink=sink)
+    emit_event(
+        "consensus_observation", run_id="r", round_id=0, normalized_rms=0.01, sink=sink
+    )
     if fail:
         emit_event("run_failed", run_id="r", round_id=1, error="peer lost", sink=sink)
     else:
@@ -337,3 +338,59 @@ def test_python_dash_m_dromeus_runs_the_command() -> None:
 
     assert result.returncode == 0
     assert result.stdout.startswith("dromeus ")
+
+
+def test_malformed_draft_is_an_input_error(
+    in_repo: None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Found on AWS: an unquoted all-zero hash reads as the integer 0."""
+    draft = tmp_path / "draft.yaml"
+    from examples.custom_training import task
+
+    from dromeus import make_draft
+
+    make_draft(
+        task(),
+        draft,
+        run_id="cli-test",
+        participants=4,
+        rounds=3,
+        local_steps=2,
+        axl_version="test-axl",
+    )
+    text = draft.read_text()
+    start = text.index("  loss_definition_hash: ")
+    end = text.index("\n", start)
+    draft.write_text(text[:start] + "  loss_definition_hash: " + "0" * 64 + text[end:])
+
+    code = main(["check", "--draft", str(draft), "--task", EXAMPLE_TASK])
+
+    err = capsys.readouterr().err
+    assert code == ExitCode.INVALID_INPUT
+    assert "invalid draft" in err
+    assert "loss_definition_hash" in err
+
+
+def test_run_with_a_missing_draft_is_an_input_error(
+    in_repo: None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import numpy as np
+
+    data = tmp_path / "local.npz"
+    np.savez(
+        data,
+        inputs=np.zeros((4, 3), dtype=np.float32),
+        targets=np.zeros((4, 1), dtype=np.float32),
+    )
+    monkeypatch.setenv("DROMEUS_LOCAL_DATA", str(data))
+    config = _node_config(tmp_path)  # draft.yaml is never written
+
+    code = main(
+        ["run", "--config", str(config), "--task", "examples.custom_training:setup"]
+    )
+
+    assert code == ExitCode.INVALID_INPUT
+    assert "cannot read draft" in capsys.readouterr().err

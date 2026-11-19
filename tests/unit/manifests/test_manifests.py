@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from support.paths import TESTS_ROOT
 from support.sample_manifest import manifest_data
 
+from dromeus.errors import DraftError
 from dromeus.manifests.canonical import (
     canonical_hash,
     canonical_json,
@@ -174,7 +175,7 @@ def test_retired_manifest_versions_are_rejected(version: int) -> None:
 
     with pytest.raises(ValidationError, match="Input should be 7"):
         DraftRunSpec.model_validate(data)
-    with pytest.raises(ValidationError, match="Input should be 7"):
+    with pytest.raises(DraftError, match="Input should be 7"):
         parse_draft_yaml(json.dumps(data))
     with pytest.raises(ValidationError, match="Input should be 7"):
         parse_sealed_json(json.dumps(data))
