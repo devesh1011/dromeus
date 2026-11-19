@@ -19,6 +19,7 @@ from pydantic import (
     model_validator,
 )
 
+from dromeus.errors import RunError
 from dromeus.manifests.canonical import canonical_json_bytes
 from dromeus.manifests.models import (
     Identifier,
@@ -35,7 +36,7 @@ from dromeus.telemetry.events import EventSink
 EVIDENCE_VERSION = 3
 
 
-class EvidenceError(ValueError):
+class EvidenceError(RunError, ValueError):
     """Official benchmark evidence is invalid, incompatible, or inconsistent."""
 
 

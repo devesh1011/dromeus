@@ -14,6 +14,7 @@ from typing import Literal
 
 import numpy as np
 
+from dromeus.errors import RunError
 from dromeus.manifests.models import ConsensusSketchMessage, PublicKey, RoundId
 
 COUNT_SKETCH_SIZE = 4096
@@ -22,7 +23,7 @@ COUNT_SKETCH_SIZE = 4096
 _COUNT_SKETCH_CHUNK_VALUES = 65536
 
 
-class ConsensusSketchError(ValueError):
+class ConsensusSketchError(RunError, ValueError):
     """A consensus sketch was malformed or arrived from an invalid member."""
 
 

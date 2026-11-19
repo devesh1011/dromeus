@@ -8,8 +8,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src" / "dromeus"
+# Leaf modules every package may import; they import no Dromeus module.
+SHARED_LEAVES = frozenset({"errors"})
 
 ALLOWED: dict[str, frozenset[str]] = {
+    # The package root only re-exports the public API.
+    "__init__": frozenset(
+        {"application", "manifests", "node", "persistence", "training"}
+    ),
     "application": frozenset(
         {"application", "manifests", "membership", "persistence", "runtime", "training"}
     ),
@@ -32,16 +38,19 @@ ALLOWED: dict[str, frozenset[str]] = {
     ),
     "node": frozenset(
         {
+            "application",
             "manifests",
             "membership",
             "persistence",
             "protocol",
             "runtime",
             "telemetry",
+            "training",
             "transport",
         }
     ),
     "persistence": frozenset({"manifests", "persistence"}),
+    "errors": frozenset(),
     "protocol": frozenset({"protocol"}),
     "runtime": frozenset(
         {
@@ -155,7 +164,7 @@ def main() -> int:
             graph.setdefault(target, set())
             if target != source_owner:
                 graph[source_owner].add(target)
-            if target not in allowed:
+            if target not in allowed and target not in SHARED_LEAVES:
                 choices = ", ".join(sorted(allowed)) or "no Dromeus modules"
                 errors.append(
                     f"dependency direction: {path.relative_to(ROOT)} imports "

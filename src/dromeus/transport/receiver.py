@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from dromeus.errors import RunError
 from dromeus.manifests.models import (
     AlgorithmId,
     MessageId,
@@ -46,7 +47,7 @@ MAX_FUTURE_ROUND_MESSAGES = 64
 MAX_TELEMETRY_ROUND_AGE = 64
 
 
-class ReceiverError(RuntimeError):
+class ReceiverError(RunError):
     """Inbound traffic violated routing policy."""
 
 

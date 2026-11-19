@@ -7,6 +7,7 @@ from typing import cast
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
 from pydantic import ValidationError
 
+from dromeus.errors import RunError
 from dromeus.protocol.models import DomainModel, Envelope
 
 DEFAULT_MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
@@ -14,7 +15,7 @@ _ENVELOPE_OVERHEAD_BYTES = 4096
 _MAX_ARRAY_LENGTH = 1024
 
 
-class ProtocolDecodeError(ValueError):
+class ProtocolDecodeError(RunError, ValueError):
     """Encoded protocol bytes are malformed or unsupported."""
 
 

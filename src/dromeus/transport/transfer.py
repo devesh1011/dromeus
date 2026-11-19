@@ -10,6 +10,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from dromeus.errors import RunError
 from dromeus.manifests.canonical import file_sha256
 from dromeus.manifests.models import (
     Identifier,
@@ -42,7 +43,7 @@ from dromeus.transport.outbound_scheduler import Priority, SendTiming
 from dromeus.transport.receiver import MessageChannel, Receiver
 
 
-class TransferError(RuntimeError):
+class TransferError(RunError):
     """Artifact transfer failed terminally."""
 
 

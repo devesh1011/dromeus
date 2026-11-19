@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from dromeus.errors import RunError
 from dromeus.manifests.models import PublicKey
 
 
-class TransportError(RuntimeError):
+class TransportError(RunError):
     """The underlying byte transport failed."""
 
 

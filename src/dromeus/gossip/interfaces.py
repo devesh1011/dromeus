@@ -15,11 +15,12 @@ from dromeus.algorithms.base import (
     AlgorithmUpdate,
     UpdateBundle,
 )
+from dromeus.errors import RunError
 from dromeus.manifests.models import PublicKey, RoundId
 from dromeus.training.base import EvaluationResult
 
 
-class PairCommitError(RuntimeError):
+class PairCommitError(RunError):
     """A peer update or pair commit could not be completed safely."""
 
 
