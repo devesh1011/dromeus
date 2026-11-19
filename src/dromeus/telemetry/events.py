@@ -17,6 +17,11 @@ class EventSink(Protocol):
     def append(self, record: Mapping[str, object]) -> None: ...
 
 
+def event_log_path(run_root: Path) -> Path:
+    """Where a node writes its JSONL events and evidence under its run root."""
+    return run_root / "logs" / "dromeus.jsonl"
+
+
 @dataclass(slots=True)
 class JsonlEventSink:
     """Thread-safe append-only JSONL sink for one node's telemetry."""
