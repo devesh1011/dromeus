@@ -54,8 +54,8 @@ packages = ["src/dromeus"]
 only-include = ["src", "pyproject.toml", "README.md", "LICENSE"]
 
 [tool.pyright]
-extraPaths = [".", "src", "tests"]
-include = ["src", "tests", "benchmarks"]
+extraPaths = [".", "src", "tests", "packages/dromeus-axl/src"]
+include = ["src", "tests", "benchmarks", "packages/dromeus-axl/src"]
 # Retained results are frozen evidence for their tagged release, not code
 # maintained against the current library.
 exclude = ["benchmarks/results"]
@@ -66,8 +66,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py312"
-# Lint only the installed library; benchmarks, tests and frozen results are excluded.
-include = ["src/dromeus/**/*.py"]
+# Lint only the installed libraries; benchmarks, tests and frozen results are excluded.
+include = ["src/dromeus/**/*.py", "packages/dromeus-axl/src/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

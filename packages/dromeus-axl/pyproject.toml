@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dromeus-axl"
+# Bump with every change of the pinned AXL_COMMIT or of the packaging.
+version = "0.1.0"
+description = "Gensyn's AXL network node, prebuilt for Dromeus"
+readme = "README.md"
+requires-python = ">=3.11"
+license-files = ["NOTICE"]
+authors = [{ name = "Dromeus contributors" }]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+"AXL source" = "https://github.com/gensyn-ai/axl"
+Dromeus = "https://github.com/devesh1011/dromeus"
+
+[project.scripts]
+dromeus-axl = "dromeus_axl:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dromeus_axl"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
