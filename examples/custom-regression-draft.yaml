@@ -11,7 +11,7 @@ dataset:
   objective: equal-node
 expected_participant_count: 4
 environment:
-  dromeus_version: 0.4.0.dev0
+  dromeus_version: 0.4.0.dev1
   protocol_version: 1
   pytorch_version: 2.13.0
   axl_version: replace-with-your-axl-version
