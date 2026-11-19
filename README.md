@@ -61,10 +61,12 @@ peers. The [configuration guide](guides/configuration.md) covers each node's
 with the other participants. From the command line, each node runs:
 
 ```bash
-uv run python -m dromeus.node --config /path/to/node.yaml --task my_training:setup
+dromeus doctor --config /path/to/node.yaml   # optional: is this machine ready?
+dromeus run --config /path/to/node.yaml --task my_training:setup
 ```
 
-where `my_training.setup()` returns this node's `(task, LocalData)`.
+where `my_training.setup()` returns this node's `(task, LocalData)`. The
+[command-line guide](guides/command-line.md) covers every command and exit code.
 
 ## Working assumptions
 

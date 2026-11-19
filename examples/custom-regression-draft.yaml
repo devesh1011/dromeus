@@ -59,7 +59,7 @@ training:
   initialization: public_untrained
   evaluation_provenance: public_fixed_holdout
   task_definition_hash: c96f38ae74f6ef8df649dba7ccff05c18fcfb769016f96223ec504b43cad980c
-  implementation_hash: d5100f7a2a4480124d1ea6d9a57fd4411be4cca75e50211abbaa540a5467d646
+  implementation_hash: be3157a791cf1f919edc8c64a32d583d8c882a374d7e3e87b41ee16cc8b61f0f
   batch_definition_hash: f6ad28b5a4fbf4c67fe74b4541ba6a546bf568b37496d94ac4a65b7ca7b04dbb
   loss_definition_hash: b819ec524688f81c83df34cc5fc656504b8c5bf5351c452d9708708c709a6465
   record_unit: example

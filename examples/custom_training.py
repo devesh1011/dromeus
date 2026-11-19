@@ -2,11 +2,13 @@
 
 Write the shared draft once, on one machine:
 
-    python -m examples.custom_training draft examples/custom-regression-draft.yaml
+    dromeus draft examples/custom-regression-draft.yaml \\
+        --task examples.custom_training:task --run-id custom-regression \\
+        --participants 4 --rounds 20 --local-steps 10 --axl-version YOUR-AXL-VERSION
 
 Then run every node, each with its own data file:
 
-    DROMEUS_LOCAL_DATA=/path/to/local.npz python -m dromeus.node \\
+    DROMEUS_LOCAL_DATA=/path/to/local.npz dromeus run \\
         --config examples/node.yaml --task examples.custom_training:setup
 
 The local NPZ holds `inputs` [N, 3] and `targets` [N, 1], both float32.
@@ -16,7 +18,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -91,23 +92,5 @@ def local_data(path: Path) -> dromeus.LocalData:
 
 
 def setup() -> tuple[dromeus.TrainingTask, dromeus.LocalData]:
-    """Entry point for `python -m dromeus.node --task`."""
+    """Entry point for `dromeus run --task`."""
     return task(), local_data(Path(os.environ["DROMEUS_LOCAL_DATA"]))
-
-
-def write_draft(path: Path) -> str:
-    return dromeus.make_draft(
-        task(),
-        path,
-        run_id="custom-regression",
-        participants=4,
-        rounds=20,
-        local_steps=10,
-        axl_version="replace-with-your-axl-version",
-    )
-
-
-if __name__ == "__main__":
-    if sys.argv[1:2] != ["draft"] or len(sys.argv) != 3:
-        raise SystemExit("usage: python -m examples.custom_training draft PATH")
-    print(write_draft(Path(sys.argv[2])))

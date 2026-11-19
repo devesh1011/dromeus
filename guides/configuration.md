@@ -19,13 +19,22 @@ axl_bridge_url: http://127.0.0.1:9002   # this machine's AXL bridge, loopback on
 run_root: runs/regression/node-0        # checkpoints, logs and run state
 invitation_path: runs/regression/invitation.json
 bootstrap_uri: axl://regression-2026-11 # the same on every node
-invitation_timeout_seconds: 300
+invitation_timeout_seconds: 300        # participants: how long to wait for the invitation
+enrollment_window_seconds: 900          # initiator only, optional: when joining closes
 ```
 
 The initiator writes the invitation to `invitation_path`. Copy that file to the
 same path on every participant; participants wait up to
 `invitation_timeout_seconds` for it. The AXL bridge must already be running and
-connected to the group's peers.
+connected to the group's peers. `dromeus doctor --config node.yaml` checks all of
+this before you start.
+
+With `enrollment_window_seconds`, the invitation expires that many seconds after
+the initiator writes it. Participants refuse an expired invitation, and the
+initiator stops with a `FormationError` if the group isn't complete when the window
+closes, so a stale invitation can't start a run late. Expiry compares wall clocks
+across machines: keep every node's clock NTP-synchronized. Without the setting,
+invitations don't expire and formation is bounded only by its control deadline.
 
 ## Shared draft
 

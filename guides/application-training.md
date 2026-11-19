@@ -88,11 +88,20 @@ outer step and update compression, `privacy=dromeus.Privacy(...)` for private
 training, `transport=dromeus.TransportLimits(...)` for WAN tuning and
 `divergence=dromeus.DivergencePolicy(...)` for [divergence warnings](divergence-monitoring.md).
 
+The same draft, without the optional settings, from the command line:
+
+```bash
+dromeus draft draft.yaml --task my_training:task --run-id regression-2026-11 \
+  --participants 4 --rounds 20 --local-steps 10 --axl-version your-pinned-axl-version
+```
+
 Each node can check the draft before starting:
 
 ```python
 dromeus.check_draft("draft.yaml", task())  # raises DraftError naming what differs
 ```
+
+or `dromeus check --draft draft.yaml --task my_training:task`.
 
 ## Run each node
 
@@ -114,8 +123,10 @@ print(result.committed_rounds, result.manifest_hash)
 Or from the command line, with a function that returns `(task, local_data)`:
 
 ```bash
-python -m dromeus.node --config node.yaml --task my_training:setup
+dromeus run --config node.yaml --task my_training:setup
 ```
+
+See the [command-line guide](command-line.md) for `doctor`, `watch` and exit codes.
 
 Before contacting AXL, the node checks the draft against its task and its
 installed Dromeus and PyTorch versions. One node is the `initiator`: it writes an
