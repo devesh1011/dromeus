@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NoReturn
 
 from dromeus.errors import FormationError
 from dromeus.manifests.canonical import (
@@ -210,7 +211,9 @@ class FormationProtocol:
         bootstrap_uri: str,
         checkpoint_path: Path,
         tensor_schema: TensorSchema,
+        enrollment_expires_at: datetime | None = None,
     ) -> FormationResult:
+        """Admit joins until the group is full; refuse joins after enrollment closes."""
         local_key = await self._transport.local_public_key()
         emit_event(
             "formation_started",
@@ -223,11 +226,14 @@ class FormationProtocol:
             draft=self._draft,
             initiator_public_key=local_key,
             bootstrap_uri=bootstrap_uri,
+            enrollment_expires_at=enrollment_expires_at,
         )
         participant_keys = {local_key}
         participant_count = self._draft.participant_count
         while len(participant_keys) < participant_count:
-            envelope = await self._next_control()
+            envelope = await self._next_join(
+                enrollment_expires_at, joined=len(participant_keys)
+            )
             if envelope.message_type is not MessageType.JOIN_REQUEST:
                 continue
             join = decode_message(
@@ -489,20 +495,49 @@ class FormationProtocol:
         self._sealed_sender = sender
         return manager
 
-    async def _next_control(self) -> Envelope:
+    async def _next_control(self, timeout_seconds: float | None = None) -> Envelope:
         try:
             return await self._receiver.receive(
                 MessageChannel.CONTROL,
-                timeout_seconds=self._formation_timeout_seconds,
+                timeout_seconds=self._formation_timeout_seconds
+                if timeout_seconds is None
+                else timeout_seconds,
             )
         except TimeoutError as error:
-            emit_event(
-                "formation_failed",
-                run_id=self._draft.run_id,
-                error="formation control deadline exceeded",
-                sink=self._event_sink,
+            self._fail_formation("formation control deadline exceeded", error)
+
+    async def _next_join(
+        self, enrollment_expires_at: datetime | None, *, joined: int
+    ) -> Envelope:
+        """Next control message while enrolling; fail once enrollment has closed."""
+        if enrollment_expires_at is None:
+            return await self._next_control()
+        remaining = (enrollment_expires_at - datetime.now(UTC)).total_seconds()
+        closed = (
+            f"enrollment closed at {enrollment_expires_at.isoformat()} with "
+            f"{joined} of {self._draft.participant_count} participants joined"
+        )
+        if remaining <= 0:
+            self._fail_formation(closed)
+        if remaining >= self._formation_timeout_seconds:
+            return await self._next_control()
+        try:
+            return await self._receiver.receive(
+                MessageChannel.CONTROL, timeout_seconds=remaining
             )
-            raise FormationError("formation control deadline exceeded") from error
+        except TimeoutError as error:
+            self._fail_formation(closed, error)
+
+    def _fail_formation(
+        self, message: str, cause: BaseException | None = None
+    ) -> NoReturn:
+        emit_event(
+            "formation_failed",
+            run_id=self._draft.run_id,
+            error=message,
+            sink=self._event_sink,
+        )
+        raise FormationError(message) from cause
 
     @property
     def _formation_timeout_seconds(self) -> float:

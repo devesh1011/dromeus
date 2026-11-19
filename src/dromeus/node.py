@@ -1,22 +1,28 @@
-"""Run one Dromeus node: the public `Node` and its command-line entry point."""
+"""Run one Dromeus node: the public `Node` and its machine-local config."""
 
 from __future__ import annotations
 
-import argparse
 import asyncio
-import importlib
 import inspect
 import json
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Self, cast
 from urllib.parse import urlparse
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from dromeus.application import LocalData, check_environment, prepare_task
 from dromeus.errors import ConfigError, FormationError
@@ -41,7 +47,12 @@ from dromeus.runtime import (
     WorkloadFactory,
     private_preparation_for_node,
 )
-from dromeus.telemetry.events import EventSink, JsonlEventSink, emit_event
+from dromeus.telemetry.events import (
+    EventSink,
+    JsonlEventSink,
+    emit_event,
+    event_log_path,
+)
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.training.task import TrainingTask
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
@@ -64,7 +75,17 @@ class NodeConfig(BaseModel):
     invitation_path: Path
     bootstrap_uri: Annotated[str, Field(min_length=1)]
     invitation_timeout_seconds: Annotated[float, Field(gt=0)] = 300.0
+    enrollment_window_seconds: Annotated[float, Field(gt=0)] | None = None
     manifest_expectation: SealedManifestExpectation | None = None
+
+    @model_validator(mode="after")
+    def enrollment_window_is_initiator_only(self) -> Self:
+        if (
+            self.enrollment_window_seconds is not None
+            and self.role is not NodeRole.INITIATOR
+        ):
+            raise ValueError("enrollment_window_seconds applies to the initiator only")
+        return self
 
     @field_validator("axl_bridge_url")
     @classmethod
@@ -175,16 +196,24 @@ async def run_node(
             prepared_training.create_initial_checkpoint,
             config.run_root / "initial.safetensors",
         )
+        expires_at = (
+            None
+            if config.enrollment_window_seconds is None
+            else datetime.now(UTC)
+            + timedelta(seconds=config.enrollment_window_seconds)
+        )
         invitation = create_invitation(
             draft=draft,
             initiator_public_key=local_key,
             bootstrap_uri=config.bootstrap_uri,
+            enrollment_expires_at=expires_at,
         )
         await asyncio.to_thread(_write_invitation, config.invitation_path, invitation)
         formation = InitiatorFormation(
             bootstrap_uri=config.bootstrap_uri,
             checkpoint_path=checkpoint.path,
             tensor_schema=checkpoint.tensor_schema,
+            enrollment_expires_at=expires_at,
         )
     else:
         invitation = await _read_invitation(
@@ -265,7 +294,7 @@ def _prepare_node_start(
 ) -> tuple[DraftRunSpec, JsonlEventSink]:
     draft = parse_draft_yaml(config.draft_path)
     config.run_root.mkdir(parents=True, exist_ok=True)
-    event_sink = JsonlEventSink(config.run_root / "logs" / "dromeus.jsonl")
+    event_sink = JsonlEventSink(event_log_path(config.run_root))
     emit_event(
         "node_start",
         run_id=draft.run_id,
@@ -306,43 +335,3 @@ async def _write_topology_snapshot(transport: AXLTransport, path: Path) -> None:
 def _atomic_write(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_bytes(path, payload)
-
-
-TaskSetup = Callable[[], tuple[TrainingTask, LocalData]]
-
-
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run a Dromeus node")
-    parser.add_argument("--config", required=True, type=Path)
-    parser.add_argument(
-        "--task",
-        required=True,
-        help="module:callable returning this node's (TrainingTask, LocalData)",
-    )
-    return parser
-
-
-def load_task_setup(reference: str) -> TaskSetup:
-    """Import a `module:callable` that returns a task and this node's data."""
-    module_name, separator, name = reference.partition(":")
-    if not separator or not module_name or not name:
-        raise ConfigError("task must be given as module:callable")
-    setup = getattr(importlib.import_module(module_name), name, None)
-    if not callable(setup):
-        raise ConfigError(f"task setup is not callable: {reference}")
-    return cast(TaskSetup, setup)
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
-    config_path: Path = args.config
-    if not config_path.is_file():
-        _parser().error(f"config file does not exist: {config_path}")
-    node = Node.from_file(config_path)
-    task, local = load_task_setup(str(args.task))()
-    asyncio.run(node.run(task, local=local))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

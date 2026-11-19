@@ -7,6 +7,7 @@ import inspect
 import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -168,6 +169,7 @@ class InitiatorFormation:
     bootstrap_uri: str
     checkpoint_path: Path
     tensor_schema: TensorSchema
+    enrollment_expires_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,6 +416,7 @@ class NodeRuntime:
                     bootstrap_uri=formation.bootstrap_uri,
                     checkpoint_path=formation.checkpoint_path,
                     tensor_schema=formation.tensor_schema,
+                    enrollment_expires_at=formation.enrollment_expires_at,
                 )
             else:
                 result = await self.join(invitation=formation.invitation)
@@ -514,6 +517,7 @@ class NodeRuntime:
         bootstrap_uri: str,
         checkpoint_path: Path,
         tensor_schema: TensorSchema,
+        enrollment_expires_at: datetime | None = None,
     ) -> FormationResult:
         """Form as initiator using a checkpoint prepared by the local trainer."""
         await self._start_formation()
@@ -522,6 +526,7 @@ class NodeRuntime:
                 bootstrap_uri=bootstrap_uri,
                 checkpoint_path=checkpoint_path,
                 tensor_schema=tensor_schema,
+                enrollment_expires_at=enrollment_expires_at,
             )
         except BaseException:
             await self._fail()

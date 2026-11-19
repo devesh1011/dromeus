@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -76,6 +77,7 @@ class LifecycleRuntime(NodeRuntime):
         bootstrap_uri: str,
         checkpoint_path: Path,
         tensor_schema: TensorSchema,
+        enrollment_expires_at: datetime | None = None,
     ) -> FormationResult:
         self.events.append("initiate")
         return self.result

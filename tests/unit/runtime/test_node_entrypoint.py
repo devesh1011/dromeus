@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -9,14 +8,13 @@ import pytest
 from support.sample_manifest import manifest_data
 
 from dromeus import node as node_module
-from dromeus.application import LocalData, installed_versions
+from dromeus.application import installed_versions
 from dromeus.errors import ConfigError
 from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import FormationResult, create_invitation
-from dromeus.node import NodeRole, load_node_config, main
+from dromeus.node import NodeRole, load_node_config
 from dromeus.runtime import ParticipantFormation, TrainingConfig
 from dromeus.training.state import InitialCheckpoint
-from dromeus.training.task import TrainingTask
 
 
 def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> None:
@@ -193,44 +191,113 @@ def test_run_node_uses_deep_runtime_lifecycle(
     }
 
 
-def test_main_executes_config_instead_of_exiting_after_start_event(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    config_path = tmp_path / "node.yaml"
-    config_path.write_text(
-        "\n".join(
+def test_enrollment_window_is_an_initiator_setting(tmp_path: Path) -> None:
+    def config_text(role: str) -> str:
+        return "\n".join(
             (
-                "role: initiator",
-                f"draft_path: {tmp_path / 'missing-draft.yaml'}",
+                f"role: {role}",
+                f"draft_path: {tmp_path / 'draft.yaml'}",
                 "axl_bridge_url: http://127.0.0.1:9002",
                 f"run_root: {tmp_path / 'run'}",
                 f"invitation_path: {tmp_path / 'invitation.json'}",
                 "bootstrap_uri: tls://bootstrap.example:9000",
+                "enrollment_window_seconds: 600",
             )
-        ),
-        encoding="utf-8",
+        )
+
+    config_path = tmp_path / "node.yaml"
+    config_path.write_text(config_text("initiator"), encoding="utf-8")
+    assert load_node_config(config_path).enrollment_window_seconds == 600
+
+    config_path.write_text(config_text("participant"), encoding="utf-8")
+    with pytest.raises(ConfigError, match="initiator only"):
+        load_node_config(config_path)
+
+
+def test_initiator_writes_and_enforces_its_enrollment_window(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from dromeus.manifests.models import Invitation
+    from dromeus.runtime import InitiatorFormation
+
+    manifest = SealedManifest.model_validate(manifest_data())
+    draft_data = manifest.model_dump(mode="python")
+    for field in ("draft_hash", "participants", "initial_checkpoint_hash", "tensor_schema"):
+        del draft_data[field]
+    dromeus_version, pytorch_version = installed_versions()
+    draft_data["environment"] = {
+        **draft_data["environment"],
+        "dromeus_version": dromeus_version,
+        "pytorch_version": pytorch_version,
+    }
+    draft_path = tmp_path / "draft.yaml"
+    draft_path.write_text(
+        DraftRunSpec.model_validate(draft_data).model_dump_json(), encoding="utf-8"
+    )
+    captured: dict[str, object] = {}
+
+    class FakeTransport:
+        def __init__(self, config: object) -> None:
+            pass
+
+        async def local_public_key(self) -> str:
+            return "peer-0"
+
+    class FakeRuntime:
+        def __init__(self, **kwargs: object) -> None:
+            self.event_sink = kwargs["event_sink"]
+
+        async def run_to_completion(self, **kwargs: object) -> None:
+            captured["formation"] = kwargs["formation"]
+
+    class FakePreparedTraining:
+        tensor_schema = manifest.tensor_schema
+
+        def validate_draft(self, draft: DraftRunSpec) -> None:
+            pass
+
+        def create_initial_checkpoint(self, path: Path) -> InitialCheckpoint:
+            return InitialCheckpoint(
+                path=path, tensor_schema=manifest.tensor_schema, sha256="0" * 64
+            )
+
+        def build_config(self, **kwargs: object) -> TrainingConfig:
+            raise AssertionError("formation is faked; training is never built")
+
+    monkeypatch.setattr(node_module, "AXLTransport", FakeTransport)
+    monkeypatch.setattr(node_module, "NodeRuntime", FakeRuntime)
+    config = node_module.NodeConfig(
+        role=NodeRole.INITIATOR,
+        draft_path=draft_path,
+        axl_bridge_url="http://127.0.0.1:9002",
+        run_root=tmp_path / "run",
+        invitation_path=tmp_path / "invitation.json",
+        bootstrap_uri="tls://bootstrap.example:9000",
+        enrollment_window_seconds=600,
+    )
+    before = datetime.now(UTC)
+
+    asyncio.run(
+        node_module.run_node(
+            config, prepare_training=lambda draft: FakePreparedTraining()
+        )
     )
 
-    loaded_tasks: list[str] = []
-
-    def fake_load_task_setup(
-        reference: str,
-    ) -> Callable[[], tuple[TrainingTask, LocalData]]:
-        loaded_tasks.append(reference)
-        return lambda: (cast(TrainingTask, object()), cast(LocalData, object()))
-
-    monkeypatch.setattr(node_module, "load_task_setup", fake_load_task_setup)
-    with pytest.raises(FileNotFoundError):
-        main(
-            [
-                "--config",
-                str(config_path),
-                "--task",
-                "my_app.task:setup",
-            ]
-        )
-    assert loaded_tasks == ["my_app.task:setup"]
+    invitation = Invitation.model_validate_json(
+        (tmp_path / "invitation.json").read_bytes()
+    )
+    formation = captured["formation"]
+    assert isinstance(formation, InitiatorFormation)
+    assert invitation.enrollment_expires_at == formation.enrollment_expires_at
+    assert invitation.enrollment_expires_at is not None
+    assert (
+        before + timedelta(seconds=600)
+        <= invitation.enrollment_expires_at
+        <= datetime.now(UTC) + timedelta(seconds=600)
+    )
 
 
 def test_participant_waits_for_a_completely_copied_invitation(tmp_path: Path) -> None:

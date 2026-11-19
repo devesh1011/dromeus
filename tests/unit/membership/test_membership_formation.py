@@ -310,3 +310,98 @@ def test_altered_sealed_policy_never_reaches_ready(
     assert MessageType.JOIN_REQUEST in sent
     assert MessageType.READY not in sent
     assert not list(tmp_path.rglob("*.safetensors"))
+
+
+def _small_draft() -> tuple[SealedManifest, DraftRunSpec]:
+    manifest = SealedManifest.model_validate(manifest_data())
+    draft_data = manifest.model_dump(mode="python")
+    for field in ("draft_hash", "participants", "initial_checkpoint_hash", "tensor_schema"):
+        del draft_data[field]
+    draft_data["transport"]["max_retries"] = 1
+    draft_data["transport"]["retry_timeout_seconds"] = 0.05
+    return manifest, DraftRunSpec.model_validate(draft_data)
+
+
+def _runtimes(
+    tmp_path: Path, manifest: SealedManifest, draft: DraftRunSpec, count: int
+) -> list[NodeRuntime]:
+    network = InMemoryNetwork()
+    return [
+        NodeRuntime(
+            transport=InMemoryTransport(network=network, public_key=f"peer-{index}"),
+            draft=draft,
+            environment=manifest.environment,
+            dataset=manifest.dataset,
+            artifact_root=tmp_path / f"artifacts-{index}",
+        )
+        for index in range(count)
+    ]
+
+
+def test_initiator_refuses_to_wait_past_the_enrollment_window(tmp_path: Path) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    manifest, draft = _small_draft()
+    assert draft.participant_count > 2
+    nodes = _runtimes(tmp_path, manifest, draft, 2)
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    write_checkpoint(checkpoint)
+    expires_at = datetime.now(UTC) + timedelta(seconds=0.5)
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key="peer-0",
+        bootstrap_uri="axl://bootstrap",
+        enrollment_expires_at=expires_at,
+    )
+
+    async def scenario() -> None:
+        joiner = asyncio.create_task(nodes[1].join(invitation=invitation))
+        try:
+            with pytest.raises(
+                FormationError,
+                match=f"enrollment closed .* with 2 of {draft.participant_count}",
+            ):
+                await asyncio.wait_for(
+                    nodes[0].initiate(
+                        bootstrap_uri="axl://bootstrap",
+                        checkpoint_path=checkpoint,
+                        tensor_schema=manifest.tensor_schema,
+                        enrollment_expires_at=expires_at,
+                    ),
+                    timeout=5,
+                )
+        finally:
+            joiner.cancel()
+            await asyncio.gather(joiner, return_exceptions=True)
+
+    asyncio.run(scenario())
+
+
+def test_full_group_forms_inside_the_enrollment_window(tmp_path: Path) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    manifest, draft = _small_draft()
+    nodes = _runtimes(tmp_path, manifest, draft, draft.participant_count)
+    checkpoint = tmp_path / "checkpoint.safetensors"
+    write_checkpoint(checkpoint)
+    expires_at = datetime.now(UTC) + timedelta(seconds=30)
+    invitation = create_invitation(
+        draft=draft,
+        initiator_public_key="peer-0",
+        bootstrap_uri="axl://bootstrap",
+        enrollment_expires_at=expires_at,
+    )
+
+    async def scenario() -> list[FormationResult]:
+        initiator = nodes[0].initiate(
+            bootstrap_uri="axl://bootstrap",
+            checkpoint_path=checkpoint,
+            tensor_schema=manifest.tensor_schema,
+            enrollment_expires_at=expires_at,
+        )
+        joins = [node.join(invitation=invitation) for node in nodes[1:]]
+        return await asyncio.wait_for(asyncio.gather(initiator, *joins), timeout=10)
+
+    results = asyncio.run(scenario())
+
+    assert len({result.manifest_hash for result in results}) == 1
