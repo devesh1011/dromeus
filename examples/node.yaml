@@ -4,5 +4,5 @@ draft_path: examples/custom-regression-draft.yaml
 axl_bridge_url: http://127.0.0.1:9002
 run_root: runs/custom-regression/node-0
 invitation_path: runs/custom-regression/invitation.json
-bootstrap_uri: axl://custom-regression-v1
+bootstrap_uri: axl://custom-regression
 invitation_timeout_seconds: 300

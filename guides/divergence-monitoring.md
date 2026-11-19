@@ -26,36 +26,35 @@ before reusing the profile. It does not establish
 thresholds for text models, other recipes, secure private datasets, or all failure
 families. Low disagreement can still accompany poor accuracy or shared collapse.
 
-Before formation, add the policy to a **new, otherwise complete draft** for that
-workload. From the repository root:
+Add the policy when writing a **new** draft for that workload. From the repository
+root:
 
 ```python
+import hashlib
 from pathlib import Path
 
-import yaml
+import dromeus
 
-from dromeus.manifests.canonical import canonical_hash, parse_draft_yaml
-from dromeus.manifests.models import DivergencePolicy, DraftRunSpec
-
-policy = DivergencePolicy.model_validate_json(
-    Path("benchmarks/results/m3/configurations/divergence-policy.json").read_bytes()
-)
-if canonical_hash(policy) != (
-    "d7a815d67ff04c9419231b89a400d63f2e951063c1c37ff67fef699cd407a448"
+source = Path("benchmarks/results/m3/configurations/divergence-policy.json")
+if hashlib.sha256(source.read_bytes()).hexdigest() != (
+    "f8d8fda6688c750e1cd679f6ed81e8f12e9607080162e47c3b4222d2b4955aa5"
 ):
-    raise ValueError("digit policy differs from the validated policy")
+    raise ValueError("digit policy file differs from the validated policy")
+policy = dromeus.DivergencePolicy.model_validate_json(source.read_bytes())
 
-draft = parse_draft_yaml(Path("new-digit-draft.yaml"))
-values = draft.model_dump(mode="python")
-values["divergence_detection"] = policy
-draft = DraftRunSpec.model_validate(values)
-Path("digits-with-warnings.yaml").write_text(
-    yaml.safe_dump(draft.model_dump(mode="json", exclude_none=True)),
-    encoding="utf-8",
+dromeus.make_draft(
+    digit_task(),  # your task for the recorded digit recipe
+    "digits-with-warnings.yaml",
+    run_id="digits-with-warnings-2026-11",
+    participants=4,
+    rounds=75,
+    local_steps=10,
+    axl_version="your-pinned-axl-version",
+    divergence=policy,
 )
 ```
 
-Give every participant the same generated draft, and set its node configuration's
+Give every participant the same draft, and set each node configuration's
 `draft_path` to `digits-with-warnings.yaml`. The policy belongs in the shared draft,
 not at the top level of `node.yaml`. Formation binds it into the sealed draft hash;
 the runtime reads that sealed policy when constructing its divergence monitor.
@@ -100,76 +99,14 @@ denominator-degenerate flag (mean norm <= 1e-12). A near-zero mean triggers a se
 absolute spread in these windows. Without them, such windows are insufficient data
 for a divergence/recovery decision.
 
-`runtime.divergence_status` exposes the immutable current snapshot, including the
-active warning, source/detection rounds, window, age and coverage.
-`runtime.divergence_dropped` exposes the shared detector-enabled event delivery
-drop count. `divergence_status` evidence records each state/warning/scale transition
-once with policy hash, threshold-set identity, sequence, contributing window and
-measurements. Gaps in delivery sequence numbers indicate omitted records.
+Each node's evidence log (`run_root/logs/dromeus.jsonl`) records every
+state, warning and scale transition once as a `divergence_status` record, with the
+policy hash, threshold-set identity, sequence number, contributing window and
+measurements. Gaps in sequence numbers indicate omitted records.
 
-When the node has an event sink, node metrics, consensus and warnings share one bounded
-background event sink. A slow, failed or locked underlying sink cannot block the
-training loop. Local detector state updates even if the event queue overflows.
-Shutdown is bounded; an already blocked sink write may complete later, but no new
-writes start after its timeout. Callers adding their own event producers should
-use `runtime.event_sink` rather than writing directly to its underlying sink.
-Call `runtime.stop()` to release event delivery, including when formation fails.
-
-### Require final sketches before completing a run
-
-Large models can take longer to project than the default five-second telemetry
-shutdown window. Applications that require the final consensus observation can
-opt into a completion policy on `TrainingConfig`:
-
-```python
-from dataclasses import replace
-
-from dromeus.runtime import ConsensusCompletionPolicy
-
-training = replace(
-    training,
-    consensus_completion=ConsensusCompletionPolicy(
-        timeout_seconds=120.0,  # choose and validate for your deployment
-        barrier=wait_for_group_completion,
-    ),
-)
-```
-
-`wait_for_group_completion(receipt, deadline)` is an application-supplied async
-function. The runtime first waits for final sketch publication, receipt of every
-sealed member's final sketch, and completion of its final consensus callback.
-It then passes a receipt binding the run, manifest, local node, final round and
-participant keys to the barrier. Receivers remain active while the barrier runs.
-The deadline is an absolute time on the current asyncio event loop's clock; both
-stages share that deadline.
-
-The barrier must verify a matching local-completion receipt from **every** sealed
-participant before returning. A successful local send, an empty queue, or this
-node's complete observation does not establish that the other nodes received its
-sketch. Use trusted, run-scoped coordination and reject stale, conflicting or
-incomplete receipts. The library does not supply that coordination service or
-authenticate arbitrary application receipts on your behalf.
-
-Timeout, missing peers, callback failure or cancellation prevents successful run
-completion. Already committed updates and privacy reservations remain consumed;
-this is not permission to replay training or resume a secure private run. This
-policy covers final consensus computation and reporting, not delivery of every
-queued event to an external sink. With no policy, existing best-effort shutdown
-behavior is unchanged.
-
-Opted-in cleanup uses the same absolute deadline and reports incomplete shutdown
-instead of waiting indefinitely for a blocked report callback. Callbacks should
-support cancellation and bound their own I/O. Canceling an asyncio task cannot
-kill a native projection thread or arbitrary callback code. Telemetry's
-`pending_shutdown_tasks` counts unfinished asyncio tasks only;
-`projection_thread_may_continue` conservatively records interrupted threaded
-work. Deployments still need a process-level deadline for uncooperative code.
-
-Run the focused checks:
-
-```bash
-uv run --no-sync pytest tests/unit/telemetry tests/unit/runtime/test_divergence_runtime.py -q
-```
+Metrics, consensus and warnings share one bounded background event queue, so a
+slow or failed log write cannot block training. Local detector state updates even
+if the queue overflows, and shutdown is bounded.
 
 The M2 replay study and its exploratory thresholds are recorded with the M3
 evidence at tag [`v0.3.0`](https://github.com/devesh1011/dromeus/blob/v0.3.0/benchmarks/results/m3/README.md); its replay
@@ -199,10 +136,9 @@ The member mapping uses public keys, regardless of arrival order. Measurements
 reuse already exchanged sketches and do not add network messages or privacy
 mechanisms.
 
-All event producers share the bounded background sink, including
-runs without detection. `runtime.telemetry_delivery_dropped` reports lost/failed
-event deliveries independently of the detector. Missing evidence can therefore
-reflect missing sketches or delivery loss; it does not mean zero divergence.
+All evidence shares the bounded background queue, including runs without
+detection. Missing evidence can therefore reflect missing sketches or delivery
+loss; it does not mean zero divergence.
 
 The per-node plotting tool used for the M3 study, and the source-bound logs it
 plotted, are available at tag [`v0.3.0`](https://github.com/devesh1011/dromeus/blob/v0.3.0/benchmarks/results/m3/divergence-repair-2026-10-25/REPORT.md).

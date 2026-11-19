@@ -1,117 +1,161 @@
-# Application-owned training
+# Training with Dromeus
 
-Your Python program owns the model, data loader, loss, optimizer, scheduling, and
-local evaluation. Dromeus forms the group, validates the shared contract and tensor
-schema, runs NoLoCo peer updates over AXL by default, and persists checkpoints.
+Every node in a group trains the same model on its own records. After each round
+of local steps, a node exchanges a NoLoCo update with one scheduled peer over AXL.
+No node ever sends its records anywhere.
 
-The [example application](../examples/custom_training.py) demonstrates an ordinary application with a custom
-three-feature network, Huber loss, and RMSprop. Each node supplies its own local
-NPZ file. The runtime never selects a model or downloads a dataset.
+You write three things:
 
-```bash
-DROMEUS_LOCAL_DATA=/absolute/path/to/this-nodes-data.npz \
-  uv run python -m dromeus.node --config /path/to/node.yaml \
-  --factory my_training:prepare_training
-```
+1. A **task**: the model, how records form a batch, the per-record loss and the
+   optimizer. Every node builds the identical task.
+2. A **draft**: the group's shared settings (members, rounds, NoLoCo settings).
+   One person writes it from the task, and every node uses the same file.
+3. Each node's **local data**: its own records, which never leave the machine.
 
-Create your own `my_training.py` module; the example is not a runtime dependency. The factory is an ordinary importable **local Python function** accepting a
-`DraftRunSpec`. You can instead call
-`await run_node(config, prepare_training=your_factory)` from your program. Deploy
-that program and its dependencies to each participant. Dromeus does not transmit
-or execute Python scripts received from peers.
+The [example](../examples/custom_training.py) is a complete regression task in
+about 120 lines. Everything below imports only from `dromeus`.
 
-NoLoCo is the decentralized algorithm. Omitting `algorithm_id` from a draft is
-equivalent to `algorithm_id: noloco`; the resolved selection is included explicitly
-in the sealed manifest. NoLoCo settings and artifact codecs must be declared
-consistently for the group; missing settings fail validation.
-
-Your script's optimizer (RMSprop in this example) performs the local inner steps.
-Dromeus then computes NoLoCo's outer gradient from the fast and slow weights,
-exchanges outer-gradient and slow-weight artifacts with the peer over AXL, and
-applies NoLoCo's outer momentum and correction. Choosing a custom model or local
-optimizer does not change the group's decentralized algorithm.
-
-Before running, create your node configuration and shared draft using the [configuration guide](configuration.md), with your deployment's versions. Every node must
-use the same draft. Set one node's role to `initiator`; other nodes use
-`participant`. The configured AXL bridge must already be running and connected to
-the group's peers. Deliver the initiator's invitation file out of band to every
-participant at its configured `invitation_path`.
-
-The NPZ contains FP32 `inputs` of shape `[N, 3]` and FP32 `targets` of shape `[N, 1]`.
-`N` must be positive and may differ between nodes. Optional `evaluation_inputs`
-and `evaluation_targets` contain independently held-out records of those shapes.
-The example copies and validates local arrays before contacting AXL. The
-application must ensure held-out provenance; Dromeus cannot infer record identity
-from arbitrary private data. Changing your model, task, or training policy requires
-updating the corresponding definitions and manifest hashes.
-
-The convenient PyTorch interface is:
+## Define the task
 
 ```python
-from dromeus.application import prepare_application
-from dromeus.training.trainer import PyTorchTrainer
+from pathlib import Path
 
-trainer = PyTorchTrainer(
-    model=my_model,
-    train_step=my_local_step,       # (model) -> finite loss or None
-    evaluate=my_evaluation,         # optional: (model) -> {name: finite value}
-    save_state=save_my_state,       # () -> dict[str, numpy.ndarray]
-    load_state=restore_my_state,    # (state) -> None
-    state_identity=my_local_identity,
-)
-prepared = prepare_application(
-    draft=draft,
-    trainer=trainer,
-    model_definition=MODEL_DEFINITION,
-    task_definition=TASK_DEFINITION,
-    training_definition=TRAINING_DEFINITION,
+import torch
+from torch import nn
+
+import dromeus
+
+
+def build_model() -> nn.Module:
+    return nn.Sequential(nn.Linear(3, 7), nn.Tanh(), nn.Linear(7, 1))
+
+
+def huber_per_record(model, batch):
+    inputs, targets = batch
+    losses = nn.functional.huber_loss(model(inputs), targets, reduction="none")
+    return losses.mean(dim=1)  # one loss per record, shape [B]
+
+
+def task() -> dromeus.TrainingTask:
+    return dromeus.TrainingTask(
+        model_factory=build_model,
+        batch_adapter=dromeus.TensorBatchAdapter(
+            example=(torch.zeros(2, 3), torch.zeros(2, 1)),  # public, at least 2 records
+            definition="inputs [B,3] float32, targets [B,1] float32",
+        ),
+        loss_per_record=huber_per_record,
+        model_definition="regression: Linear(3,7), Tanh, Linear(7,1); float32",
+        task_definition="regression: three float32 features; scalar float32 target",
+        loss_definition="Huber loss, delta 1, one value per record",
+        implementation_hash=dromeus.code_hash(Path(__file__)),
+        optimizer=dromeus.Optimizer.adam(learning_rate=0.005),
+        batch_size=8,
+    )
+```
+
+- The **definitions** are short descriptions of what the code means. They become
+  hashes in the draft, so every node must use identical text. Change the text
+  whenever you change the meaning.
+- `implementation_hash` identifies the code itself. `code_hash` hashes the files
+  you name, so pass every module your task depends on.
+- `loss_per_record` computes the forward pass and returns one differentiable loss
+  per record. Don't call `backward()` or step an optimizer: Dromeus does both.
+- The optimizer is `Optimizer.sgd`, `Optimizer.adam` or `Optimizer.adamw`. For
+  any other optimizer, see [private training](private-training.md#register-an-optimizer).
+- Optional `public_evaluate(model) -> {name: value}` reports metrics each round.
+  It must use public data, never a node's own records.
+
+## Write the shared draft
+
+One person writes the draft once and gives the file to every node:
+
+```python
+dromeus.make_draft(
+    task(),
+    "draft.yaml",
+    run_id="regression-2026-11",
+    participants=4,
+    rounds=20,
+    local_steps=10,
+    axl_version="your-pinned-axl-version",
 )
 ```
 
-`train_step` owns one optimizer step and its batch. It can use regression,
-classification, or another differentiable objective. Signed losses are valid.
-Evaluation is optional and accepts named metrics such as MAE or perplexity; there
-is no required accuracy or classification target. Each committed round is logged
-as a `round_metrics` evidence record with your named metrics.
+`make_draft` fills in every hash, plus the Dromeus and PyTorch versions installed
+on this machine. Every node must install those same versions. Optional settings:
+`noloco=dromeus.NoLoCo(alpha=..., beta=..., gamma=..., top_k_fraction=...)` for the
+outer step and update compression, `privacy=dromeus.Privacy(...)` for private
+training, `transport=dromeus.TransportLimits(...)` for WAN tuning and
+`divergence=dromeus.DivergencePolicy(...)` for [divergence warnings](divergence-monitoring.md).
 
-State callbacks must capture and restore **all** application state required for
-the next step: optimizer moments, scheduler, batch cursor, sampler, and any random
-generators. Use finite numeric arrays; no pickle is required. `state_identity`
-should bind the local records, preprocessing, training settings, device policy,
-and other continuation-sensitive choices. Preparation additionally binds the
-shared model/task/training definitions, the decentralized algorithm and its
-parameters/inner-step count, and the artifact codec configuration, so restore
-rejects a checkpoint made under different shared settings.
-Same-policy offline continuation under a different run ID remains supported;
-changing policy requires a separately audited migration, not ordinary restore.
-The adapter saves model state, module
-training modes, step count, and last loss. A failed restore rolls back to the old
-snapshot; a callback must be able to restore its own saved output. Run failure is
-terminal if application code also fails rollback. This is explicit checkpoint
-restoration, not automatic distributed restart. NoLoCo also rolls back trainer and
-codec state when algorithm-level restoration fails, retaining its outer state and
-pending artifacts. A codec or application that cannot restore its own snapshot
-causes an explicit fatal rollback error.
+Each node can check the draft before starting:
 
-The current exchange supports non-scalar FP32 floating model parameters and
-buffers. Represent a scalar trainable value as shape `[1]`. Integer buffers stay
-local and are checkpointed. Exact tied tensors are supported when their supplied
-values agree. Conflicting aliases reject before any model write or state callback.
-Ambiguous overlapping views, including overlaps across separate NumPy-backed
-storage objects, reject during preparation. Ordinary transposes and disjoint
-memory spans remain supported. Model structure and shared parameter meanings must
-match on all nodes. Local counts do not change a node's contribution: the current
-objective weights nodes equally. Custom models do not imply support for arbitrary
-frameworks, heterogeneous parameter schemas, or every optimization algorithm.
-Advanced integrations can implement `PreparedTraining` and `CheckpointTrainer`
-directly without using the PyTorch convenience adapter. Integrations that bypass
-`prepare_application` must bind their own complete configuration and local data
-identity in checkpoint state.
+```python
+dromeus.check_draft("draft.yaml", task())  # raises DraftError naming what differs
+```
 
+## Run each node
 
-## Private local training
+Each node has its own [node configuration](configuration.md) naming its AXL bridge,
+its role and where to write files. Then:
 
-See [private training](private-training.md) for the owned private trainer,
-privacy policies, durable reservations, secure RNG installation and model-only
-exports. To let Dromeus own sampling and the optimizer step for any model, see
-[model-independent training](model-independent-training.md).
+```python
+import asyncio
+
+local = dromeus.LocalData(
+    dataset=my_records,          # any indexable torch Dataset of record tensors
+    data_identity=my_file_hash,  # names this exact copy of the records
+)
+node = dromeus.Node.from_file("node.yaml")
+result = asyncio.run(node.run(task(), local=local))
+print(result.committed_rounds, result.manifest_hash)
+```
+
+Or from the command line, with a function that returns `(task, local_data)`:
+
+```bash
+python -m dromeus.node --config node.yaml --task my_training:setup
+```
+
+Before contacting AXL, the node checks the draft against its task and its
+installed Dromeus and PyTorch versions. One node is the `initiator`: it writes an
+invitation file, which you deliver to every participant at its configured
+`invitation_path`. The group forms, trains every round and stops. `run` returns
+when the run completes, or raises a `DromeusError` subclass.
+
+## What happens in a round
+
+Your optimizer performs `local_steps` steps on the node's own batches. Dromeus then
+computes NoLoCo's outer gradient from the fast and slow weights, exchanges the
+outer gradient and slow weights with this round's peer, and applies the outer
+momentum and correction. Each committed round is recorded as a `round_metrics`
+evidence record with the training loss and any public evaluation metrics.
+Checkpoints are written under the node's `run_root`.
+
+## Errors
+
+Every failure Dromeus raises on purpose is a `dromeus.DromeusError`:
+
+| Error | Meaning |
+| --- | --- |
+| `ConfigError` | The node configuration or a local setting is invalid |
+| `TaskError` | The task's model, batches, loss or optimizer is not admissible |
+| `DraftError` | The draft is malformed or doesn't match this task or machine |
+| `PrivacyError` | A privacy policy, ledger or budget check failed |
+| `FormationError` | The group couldn't form: invitation, membership or readiness |
+| `RunError` | The run failed after formation: peers, transport or rounds |
+
+The first four are also `ValueError`; the last two are also `RuntimeError`.
+
+## Limits
+
+- Model parameters must be dense float32. Represent a scalar parameter as shape
+  `[1]`. Integer buffers stay local and are checkpointed.
+- Every node weighs equally, whatever its number of records.
+- Membership is fixed: if one node fails, the run stops. There is no automatic
+  group restart.
+- Batches are trees (tuples, lists, string-keyed dicts) of tensors with records on
+  axis 0 and fixed trailing shapes. Pad sequences to a declared length.
+
+For token data, frozen weights and the exact model checks, see the
+[task reference](model-independent-training.md).

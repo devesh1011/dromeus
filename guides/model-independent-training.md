@@ -1,123 +1,81 @@
-# Application scripts with ordinary or private training
+# Task reference
 
-Every participant installs the same trusted Python module and supplies its own
-local records. The filename is arbitrary. Dromeus prepares the task, coordinates
-NoLoCo, and exchanges parameter-update bytes through AXL.
+Details of `dromeus.TrainingTask` beyond [training with Dromeus](application-training.md):
+batches, losses, model checks, token data and trust.
 
-```sh
-python -m dromeus.node --config node.json --factory my_training:prepare
-```
+## Fields
 
-Task runs use manifest version 7, like every run. The callback interface in
-[application-owned training](application-training.md) remains available when your
-script must own its own optimizer step.
+| Field | Meaning |
+| --- | --- |
+| `model_factory` | Builds the model. Must create only public initial state. |
+| `batch_adapter` | A `TensorBatchAdapter` describing one batch's structure |
+| `loss_per_record` | `(model, batch) -> Tensor[B]`, one differentiable loss per record |
+| `model_definition`, `task_definition`, `loss_definition` | Text every node shares; hashed into the draft |
+| `implementation_hash` | SHA-256 of the task code, usually `dromeus.code_hash(...)` |
+| `optimizer` | `Optimizer.sgd/adam/adamw(...)` or an `OptimizerRegistration` |
+| `batch_size` | Records per logical batch (the expected size under Poisson sampling) |
+| `record_unit` | What one record is, for example `"example"` or `"fixed_token_sequence"` |
+| `schedule` | `"constant"` or `"linear_decay"` learning rate |
+| `initialization` | `"public_untrained"` or `"public_pretrained"` |
+| `public_evaluate` | Optional `(model) -> {name: value}` on public data only |
 
-## What the application supplies
+## Batches
 
-`TrainingTask` accepts a model factory, finite indexed dataset,
-`TensorBatchAdapter`, per-record loss function, definitions, and an optional
-trusted optimizer registration. Custom model class names require no core edits.
-The first batch adapter supports dictionaries, tuples and lists of dense tensors
-with record axis zero, including integer token IDs and boolean masks. Shapes after
-the record axis are fixed; pad sequences to a declared public length. Public
-non-batched constants can live in the model/task definition rather than the batch.
+`TensorBatchAdapter(example, definition)` accepts dictionaries, tuples and lists of
+dense tensors with records on axis 0, including integer token IDs and boolean
+masks. Shapes after the record axis are fixed; pad sequences to a declared public
+length. `example` is a public or synthetic batch of at least two records; it
+describes the structure without touching any node's records. Collation must keep
+each record intact and must not compute statistics across records. Constants that
+aren't per record belong in the model or task code, not in the batch.
 
-```python
-from dromeus.application import LocalTrainingOptions, prepare_task
-from dromeus.training.task import TrainingTask
+## Losses
 
+Return a differentiable float tensor of shape `[B]`, one value per record. Don't
+call `backward()` or step an optimizer inside the callback. Don't mix records,
+read other records, keep raw activations across steps or publish raw losses.
 
-def prepare(draft):
-    task = TrainingTask(
-        model_factory=build_model,
-        dataset=open_local_records(),
-        batch_adapter=public_batch_adapter(),
-        loss_per_record=loss_per_record,
-        model_definition=MODEL_DEFINITION,
-        task_definition=TASK_DEFINITION,
-        loss_definition=LOSS_DEFINITION,
-        implementation_hash=INSTALLED_IMPLEMENTATION_SHA256,
-        optimizer_registration=optimizer_registration(),
-        record_unit="fixed_token_sequence",
-    )
-    return prepare_task(
-        draft=draft,
-        task=task,
-        # For an ordinary draft, pass the shared TaskTrainingSpec explicitly.
-        specification=shared_specification(),
-        local=LocalTrainingOptions(
-            data_identity=local_lineage_and_version(),
-            reservation_store=local_ledger() if draft.privacy else None,
-            max_physical_batch_size=physical_limit(),
-            research_seed=None,  # Secure private mode; ordinary defaults to seed 0.
-        ),
-    )
-```
-
-This is an interface sketch. The script supplies the forward/loss computation,
-while Dromeus invokes it and owns backward and optimizer updates.
-Return a differentiable tensor `[B]`, one scalar per privacy record. Do not call
-backward or step an optimizer inside the callback. Do not mix records, read other
-private examples, retain raw activations across steps, or publish raw losses.
-
-Use `describe_task(task, batch_size=..., optimizer=...)` to construct the public
-`TaskTrainingSpec` before sealing. With a task optimizer registration, omit the
-`optimizer` argument; otherwise pass a built-in `PrivateOptimizerSpec` preset. `describe_task` examines a public model and declared
-batch schema without reading dataset records. `prepare_task` validates definitions
-against the group's manifest, then selects private or ordinary execution.
-
-Private mode requires positive clipping/noise and an explicit privacy policy,
-finite population, persistent ledger and Poisson sampling. Ordinary mode can use
-`sampling="shuffle"` without Opacus. A matched baseline deliberately selects
-Poisson sampling and therefore uses the optional privacy dependency's sampler,
-without clipping, noise, accounting or a privacy claim.
-
-## Token records and privacy ledgers
+## Token records
 
 Language-model tasks fit the same interface: store fixed-length integer token
-records, pad to a declared public length, and freeze tokenizer vocabulary and
-sequence boundaries before training. A fixed-sequence privacy statement does not
-automatically protect an entire document or person; repeated or overlapping chunks
+records, pad to a declared public length, and freeze the tokenizer vocabulary and
+sequence boundaries before training. A per-sequence privacy statement does not
+automatically protect a whole document or person; repeated or overlapping chunks
 need composition.
 
-Private runs need a persistent ledger per dataset lineage. The operator creates it
-explicitly with `PrivacyLedger.create(path, lineage=...)`; existing ledgers must
-carry all applicable reservations, including failed runs. For public-data
-reproducibility only, select the `reproducible_public_benchmark` randomness profile
-and pass `research_seed`; secure mode rejects a seed and requires CSPRNG.
+## Model checks
 
-## Supported execution and validation
+Before any record is read, Dromeus checks the model on the public `example` batch:
 
-The current generic private profile uses pinned Opacus hooks, dense FP32
-parameters, flat clipping, fixed record semantics and deterministic task/model
-execution. It supports custom containers composed of compatible operations,
-shared parameters, declared frozen parameters and immutable public container
-buffers. It checks a public/synthetic fixture against independent per-record
-autograd before private records are sampled. This is evidence for the declared
-profile, not a proof that arbitrary Python has no data-dependent side effects.
+- Supported: custom containers of compatible operations, shared (tied) parameters,
+  declared frozen parameters and immutable public buffers.
+- Each tied parameter is exchanged once. Frozen weights and public buffers are not
+  exchanged; they are verified locally. Consensus for a partially frozen model
+  measures trainable parameters only.
+- Rejected, with the module path and the missing capability: BatchNorm,
+  cross-record losses, unsafe trainable-layer buffers, uncontrolled model
+  randomness, unbounded streams and changing record populations. There is no
+  silent layer replacement or non-private fallback.
 
-Unsupported operations name their module path and missing capability. BatchNorm,
-cross-record losses, unsafe trainable-layer buffers, uncontrolled model randomness,
-unbounded streams and changing record populations require different profiles.
-Opacus custom gradient samplers are trusted local code and must satisfy the same
-conformance checks. There is no silent layer replacement or non-private fallback.
+The private profile uses pinned Opacus hooks, dense float32 parameters, flat
+clipping and deterministic task execution, and checks the example batch against
+independent per-record autograd. This is evidence for that profile, not a proof
+that arbitrary Python has no data-dependent side effects.
 
-Each tied parameter is clipped and exchanged once. Public immutable buffers and
-frozen weights are excluded from NoLoCo/codec updates and verified locally.
-Consequently, consensus for a partially frozen task measures trainable coordinates.
-Model-only exports retain permitted model state, including aliases and declared
-public constants, so they can be loaded into the same application architecture.
-Local research checkpoints also contain optimizer/sampler/accountant state and must
-not be published. Secure crash resume remains unsupported.
+An empty Poisson draw still performs one noise-only update. Physical microbatches
+(`LocalData.physical_batch_size`) do not add accounting steps.
 
-An empty Poisson draw still performs one noise-only logical update. Physical
-microbatches do not add accounting steps. Failed updates retain the complete
-reservation, and raw private loss is suppressed before telemetry sees it.
+## Checkpoints and exports
+
+Local checkpoints contain optimizer, sampler and accountant state and must not be
+published. Model-only exports keep the permitted model state, including aliases
+and declared public constants, so they load into the same architecture. Secure
+private runs cannot resume after a crash.
 
 ## Trust and identity
 
-Implementation hashes and shared definitions establish agreement among peers;
-they do not remotely attest code or sandbox a malicious local process. Install
-and inspect the application and dependencies locally. Dromeus never imports code
-named by a peer's manifest. Public initialization, public evaluation and the
-absence of extra private-data releases remain part of the privacy contract.
+Implementation hashes and shared definitions show that peers agree; they do not
+attest code remotely or sandbox a malicious local process. Install and inspect the
+task code and its dependencies on every node. Dromeus never imports code named by
+a peer's draft. Public initialization, public evaluation and no extra releases of
+private data remain part of the privacy contract.

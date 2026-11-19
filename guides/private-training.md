@@ -1,81 +1,84 @@
-# Private training with the group's optimizer
+# Private training
 
-Private runs use the [model-independent task interface](model-independent-training.md):
-the application describes its model, records and per-record loss as a
-`TrainingTask`, and the group's draft adds a `privacy` policy and the task's
-`private_training` specification.
+A private run adds record-level differential privacy to every node's local
+training. Dromeus owns Poisson sampling, per-record clipping, Gaussian noise and
+privacy accounting; the group's optimizer consumes the sanitized gradients.
+Install the extra first: `pip install "dromeus[privacy]"`.
 
-Dromeus owns Poisson sampling, per-example clipping, Gaussian noise and accounting.
-The group chooses the optimizer that consumes those sanitized gradients. A custom
-optimizer does not require editing Dromeus or adding its name to a registry.
+## Make a private draft
 
-The task specification selects either a built-in `PrivateOptimizerSpec` preset
-(SGD, Adam or AdamW) or a `FactoryOptimizerSpec` for a registered optimizer. Every
-participant supplies the same trusted implementation and matches the complete
-shared specification before formation.
+Pass `privacy` when writing the draft:
+
+```python
+dromeus.make_draft(
+    task(),
+    "draft.yaml",
+    run_id="private-regression-2026-11",
+    participants=4,
+    rounds=20,
+    local_steps=10,
+    axl_version="your-pinned-axl-version",
+    privacy=dromeus.Privacy(max_grad_norm=1.0, noise_multiplier=1.1, delta=1e-5),
+)
+```
+
+The privacy horizon is the run's total local steps (`rounds x local_steps`), and
+sampling switches to Poisson. `epsilon_limit` optionally caps spending. Real
+private runs use the default `randomness="secure"`, which needs the pinned secure
+RNG dependency; use `"reproducible_public_benchmark"` only for seeded research on
+public data.
+
+## Give each node a ledger
+
+Each private dataset needs a durable ledger that records every privacy
+reservation, including failed runs. Create it once, then reopen it for every run:
+
+```python
+ledger = dromeus.PrivacyLedger.create("ledger.json", lineage="site-a-records")
+# later runs: dromeus.PrivacyLedger("ledger.json", lineage="site-a-records")
+
+local = dromeus.LocalData(
+    dataset=my_records,
+    data_identity=my_file_hash,
+    ledger=ledger,
+    physical_batch_size=16,  # records processed at once; doesn't change accounting
+)
+```
+
+Never delete or recreate a ledger to restart a run. Secure runs refuse a
+`research_seed`; reproducible public benchmarks require one.
 
 ## Register an optimizer
 
-[RMSprop reference fixture](../tests/support/private_optimizer.py) is a complete RMSprop registration. Copy and adapt it into your own `my_optimizer.py` module before using the configuration below.
-It supplies:
+`Optimizer.sgd`, `Optimizer.adam` and `Optimizer.adamw` cover most runs, private
+or not. For any other optimizer, pass an `OptimizerRegistration` as the task's
+`optimizer`. Every node supplies the same trusted implementation. The
+[RMSprop reference](../tests/support/private_optimizer.py) is a complete
+registration to copy and adapt. A registration supplies:
 
 - `optimizer_type`: the exact PyTorch optimizer class, including custom subclasses.
 - `implementation_hash`: SHA-256 identifying the optimizer implementation, factory
   and state-validator contract. Include relevant dependencies in this identity.
 - `create(model)`: construct fresh optimizer state on the actual model parameters.
 - `validate_state(state, parameters, logical_steps)`: reject incorrect optimizer
-  state fields, tensor shapes/dtypes, counters and initial values.
-
-Attach the registration to the task and describe it before sealing the group's draft:
+  state fields, tensor shapes and dtypes, counters and initial values.
 
 ```python
 from my_optimizer import registration
-from dromeus.application import (
-    LocalTrainingOptions,
-    definition_hash,
-    describe_task,
-    prepare_task,
-)
-from dromeus.training.private_trainer import private_training_definition
-from dromeus.training.task import TrainingTask
 
-task = TrainingTask(
-    model_factory=public_model_factory,
-    dataset=open_local_records(),
-    batch_adapter=public_batch_adapter(),
-    loss_per_record=loss_per_record,
-    model_definition=MODEL_DEFINITION,
-    task_definition=TASK_DEFINITION,
-    loss_definition=LOSS_DEFINITION,
-    implementation_hash=INSTALLED_IMPLEMENTATION_SHA256,
-    optimizer_registration=registration(),
-    public_evaluate=evaluate_public_holdout,
-)
-spec = describe_task(task, batch_size=64, schedule="linear_decay")
-# Set draft.private_training = spec and draft.privacy to the group's policy.
-# Set draft.application_training.definition_hash to:
-training_hash = definition_hash(private_training_definition(spec))
-
-prepared = prepare_task(
-    draft=draft,
-    task=task,
-    local=LocalTrainingOptions(
-        data_identity=local_lineage_identity,
-        reservation_store=ledger,
-        max_physical_batch_size=16,
-    ),
+task = dromeus.TrainingTask(
+    ...,  # model, batches, loss and definitions as usual
+    optimizer=registration(),
+    batch_size=64,
+    schedule="linear_decay",
 )
 ```
 
-The surrounding application supplies those data/model/draft/ledger values and the
-normal NoLoCo/AXL setup. Use secure randomness for private data, with the pinned
-secure RNG dependency installed. For reproducible experiments on public data only,
-select that profile explicitly and pass `research_seed`. Missing secure RNG fails
-preparation. No training or spending happens during `describe`; its factory must
+No training or spending happens while the draft is written; the model factory must
 construct only public initial state. Group formation shares model weights, never
 optimizer moments, sampler state or private data.
 
-`describe` returns the fully qualified class name, implementation hash, Torch
+The registration's description records the fully qualified class name, implementation hash, Torch
 version and each group's ordered parameter names and resolved options. Every model
 parameter must appear exactly once. Groups may have different learning rates;
 linear decay applies the same horizon fraction to each initial rate. Other options

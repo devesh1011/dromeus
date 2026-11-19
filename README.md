@@ -5,9 +5,9 @@ participant trains on its own local dataset and exchanges model updates with
 peers over [Gensyn's AXL network](https://github.com/gensyn-ai/axl), without a
 central server aggregating those updates.
 
-You bring the model, data loader, loss, and local optimizer. Dromeus coordinates
-the group and applies [NoLoCo](https://github.com/gensyn-ai/noloco) updates between
-peers. It is built for developers experimenting with decentralized training on
+You bring the model, per-record loss and optimizer as a `TrainingTask`. Dromeus
+coordinates the group, runs local training and applies
+[NoLoCo](https://github.com/gensyn-ai/noloco) updates between peers. It is built for developers experimenting with decentralized training on
 independently operated machines.
 
 ## How training works
@@ -42,28 +42,29 @@ cd dromeus
 ./scripts/bootstrap
 ```
 
-The [application guide](guides/application-training.md) walks through a custom PyTorch
-regression model using Huber loss and RMSprop. Each participant supplies its own
-local data file. Create your own `my_training.py` module using that interface.
+The [training guide](guides/application-training.md) covers the three steps
+with a complete regression example:
 
-Before launching, configure an AXL node on each machine and connect the group's
-peers. Create the per-node configuration and shared run draft using the
-[configuration guide](guides/configuration.md),
-and prepare the local data described in the guide. One participant initiates
-group formation; share its invitation file with the other participants.
+```python
+import dromeus
 
-Once those inputs are ready, launch each participant:
-
-```bash
-DROMEUS_LOCAL_DATA=/absolute/path/to/this-nodes-data.npz \
-  uv run python -m dromeus.node \
-  --config /path/to/node.yaml \
-  --factory my_training:prepare_training
+task = dromeus.TrainingTask(...)  # model, batches, loss, optimizer; same on every node
+dromeus.make_draft(task, "draft.yaml", run_id="my-run", participants=4,
+                   rounds=20, local_steps=10, axl_version="your-axl-version")
+# on each node, with its own records:
+await dromeus.Node.from_file("node.yaml").run(task, local=dromeus.LocalData(...))
 ```
 
-The factory connects your local training code to the shared run. The guide
-covers optional evaluation and the state callbacks needed to restore your
-optimizer and data loader.
+Before launching, configure an AXL node on each machine and connect the group's
+peers. The [configuration guide](guides/configuration.md) covers each node's
+`node.yaml`. One participant initiates group formation; share its invitation file
+with the other participants. From the command line, each node runs:
+
+```bash
+uv run python -m dromeus.node --config /path/to/node.yaml --task my_training:setup
+```
+
+where `my_training.setup()` returns this node's `(task, LocalData)`.
 
 ## Working assumptions
 

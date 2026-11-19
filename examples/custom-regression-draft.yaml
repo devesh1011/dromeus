@@ -1,27 +1,77 @@
-# Replace environment versions and commit before starting the group.
 manifest_version: 7
-run_id: custom-regression-v1
+protocol_version: 1
+run_id: custom-regression
 algorithm_id: noloco
-model_id: custom-regression
-model_definition_hash: 31df3d1a8ba81fa6d1245d7db5da9ddaff011c3b2b0b0ab6dfbe9861e71ed892
+model_id: application
+model_definition_hash: a91b2d0f4139b7920e7d22ca3c35d602a77ca0112d7c8a47c65034032fc67aa5
 dataset:
   dataset_id: application
-  task_id: regression
-  definition_hash: f3816a5af54d8906f730393ab5f8e619de7edda81e75a0dc849092585eee6a1a
-application_training:
-  policy_id: rmsprop-huber
-  definition_hash: 1a983898d8d0cda650ab854a193edacf20c310037cbeb2aa06726742f7945e70
+  task_id: application
+  definition_hash: c96f38ae74f6ef8df649dba7ccff05c18fcfb769016f96223ec504b43cad980c
+  objective: equal-node
 expected_participant_count: 4
 environment:
-  dromeus_version: 0.1.0
-  dromeus_commit: '0000000'
-  pytorch_version: replace-with-installed-version
-  axl_version: replace-with-installed-version
-  model_definition_hash: 31df3d1a8ba81fa6d1245d7db5da9ddaff011c3b2b0b0ab6dfbe9861e71ed892
+  dromeus_version: 0.3.0
+  protocol_version: 1
+  pytorch_version: 2.13.0
+  axl_version: replace-with-your-axl-version
+  model_definition_hash: a91b2d0f4139b7920e7d22ca3c35d602a77ca0112d7c8a47c65034032fc67aa5
 local_steps: 10
 round_count: 20
-peer_scheduler_seed: 17
+peer_scheduler_seed: 0
 codec_id: safetensors
+transport:
+  max_payload_bytes: 8388608
+  max_retries: 3
+  retry_timeout_seconds: 5.0
+  chunk_size_bytes: 65536
+  window_size: 2
+consensus_sketch:
+  size: 4096
+  seed: 0
+training:
+  optimizer:
+    name: adam
+    torch_version: 2.13.0
+    parameter_names:
+    - 0.weight
+    - 0.bias
+    - 2.weight
+    - 2.bias
+    learning_rate: 0.005
+    weight_decay: 0.0
+    momentum: 0.0
+    dampening: 0.0
+    nesterov: false
+    betas:
+    - 0.9
+    - 0.999
+    numerical_epsilon: 1.0e-08
+    amsgrad: false
+    foreach: false
+    fused: false
+    capturable: false
+    differentiable: false
+    maximize: false
+  batch_size: 8
+  sampling: shuffle
+  schedule: constant
+  initialization: public_untrained
+  evaluation_provenance: public_fixed_holdout
+  task_definition_hash: c96f38ae74f6ef8df649dba7ccff05c18fcfb769016f96223ec504b43cad980c
+  implementation_hash: d5100f7a2a4480124d1ea6d9a57fd4411be4cca75e50211abbaa540a5467d646
+  batch_definition_hash: f6ad28b5a4fbf4c67fe74b4541ba6a546bf568b37496d94ac4a65b7ca7b04dbb
+  loss_definition_hash: b819ec524688f81c83df34cc5fc656504b8c5bf5351c452d9708708c709a6465
+  record_unit: example
+  gradient_backend: opacus_hooks
+  trainable_parameter_names:
+  - 0.weight
+  - 0.bias
+  - 2.weight
+  - 2.bias
+  parameter_aliases: []
+  public_buffer_hashes: {}
+  frozen_parameter_hashes: {}
 algorithm_config:
   alpha: 0.5
   beta: 0.7
@@ -32,12 +82,3 @@ artifact_codecs:
   codec_id: identity
 - artifact_name: slow_weights
   codec_id: identity
-transport:
-  max_payload_bytes: 8388608
-  max_retries: 3
-  retry_timeout_seconds: 5.0
-  chunk_size_bytes: 65536
-  window_size: 2
-consensus_sketch:
-  size: 4096
-  seed: 17
