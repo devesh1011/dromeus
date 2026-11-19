@@ -64,7 +64,8 @@ def test_four_independent_custom_python_processes_over_axl(tmp_path: Path) -> No
                             await asyncio.create_subprocess_exec(
                                 sys.executable,
                                 "-m",
-                                "dromeus.node",
+                                "dromeus",
+                                "run",
                                 "--config",
                                 str(config_path),
                                 "--task",

@@ -93,7 +93,7 @@ def optimizer_for(name: str) -> Optimizer:
 
 
 def setup() -> tuple[TrainingTask, LocalData]:
-    """Entry point for `python -m dromeus.node --task` in each private process."""
+    """Entry point for `dromeus run --task` in each private process."""
     root = Path(os.environ["DROMEUS_PRIVATE_NODE_ROOT"])
     rank = int(os.environ["DROMEUS_PRIVATE_NODE_RANK"])
     optimizer = optimizer_for(os.environ["DROMEUS_PRIVATE_OPTIMIZER"])
@@ -181,7 +181,8 @@ def test_four_private_python_processes_over_axl(
                             await asyncio.create_subprocess_exec(
                                 sys.executable,
                                 "-m",
-                                "dromeus.node",
+                                "dromeus",
+                                "run",
                                 "--config",
                                 str(config_path),
                                 "--task",

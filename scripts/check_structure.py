@@ -19,7 +19,15 @@ ALLOWED: dict[str, frozenset[str]] = {
     "application": frozenset(
         {"application", "manifests", "membership", "persistence", "runtime", "training"}
     ),
+    "__main__": frozenset({"cli"}),
     "algorithms": frozenset({"algorithms", "manifests", "training"}),
+    # Command-line shell: parses arguments and prints; behaviour lives below it.
+    "cli": frozenset(
+        {"application", "diagnostics", "manifests", "node", "telemetry", "training"}
+    ),
+    "diagnostics": frozenset(
+        {"application", "manifests", "node", "training", "transport"}
+    ),
     "gossip": frozenset(
         {
             "algorithms",

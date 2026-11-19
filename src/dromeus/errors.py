@@ -35,6 +35,16 @@ class RunError(DromeusError, RuntimeError):
     """The run failed after formation: peers, transport, rounds or persistence."""
 
 
+def one_line(message: str) -> str:
+    """Collapse a multi-line error message, such as pydantic's, to one line."""
+    lines = (line.strip() for line in message.splitlines())
+    return "; ".join(
+        line
+        for line in lines
+        if line and not line.startswith("For further information visit")
+    )
+
+
 __all__ = [
     "ConfigError",
     "DraftError",
@@ -43,4 +53,5 @@ __all__ = [
     "PrivacyError",
     "RunError",
     "TaskError",
+    "one_line",
 ]

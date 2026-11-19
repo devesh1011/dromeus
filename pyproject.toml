@@ -25,6 +25,9 @@ dependencies = [
     "torch>=2.7,<3",
 ]
 
+[project.scripts]
+dromeus = "dromeus.cli:main"
+
 [project.optional-dependencies]
 privacy = ["opacus==1.6.0"]
 
