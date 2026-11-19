@@ -42,8 +42,9 @@ cd dromeus
 ./scripts/bootstrap
 ```
 
-The [training guide](guides/application-training.md) covers the three steps
-with a complete regression example:
+To see a run first, the [quickstart](guides/quickstart.md) trains four nodes on
+one machine in a few minutes. The [training guide](guides/application-training.md)
+covers the three steps with a complete regression example:
 
 ```python
 import dromeus
@@ -57,7 +58,9 @@ await dromeus.Node.from_file("node.yaml").run(task, local=dromeus.LocalData(...)
 
 Before launching, start an AXL node on each machine and connect the group's
 peers. On Linux (x86_64, aarch64) and Apple-silicon macOS, Dromeus installs a
-pinned AXL build: run it with `dromeus-axl -config axl.json`. The [configuration guide](guides/configuration.md) covers each node's
+pinned AXL build: run it with `dromeus-axl -config axl.json`. The
+[AXL setup guide](guides/axl.md) covers keys, bootstrap peers and nodes behind
+NAT; the [configuration guide](guides/configuration.md) covers each node's
 `node.yaml`. One participant initiates group formation; share its invitation file
 with the other participants. From the command line, each node runs:
 

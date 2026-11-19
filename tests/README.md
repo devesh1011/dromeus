@@ -47,11 +47,15 @@ skip does not certify secure mode.
 
 ## Real AXL integration
 
-The harness, doctor, custom-application and private-task tests start four local
-AXL nodes from the AXL bundled with Dromeus (`dromeus-axl`), so they run in the
+The harness, doctor, custom-application, private-task and quickstart tests start
+four local AXL nodes from the AXL bundled with Dromeus (`dromeus-axl`), so they run in the
 normal gate on Linux x86_64/aarch64 and Apple-silicon macOS. Elsewhere they skip
 unless `DROMEUS_AXL_BINARY` names an AXL binary, which also overrides the bundled
 one. A skip is not evidence that the deployment path was exercised.
+
+`integration/test_quickstart.py` runs every bash block of
+`guides/quickstart.md` after the install block, unchanged, on the guide's fixed
+ports (9101, 9201 to 9204). Edit the guide and the test checks the new commands.
 
 ```bash
 # Real AXL tests against another AXL build
