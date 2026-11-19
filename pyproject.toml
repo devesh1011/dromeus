@@ -17,6 +17,8 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+    # The pinned AXL node, on every platform PyTorch and AXL both support.
+    "dromeus-axl==0.1.0; (sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')) or (sys_platform == 'darwin' and platform_machine == 'arm64')",
     "msgpack>=1.1,<2",
     "numpy>=2,<3",
     "pydantic>=2.11,<3",

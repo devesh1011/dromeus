@@ -31,6 +31,7 @@ name = "dromeus"
 version = "0.4.0.dev1"
 source = { editable = "." }
 dependencies = [
+    { name = "dromeus-axl", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')" },
     { name = "msgpack" },
     { name = "numpy" },
     { name = "pydantic" },
@@ -54,6 +55,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dromeus-axl", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (platform_machine == 'aarch64' and sys_platform == 'linux') or (platform_machine == 'x86_64' and sys_platform == 'linux')", specifier = "==0.1.0" },
     { name = "msgpack", specifier = ">=1.1,<2" },
     { name = "numpy", specifier = ">=2,<3" },
     { name = "opacus", marker = "extra == 'privacy'", specifier = "==1.6.0" },
@@ -70,6 +72,16 @@ dev = [
     { name = "pyright", specifier = ">=1.1.400" },
     { name = "pytest", specifier = ">=8.4" },
     { name = "ruff", specifier = ">=0.12" },
+]
+
+[[package]]
+name = "dromeus-axl"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/cd/921718f56469d3698d28196256b030307a8b64166ed6f6d815907c5ec0b0/dromeus_axl-0.1.0-py3-none-macosx_12_0_arm64.whl", hash = "sha256:b16a3415b8eb5c462f1ab9109c65c6d1c78b8a534226743acd8c77e7299902d9", size = 8757188, upload-time = "2026-11-19T11:15:13.617Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/a3/2e597aa9e963c3f67b218f5a1d8d602d38dd722d76a051db3e7b69290c43/dromeus_axl-0.1.0-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:e9563b2691d54eafc467da1e6e4ac0cb357395f367dd26b6470044bfe2fc5efd", size = 8350055, upload-time = "2026-11-19T11:15:16.675Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/a3/89be6a5601aeca89b0a1ddc431ac572e3d7e876d9ddd5eded0cad4e56137/dromeus_axl-0.1.0-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:e89494cd1c7e67dd1253d12195b8f94b3893cc8118b54c54b917ad7a27ffe1a1", size = 9045221, upload-time = "2026-11-19T11:15:18.703Z" },
 ]
 
 [[package]]
