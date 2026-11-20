@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import time
 from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 from dromeus.algorithms.base import (
     AlgorithmObservations,
@@ -29,6 +30,8 @@ from dromeus.gossip.interfaces import (
 from dromeus.gossip.peer_scheduler import PeerScheduler
 from dromeus.manifests.models import PublicKey, RoundId, TransportLimits
 from dromeus.telemetry.metrics import MetricsPublisher, RoundTiming
+
+_T = TypeVar("_T")
 
 
 class GossipEngine:
@@ -295,7 +298,7 @@ class GossipEngine:
         except Exception:
             return AlgorithmObservations()
 
-    async def _with_pair_timeout[T](self, operation: Awaitable[T]) -> T:
+    async def _with_pair_timeout(self, operation: Awaitable[_T]) -> _T:
         if self._timeout_seconds is None:
             return await operation
         return await asyncio.wait_for(operation, timeout=self._timeout_seconds)

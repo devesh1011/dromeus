@@ -151,7 +151,7 @@ def _measure_consensus(
         raise ConsensusSketchError("participant keys must match sketches and be unique")
     mean = values.mean(axis=0)
     squared_distances = np.sum((values - mean) ** 2, axis=1)
-    spread = float(np.sqrt(np.mean(squared_distances)))
+    spread = float(np.sqrt(squared_distances.mean()))
     norm = float(np.linalg.norm(mean))
     members = (
         tuple(

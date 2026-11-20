@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import TypeVar, cast
 
 import msgpack  # pyright: ignore[reportMissingTypeStubs]
 from pydantic import ValidationError
@@ -28,12 +28,15 @@ def encode_message(model: DomainModel) -> bytes:
     return cast(bytes, msgpack.packb(value))  # pyright: ignore[reportUnknownMemberType]
 
 
-def decode_message[T: DomainModel](
+_M = TypeVar("_M", bound=DomainModel)
+
+
+def decode_message(
     data: bytes,
-    model_type: type[T],
+    model_type: type[_M],
     *,
     max_bytes: int,
-) -> T:
+) -> _M:
     try:
         return model_type.model_validate(_unpack(data, max_bytes=max_bytes))
     except (ValueError, ValidationError, msgpack.UnpackException) as error:

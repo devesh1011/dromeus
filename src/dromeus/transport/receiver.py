@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import TypeVar
 
 from dromeus.errors import RunError
 from dromeus.manifests.models import (
@@ -335,7 +336,10 @@ class Receiver:
             await self._route(envelope)
 
 
-def _forget_rounds_before[K](seen: dict[K, RoundId | None], round_id: int) -> None:
+_K = TypeVar("_K")
+
+
+def _forget_rounds_before(seen: dict[_K, RoundId | None], round_id: int) -> None:
     expired = [
         key
         for key, seen_round in seen.items()

@@ -7,7 +7,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Self, cast
+from typing import Literal, Self, TypeAlias, cast
 
 from pydantic import (
     BaseModel,
@@ -246,7 +246,7 @@ class RunFailedEvidence(_EvidenceBase):
     error: str = Field(min_length=1, max_length=1024)
 
 
-type EvidenceRecord = (
+EvidenceRecord: TypeAlias = (
     RoundMetricsEvidence
     | ConsensusObservationEvidence
     | NodeConsensusDistanceEvidence

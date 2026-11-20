@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, TypeAlias
 
 import numpy as np
 
@@ -179,7 +179,7 @@ class ParticipantFormation:
     invitation: Invitation
 
 
-type FormationRequest = InitiatorFormation | ParticipantFormation
+FormationRequest: TypeAlias = InitiatorFormation | ParticipantFormation
 
 
 @dataclass(frozen=True, slots=True)
@@ -190,9 +190,9 @@ class NodeRunResult:
     commits: tuple[RoundCommit, ...]
 
 
-type TrainingFactory = Callable[[FormationResult], TrainingConfig]
-type ReadyHook = Callable[[FormationResult], None | Awaitable[None]]
-type CompletionHook = Callable[[NodeRunResult], None | Awaitable[None]]
+TrainingFactory: TypeAlias = Callable[[FormationResult], TrainingConfig]
+ReadyHook: TypeAlias = Callable[[FormationResult], None | Awaitable[None]]
+CompletionHook: TypeAlias = Callable[[NodeRunResult], None | Awaitable[None]]
 
 
 class PreparedTraining(Protocol):
@@ -215,7 +215,7 @@ class PreparedTraining(Protocol):
     ) -> TrainingConfig: ...
 
 
-type WorkloadFactory = Callable[[DraftRunSpec], PreparedTraining]
+WorkloadFactory: TypeAlias = Callable[[DraftRunSpec], PreparedTraining]
 
 
 def private_preparation_for_node(

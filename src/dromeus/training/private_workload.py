@@ -7,7 +7,7 @@ owns Opacus, optimizer invocation, accounting, reservations and logical steps.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, TypeAlias, cast
 
 import numpy as np
 import torch
@@ -29,8 +29,8 @@ from dromeus.training.private_model import (
 )
 from dromeus.training.task import TrainingTask, validate_record_losses
 
-type PublicEvaluation = Callable[[nn.Module], Mapping[str, float]]
-type WeightSnapshot = Callable[[], dict[str, np.ndarray]]
+PublicEvaluation: TypeAlias = Callable[[nn.Module], Mapping[str, float]]
+WeightSnapshot: TypeAlias = Callable[[], dict[str, np.ndarray]]
 
 
 class PrivateWorkloadStep(Protocol):

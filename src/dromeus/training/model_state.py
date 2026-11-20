@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypeAlias
 
 import torch
 from torch import Tensor, nn
@@ -58,7 +58,7 @@ def tensor_schema_for_model(
     return TensorSchema(tensors=tuple(tensors))
 
 
-type _StateLayout = tuple[int, int, torch.dtype, tuple[int, ...], tuple[int, ...]]
+_StateLayout: TypeAlias = tuple[int, int, torch.dtype, tuple[int, ...], tuple[int, ...]]
 
 
 def model_state_alias_groups(model: nn.Module) -> tuple[tuple[str, ...], ...]:
