@@ -34,7 +34,7 @@ record evaluation metrics, timing, and transfer behavior.
 
 ## Get started
 
-Use Python 3.12 and `uv`. Install from the source checkout:
+Use Python 3.11 or newer and `uv`. Install from the source checkout:
 
 ```bash
 git clone https://github.com/devesh1011/dromeus.git
@@ -42,8 +42,15 @@ cd dromeus
 ./scripts/bootstrap
 ```
 
-To see a run first, the [quickstart](guides/quickstart.md) trains four nodes on
-one machine in a few minutes. The [training guide](guides/application-training.md)
+Or install the pre-release from PyPI, in a virtual environment or an activated
+conda environment:
+
+```bash
+pip install --pre dromeus            # add [privacy] for private training
+```
+
+To see a run first, the [quickstart](https://github.com/devesh1011/dromeus/blob/main/guides/quickstart.md) trains four nodes on
+one machine in a few minutes. The [training guide](https://github.com/devesh1011/dromeus/blob/main/guides/application-training.md)
 covers the three steps with a complete regression example:
 
 ```python
@@ -59,8 +66,8 @@ await dromeus.Node.from_file("node.yaml").run(task, local=dromeus.LocalData(...)
 Before launching, start an AXL node on each machine and connect the group's
 peers. On Linux (x86_64, aarch64) and Apple-silicon macOS, Dromeus installs a
 pinned AXL build: run it with `dromeus-axl -config axl.json`. The
-[AXL setup guide](guides/axl.md) covers keys, bootstrap peers and nodes behind
-NAT; the [configuration guide](guides/configuration.md) covers each node's
+[AXL setup guide](https://github.com/devesh1011/dromeus/blob/main/guides/axl.md) covers keys, bootstrap peers and nodes behind
+NAT; the [configuration guide](https://github.com/devesh1011/dromeus/blob/main/guides/configuration.md) covers each node's
 `node.yaml`. One participant initiates group formation; share its invitation file
 with the other participants. From the command line, each node runs:
 
@@ -70,7 +77,7 @@ dromeus run --config /path/to/node.yaml --task my_training:setup
 ```
 
 where `my_training.setup()` returns this node's `(task, LocalData)`. The
-[command-line guide](guides/command-line.md) covers every command and exit code.
+[command-line guide](https://github.com/devesh1011/dromeus/blob/main/guides/command-line.md) covers every command and exit code.
 
 ## Working assumptions
 
@@ -87,12 +94,12 @@ Keeping datasets local does not make ordinary model updates private. Optional
 private training uses Opacus per-example clipping, Gaussian noise and per-node
 accounting through an owned trainer. Groups supply compatible optimizer factories;
 private execution also requires an admitted model/loss and the documented state
-contract. See [private training](guides/private-training.md) for supported
+contract. See [private training](https://github.com/devesh1011/dromeus/blob/main/guides/private-training.md) for supported
 profiles, secure randomness, privacy scope and fresh-start restrictions.
 
 Divergence monitoring records model disagreement and emits configurable warnings.
 Thresholds are workload-specific and require calibration; agreement alone does not
-prove model utility. See [monitoring](guides/divergence-monitoring.md).
+prove model utility. See [monitoring](https://github.com/devesh1011/dromeus/blob/main/guides/divergence-monitoring.md).
 Secure aggregation and Byzantine fault tolerance are not implemented.
 
 ## Benchmarks
@@ -124,9 +131,9 @@ tests; the benchmark runners used for those milestones are not maintained here.
 ## Development
 
 Run `./scripts/verify` before contributing. It checks architecture boundaries,
-lint, types, and tests. The [test guide](tests/README.md) lists focused commands
+lint, types, and tests. The [test guide](https://github.com/devesh1011/dromeus/blob/main/tests/README.md) lists focused commands
 and the prerequisites for real-AXL integration tests.
 
 ## License
 
-[MIT](LICENSE).
+[MIT](https://github.com/devesh1011/dromeus/blob/main/LICENSE).
