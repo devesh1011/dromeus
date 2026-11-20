@@ -44,15 +44,10 @@ jobs:
           fi
       - name: Build sdist and wheel
         run: uv build
-      - name: Install the wheel into a clean environment
-        run: |
-          python -m venv /tmp/clean
-          /tmp/clean/bin/pip install -q torch --index-url https://download.pytorch.org/whl/cpu
-          /tmp/clean/bin/pip install -q dist/*.whl
-          cd /tmp
-          /tmp/clean/bin/dromeus --version
-          /tmp/clean/bin/python -m dromeus --help
-          /tmp/clean/bin/python -c "import dromeus; print(dromeus.__version__, dromeus.TrainingTask)"
+      - name: Bootstrap the test runner
+        run: ./scripts/bootstrap
+      - name: Run the quickstart from the wheel in a clean environment
+        run: ./scripts/check_clean_install dist/*.whl
       - uses: actions/upload-artifact@v4
         with:
           name: dist

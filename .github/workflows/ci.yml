@@ -7,12 +7,19 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is the oldest supported; 3.14 the newest with PyTorch wheels.
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    env:
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
 
       - uses: astral-sh/setup-uv@v8.3.2
 
@@ -25,3 +32,44 @@ jobs:
 
       - name: Verify
         run: ./scripts/verify
+
+  # The built wheel, installed with nothing from the source tree, runs the
+  # quickstart (W3 step 3).
+  clean-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v8.3.2
+      - name: Bootstrap the test runner
+        run: ./scripts/bootstrap
+      - name: Build the wheel
+        run: uv build --wheel
+      - name: Run the quickstart from the installed wheel
+        run: ./scripts/check_clean_install dist/*.whl
+
+  # The same, pip-installed into a conda environment (D4).
+  conda:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v8.3.2
+      - name: Bootstrap the test runner
+        run: ./scripts/bootstrap
+      - name: Build the wheel
+        run: uv build --wheel
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.12"
+          activate-environment: dromeus
+          auto-activate-base: false
+      - name: Run the quickstart from the conda environment
+        run: ./scripts/check_clean_install dist/*.whl "$CONDA_PREFIX"

@@ -1,8 +1,10 @@
 """Run the quickstart guide's commands as written, the way a reader would.
 
 The guide's first block (clone and bootstrap) is replaced by a copy of
-`examples/` and a link to this test's virtual environment. Every later bash
-block runs unchanged, in order, in one shell.
+`examples/` and a link to a virtual environment: this test's own, or the one
+named by `DROMEUS_QUICKSTART_VENV` (the clean-install check points it at an
+environment with only the built wheel installed). Every later bash block runs
+unchanged, in order, in one shell.
 """
 
 from __future__ import annotations
@@ -41,7 +43,8 @@ def test_quickstart_commands_train_four_nodes(tmp_path: Path) -> None:
         tmp_path / "examples",
         ignore=shutil.ignore_patterns("__pycache__"),
     )
-    (tmp_path / ".venv").symlink_to(Path(sys.prefix), target_is_directory=True)
+    venv = Path(os.environ.get("DROMEUS_QUICKSTART_VENV") or sys.prefix)
+    (tmp_path / ".venv").symlink_to(venv, target_is_directory=True)
     script = "\n".join(quickstart_blocks())
     environment = {
         key: value for key, value in os.environ.items() if key != "VIRTUAL_ENV"

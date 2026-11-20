@@ -1,0 +1,59 @@
+#!/bin/sh
+# Install a built Dromeus wheel where nothing comes from the source tree, then run
+# the quickstart with it: its `dromeus`, `dromeus-axl` and library all come from
+# the wheel and its dependencies.
+#
+#   ./scripts/check_clean_install dist/dromeus-*.whl            # a fresh venv
+#   ./scripts/check_clean_install dist/dromeus-*.whl "$CONDA_PREFIX"
+#
+# With an environment prefix (a conda environment), the wheel is pip-installed
+# into that environment. The quickstart starts with `source .venv/bin/activate`,
+# which a conda environment doesn't have, so it gets a venv that only exposes the
+# environment's packages (`--system-site-packages`) and links the environment's
+# `dromeus` and `dromeus-axl` commands. Needs ./scripts/bootstrap for the test
+# runner.
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+WHEEL=$(CDPATH= cd -- "$(dirname -- "$1")" && pwd)/$(basename -- "$1")
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+if [ $# -ge 2 ]; then
+    TARGET=$2                        # an existing environment, such as conda's
+    "$TARGET/bin/python" -m venv --system-site-packages "$WORK/venv"
+else
+    python3 -m venv "$WORK/venv"
+    TARGET=$WORK/venv
+fi
+
+if [ "$(uname -s)" = Linux ]; then
+    # The default Linux torch wheel bundles CUDA (several GB); the quickstart is CPU.
+    "$TARGET/bin/python" -m pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+fi
+"$TARGET/bin/python" -m pip install -q "$WHEEL"
+if [ "$TARGET" != "$WORK/venv" ]; then
+    for command in dromeus dromeus-axl; do
+        ln -s "$TARGET/bin/$command" "$WORK/venv/bin/$command"
+    done
+fi
+
+cd "$WORK"
+"$WORK/venv/bin/python" -c "import dromeus, dromeus_axl; print(dromeus.__version__, dromeus.__file__); print(dromeus_axl.build_info())"
+case $("$WORK/venv/bin/python" -c "import dromeus; print(dromeus.__file__)") in
+    "$ROOT"/*) echo "check_clean_install: dromeus was imported from the source tree" >&2; exit 1 ;;
+esac
+
+# The guide activates .venv; its `dromeus` must be the installed one, not one
+# from the test runner's environment further along PATH.
+for command in dromeus dromeus-axl; do
+    if [ ! -x "$WORK/venv/bin/$command" ]; then
+        echo "check_clean_install: $command is not installed in the clean environment" >&2
+        exit 1
+    fi
+done
+
+cd "$ROOT"
+DROMEUS_QUICKSTART_VENV="$WORK/venv" uv run --frozen --no-sync \
+    pytest tests/integration/test_quickstart.py -q -p no:cacheprovider
+echo "check_clean_install: the installed wheel ran the quickstart"
