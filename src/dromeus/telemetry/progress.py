@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from io import BufferedReader
 from pathlib import Path
-from typing import cast
+from typing import TypeAlias, cast
 
 from dromeus.errors import ConfigError
 
@@ -67,7 +67,7 @@ class RunFailed:
     round_id: int | None
 
 
-type Progress = (
+Progress: TypeAlias = (
     NodeStarted
     | NodeReady
     | RoundCommitted
@@ -75,6 +75,9 @@ type Progress = (
     | RunCompleted
     | RunFailed
 )
+
+
+NODE_STOPPED = "the node stopped without logging a result"
 
 
 class _Malformed(Exception):
@@ -119,6 +122,7 @@ def read_progress(
     *,
     follow: bool,
     poll_seconds: float = 0.5,
+    is_running: Callable[[], bool] | None = None,
 ) -> Iterator[Progress]:
     """Yield progress items from a node's JSONL log, in log order.
 
@@ -126,20 +130,40 @@ def read_progress(
     the file may appear later and is polled like `tail -f`. The iterator stops
     right after a terminal item (`RunCompleted` or `RunFailed`). A missing file
     raises `ConfigError` immediately when `follow=False`.
+
+    A node can exit without logging a terminal event (a crash, a kill, an error
+    before formation). When following, `is_running` is asked at the end of the
+    log; once it returns False, the log is read once more and, if still no
+    terminal event arrived, a `RunFailed` saying so ends the stream.
     """
     if not follow and not path.is_file():
         raise _missing_log(path)
-    return _stream(path, follow=follow, poll_seconds=poll_seconds)
+    return _stream(
+        path, follow=follow, poll_seconds=poll_seconds, is_running=is_running
+    )
 
 
-def _stream(path: Path, *, follow: bool, poll_seconds: float) -> Iterator[Progress]:
+def _stream(
+    path: Path,
+    *,
+    follow: bool,
+    poll_seconds: float,
+    is_running: Callable[[], bool] | None,
+) -> Iterator[Progress]:
     with _open_log(path, follow=follow, poll_seconds=poll_seconds) as handle:
         pending = b""
+        node_stopped = False
         while True:
             chunk = handle.read(_CHUNK_BYTES)
             if not chunk:
                 if not follow:
                     return
+                if node_stopped:
+                    yield RunFailed(error=NODE_STOPPED, round_id=None)
+                    return
+                if is_running is not None and not is_running():
+                    node_stopped = True  # read once more: it may have just logged
+                    continue
                 time.sleep(poll_seconds)
                 continue
             # Newline bytes never occur inside a UTF-8 sequence, so each complete

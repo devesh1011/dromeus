@@ -248,11 +248,16 @@ def _doctor(args: argparse.Namespace) -> ExitCode:
 
 def _watch(args: argparse.Namespace) -> ExitCode:
     from dromeus.telemetry.events import event_log_path
+    from dromeus.telemetry.liveness import node_is_running
     from dromeus.telemetry.progress import RunFailed, read_progress
 
-    path = event_log_path(cast(Path, args.run_root))
+    run_root = cast(Path, args.run_root)
     code = ExitCode.OK
-    for item in read_progress(path, follow=not args.once):
+    for item in read_progress(
+        event_log_path(run_root),
+        follow=not args.once,
+        is_running=lambda: node_is_running(run_root),
+    ):
         print(describe_progress(item), flush=True)
         if isinstance(item, RunFailed):
             code = ExitCode.RUN_FAILED

@@ -377,3 +377,42 @@ def test_follow_waits_for_late_file_and_yields_items_split_across_writes(
         ConsensusMeasured(round_id=3, normalized_rms=0.25),
         RunCompleted(committed_rounds=1),
     ]
+
+
+def test_follow_stops_when_the_node_exits_without_a_terminal_event(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "dromeus.jsonl"
+    path.write_text(
+        json.dumps(event_record("node_start", run_id=RUN_ID, role="initiator")) + "\n"
+    )
+
+    items = list(
+        read_progress(path, follow=True, poll_seconds=0.01, is_running=lambda: False)
+    )
+
+    assert items == [
+        NodeStarted(run_id=RUN_ID, role="initiator"),
+        RunFailed(error="the node stopped without logging a result", round_id=None),
+    ]
+
+
+def test_follow_reads_what_the_node_logged_before_it_stopped(tmp_path: Path) -> None:
+    path = tmp_path / "dromeus.jsonl"
+    path.write_text("")
+    calls = 0
+
+    def is_running() -> bool:
+        # The node writes its last record and exits between two polls.
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            with path.open("a") as handle:
+                handle.write(json.dumps(_round_record()) + "\n")
+        return False
+
+    items = list(
+        read_progress(path, follow=True, poll_seconds=0.01, is_running=is_running)
+    )
+
+    assert [type(item) for item in items] == [RoundCommitted, RunFailed]

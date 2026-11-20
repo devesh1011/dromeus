@@ -53,9 +53,11 @@ from dromeus.telemetry.events import (
     emit_event,
     event_log_path,
 )
+from dromeus.telemetry.liveness import hold_node_lock
 from dromeus.telemetry.metrics import JsonlMetricsPublisher
 from dromeus.training.task import TrainingTask
 from dromeus.transport.axl import AXLBridgeConfig, AXLTransport
+from dromeus.transport.interface import TransportError
 
 
 class NodeRole(StrEnum):
@@ -165,7 +167,28 @@ async def run_node(
     on_ready: Callable[[FormationResult, str, EventSink], None | Awaitable[None]]
     | None = None,
 ) -> NodeRunResult:
-    """Run a developer-supplied workload; this module never selects models or data."""
+    """Run a developer-supplied workload; this module never selects models or data.
+
+    The node holds its run root's lock for the whole run, so `dromeus watch`
+    can tell when it stops, even without a logged result.
+    """
+    with hold_node_lock(config.run_root):
+        return await _run_node(
+            config,
+            prepare_training=prepare_training,
+            training_decorator=training_decorator,
+            on_ready=on_ready,
+        )
+
+
+async def _run_node(
+    config: NodeConfig,
+    *,
+    prepare_training: WorkloadFactory,
+    training_decorator: TrainingDecorator | None,
+    on_ready: Callable[[FormationResult, str, EventSink], None | Awaitable[None]]
+    | None,
+) -> NodeRunResult:
     draft, event_sink = await asyncio.to_thread(
         _prepare_node_start,
         config,
@@ -247,6 +270,8 @@ async def run_node(
         await _write_topology_snapshot(
             transport,
             run_store_root / "topology-ready.json",
+            sink=event_sink,
+            run_id=result.manifest.run_id,
         )
         await asyncio.to_thread(
             emit_event,
@@ -265,6 +290,8 @@ async def run_node(
         await _write_topology_snapshot(
             transport,
             run_store_root / "topology-complete.json",
+            sink=event_sink,
+            run_id=result.formation.manifest.run_id,
         )
         await asyncio.to_thread(
             emit_event,
@@ -325,8 +352,27 @@ async def _read_invitation(path: Path, *, timeout_seconds: float) -> Invitation:
     raise FormationError(f"timed out waiting for invitation {path}: {problem}")
 
 
-async def _write_topology_snapshot(transport: AXLTransport, path: Path) -> None:
-    topology = await transport.topology()
+async def _write_topology_snapshot(
+    transport: AXLTransport, path: Path, *, sink: EventSink, run_id: str
+) -> None:
+    """Record AXL's view of the network, as evidence only.
+
+    A failed snapshot is logged, never raised: it must not fail a node that has
+    formed, or one that has committed every round.
+    """
+    try:
+        topology = await transport.topology()
+    except TransportError as error:
+        await asyncio.to_thread(
+            emit_event,
+            "topology_snapshot_failed",
+            run_id=run_id,
+            sink=sink,
+            snapshot=path.name,
+            error=str(error),
+            cause=repr(error.__cause__),
+        )
+        return
     payload = (
         json.dumps(topology, allow_nan=False, sort_keys=True, indent=2) + "\n"
     ).encode()

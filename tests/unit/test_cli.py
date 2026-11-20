@@ -299,6 +299,22 @@ def test_watch_exits_with_run_failed(
     )
 
 
+def test_watch_exits_when_the_node_stopped_without_a_result(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Found in the quickstart: a node that died without a terminal event left
+    # `watch` waiting forever.
+    sink = JsonlEventSink(event_log_path(tmp_path))
+    emit_event("node_start", run_id="r", role="initiator", sink=sink)
+
+    code = main(["watch", "--run-root", str(tmp_path)])
+
+    assert code == ExitCode.RUN_FAILED
+    assert capsys.readouterr().out.splitlines()[-1] == (
+        "run failed: the node stopped without logging a result"
+    )
+
+
 def test_watch_without_a_log_is_an_input_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

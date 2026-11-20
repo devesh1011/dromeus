@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import cast
 
@@ -14,7 +15,10 @@ from dromeus.manifests.models import DraftRunSpec, SealedManifest
 from dromeus.membership.formation import FormationResult, create_invitation
 from dromeus.node import NodeRole, load_node_config
 from dromeus.runtime import ParticipantFormation, TrainingConfig
+from dromeus.telemetry.events import JsonlEventSink
 from dromeus.training.state import InitialCheckpoint
+from dromeus.transport.axl import AXLTransport
+from dromeus.transport.interface import TransportError
 
 
 def test_load_node_config_validates_frozen_initiator_inputs(tmp_path: Path) -> None:
@@ -345,3 +349,31 @@ def test_unreadable_invitation_times_out_as_formation_error(tmp_path: Path) -> N
 
     with pytest.raises(FormationError, match="invitation"):
         asyncio.run(_read_invitation(path, timeout_seconds=0.5))
+
+
+def test_failed_topology_snapshot_is_logged_and_does_not_fail_the_node(
+    tmp_path: Path,
+) -> None:
+    # A completed run once failed here: the end-of-run snapshot is evidence only.
+    class UnreachableBridge:
+        async def topology(self) -> dict[str, object]:
+            raise TransportError("failed to query AXL topology")
+
+    sink = JsonlEventSink(tmp_path / "events.jsonl")
+    snapshot = tmp_path / "topology-complete.json"
+
+    asyncio.run(
+        node_module._write_topology_snapshot(  # pyright: ignore[reportPrivateUsage]
+            cast(AXLTransport, UnreachableBridge()),
+            snapshot,
+            sink=sink,
+            run_id="run-1",
+        )
+    )
+
+    assert not snapshot.exists()
+    records = [json.loads(line) for line in sink.path.read_text().splitlines()]
+    assert [record["event"] for record in records] == ["topology_snapshot_failed"]
+    assert records[0]["run_id"] == "run-1"
+    assert records[0]["snapshot"] == "topology-complete.json"
+    assert records[0]["error"] == "failed to query AXL topology"

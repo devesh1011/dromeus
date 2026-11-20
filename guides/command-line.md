@@ -83,8 +83,13 @@ dromeus watch --run-root runs/regression/node-0
 
 Prints one line per event as the node writes it: formation, each committed round
 (loss, public evaluation metrics, round time, peer) and each consensus distance.
-It waits for the log to appear and stops when the run completes or fails. `--once`
-prints what is logged so far and exits.
+It waits for the log to appear and stops when the run completes or fails. If the
+node stops without logging a result (killed, or an error before formation), `watch`
+prints `run failed: the node stopped without logging a result` and exits with 5;
+the node's own output says why. `--once` prints what is logged so far and exits.
+
+While a node runs it holds a lock on `run_root/node.lock`, so two nodes can't
+share a `run_root`: the second stops with an input error.
 
 ## Errors and exit codes
 
