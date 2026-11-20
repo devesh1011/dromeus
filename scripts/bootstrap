@@ -9,15 +9,15 @@ if ! command -v uv >/dev/null 2>&1; then
     exit 127
 fi
 
-echo "bootstrap: syncing locked Python 3.12 environment"
+echo "bootstrap: syncing the locked environment"
 if ! uv sync --frozen; then
-    echo "bootstrap: sync failed. Check network access and Python 3.12 availability. If dependencies intentionally changed, run 'uv lock' and commit uv.lock." >&2
+    echo "bootstrap: sync failed. Check network access and that Python 3.11 or newer is available. If dependencies intentionally changed, run 'uv lock' and commit uv.lock." >&2
     exit 1
 fi
 
 version=$(uv run --frozen --no-sync python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-if [ "$version" != "3.12" ]; then
-    echo "bootstrap: expected Python 3.12, resolved $version. Remove .venv and rerun ./scripts/bootstrap." >&2
+if ! uv run --frozen --no-sync python -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+    echo "bootstrap: Dromeus needs Python 3.11 or newer, resolved $version. Remove .venv and rerun ./scripts/bootstrap." >&2
     exit 1
 fi
 
